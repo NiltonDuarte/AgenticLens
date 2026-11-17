@@ -50,7 +50,7 @@ func testNativePendingGeneration(t *testing.T, crash bool) {
 		t.Fatal(err)
 	}
 	output := filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
-	lock, err := capture.AcquirePublication(context.Background(), output)
+	lock, err := capture.AcquirePublication(context.Background(), output, f.project)
 	if err != nil {
 		t.Fatal(err)
 	}

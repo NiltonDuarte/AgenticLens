@@ -192,7 +192,7 @@ func TestPublicationLockSharesPhysicalAliasBeforeAndAfterCreation(t *testing.T) 
 						t.Fatal(err)
 					}
 				}
-				first, err := capture.AcquirePublication(context.Background(), alias)
+				first, err := capture.AcquirePublication(context.Background(), alias, project)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -208,7 +208,7 @@ func TestPublicationLockSharesPhysicalAliasBeforeAndAfterCreation(t *testing.T) 
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 				defer cancel()
-				second, err := capture.AcquirePublication(ctx, target)
+				second, err := capture.AcquirePublication(ctx, target, project)
 				if err == nil {
 					second.Close()
 					t.Fatal("same physical ledger has simultaneous publication owners")
@@ -220,7 +220,7 @@ func TestPublicationLockSharesPhysicalAliasBeforeAndAfterCreation(t *testing.T) 
 					t.Fatal(err)
 				}
 				first = nil
-				second, err = capture.AcquirePublication(context.Background(), target)
+				second, err = capture.AcquirePublication(context.Background(), target, project)
 				if err != nil {
 					t.Fatal(err)
 				}

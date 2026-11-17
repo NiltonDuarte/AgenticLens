@@ -41,7 +41,7 @@ func TestManualWritersWaitForFormatterPublication(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			owner, err := capture.AcquirePublication(context.Background(), paths[1])
+			owner, err := capture.AcquirePublication(context.Background(), paths[1], root)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -136,12 +136,13 @@ func TestManualWritersWaitForFormatterPublication(t *testing.T) {
 func TestManualWritersPreservePendingPublication(t *testing.T) {
 	for _, writer := range []string{"migration", "backfill"} {
 		t.Run(writer, func(t *testing.T) {
-			path := filepath.Join(newBackfillProject(t), "agentic_metrics.json")
+			project := newBackfillProject(t)
+			path := filepath.Join(project, "agentic_metrics.json")
 			body := []byte(`{"schema_version":4,"ticket_id":"A","ticket_title":"fixture","sessions":[],"anomalies":[]}`)
 			if err := os.WriteFile(path, body, 0644); err != nil {
 				t.Fatal(err)
 			}
-			owner, err := capture.AcquirePublication(context.Background(), path)
+			owner, err := capture.AcquirePublication(context.Background(), path, project)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -137,7 +137,7 @@ func TestCaptureCLIRestartsInterruptedArtifactPublication(t *testing.T) {
 				if err := os.WriteFile(summary, []byte("# Preserved user introduction\n"), 0600); err != nil {
 					t.Fatal(err)
 				}
-				lock, err := capture.AcquirePublication(context.Background(), f.output)
+				lock, err := capture.AcquirePublication(context.Background(), f.output, f.project)
 				if err != nil {
 					t.Fatal(err)
 				}

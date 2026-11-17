@@ -80,7 +80,7 @@ func TestRelocationPreservesActualRecoverablePublicationJournal(t *testing.T) {
 		}
 	}
 	members := []string{ledger, summary}
-	publication, err := capture.AcquirePublication(context.Background(), ledger)
+	publication, err := capture.AcquirePublication(context.Background(), ledger, project)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +193,7 @@ func TestRelocationPreservesActualRecoverablePublicationJournal(t *testing.T) {
 	if err != nil || pending.Generation != 9 || pending.Acknowledged != 4 {
 		t.Fatalf("interrupted publication was falsely acknowledged: %+v %v", pending, err)
 	}
-	publication, err = capture.AcquirePublication(context.Background(), ledger)
+	publication, err = capture.AcquirePublication(context.Background(), ledger, project)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -169,7 +169,7 @@ func (c *waitingFormatContext) Done() <-chan struct{} {
 func TestFormatLedgerFilesWaitsForPublisherBeforeReading(t *testing.T) {
 	root := t.TempDir()
 	path := putFormatLedger(t, root, "T-1", formatFixture)
-	owner, err := capture.AcquirePublication(context.Background(), path)
+	owner, err := capture.AcquirePublication(context.Background(), path, root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +298,7 @@ func TestFormatLedgerFilesReportsPartialLatePublicationFailure(t *testing.T) {
 		putFormatLedger(t, root, "B", formatFixture),
 		putFormatLedger(t, root, "C", formatFixture),
 	}
-	owner, err := capture.AcquirePublication(context.Background(), paths[2])
+	owner, err := capture.AcquirePublication(context.Background(), paths[2], root)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -84,7 +84,7 @@ func FormatLedgerFiles(ctx context.Context, opts LedgerFormatOptions) (results [
 	if opts.Mode != "" && opts.Mode != LedgerFormatWrite && opts.Mode != LedgerFormatDryRun && opts.Mode != LedgerFormatCheck {
 		return nil, errors.New("invalid format mode")
 	}
-	paths, _, err := formatLedgerPaths(opts)
+	paths, project, err := formatLedgerPaths(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func FormatLedgerFiles(ctx context.Context, opts LedgerFormatOptions) (results [
 		if opts.Mode == LedgerFormatCheck || opts.Mode == LedgerFormatDryRun {
 			readLock, e = capture.ReadPublicationDirectory(path)
 		} else {
-			lock, e = capture.AcquirePublication(ctx, path, opts.Project)
+			lock, e = capture.AcquirePublication(ctx, path, project)
 		}
 		if e != nil {
 			results[index].Error = e

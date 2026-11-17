@@ -91,7 +91,7 @@ func TestCapturePublicationBudgetExpiryRetainsPendingAndRecovers(t *testing.T) {
 	}
 	// Holding actual publication ownership makes generation unable to commit,
 	// regardless of how quickly the machine starts the generator subprocess.
-	publication, err := capture.AcquirePublication(context.Background(), f.output)
+	publication, err := capture.AcquirePublication(context.Background(), f.output, f.project)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -47,18 +47,15 @@ func waitPublicationLock(ctx context.Context, file *os.File) error {
 		}
 	}
 }
-func AcquirePublication(ctx context.Context, path string, project ...string) (*PublicationLock, error) {
+func AcquirePublication(ctx context.Context, path, project string) (*PublicationLock, error) {
+	if strings.TrimSpace(project) == "" {
+		return nil, fmt.Errorf("publication requires an explicit owning project")
+	}
 	parent, err := ProjectDirectory(filepath.Dir(path))
 	if err != nil {
 		return nil, err
 	}
-	selected := ""
-	if len(project) > 0 {
-		selected = project[0]
-	} else {
-		selected = parent
-	}
-	selected, err = config.ProjectRoot(selected)
+	selected, err := config.ProjectRoot(project)
 	if err != nil {
 		return nil, err
 	}

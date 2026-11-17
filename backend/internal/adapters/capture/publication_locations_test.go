@@ -9,6 +9,48 @@ import (
 	"agenticlens/internal/adapters/capture"
 )
 
+func TestPublicationRequiresOwningProjectForExternalHome(t *testing.T) {
+	project, external := t.TempDir(), t.TempDir()
+	captureProjectConfig(t, project, "Owning project")
+	captureProjectConfig(t, external, "Unrelated enclosing project")
+	policy, err := fixtureSharedYAML(t, "Owning project", external)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), policy, 0600); err != nil {
+		t.Fatal(err)
+	}
+	ledger := filepath.Join(external, "agentic_metrics.json")
+	for _, blank := range []string{"", "  "} {
+		if owner, err := capture.AcquirePublication(context.Background(), ledger, blank); err == nil {
+			owner.Close()
+			t.Fatal("blank project inferred ownership from external destination")
+		}
+	}
+	owner, err := capture.AcquirePublication(context.Background(), ledger, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := owner.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	want, err := filepath.EvalSymlinks(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if owner.Project() != want || owner.StateHome() != filepath.Join(want, "publication-state") {
+		t.Fatalf("selected destination's project instead of owning project: %s %s", owner.Project(), owner.StateHome())
+	}
+	if err := owner.ValidateLocation(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(external, "publication-state")); !os.IsNotExist(err) {
+		t.Fatalf("initialized unrelated project's state: %v", err)
+	}
+}
+
 func TestPublicationLeaseFollowsRealRenameAndRejectsOutsideScope(t *testing.T) {
 	project := t.TempDir()
 	captureProjectConfig(t, project, "Publication movement")
@@ -29,7 +71,7 @@ func TestPublicationLeaseFollowsRealRenameAndRejectsOutsideScope(t *testing.T) {
 	if err := os.WriteFile(ledger, []byte("accepted"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	owner, err := capture.AcquirePublication(context.Background(), ledger)
+	owner, err := capture.AcquirePublication(context.Background(), ledger, project)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +135,7 @@ func TestUnavailableOperationalStateStopsBeforeWorkspaceChanges(t *testing.T) {
 	if err := os.WriteFile(ledger, accepted, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if owner, err := capture.AcquirePublication(context.Background(), ledger); err == nil {
+	if owner, err := capture.AcquirePublication(context.Background(), ledger, project); err == nil {
 		owner.Close()
 		t.Fatal("unavailable state home accepted")
 	}

@@ -405,13 +405,13 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 
 // SaveMetricsLedger publishes an explicit computed snapshot in an existing,
 // configured directory; it never recreates a disappeared output home.
-func SaveMetricsLedger(path string, ledger domain.AgenticMetricsLedger) error {
+func SaveMetricsLedger(project, path string, ledger domain.AgenticMetricsLedger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	return saveMetricsLedger(ctx, path, ledger)
+	return saveMetricsLedger(ctx, project, path, ledger)
 }
 
-func saveMetricsLedger(ctx context.Context, path string, ledger domain.AgenticMetricsLedger) (err error) {
+func saveMetricsLedger(ctx context.Context, project, path string, ledger domain.AgenticMetricsLedger) (err error) {
 	path = capture.PublicationPath(path)
 	parentDir := filepath.Dir(path)
 	if _, err := capture.StatPublicationFile(parentDir); err != nil {
@@ -424,7 +424,7 @@ func saveMetricsLedger(ctx context.Context, path string, ledger domain.AgenticMe
 	if err != nil {
 		return fmt.Errorf("resolving metrics output: %w", err)
 	}
-	owner, err := capture.AcquirePublication(ctx, path)
+	owner, err := capture.AcquirePublication(ctx, path, project)
 	if err != nil {
 		return fmt.Errorf("acquiring metrics publication ownership: %w", err)
 	}

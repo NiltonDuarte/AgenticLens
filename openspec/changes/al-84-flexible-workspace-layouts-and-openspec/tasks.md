@@ -28,3 +28,9 @@ The user requested a fresh Astra review and fixes. This iteration 01 follow-up r
 - [x] Refresh telemetry, verify all 47 owners and prepare final evidence for the corrected PR144 handoff. Parent publishes the prepared commit; no merge is authorized.
 
 [Delivery](delivery.md) owns current results and review; [retained findings](evidence/iterations/01/REVIEW_SUMMARY.json) preserves prior and Astra findings.
+
+## Explicit publication project correction
+
+- [x] Remove optional publication project and destination inference; update snapshot, relocation, formatting and test callers. Reject blank project selection.
+- [x] Add a real external-home regression with conflicting enclosing project configuration.
+- [ ] Complete affected checks and integrated make, retain evidence, refresh telemetry and publish. This bounded signature/caller correction is directly inspected and tested; prior unrelated review scopes carry forward.

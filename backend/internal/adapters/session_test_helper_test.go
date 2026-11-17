@@ -179,5 +179,5 @@ func saveFixtureMetricsLedger(t *testing.T, path string, ledger domain.AgenticMe
 	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.local.yaml"), []byte("agenticlens:\n  state_dir: .publication-state\n"), 0600); err != nil {
 		return err
 	}
-	return adapters.SaveMetricsLedger(path, ledger)
+	return adapters.SaveMetricsLedger(root, path, ledger)
 }

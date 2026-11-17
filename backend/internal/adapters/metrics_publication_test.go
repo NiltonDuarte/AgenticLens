@@ -59,7 +59,7 @@ func TestSaveMetricsLedgerOwnsPhysicalOutput(t *testing.T) {
 	if err := os.Symlink(path, alias); err != nil {
 		t.Fatal(err)
 	}
-	owner, err := capture.AcquirePublication(context.Background(), path)
+	owner, err := capture.AcquirePublication(context.Background(), path, root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestSaveMetricsLedgerOwnsPhysicalOutput(t *testing.T) {
 	done := make(chan error, 1)
 	id, title := "T-1", "new export snapshot"
 	ledger := domain.AgenticMetricsLedger{TicketID: &id, TicketTitle: &title}
-	go func() { done <- saveMetricsLedger(ctx, alias, ledger) }()
+	go func() { done <- saveMetricsLedger(ctx, root, alias, ledger) }()
 	select {
 	case <-ctx.waiting:
 	case err := <-done:
@@ -111,7 +111,7 @@ func TestSaveMetricsLedgerOwnsPhysicalOutput(t *testing.T) {
 	if err := capture.PublicationOwner(path).Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err := SaveMetricsLedger(alias, domain.AgenticMetricsLedger{}); err == nil || !strings.Contains(err.Error(), "incomplete") {
+	if err := SaveMetricsLedger(root, alias, domain.AgenticMetricsLedger{}); err == nil || !strings.Contains(err.Error(), "incomplete") {
 		t.Fatalf("export accepted pending journal: %v", err)
 	}
 	after, err := os.ReadFile(path)
