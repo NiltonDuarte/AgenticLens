@@ -34,15 +34,15 @@ Full `make` passed (231 frontend unit and 804 integration tests), alongside stri
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 12
-- **Active Agent Duration:** 1h 11m (recorded duration including 606s provisional)
+- **Software Development Life Cycle Iterations:** 13
+- **Active Agent Duration:** 1h 14m (recorded duration including 99s provisional)
 - **Context Window Health:** ELEVATED — Root agent peak 259.9k tokens (58% of 450k healthy ceiling, 1 compactions) | Subagents peak 129.5k (Reviewer-behavior)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 36,201 reasoning tokens (21.4% of generated output)
-- **Tool Health & Self-Correction:** 342 tool calls (33 self-corrections, 90.4% success rate)
+- **Reasoning Effort:** 36,450 reasoning tokens (21.1% of generated output)
+- **Tool Health & Self-Correction:** 356 tool calls (33 self-corrections, 90.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (2 WARNING).
@@ -56,17 +56,17 @@ Full `make` passed (231 frontend unit and 804 integration tests), alongside stri
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **Unknown** | 2 | 785,912 | 90,906 | 25,219,200 | 97.0% | 259.9k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Unknown** | 2 | 807,756 | 94,362 | 26,877,056 | 97.1% | 259.9k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-architecture** | 1 | 96,524 | 11,312 | 1,920,640 | 95.2% | 103.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-behavior** | 1 | 108,653 | 13,625 | 2,883,968 | 96.4% | 129.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-data** | 1 | 92,417 | 10,347 | 2,242,432 | 96.0% | 110.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-tests** | 1 | 85,512 | 6,449 | 1,026,048 | 92.3% | 102.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **6** | **1,169,018** | **132,639** | **33,292,288** | **96.6%** | **259.9k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations)** |
+| **Total** | **6** | **1,190,862** | **136,095** | **34,950,144** | **96.7%** | **259.9k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6.1-sol** | 5 | 1,050,148 | 118,834 | 30,536,192 | 96.7% | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **gpt-6.2-astra** | 1 | 118,870 | 13,805 | 2,756,096 | 95.9% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **6** | **1,169,018** | **132,639** | **33,292,288** | **96.6%** | **Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations)** |
+| **gpt-6.2-astra** | 1 | 140,714 | 17,261 | 4,413,952 | 96.9% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **6** | **1,190,862** | **136,095** | **34,950,144** | **96.7%** | **Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations)** |
 <!-- agentic-lens:metrics:end -->
