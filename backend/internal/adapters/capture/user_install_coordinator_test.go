@@ -105,7 +105,7 @@ func recoverUserCoordinatorWithLeases(t *testing.T, home string, resources ...st
 func coordinatorHomeFixture(t *testing.T, f userTransactionFixture) userTransactionFixture {
 	t.Helper()
 	other := f
-	other.options.Home = filepath.Join(t.TempDir(), "second-home")
+	other.options.Home = filepath.Join(protectedUserFixtureRoot(t), "second-home")
 	if err := os.Mkdir(other.options.Home, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -184,6 +184,7 @@ func TestUserMigrationStaleReferenceCannotRecoverAnotherOwnersJournal(t *testing
 	// shared reference must not acquire authority over this new private journal.
 	other := newUserTransactionFixture(t)
 	other.options.Home = f.options.Home
+	other.options.Entrypoint = f.options.Entrypoint
 	otherPaths := []string{other.legacyHooks, other.legacyAnchor, other.legacyState, other.pendingDB, filepath.Join(f.options.Home, "hooks.json"), filepath.Join(f.options.Home, "agenticlens-user-installation.json")}
 	beforeB := snapshotUserArtifacts(t, otherPaths)
 	stopCoordinatedUserMigration(t, other, "legacy-hooks")
@@ -350,6 +351,7 @@ func TestUserMigrationPublicInstallPreservesDeletedOwner(t *testing.T) {
 		t.Run(prefix, func(t *testing.T) {
 			f := newUserTransactionFixture(t)
 			f.options.Repository = f.project
+			installUserFixtureCompanion(t, f.options.Entrypoint)
 			stopCoordinatedUserMigration(t, f, prefix)
 			if err := os.RemoveAll(f.options.Home); err != nil {
 				t.Fatal(err)
@@ -370,7 +372,8 @@ func TestUserMigrationPublicInstallPreservesDeletedOwner(t *testing.T) {
 	t.Run("fresh home without pending authority", func(t *testing.T) {
 		f := newUserTransactionFixture(t)
 		f.options.Repository = f.project
-		f.options.Home = filepath.Join(t.TempDir(), "new-private-home")
+		installUserFixtureCompanion(t, f.options.Entrypoint)
+		f.options.Home = filepath.Join(protectedUserFixtureRoot(t), "new-private-home")
 		database := mustReadUserInstall(t, f.pendingDB)
 		if _, err := InstallUserCodex(context.Background(), f.options); err != nil {
 			t.Fatalf("legitimate fresh home was rejected: %v", err)

@@ -25,7 +25,7 @@ type userTransactionFixture struct {
 
 func newUserTransactionFixture(t *testing.T) userTransactionFixture {
 	t.Helper()
-	root := t.TempDir()
+	root := protectedUserFixtureRoot(t)
 	binary, err := compatibleCaptureTestExecutable(t)
 	if err != nil {
 		t.Fatal(err)
@@ -269,7 +269,7 @@ func TestRootRecoveryLocksInterruptedHomeEvenWhenCurrentHomeDiffers(t *testing.T
 				t.Fatal(err)
 			}
 			other := f.options
-			other.Home = filepath.Join(t.TempDir(), "different-current-home")
+			other.Home = filepath.Join(protectedUserFixtureRoot(t), "different-current-home")
 			_, installErr := InstallUserCodex(context.Background(), other)
 			if installErr == nil || !strings.Contains(installErr.Error(), "progress") {
 				lock.Close()
@@ -313,7 +313,7 @@ func TestUserRecoveryRefusesUnmatchedPrivateJournalEdit(t *testing.T) {
 	paths := append(append([]string{}, f.paths...), journalPath, filepath.Join(f.project, ".codex", userInstallPendingFile))
 	before := snapshotUserArtifacts(t, paths)
 	other := f.options
-	other.Home = filepath.Join(t.TempDir(), "different-current-home")
+	other.Home = filepath.Join(protectedUserFixtureRoot(t), "different-current-home")
 	if _, err := InstallUserCodex(context.Background(), other); err == nil || !strings.Contains(err.Error(), "changed") {
 		t.Fatalf("edited private journal bypassed its shared binding: %v", err)
 	}

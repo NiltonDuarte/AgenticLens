@@ -14,6 +14,10 @@ from distribution_fixture import DistributionFixture, ROOT, SETUP, build_probe, 
 
 
 class CaptureDistributionTest(DistributionFixture):
+    # The operator's installed manager and engine must be outside the Codex
+    # workspace-write profile's normal /tmp grant.
+    fixture_parent = '/var/tmp'
+
     def assert_user_hooks(self, hooks, unrelated=None):
         events = {'SessionStart', 'UserPromptSubmit', 'SubagentStart', 'SubagentStop', 'Stop', 'SessionEnd', 'PostToolUse'}
         self.assertEqual(set(hooks), events)
@@ -26,6 +30,10 @@ class CaptureDistributionTest(DistributionFixture):
             self.assertEqual(shlex.split(handlers[0]['command']), [str(self.dest / 'agentic-lens'), action])
             if event == 'PostToolUse':
                 self.assertEqual(owned[0].get('matcher'), '^Bash$')
+
+    def install_protected_engine(self, engine, env=None):
+        self.succeeds(self.launch('install', self.pin, '--install-root', self.home / '.agenticlens',
+                                  '--local-bin', engine, '--sha256', digest(engine), env=env))
 
     def install_native_reporting_probe(self):
         application = build_app(self.pin)
@@ -112,6 +120,7 @@ class CaptureDistributionTest(DistributionFixture):
                 self.assertEqual(self.snapshot_owned_paths(user_config, codex, state), fresh)
 
                 if role == 'engine':
+                    self.install_protected_engine(self.application, env=env)
                     codex_args = ['--repo', self.repo, '--store', codex, '--entrypoint', entrypoint]
                     self.succeeds(self.launch('capture', 'install-user', *codex_args, env=env))
                     before = self.snapshot_owned_paths(codex, user_config)
@@ -165,6 +174,20 @@ class CaptureDistributionTest(DistributionFixture):
         self.succeeds(self.launch('capture', 'install-user', '--repo', self.repo, '--entrypoint', manager))
         self.assertTrue(os.path.samestat(admitted, manager.stat()), 'unchanged native user install replaced active manager')
         self.assertEqual(hooks.read_bytes(), before)
+        self.assertEqual(self.requests(), [])
+
+    def test_trusted_callback_requires_protected_worker_protocol(self):
+        self.succeeds(self.install_local('--capture-source', 'codex'))
+        self.write_config('v9.8.8')
+        compatible_cli = build_probe(self.pin)
+        self.install_protected_engine(compatible_cli)
+        policy = self.repo / '.agenticlens-config.local.yaml'
+        policy.write_text(policy.read_text().replace('enabled: false', 'enabled: true'))
+        event = json.dumps({'cwd': str(self.repo), 'session_id': 'probe-id', 'hook_event_name': 'SessionStart'})
+        rejected = self.launch('codex-hook', input=event)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('worker protocol', rejected.stderr)
+        self.assertFalse((self.root / 'capture state').exists())
         self.assertEqual(self.requests(), [])
 
     def test_manager_update_is_independent_of_engine_pin_and_hook_ownership(self):
@@ -316,6 +339,7 @@ class CaptureDistributionTest(DistributionFixture):
     def test_user_install_diagnoses_base_legacy_callbacks_and_migrates_only_owned_groups(self):
         application = build_app(self.pin)
         self.succeeds(self.install_local(probe=application))
+        self.install_protected_engine(application)
         source = Path(self.env['CODEX_HOME']); source.mkdir(parents=True, exist_ok=True)
         (source / 'sessions').mkdir()
         state = self.root / 'legacy capture state'

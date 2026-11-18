@@ -50,8 +50,9 @@ func TestNativeUserHookDisabledSessionUsesContextAndAvoidsCaptureIO(t *testing.T
 }
 
 func TestNativeUserBindingUsesSelectedHandlerDespiteInactiveLegacyWrapper(t *testing.T) {
-	f := newCaptureGenerationFixture(t)
-	if _, err := capture.InstallUserCodex(context.Background(), capture.UserInstallOptions{Home: f.store, Entrypoint: managerBinaryPath}); err != nil {
+	f := newCodexInboxFixture(t)
+	manager := fixtureCaptureManager()
+	if _, err := capture.InstallUserCodex(context.Background(), capture.UserInstallOptions{Home: f.store, Entrypoint: manager}); err != nil {
 		t.Fatalf("install actual current user integration: %v", err)
 	}
 	t.Setenv("PATH", t.TempDir())

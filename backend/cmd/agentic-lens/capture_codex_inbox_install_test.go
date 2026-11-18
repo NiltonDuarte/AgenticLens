@@ -2,11 +2,13 @@ package main_test
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -14,6 +16,47 @@ import (
 	"agenticlens/internal/adapters/capture"
 	"github.com/pelletier/go-toml/v2"
 )
+
+// The native workspace-write profile grants access to the ordinary system
+// temp directory. Keep this fixture's isolated operator home outside that root.
+func newCaptureOperatorHome(t *testing.T, project string) string {
+	t.Helper()
+	root, err := os.MkdirTemp("/var/tmp", "agenticlens-protected-test-")
+	if err != nil {
+		t.Fatalf("protected fixture requires writable /var/tmp outside the sandbox's temp grant: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(root); err != nil {
+			t.Error(err)
+		}
+	})
+	home, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
+	manager := fixtureCaptureManager()
+	digest := func(path string) string { return fmt.Sprintf("%x", sha256.Sum256(readCaptureFile(t, path))) }
+	for _, args := range [][]string{
+		{"self-update", "--version", "v9.8.7", "--local-bin", managerBinaryPath, "--sha256", digest(managerBinaryPath), "--dest", manager},
+		{"--al-project", project, "install", "v9.8.7", "--install-root", filepath.Join(home, ".agenticlens"), "--local-bin", cliBinaryPath, "--sha256", digest(cliBinaryPath)},
+	} {
+		cmd := exec.Command(managerBinaryPath, args...)
+		cmd.Dir = project
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("operator provisioning failed: %s %v", out, err)
+		}
+	}
+	return manager
+}
+
+func fixtureCaptureManager() string {
+	return filepath.Join(os.Getenv("HOME"), ".local", "bin", "agentic-lens")
+}
+func fixtureCaptureEngine() string {
+	host := runtime.GOOS + "-" + runtime.GOARCH
+	return filepath.Join(os.Getenv("HOME"), ".agenticlens", "bin", "v9.8.7", host, "agentic-lens-engine-"+host)
+}
 
 // User-hook installation resolves an explicit engine pin in addition to the
 // generation fixture's configured ledger roots and separate private state.
@@ -24,12 +67,28 @@ func newCodexInboxFixture(t *testing.T) captureGenerationFixture {
 	if err := os.WriteFile(path, append([]byte("agenticlens:\n  version: v9.8.7\n"), readCaptureFile(t, path)...), 0600); err != nil {
 		t.Fatal(err)
 	}
+	newCaptureOperatorHome(t, f.project)
+	f.store = filepath.Join(os.Getenv("HOME"), ".codex")
+	if err := os.MkdirAll(filepath.Join(f.store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CODEX_HOME", f.store)
+	f.stateBase = filepath.Join(os.Getenv("HOME"), "capture-state")
+	f.publication = filepath.Join(os.Getenv("HOME"), "publication-state")
+	var err error
+	f.state, err = capture.ProjectState(f.stateBase, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n")); err != nil {
+		t.Fatal(err)
+	}
 	return f
 }
 
 func codexInboxInstall(t *testing.T, project, command string, extra ...string) ([]byte, error) {
 	t.Helper()
-	args := []string{"capture", command, "--user-source", "codex", "--repo", project, "--entrypoint", managerBinaryPath}
+	args := []string{"capture", command, "--user-source", "codex", "--repo", project, "--entrypoint", fixtureCaptureManager()}
 	return exec.Command(cliBinaryPath, append(args, extra...)...).CombinedOutput()
 }
 
@@ -113,7 +172,7 @@ func TestCodexInboxPreexistingGrantAndConflictPreflight(t *testing.T) {
 			if kind == "overlapping capture state" || kind == "overlapping publication state" {
 				privatePath := f.stateBase
 				if kind == "overlapping publication state" {
-					privatePath = filepath.Join(f.project, ".publication-state")
+					privatePath = f.publication
 				}
 				local := filepath.Join(f.project, ".agenticlens-config.local.yaml")
 				current := readCaptureFile(t, local)
@@ -160,12 +219,12 @@ func TestCodexInboxPreexistingGrantAndConflictPreflight(t *testing.T) {
 	}
 }
 
-func TestCodexInboxRejectsExecutableSettingsInsideWritableDirectory(t *testing.T) {
+func TestCodexInboxProtectsExecutableSelectionAtInstall(t *testing.T) {
 	for _, setting := range []string{"install_root", "binary_dir", "manager"} {
 		t.Run(setting, func(t *testing.T) {
 			f := newCodexInboxFixture(t)
 			inbox := filepath.Join(f.store, "agenticlens-binding-inbox")
-			manager := managerBinaryPath
+			manager := fixtureCaptureManager()
 			if setting == "manager" {
 				if err := os.Mkdir(inbox, 0700); err != nil {
 					t.Fatal(err)
@@ -180,8 +239,12 @@ func TestCodexInboxRejectsExecutableSettingsInsideWritableDirectory(t *testing.T
 			}
 			cmd := exec.Command(cliBinaryPath, "capture", "install-user", "--user-source", "codex", "--repo", f.project, "--entrypoint", manager, "--dry-run")
 			out, err := cmd.CombinedOutput()
-			if err == nil || !strings.Contains(strings.ToLower(string(out)), "inside the codex binding inbox") {
-				t.Fatalf("expected isolated-path diagnosis for %s: %s %v", setting, out, err)
+			if setting == "manager" {
+				if err == nil || !strings.Contains(strings.ToLower(string(out)), "inbox") {
+					t.Fatalf("manager must be outside the writable inbox: %s %v", out, err)
+				}
+			} else if err != nil {
+				t.Fatalf("project %s should not select the trusted callback engine: %s %v", setting, out, err)
 			}
 			for _, name := range []string{"hooks.json", "config.toml", "agenticlens-user-installation.json"} {
 				if _, err := os.Stat(filepath.Join(f.store, name)); !os.IsNotExist(err) {
@@ -206,22 +269,23 @@ func configureInboxExecutablePath(t *testing.T, f captureGenerationFixture, sett
 	}
 }
 
-func TestCodexHookRejectsEngineInRuntimeInboxForDifferentProject(t *testing.T) {
+func TestCodexHookPreservesRuntimeSourceCheckAcrossProjects(t *testing.T) {
 	installed := newCodexInboxFixture(t)
+	manager := fixtureCaptureManager()
+	home := os.Getenv("HOME")
 	codexInboxOperation(t, installed.project, "install-user")
 	project := newCodexInboxFixture(t)
+	t.Setenv("HOME", home)
 	t.Setenv("CODEX_HOME", installed.store)
 	configureInboxExecutablePath(t, project, "binary_dir", filepath.Join(installed.store, "agenticlens-binding-inbox"))
 	input, err := json.Marshal(capture.HookInput{SessionID: "new-root", Event: "SessionStart", WorkingDirectory: project.project})
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(managerBinaryPath, "codex-hook")
+	cmd := exec.Command(manager, "codex-hook")
 	cmd.Stdin = bytes.NewReader(input)
 	out, err := cmd.CombinedOutput()
-	// There is no executable at the configured location. Admission should
-	// diagnose the path itself before trying to inspect an engine.
-	if err == nil || !strings.Contains(strings.ToLower(string(out)), "inside the codex binding inbox") || strings.Contains(string(out), "no such file") {
-		t.Fatalf("expected runtime inbox exclusion before native lookup: %s %v", out, err)
+	if err == nil || !strings.Contains(string(out), "runtime source") || !strings.Contains(string(out), project.store) || !strings.Contains(string(out), installed.store) {
+		t.Fatalf("expected the protected handler to diagnose both source homes: %s %v", out, err)
 	}
 }

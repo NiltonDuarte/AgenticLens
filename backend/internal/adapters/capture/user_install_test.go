@@ -2,10 +2,12 @@ package capture
 
 import (
 	config "agenticlens/internal/adapters/config"
+	"agenticlens/internal/adapters/manager"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +15,7 @@ import (
 )
 
 func TestUserHooksInstallIdempotentAndOwnedRemoval(t *testing.T) {
-	root := t.TempDir()
+	root := protectedUserFixtureRoot(t)
 	home := filepath.Join(root, "codex")
 	t.Setenv("CODEX_HOME", home)
 	cache := filepath.Join(root, "native")
@@ -160,7 +162,7 @@ func TestUserHooksInstallIdempotentAndOwnedRemoval(t *testing.T) {
 }
 
 func TestUserHooksModifiedOwnedCommandPreserved(t *testing.T) {
-	root := t.TempDir()
+	root := protectedUserFixtureRoot(t)
 	home := filepath.Join(root, "codex")
 	binary, err := compatibleCaptureTestExecutable(t)
 	if err != nil {
@@ -251,7 +253,7 @@ func init() {
 		} else {
 			fmt.Println(HandlerProtocolVersion)
 		}
-	case "manager protocol", "dispatch protocol", "manager codex-binding-wake-protocol":
+	case "manager protocol", "dispatch protocol", "manager codex-binding-wake-protocol", "manager protected-codex-hook-protocol", "capture protected-worker-protocol":
 		if os.Getenv("AL79_CAPTURE_NATIVE_FIXTURE") == "bad-manager" {
 			fmt.Println("0")
 		} else {
@@ -270,13 +272,53 @@ func compatibleCaptureTestExecutable(t *testing.T) (string, error) {
 	t.Helper()
 	t.Setenv("AL79_CAPTURE_NATIVE_FIXTURE", "1")
 	t.Setenv("GORACE", strings.TrimSpace(os.Getenv("GORACE")+" atexit_sleep_ms=0"))
-	return os.Executable()
+	source, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	home := protectedUserFixtureRoot(t)
+	t.Setenv("HOME", home)
+	target := filepath.Join(home, ".local", "bin", "agentic-lens")
+	if err := installTestManager(source, target, mustReadUserInstall(t, source)); err != nil {
+		return "", err
+	}
+	return target, nil
+}
+
+func installUserFixtureCompanion(t *testing.T, source string) {
+	t.Helper()
+	args := []string{"install", "v9.8.7", "--install-root", filepath.Join(os.Getenv("HOME"), ".agenticlens"), "--local-bin", source, "--sha256", hash(mustReadUserInstall(t, source))}
+	if err := manager.Run(args, nil, io.Discard, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func protectedUserFixtureRoot(t *testing.T) string {
+	t.Helper()
+	root, err := os.MkdirTemp("/var/tmp", "agenticlens-user-capture-")
+	if err != nil {
+		t.Fatalf("create isolated operator fixture outside sandbox temp grant: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(root); err != nil {
+			t.Error(err)
+		}
+	})
+	path, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func installTestManager(source, target string, content []byte) error {
+	return manager.Run([]string{"self-update", "--version", "v9.8.7", "--local-bin", source, "--sha256", hash(content), "--dest", target}, nil, io.Discard, io.Discard)
 }
 
 func TestIncompatibleUserManagerDoesNotCreateOrChangeOwnedState(t *testing.T) {
 	for _, owned := range []bool{false, true} {
 		t.Run(fmt.Sprint(owned), func(t *testing.T) {
-			root := t.TempDir()
+			root := protectedUserFixtureRoot(t)
 			binary, err := compatibleCaptureTestExecutable(t)
 			if err != nil {
 				t.Fatal(err)
@@ -376,16 +418,13 @@ func TestRetainedAdmissionRejectsSourceChangedAfterValidation(t *testing.T) {
 }
 
 func TestUserHooksDoNotOwnOrReplaceManager(t *testing.T) {
-	root := t.TempDir()
+	root := protectedUserFixtureRoot(t)
 	binary, err := compatibleCaptureTestExecutable(t)
 	if err != nil {
 		t.Fatal(err)
 	}
-	manager := filepath.Join(root, "manager")
+	manager := binary
 	original := mustReadUserInstall(t, binary)
-	if err := os.WriteFile(manager, original, 0700); err != nil {
-		t.Fatal(err)
-	}
 	homeA, homeB := filepath.Join(root, "home-a"), filepath.Join(root, "home-b")
 	options := UserInstallOptions{Home: homeA, Entrypoint: manager}
 	if _, err := InstallUserCodex(context.Background(), options); err != nil {
@@ -394,9 +433,15 @@ func TestUserHooksDoNotOwnOrReplaceManager(t *testing.T) {
 	hooks := mustReadUserInstall(t, filepath.Join(homeA, "hooks.json"))
 	receipt := mustReadUserInstall(t, filepath.Join(homeA, "agenticlens-user-installation.json"))
 	upgraded := append(append([]byte{}, original...), []byte("completed manager update")...)
-	if err := os.WriteFile(manager, upgraded, 0700); err != nil {
+	candidate := filepath.Join(root, "operator-update")
+	if err := os.WriteFile(candidate, upgraded, 0700); err != nil {
 		t.Fatal(err)
 	}
+	if err := installTestManager(candidate, manager, upgraded); err != nil {
+		t.Fatal(err)
+	}
+	beforeReceipt := mustReadUserInstall(t, manager+".installation.json")
+	beforeChecksum := mustReadUserInstall(t, manager+".sha256")
 	options.Home = homeB
 	if _, err := InstallUserCodex(context.Background(), options); err != nil {
 		t.Fatal(err)
@@ -414,9 +459,10 @@ func TestUserHooksDoNotOwnOrReplaceManager(t *testing.T) {
 	if !bytes.Equal(upgraded, mustReadUserInstall(t, manager)) {
 		t.Fatal("hook uninstall removed or replaced manager")
 	}
-	for _, path := range []string{filepath.Join(root, "cache"), manager + ".sha256", manager + ".installation.json"} {
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			t.Fatalf("hook installer acquired manager ownership at %s: %v", path, err)
-		}
+	if !bytes.Equal(beforeReceipt, mustReadUserInstall(t, manager+".installation.json")) || !bytes.Equal(beforeChecksum, mustReadUserInstall(t, manager+".sha256")) {
+		t.Fatal("hook installer changed operator-owned manager receipts")
+	}
+	if _, err := os.Stat(filepath.Join(root, "cache")); !os.IsNotExist(err) {
+		t.Fatalf("hook installer created cache: %v", err)
 	}
 }

@@ -64,7 +64,7 @@ func init() {
 	os.Exit(0)
 }
 
-type captureGenerationFixture struct{ project, store, state, stateBase, output string }
+type captureGenerationFixture struct{ project, store, state, stateBase, output, publication string }
 
 func newCaptureGenerationFixture(t *testing.T) captureGenerationFixture {
 	t.Helper()
@@ -1272,7 +1272,11 @@ func writeCaptureFixtureLocal(t *testing.T, f captureGenerationFixture, body []b
 		text += fmt.Sprintf("  sources:\n    codex:\n      home: %q\n", f.store)
 	}
 	if !strings.Contains(text, "agenticlens:\n") {
-		text += fmt.Sprintf("agenticlens:\n  state_dir: %q\n", filepath.Join(f.project, ".publication-state"))
+		publication := f.publication
+		if publication == "" {
+			publication = filepath.Join(f.project, ".publication-state")
+		}
+		text += fmt.Sprintf("agenticlens:\n  state_dir: %q\n", publication)
 	}
 	return os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(text), 0600)
 }
