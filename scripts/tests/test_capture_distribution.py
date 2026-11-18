@@ -177,7 +177,7 @@ class CaptureDistributionTest(DistributionFixture):
         self.assertEqual(self.requests(), [])
 
     def test_trusted_callback_requires_protected_worker_protocol(self):
-        self.succeeds(self.install_local('--capture-source', 'codex'))
+        self.succeeds(self.install_local('--capture-source', 'codex', '--capture-store', self.env['CODEX_HOME']))
         self.write_config('v9.8.8')
         compatible_cli = build_probe(self.pin)
         self.install_protected_engine(compatible_cli)
