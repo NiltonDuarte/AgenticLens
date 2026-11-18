@@ -9,8 +9,8 @@
   "ticket_title": "Report unsupported live telemetry accurately",
   "ticket_type": "fix",
   "started_at": "2026-11-17T22:11:38.406Z",
-  "completed_at": "2026-11-17T23:29:14.648151+00:00",
-  "updated_at": "2026-11-17T23:29:14.648151+00:00",
+  "completed_at": "2026-11-18T01:25:40.011512+00:00",
+  "updated_at": "2026-11-18T01:25:40.011512+00:00",
   "code": {
     "lines_added": 1123,
     "lines_deleted": 221,
@@ -19,7 +19,7 @@
     "prod_lines_added": 407,
     "prod_lines_deleted": 159,
     "files_changed": 15,
-    "sdlc_iterations": 54
+    "sdlc_iterations": 63
   },
   "sessions": [
     {
@@ -33,6 +33,16 @@
           "name": "agentic-lens-dev",
           "caller_role": "user",
           "invoked_at": "2026-11-17T22:19:55.802Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-18T01:09:42.778Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-18T01:19:43.395Z"
         }
       ],
       "delegations": [
@@ -154,6 +164,18 @@
           "description": "sync_assertion",
           "invoked_at": "2026-11-17T22:59:18.326Z",
           "child_session_id": "01a1ebbc-72f1-7c31-b72a-3fad899a430b"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "queue_behavior",
+          "invoked_at": "2026-11-18T01:10:54.767Z",
+          "child_session_id": "01a1ec34-f048-7252-93c9-e739367523dc"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "queue_data",
+          "invoked_at": "2026-11-18T01:11:02.867Z",
+          "child_session_id": "01a1ec35-0fe9-7750-927c-00f2d3802330"
         }
       ],
       "id": "01a1eb90-cf14-7d32-b430-20ef41d015b9",
@@ -161,29 +183,30 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 983,
+          "provisional_seconds": 948,
           "role": "",
           "model": "gpt-6.2-astra",
           "started_at": "2026-11-17T22:11:39.769Z",
           "completed_at": null,
-          "active_duration_seconds": 4125,
-          "turns": 3,
-          "tokens": {"input": 546016, "output": 40674, "cache_read": 38123648, "reasoning": 5230, "peak_context": 208302},
+          "active_duration_seconds": 5116,
+          "turns": 4,
+          "tokens": {"input": 832162, "output": 54001, "cache_read": 50618496, "reasoning": 6287, "peak_context": 244696},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
-          "compactions": 0,
-          "user_iterations": 23
+          "compactions": 1,
+          "user_iterations": 28
         }
       ],
       "tools": [
-        {"name": "command", "calls": 139, "errors": 6},
-        {"name": "delegate_task", "calls": 15, "errors": 0},
-        {"name": "followup_task", "calls": 10, "errors": 0},
-        {"name": "list_agents", "calls": 2, "errors": 0},
-        {"name": "send_message", "calls": 18, "errors": 0},
-        {"name": "spawn_agent", "calls": 20, "errors": 0},
-        {"name": "wait", "calls": 10, "errors": 0},
-        {"name": "wait_agent", "calls": 34, "errors": 0}
+        {"name": "command", "calls": 180, "errors": 7},
+        {"name": "delegate_task", "calls": 17, "errors": 0},
+        {"name": "followup_task", "calls": 12, "errors": 0},
+        {"name": "interrupt_agent", "calls": 1, "errors": 0},
+        {"name": "list_agents", "calls": 4, "errors": 0},
+        {"name": "send_message", "calls": 20, "errors": 0},
+        {"name": "spawn_agent", "calls": 22, "errors": 0},
+        {"name": "wait", "calls": 16, "errors": 0},
+        {"name": "wait_agent", "calls": 36, "errors": 0}
       ],
       "anomalies": [
         {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 26, "threshold": "5"}},
@@ -234,10 +257,10 @@
           "role": "coder",
           "model": "gpt-6.2-astra",
           "started_at": "2026-11-17T22:20:13.182Z",
-          "completed_at": "2026-11-17T22:35:39.402Z",
-          "active_duration_seconds": 553,
-          "turns": 2,
-          "tokens": {"input": 214837, "output": 13170, "cache_read": 5268992, "reasoning": 4077, "peak_context": 123885},
+          "completed_at": "2026-11-18T01:10:29.820Z",
+          "active_duration_seconds": 576,
+          "turns": 3,
+          "tokens": {"input": 343092, "output": 13590, "cache_read": 5647872, "reasoning": 4077, "peak_context": 127851},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -245,9 +268,9 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 30, "errors": 4},
+        {"name": "command", "calls": 32, "errors": 4},
         {"name": "list_agents", "calls": 1, "errors": 0},
-        {"name": "send_message", "calls": 12, "errors": 0},
+        {"name": "send_message", "calls": 13, "errors": 0},
         {"name": "wait", "calls": 1, "errors": 0}
       ],
       "anomalies": []
@@ -292,10 +315,10 @@
           "role": "tester",
           "model": "gpt-6.2-astra",
           "started_at": "2026-11-17T22:20:26.172Z",
-          "completed_at": "2026-11-17T22:59:45.612Z",
-          "active_duration_seconds": 1041,
-          "turns": 5,
-          "tokens": {"input": 206648, "output": 25424, "cache_read": 14149376, "reasoning": 4094, "peak_context": 177996},
+          "completed_at": "2026-11-18T01:11:59.673Z",
+          "active_duration_seconds": 1124,
+          "turns": 6,
+          "tokens": {"input": 376609, "output": 26964, "cache_read": 15632768, "reasoning": 4126, "peak_context": 186953},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -303,8 +326,8 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 71, "errors": 8},
-        {"name": "send_message", "calls": 20, "errors": 0}
+        {"name": "command", "calls": 78, "errors": 8},
+        {"name": "send_message", "calls": 21, "errors": 0}
       ],
       "anomalies": []
     },
@@ -725,6 +748,114 @@
       "tools": [
         {"name": "command", "calls": 11, "errors": 0},
         {"name": "send_message", "calls": 1, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1ec34-f048-7252-93c9-e739367523dc",
+      "parent_id": "01a1eb90-cf14-7d32-b430-20ef41d015b9",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "started_at": "2026-11-18T01:10:54.833Z",
+          "completed_at": "2026-11-18T01:24:06.319Z",
+          "active_duration_seconds": 791,
+          "turns": 1,
+          "tokens": {"input": 81223, "output": 4358, "cache_read": 713856, "reasoning": 266, "peak_context": 79509},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 26, "errors": 0},
+        {"name": "send_message", "calls": 1, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1ec35-0fe9-7750-927c-00f2d3802330",
+      "parent_id": "01a1eb90-cf14-7d32-b430-20ef41d015b9",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "started_at": "2026-11-18T01:11:02.940Z",
+          "completed_at": "2026-11-18T01:12:57.946Z",
+          "active_duration_seconds": 115,
+          "turns": 1,
+          "tokens": {"input": 66438, "output": 2930, "cache_read": 366848, "reasoning": 327, "peak_context": 79950},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 15, "errors": 0},
+        {"name": "send_message", "calls": 1, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1ec35-56b3-7362-8971-7ee5af860895",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "",
+          "model": "gpt-6-luna",
+          "started_at": "2026-11-18T01:11:21.461Z",
+          "completed_at": "2026-11-18T01:15:51.403Z",
+          "active_duration_seconds": 270,
+          "turns": 1,
+          "tokens": {"input": 77266, "output": 2945, "cache_read": 1161984, "reasoning": 462, "peak_context": 55568},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 2
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 12, "errors": 1}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1ec35-35dc-7d20-bca5-3afc5b85610b",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "",
+          "model": "gpt-6-luna",
+          "started_at": "2026-11-18T01:11:13.103Z",
+          "completed_at": "2026-11-18T01:13:12.097Z",
+          "active_duration_seconds": 119,
+          "turns": 1,
+          "tokens": {"input": 55165, "output": 2791, "cache_read": 806400, "reasoning": 605, "peak_context": 51866},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 2
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 8, "errors": 1}
       ],
       "anomalies": []
     },

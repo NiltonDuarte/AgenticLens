@@ -8,8 +8,20 @@ Clean v2 databases continue to hydrate historical events. Competing mixed layout
 
 The live view displays tree and session read failures, keeps the last usable observation, and clears the corresponding diagnostic after a successful refresh. Verification exercises actual server startup and routes against synthetic SQLite stores, stream failure and recovery, and dashboard REST/SSE ordering.
 
-Integrated `make` passed at `f8953abb` with 231 frontend unit tests, 819 frontend integration tests, Go race tests and builds for four platforms. Standalone HTTP responses matched the embedded assets and the expected v2 diagnosis.
+The branch includes queue base `fc489ff9`. Integrated `make` passed at `29a7de6a` with 231 frontend unit tests, 819 frontend integration tests, Go race tests and builds for four platforms. The standalone Linux engine served the canonical embedded assets and returned the expected v2 diagnosis on all three live routes.
 
+
+## Queue integration verification
+
+Merge `29a7de6a309fff63791b80f59c506821fd0a866f` integrated `fc489ff921254d6421110dcda24b585ae3f7a940` into `f22bca4a`. The roadmap index matches the queue base with the completed FIX-18 entry removed. FIX-18, FIX-19, AL-73, AL-80 and AL-65 are in Done. AL-94 is Ready and AL-95 depends on it. AL-65 changed roadmap and OpenSpec documents only.
+
+The two shared Go files merged without a manual source edit. The server keeps the selected source available for historical requests after a failed live start. Historical Codex hydration rejects duplicate locations for a recorded owner, reports the ambiguity, and continues with other owners. Registered generation reports failed or pending owners while retaining accepted facts. The dashboard keeps its last usable observations through read failures and reconciles recovery in request order.
+
+The tester ran `go test -race -count=1` with focused selectors in the engine CLI and the Codex, live, backfill and HTTP adapters. All 51 leaf cases passed with zero skips. The focused Vitest live API and dashboard suites passed all 93 tests. Full `make` passed on the merge, including release and capture checks and four-platform builds. A separate check launched the resulting Linux amd64 engine, compared its served index, JavaScript and CSS byte-for-byte against the canonical build, and verified identical HTTP 503 v2 diagnoses for session listing, trace and SSE admission.
+
+A separate Go overlay combined the SQLite v2 history fixture with identical, divergent compressed, and warning-bearing Codex copies. All three variants passed under the race detector. Each verified the v2 live startup diagnosis, usable v2 and healthy Codex history, explicit exclusion of the ambiguous child, repeatable events, and unchanged ledger facts.
+
+Behavior and data reviewers on `gpt-6.2-sol/high` and `gpt-6-luna/medium` approved the combined paths without new findings. They traced both merge parents through the actual service and reused the unchanged dashboard, architecture and test evidence. Runtime checks used isolated source fixtures. The previous release evidence follows.
 
 ## Verification
 
@@ -29,19 +41,19 @@ The fixtures use controlled sources and browser responses. They establish the sp
 
 ## Telemetry scope
 
-The integrated engine selected the configured local Codex store. A temporary worktree-local policy supplied the private publication state directory. Capture stayed disabled. The root extraction includes native child sessions. Fifteen host-delegated reviewer runs have separate source roots; their user assignments match the parent's recorded dispatches exactly. They were extracted by exact ID before the parent refresh to preserve their native identities and ancestry. The snapshot was taken before this conversation closed. The ledger contains the parent, 19 native children and 15 independent reviewer roots. The source did not report costs.
+The integrated engine selected the configured local Codex store. A temporary worktree-local policy supplied the private publication state directory. Capture stayed disabled. The root extraction includes native child sessions. Seventeen host-delegated reviewer runs have separate source roots; their user assignments match the parent's recorded dispatches exactly. They were extracted by exact ID before the parent refresh to preserve their native identities and ancestry. The snapshot was taken before this conversation closed. The ledger contains the parent, 21 native children and 17 independent reviewer roots. The source did not report costs.
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 54
-- **Active Agent Duration:** 2h 41m (recorded duration including 983s provisional)
-- **Context Window Health:** HEALTHY — Root agent peak 208.3k tokens (46% of 450k healthy ceiling, 0 compactions) | Subagents peak 178.0k (Tester)
+- **Software Development Life Cycle Iterations:** 63
+- **Active Agent Duration:** 3h 21m (recorded duration including 948s provisional)
+- **Context Window Health:** ELEVATED — Root agent peak 244.7k tokens (54% of 450k healthy ceiling, 1 compactions) | Subagents peak 187.0k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.4 avg turns/run (peak: 5 turns) | Planner 1.0, Coder 2.5, Tester 5.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Subagent Turn Velocity & Thrashing:** 1.4 avg turns/run (peak: 6 turns) | Planner 1.0, Coder 3.0, Tester 6.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 1.8:1 (+716 test lines / +407 prod lines)
 - **Code Delivered:** +1,123 / -221 lines across 15 code files (excluding docs)
-- **Reasoning Effort:** 43,804 reasoning tokens (17.4% of generated output)
-- **Tool Health & Self-Correction:** 898 tool calls (66 self-corrections, 92.7% success rate)
+- **Reasoning Effort:** 46,553 reasoning tokens (16.4% of generated output)
+- **Tool Health & Self-Correction:** 1,032 tool calls (69 self-corrections, 93.3% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 6 execution anomalies detected (4 CRITICAL, 2 WARNING).
@@ -60,23 +72,23 @@ The integrated engine selected the configured local Codex store. A temporary wor
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 62,872 | 3,272 | 521,088 | 89.2% | 61.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 2 | 310,502 | 24,537 | 10,921,216 | 97.2% | 123.9k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **tester** | 1 | 206,648 | 25,424 | 14,149,376 | 98.6% | 178.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 16 | 1,150,389 | 87,233 | 43,268,352 | 97.4% | 208.3k | HEALTHY | Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations) |
+| **coder** | 2 | 438,757 | 24,957 | 11,300,096 | 96.3% | 127.9k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **tester** | 1 | 376,609 | 26,964 | 15,632,768 | 97.6% | 187.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 18 | 1,568,966 | 106,296 | 57,731,584 | 97.4% | 244.7k | ELEVATED | Unavailable (0 observed, 0 partial, 18 unavailable / 18 invocations) |
 | **reviewer-architecture** | 4 | 266,150 | 15,511 | 3,005,184 | 91.9% | 85.0k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **reviewer-behavior** | 4 | 262,225 | 16,783 | 3,157,376 | 92.3% | 84.0k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **reviewer-data** | 2 | 114,816 | 9,763 | 1,700,736 | 93.7% | 83.8k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **reviewer-behavior** | 5 | 343,448 | 21,141 | 3,871,232 | 91.9% | 84.0k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **reviewer-data** | 3 | 181,254 | 12,693 | 2,067,584 | 91.9% | 83.8k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **reviewer-tests** | 5 | 255,246 | 26,040 | 5,192,576 | 95.3% | 89.0k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **Total** | **35** | **2,628,848** | **208,563** | **81,915,904** | **96.9%** | **208.3k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 35 unavailable / 35 invocations)** |
+| **Total** | **39** | **3,493,302** | **236,874** | **99,322,112** | **96.6%** | **244.7k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 39 unavailable / 39 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 15 | 604,373 | 46,559 | 5,144,704 | 89.5% | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **gpt-6-luna** | 17 | 736,804 | 52,295 | 7,113,088 | 90.6% | Unavailable (0 observed, 0 partial, 17 unavailable / 17 invocations) |
 | **gpt-6.1-sol** | 7 | 446,831 | 33,745 | 6,706,816 | 93.8% | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
-| **gpt-6.2-astra** | 5 | 1,126,038 | 93,907 | 63,715,328 | 98.3% | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **gpt-6.2-sol** | 8 | 451,606 | 34,352 | 6,349,056 | 93.4% | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
-| **Total** | **35** | **2,628,848** | **208,563** | **81,915,904** | **96.9%** | **Unavailable (0 observed, 0 partial, 35 unavailable / 35 invocations)** |
+| **gpt-6.2-astra** | 5 | 1,710,400 | 109,194 | 78,072,448 | 97.9% | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **gpt-6.2-sol** | 10 | 599,267 | 41,640 | 7,429,760 | 92.5% | Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations) |
+| **Total** | **39** | **3,493,302** | **236,874** | **99,322,112** | **96.6%** | **Unavailable (0 observed, 0 partial, 39 unavailable / 39 invocations)** |
 
-Retained recorded history: 15 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
+Retained recorded history: 17 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
 <!-- agentic-lens:metrics:end -->
