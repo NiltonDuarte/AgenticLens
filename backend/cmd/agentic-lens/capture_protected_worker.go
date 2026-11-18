@@ -106,3 +106,34 @@ func admitProtectedCapture(project, home, state string) (result error) {
 	// rather than checkpoint age or publication success, proves prior release.
 	return adaptersconfig.AdmitProtectedCodexProject(project, home)
 }
+
+// Verify the protected executable and the exact configured registry scope before
+// an automatic publisher or recovery operation opens it for writing.
+func verifyProtectedWriter(project, home, selectedState string) error {
+	binary, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	if _, _, err := runningProtectedEngine(project, home, binary); err != nil {
+		return err
+	}
+	if err := checkProtectedCaptureState(project, home, selectedState); err != nil {
+		return err
+	}
+	policy, err := adaptersconfig.ResolveCapture(project, "")
+	if err != nil {
+		return err
+	}
+	configured, err := capture.PreviewStateLocation(policy.StateDir, project)
+	if err != nil {
+		return err
+	}
+	selected, err := capture.PreviewStateLocation(selectedState, project)
+	if err != nil {
+		return err
+	}
+	if configured != selected {
+		return errors.New("protected capture requires its configured worktree state; pending work retained")
+	}
+	return nil
+}

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 	"github.com/pelletier/go-toml/v2"
 )
@@ -467,5 +468,51 @@ func TestCodexInboxInstallPreservesConcurrentAtomicSave(t *testing.T) {
 	}
 	if got := mustReadUserInstall(t, settings); !bytes.Equal(got, userSave) {
 		t.Fatalf("installer overwrote user settings: %q", got)
+	}
+}
+
+func TestUncommittedUserRemovalKeepsProtectedWorktreeAdmission(t *testing.T) {
+	manager, err := compatibleCaptureTestExecutable(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	installUserFixtureCompanion(t, manager)
+	project := t.TempDir()
+	options := UserInstallOptions{Home: filepath.Join(os.Getenv("HOME"), ".codex"), Entrypoint: manager}
+	ctx := context.Background()
+	if _, err := InstallUserCodex(ctx, options); err != nil {
+		t.Fatal(err)
+	}
+	if err := config.AdmitProtectedCodexProject(project, options.Home); err != nil {
+		t.Fatal(err)
+	}
+	options.Remove = true
+	stop := errors.New("interrupted uninstall before commit")
+	_, err = installUserCodexWithCheckpoint(ctx, options, func(stage userInstallStage, _ int) error {
+		if stage == userInstallBeforeCommit {
+			return stop
+		}
+		return nil
+	})
+	if !errors.Is(err, stop) {
+		t.Fatalf("uninstall never reached precommit checkpoint: %v", err)
+	}
+	var receipt userInstallation
+	if err := json.Unmarshal(mustReadUserInstall(t, filepath.Join(options.Home, "agenticlens-user-installation.json")), &receipt); err != nil || receipt.BindingInbox || len(receipt.Groups) != 0 {
+		t.Fatalf("expected the staged inactive receipt: %+v %v", receipt, err)
+	}
+	if _, err := os.Stat(filepath.Join(options.Home, userInstallPendingFile)); err != nil {
+		t.Fatal(err)
+	}
+	ordinaryRan := false
+	ordinary := func() error { ordinaryRan = true; return nil }
+	if err := config.WithOrdinaryCapture(project, ordinary); err == nil || ordinaryRan {
+		t.Fatalf("uncommitted uninstall released the protected route: %v", err)
+	}
+	if _, err := InstallUserCodex(ctx, options); err != nil {
+		t.Fatalf("recover and finish uninstall: %v", err)
+	}
+	if err := config.WithOrdinaryCapture(project, ordinary); err != nil || !ordinaryRan {
+		t.Fatalf("committed uninstall retained the worktree route: %v", err)
 	}
 }

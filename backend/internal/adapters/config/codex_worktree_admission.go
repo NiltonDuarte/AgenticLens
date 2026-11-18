@@ -66,18 +66,14 @@ func admissionForPath(root, project string) (string, error) {
 	if err := verifyProtectedNames(project, r.Home, path); err != nil {
 		return "", err
 	}
-	// A completed user uninstall writes a private inactive receipt. A
-	// missing/malformed receipt is not evidence that an operator released
-	// this boundary; stale worktrees stay protected until explicit repair.
+	// The receipt may go inactive before its uninstall journal commits.
+	// Only the final removal of this marker releases ordinary execution.
 	receipt, err := readCodexCaptureReceipt(r.Home)
 	if err != nil {
 		return "", fmt.Errorf("admission for %s requires the original Codex installation receipt in %s; restore or explicitly repair it: %w", project, r.Home, err)
 	}
 	if !receipt.Inbox {
-		if receipt.Groups != nil && len(receipt.Groups) == 0 {
-			return "", nil
-		}
-		return "", errors.New("protected worktree receipt no longer establishes its installation; explicitly repair Codex setup")
+		return "", errors.New("protected worktree still has an admission with an inactive receipt; finish Codex uninstall or repair setup")
 	}
 	return r.Home, nil
 }
@@ -135,20 +131,12 @@ func ProtectedCodexProjectHome(project string) (string, error) {
 
 // AdmitProtectedCodexProject runs in the verified engine while the manager
 // has verified the engine and the engine holds the namespace worker lease.
-func AdmitProtectedCodexProject(project, home string) (returnErr error) {
-	return withCaptureRouteLease(true, func() error { return recordCodexWorktree(project, home) })
-}
-
-func recordCodexWorktree(project, home string) (returnErr error) {
+func AdmitProtectedCodexProject(project, home string) error {
 	project, err := filesystem.PhysicalPath(project)
 	if err != nil {
 		return err
 	}
 	home, err = filesystem.PhysicalPath(home)
-	if err != nil {
-		return err
-	}
-	root, err := operatorCacheRoot()
 	if err != nil {
 		return err
 	}
@@ -158,6 +146,34 @@ func recordCodexWorktree(project, home string) (returnErr error) {
 	}
 	if worktree == "" {
 		worktree = project
+	}
+	// Uninstall holds this same installation lease exclusively through its
+	// committed receipt and removal of the corresponding private markers.
+	lock, err := os.OpenFile(filepath.Join(home, "install.lock"), os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return err
+	}
+	return withRouteLock(lock, false, func() error {
+		receipt, err := readCodexCaptureReceipt(home)
+		if err != nil {
+			return err
+		}
+		if !receipt.Inbox {
+			return errors.New("protected worktree requires an active Codex installation")
+		}
+		if err := PrepareCodexRouteLocks(project, home); err != nil {
+			return err
+		}
+		return withCaptureRouteLease(worktree, true, func() error {
+			return recordCodexWorktree(project, worktree, home)
+		})
+	})
+}
+
+func recordCodexWorktree(project, worktree, home string) (returnErr error) {
+	root, err := operatorCacheRoot()
+	if err != nil {
+		return err
 	}
 	path := admissionPath(root, worktree)
 	if err := verifyProtectedNames(project, home, path); err != nil {
@@ -218,45 +234,12 @@ func recordCodexWorktree(project, home string) (returnErr error) {
 	return errors.Join(directory.Sync(), directory.Close())
 }
 
-// Never create a repository enrollment or cache just to serve an independent
-// OpenCode project. A protected engine necessarily has an existing cache.
-// The directory lease spans ordinary engine selection and execution, including
-// nested worker starts, and excludes first admission while either is in flight.
-func withCaptureRouteLease(exclusive bool, run func() error) (returnErr error) {
-	root, err := operatorCacheRoot()
-	if err != nil {
-		return err
-	}
-	dir, err := os.OpenFile(root, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_DIRECTORY|syscall.O_NONBLOCK, 0)
-	if !exclusive && errors.Is(err, os.ErrNotExist) {
-		return run()
-	}
-	if err != nil {
-		return err
-	}
-	defer func() { returnErr = errors.Join(returnErr, dir.Close()) }()
-	flags := syscall.LOCK_SH | syscall.LOCK_NB
-	if exclusive {
-		flags = syscall.LOCK_EX | syscall.LOCK_NB
-	}
-	for {
-		err = syscall.Flock(int(dir.Fd()), flags)
-		if !errors.Is(err, syscall.EINTR) {
-			break
-		}
-	}
-	if err != nil {
-		return fmt.Errorf("capture routing in use; retry after the current admission or callback finishes: %w", err)
-	}
-	return run()
-}
-
 // ErrProtectedCodexProject asks an ordinary caller to reselect the protected engine.
 var ErrProtectedCodexProject = errors.New("capture worktree requires protected Codex execution")
 
 // WithOrdinaryCapture holds the read-side route guard across selection and execution.
 func WithOrdinaryCapture(project string, run func() error) error {
-	return withCaptureRouteLease(false, func() error {
+	return withCaptureRouteLease(project, false, func() error {
 		home, err := ProtectedCodexProjectHome(project)
 		if err != nil {
 			return err
@@ -320,48 +303,49 @@ func ReleaseProtectedCodexHome(home string) error {
 	} else if err != nil {
 		return err
 	}
-	return withCaptureRouteLease(true, func() error {
-		receipt, err := readCodexCaptureReceipt(home)
+	receipt, err := readCodexCaptureReceipt(home)
+	if err != nil {
+		return err
+	}
+	if receipt.Inbox || receipt.Groups == nil || len(receipt.Groups) != 0 {
+		return errors.New("Codex user uninstall is not committed; protected admissions preserved")
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if !e.Type().IsRegular() || len(e.Name()) != 69 || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		path := filepath.Join(dir, e.Name())
+		data, err := readBootstrap(path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
 		if err != nil {
 			return err
 		}
-		if receipt.Inbox || receipt.Groups == nil || len(receipt.Groups) != 0 {
-			return errors.New("Codex user uninstall is not committed; protected admissions preserved")
-		}
-		entries, err := os.ReadDir(dir)
-		if err != nil {
+		var r codexWorktreeAdmission
+		if err := json.Unmarshal(data, &r); err != nil {
 			return err
 		}
-		for _, e := range entries {
-			if !e.Type().IsRegular() || len(e.Name()) != 69 || !strings.HasSuffix(e.Name(), ".json") {
-				continue
-			}
-			path := filepath.Join(dir, e.Name())
-			data, err := readBootstrap(path)
-			if err != nil {
-				return err
-			}
-			var r codexWorktreeAdmission
-			if err := json.Unmarshal(data, &r); err != nil {
-				return err
-			}
-			if r.Home != home {
-				continue
-			}
-			if r.Protocol != 1 || !filepath.IsAbs(r.Worktree) || path != admissionPath(root, r.Worktree) {
-				return fmt.Errorf("invalid protected admission %s; preserved", path)
-			}
-			if err := verifyProtectedNames(r.Worktree, home, path); err != nil {
-				return err
-			}
-			if err := os.Remove(path); err != nil {
-				return err
-			}
+		if r.Home != home {
+			continue
 		}
-		f, err := os.Open(dir)
-		if err != nil {
+		if r.Protocol != 1 || !filepath.IsAbs(r.Worktree) || path != admissionPath(root, r.Worktree) {
+			return fmt.Errorf("invalid protected admission %s; preserved", path)
+		}
+		if err := verifyProtectedNames(r.Worktree, home, path); err != nil {
 			return err
 		}
-		return errors.Join(f.Sync(), f.Close())
-	})
+		if err := os.Remove(path); err != nil {
+			return err
+		}
+	}
+	f, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	return errors.Join(f.Sync(), f.Close())
 }

@@ -9,10 +9,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"agenticlens/internal/adapters/config"
 )
 
 const userInstallJournalVersion = 2
-const userInstallPendingFile = "agenticlens-user-install.pending.json"
+const userInstallPendingFile = config.CodexUserInstallPending
 
 var errNoPendingUserJournal = fmt.Errorf("no matching pending user journal: %w", os.ErrNotExist)
 

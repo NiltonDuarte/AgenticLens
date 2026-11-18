@@ -38,11 +38,7 @@ type userInstallation struct {
 // InstallUserCodex owns only unchanged groups in the effective user hooks file.
 // The ownership receipt is machine-wide; adoption needs no per-project receipt.
 func InstallUserCodex(ctx context.Context, options UserInstallOptions) (InstallResult, error) {
-	result, err := installUserCodexWithCheckpoint(ctx, options, nil)
-	if err == nil && options.Remove && !options.DryRun {
-		err = adaptersconfig.ReleaseProtectedCodexHome(options.Home)
-	}
-	return result, err
+	return installUserCodexWithCheckpoint(ctx, options, nil)
 }
 
 func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOptions, checkpoint func(userInstallStage, int) error) (result InstallResult, returnErr error) {
@@ -366,8 +362,16 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 			return result, errors.New("user installation changed during planning; retry")
 		}
 	}
+	if source == "codex" && !options.Remove {
+		if err := adaptersconfig.PrepareCodexRouteLocks(options.Repository, home); err != nil {
+			return result, err
+		}
+	}
 	if err := applyUserInstallationWithCheckpoint(source, home, coordinator, options.LegacyRepository, changes, checkpoint); err != nil {
 		return result, err
+	}
+	if source == "codex" && options.Remove {
+		return result, adaptersconfig.ReleaseProtectedCodexHome(home)
 	}
 	return result, nil
 }

@@ -253,7 +253,9 @@ func init() {
 		} else {
 			fmt.Println(HandlerProtocolVersion)
 		}
-	case "manager protocol", "dispatch protocol", "manager codex-binding-wake-protocol", "manager protected-codex-hook-protocol", "capture protected-worker-protocol":
+	case "capture protected-worker-protocol":
+		fmt.Println("2")
+	case "manager protocol", "dispatch protocol", "manager codex-binding-wake-protocol", "manager protected-codex-hook-protocol":
 		if os.Getenv("AL79_CAPTURE_NATIVE_FIXTURE") == "bad-manager" {
 			fmt.Println("0")
 		} else {

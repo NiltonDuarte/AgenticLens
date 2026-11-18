@@ -327,6 +327,8 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 						cancel()
 						return retire()
 					}
+					p := fence.publication
+					args = append([]string{"capture", "publish-protected", p.Project, p.Home, p.State}, args[1:]...)
 					publisher, err = adaptersconfig.ResolveProtectedCodexEngine(project, home)
 					if err != nil {
 						cancel()

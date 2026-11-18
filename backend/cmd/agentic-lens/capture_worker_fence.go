@@ -17,6 +17,7 @@ type captureWorkerFence struct {
 	artifact      os.FileInfo
 	sources       domain.TelemetrySourcePaths
 	protectedHome string
+	publication   capture.ProtectedPublication
 }
 
 func newCaptureWorkerFence(project, state, binary string, cfg domain.ProjectConfig, protectedHome string) (captureWorkerFence, error) {
@@ -25,7 +26,11 @@ func newCaptureWorkerFence(project, state, binary string, cfg domain.ProjectConf
 		if err != nil {
 			return captureWorkerFence{}, err
 		}
-		return captureWorkerFence{binary: selected, artifact: installed, sources: cfg.Telemetry.Sources, protectedHome: protectedHome}, nil
+		publication, err := capture.AdmitProtectedPublication(project, protectedHome)
+		if err != nil {
+			return captureWorkerFence{}, err
+		}
+		return captureWorkerFence{binary: selected, artifact: installed, sources: cfg.Telemetry.Sources, protectedHome: protectedHome, publication: publication}, nil
 	}
 	var fence captureWorkerFence
 	err := adaptersconfig.WithOrdinaryCapture(project, func() error {

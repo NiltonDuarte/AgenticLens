@@ -149,8 +149,16 @@ type codexCaptureReceipt struct {
 	Groups   []json.RawMessage `json:"groups"`
 }
 
+const CodexUserInstallPending = "agenticlens-user-install.pending.json"
+
 func readCodexCaptureReceipt(home string) (codexCaptureReceipt, error) {
 	var r codexCaptureReceipt
+	if _, err := os.Lstat(filepath.Join(home, CodexUserInstallPending)); !errors.Is(err, os.ErrNotExist) {
+		if err != nil {
+			return r, err
+		}
+		return r, errors.New("Codex user installation transaction is pending; finish installer recovery")
+	}
 	data, err := readBootstrap(filepath.Join(home, "agenticlens-user-installation.json"))
 	if err != nil {
 		return r, err
@@ -163,6 +171,43 @@ func readCodexCaptureReceipt(home string) (codexCaptureReceipt, error) {
 	}
 	return r, nil
 }
+
+// ProtectedReconcileHome selects the existing admission or the operator's
+// active Codex integration for an enabled project using that same source.
+func ProtectedReconcileHome(project string) (string, error) {
+	home, err := ProtectedCodexProjectHome(project)
+	if err != nil || home != "" {
+		return home, err
+	}
+	policy, err := ResolveCapture(project, "")
+	if err != nil || !policy.Enabled {
+		return "", err
+	}
+	cfg, err := Load(project)
+	if err != nil || cfg.Telemetry.Sources.CodexHome == "" {
+		return "", err
+	}
+	configured, err := filesystem.PhysicalPath(cfg.Telemetry.Sources.CodexHome)
+	if err != nil {
+		return "", err
+	}
+	actual, err := filesystem.PhysicalPath(RuntimeCodexHome())
+	if err != nil || actual != configured {
+		return "", err
+	}
+	receipt, err := readCodexCaptureReceipt(actual)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil || !receipt.Inbox {
+		return "", err
+	}
+	return actual, nil
+}
+
+// ProtectedWorkerProtocol requires admitted worktree routing and guarded private
+// state throughout the generation child, including lock and journal acquisition.
+const ProtectedWorkerProtocol = "2"
 
 const protectedEngineLimit = 256 << 20
 
@@ -322,8 +367,8 @@ func ResolveProtectedCodexEngine(project, home string, installManager ...string)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	body, err := exec.CommandContext(ctx, path, "capture", "protected-worker-protocol").Output()
-	if err != nil || strings.TrimSpace(string(body)) != "1" {
-		return "", fmt.Errorf("protected engine %s lacks the required worker protocol; provision a compatible release", path)
+	if err != nil || strings.TrimSpace(string(body)) != ProtectedWorkerProtocol {
+		return "", fmt.Errorf("protected engine %s requires protected worker protocol %s for guarded publication; provision a compatible release", path, ProtectedWorkerProtocol)
 	}
 	return path, nil
 }

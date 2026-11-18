@@ -64,7 +64,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	home := ""
 	if len(args) >= 3 && args[len(args)-2] == "--protected-codex-home" {
 		switch args[0] {
-		case "user-hook", "opencode-hook", "worker", "admit-protected-worktree":
+		case "user-hook", "opencode-hook", "worker", "reconcile", "admit-protected-worktree":
 		default:
 			return errors.New("protected Codex selection applies only to native hooks and their worker")
 		}
@@ -88,6 +88,14 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|submit-binding|reconcile|relocate-state|disable|uninstall|protocol")
 	}
 	command := args[0]
+	if command == "publish-protected" {
+		if len(args) < 5 {
+			return errors.New("protected generation requires project, Codex home, admitted state and generation arguments")
+		}
+		protection := capture.ProtectedPublication{Project: args[1], Home: args[2], State: args[3]}
+		runGeneration(args[4:], &protection)
+		return nil
+	}
 	if command == "submit-binding" {
 		return captureSubmitBinding(args[1:], output)
 	}
@@ -104,7 +112,7 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 		return inspectCaptureStateCommand(args[1:], output)
 	}
 	if command == "protected-worker-protocol" {
-		_, err := fmt.Fprintln(output, 1)
+		_, err := fmt.Fprintln(output, adaptersconfig.ProtectedWorkerProtocol)
 		return err
 	}
 	if command == "protocol" {
@@ -320,20 +328,20 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 		}
 	}
 	admittedHome := protectedHome
-	if admittedHome != "" && (command == "worker" || *source == "opencode") {
+	if admittedHome != "" && (command == "worker" || command == "reconcile" || *source == "opencode") {
 		recorded, err := adaptersconfig.ProtectedCodexProjectHome(project)
 		if err != nil {
 			return err
 		}
 		if recorded == "" {
-			return errors.New("protected worker or OpenCode callback requires an admitted project")
+			return errors.New("protected capture requires an admitted project")
 		}
 		same, err := capture.SameStore(recorded, admittedHome)
 		if err != nil || !same {
 			return errors.New("protected Codex home differs from project admission")
 		}
 	}
-	if command == "worker" || *userLevel {
+	if command == "worker" || *userLevel || (command == "reconcile" && protectedHome != "") {
 		protectedHome, err = captureWorkerHome(project, protectedHome)
 		if err != nil {
 			return err
@@ -342,6 +350,11 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 			if err := checkProtectedCaptureState(project, protectedHome, policy.StateDir); err != nil {
 				return err
 			}
+		}
+	}
+	if command == "reconcile" && protectedHome != "" {
+		if err := verifyProtectedWriter(project, protectedHome, policy.StateDir); err != nil {
+			return err
 		}
 	}
 	absState, err := capture.ProjectState(policy.StateDir, project)

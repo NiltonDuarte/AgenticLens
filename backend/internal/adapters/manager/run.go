@@ -121,6 +121,9 @@ parsed:
 		}
 		return execute(native, args, input, output, diagnostic, "")
 	}
+	if !resolve && len(args) >= 2 && args[0] == "capture" && args[1] == "reconcile" {
+		return captureReconcile(entry, args, input, output, diagnostic)
+	}
 	native, identity, err := selectEngine(entry, codexHomes...)
 	if err != nil {
 		return err
@@ -288,6 +291,10 @@ func execute(path string, args []string, input io.Reader, output, diagnostic io.
 			return err
 		}
 	}
+	return executeChild(path, args, input, output, diagnostic, directory)
+}
+
+func executeChild(path string, args []string, input io.Reader, output, diagnostic io.Writer, directory string) error {
 	command := exec.Command(path, args...)
 	command.Stdin, command.Stdout, command.Stderr, command.Dir = input, output, diagnostic, directory
 	return command.Run()
@@ -379,18 +386,55 @@ func nativeHook(harness string, engineArgs []string, input io.Reader, output, di
 			return errors.New("protected admission changed during callback; retry after checking operator setup")
 		}
 	}
-	actual, err := os.Executable()
+	native, err := protectedCaptureEngine(project, home, harness == "Codex", diagnostic)
 	if err != nil {
 		return err
 	}
-	if _, err := config.ProtectedCodexManager(project, home, actual); err != nil {
+	return execute(native, append(engineArgs, "--protected-codex-home", home), bytes.NewReader(body), output, diagnostic, project)
+}
+
+func captureReconcile(entry config.Entrypoint, args []string, input io.Reader, output, diagnostic io.Writer) error {
+	home, err := config.ProtectedReconcileHome(entry.Project)
+	if err != nil {
 		return err
+	}
+	if home == "" {
+		err := config.WithOrdinaryCapture(entry.Project, func() error {
+			native, _, err := selectEngine(entry)
+			if err != nil {
+				return err
+			}
+			// Keep the manager's shared routing lease until the command exits.
+			return executeChild(native, args, input, output, diagnostic, "")
+		})
+		if !errors.Is(err, config.ErrProtectedCodexProject) {
+			return err
+		}
+		home, err = config.ProtectedCodexProjectHome(entry.Project)
+		if err != nil || home == "" {
+			return errors.Join(errors.New("protected admission changed during reconcile; retry"), err)
+		}
+	}
+	native, err := protectedCaptureEngine(entry.Project, home, true, diagnostic)
+	if err != nil {
+		return err
+	}
+	return execute(native, append(args, "--protected-codex-home", home), input, output, diagnostic, "")
+}
+
+func protectedCaptureEngine(project, home string, admit bool, diagnostic io.Writer) (string, error) {
+	actual, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	if _, err := config.ProtectedCodexManager(project, home, actual); err != nil {
+		return "", err
 	}
 	native, err := config.ResolveProtectedCodexEngine(project, home)
 	if err != nil {
-		return err
+		return "", err
 	}
-	if harness == "Codex" {
+	if admit {
 		err := config.PrepareProtectedCodexProject(project, home, func() error {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
@@ -402,11 +446,10 @@ func nativeHook(harness string, engineArgs []string, input io.Reader, output, di
 			return nil
 		})
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
-	return execute(native, append(engineArgs, "--protected-codex-home", home), bytes.NewReader(body), output, diagnostic, project)
-
+	return native, nil
 }
 
 func listVersions(project string, args []string, output io.Writer) error {

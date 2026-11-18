@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"agenticlens/internal/adapters/capture"
+	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -299,6 +300,10 @@ func TestOpenCodeWorktreeKeepsCustomEngineAcrossCodexAdmission(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	if _, err := db.Exec(`INSERT INTO message (id,session_id,time_created,time_updated,data) VALUES ('independent-message','independent-session',1,2,'{"role":"assistant","modelID":"fixture","time":{"created":1,"completed":2},"tokens":{"input":47,"output":3}}')`); err != nil {
+		t.Fatal(err)
+	}
+	ledger := seedCaptureTicketHome(t, other, "TEST-200")
 	configure := func(f captureGenerationFixture, withCodex bool) {
 		t.Helper()
 		sources := fmt.Sprintf("    opencode:\n      database_path: %q\n", database)
@@ -347,13 +352,14 @@ func TestOpenCodeWorktreeKeepsCustomEngineAcrossCodexAdmission(t *testing.T) {
 	openCode := func(project, id string) ([]byte, error) {
 		return hook(project, capture.HookInput{Event: "session.idle", SessionID: id}, "opencode-hook", "receive")
 	}
-	verifyOpenCode := func(project, id string) {
+	verifyOpenCode := func(project, id string) string {
 		t.Helper()
 		out, err := openCode(project, id)
 		var row domain.CaptureRegistration
 		if err != nil || json.Unmarshal(out, &row) != nil || row.Request == "" || row.Identity.SessionID != id {
 			t.Fatalf("native OpenCode callback for %s: %s %v", id, out, err)
 		}
+		return row.Request
 	}
 	verifyOpenCode(other.project, "independent-session")
 	rollout := mixed.write(t, 27)
@@ -383,7 +389,14 @@ func TestOpenCodeWorktreeKeepsCustomEngineAcrossCodexAdmission(t *testing.T) {
 	if busyErr == nil || !bytes.Contains(blocked, []byte("ordinary capture worker")) || readErr != nil || after != before {
 		t.Fatalf("first admission changed pending generation or failed for the wrong reason: %s %v %+v %v", blocked, busyErr, after, readErr)
 	}
-	out, err := hook(mixed.project, codexStart, "codex-hook")
+	// Keep the independent project in an ordinary routing operation throughout
+	// the mixed project's first admission.
+	var out []byte
+	err = config.WithOrdinaryCapture(other.project, func() error {
+		var err error
+		out, err = hook(mixed.project, codexStart, "codex-hook")
+		return err
+	})
 	var reply capture.HookOutput
 	if err != nil || json.Unmarshal(out, &reply) != nil || reply.Context == nil || !strings.Contains(reply.Context.Context, fixtureCaptureEngine()) {
 		t.Fatalf("Codex callback failed to admit mixed worktree: %s %v", out, err)
@@ -407,5 +420,11 @@ func TestOpenCodeWorktreeKeepsCustomEngineAcrossCodexAdmission(t *testing.T) {
 			t.Fatalf("removing the Codex source downgraded admitted worktree at %s: %s %v", project, out, err)
 		}
 	}
-	verifyOpenCode(other.project, "independent-session")
+	const id = "independent-session"
+	request := verifyOpenCode(other.project, id)
+	event := capture.HookInput{Event: "session.idle", SessionID: id}
+	if out, err := hook(other.project, event, "opencode-hook", "bind", "--ticket-id", "TEST-200", "--ticket-title", "Independent OpenCode publication", "--ticket-type", "fix", "--request", request); err != nil {
+		t.Fatalf("bind independent session during protected engine maintenance: %s %v", out, err)
+	}
+	waitCorrectionLedger(t, ledger, id, 47)
 }

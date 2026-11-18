@@ -701,3 +701,98 @@ func TestCodexInboxPassSharesBytesAcrossOwnerProofs(t *testing.T) {
 		}
 	}
 }
+
+func TestProtectedPublisherRequiresTheWorkersValidatedState(t *testing.T) {
+	f := newCodexInboxFixture(t)
+	codexInboxOperation(t, f.project, "install-user")
+	ledger := seedCaptureTicketHome(t, f, "TEST-100")
+	prepareCaptureOwner(t, f, "root", "TEST-100", 59)
+	cmd := exec.Command(fixtureCaptureEngine(), "capture", "admit-protected-worktree", "--repo", f.project, "--protected-codex-home", f.store)
+	cmd.Dir = f.project
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("admit disposable project: %s %v", out, err)
+	}
+	registry, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+	ctx := context.Background()
+	if err := registry.RequestPublication(ctx); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := registry.PublicationRequest(ctx)
+	if err != nil || pending.Generation <= pending.Acknowledged {
+		t.Fatalf("missing fixture publication request: %+v %v", pending, err)
+	}
+	before := readCaptureFile(t, ledger)
+	args := []string{"capture", "publish-protected", f.project, f.store, f.publication, "--capture-auto", "--capture-dir", registry.CoordinationDirectory(), "--ticket-id", "TEST-100", "--ticket-title", "Explicit TEST-100", "--ticket-type", "feat", "--json-output", ledger}
+	publish := func() ([]byte, error) {
+		cmd := exec.Command(fixtureCaptureEngine(), args...)
+		cmd.Dir = f.project
+		return cmd.CombinedOutput()
+	}
+	for _, changed := range []string{filepath.Join(os.Getenv("HOME"), "other-private-state"), filepath.Join(f.project, "local-publication-state")} {
+		updated := f
+		updated.publication = changed
+		if err := writeCaptureFixtureLocal(t, updated, []byte("telemetry:\n  capture:\n")); err != nil {
+			t.Fatal(err)
+		}
+		out, err := publish()
+		if err == nil || !bytes.Contains(out, []byte("state")) {
+			t.Fatalf("publisher accepted changed operational state %s: %s %v", changed, out, err)
+		}
+		if _, err := os.Stat(changed); !os.IsNotExist(err) {
+			t.Fatalf("unexpected writes in changed state directory %s: %v", changed, err)
+		}
+		if current, err := registry.PublicationRequest(ctx); err != nil || current != pending || !bytes.Equal(before, readCaptureFile(t, ledger)) {
+			t.Fatalf("rejected publication changed durable work: %+v %v", current, err)
+		}
+	}
+	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n")); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := publish(); err != nil {
+		t.Fatalf("publish with the validated state: %s %v", out, err)
+	}
+	waitCorrectionLedger(t, ledger, "root", 59)
+}
+
+func TestManagerReconcileAdmitsPreviouslyQueuedCodexBinding(t *testing.T) {
+	f := newCodexInboxFixture(t)
+	codexInboxOperation(t, f.project, "install-user")
+	ledger := seedCaptureTicketHome(t, f, "TEST-100")
+	store, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	completion := captureWorkerCompletion(t, store.CoordinationDirectory())
+	t.Cleanup(func() {
+		if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: false\n")); err != nil {
+			t.Error(err)
+		}
+		captureCleanupWorkers(t, completion)
+	})
+	// An earlier hook installation issued this request before worktree-scoped
+	// admission existed. Leave both durable records for the upgraded manager.
+	input := capture.HookInput{SessionID: "root", Event: "SessionStart", TranscriptPath: f.write(t, 83), WorkingDirectory: f.project}
+	reply, err := capture.ReceiveCodexUser(context.Background(), store, input, f.store, fixtureCaptureEngine(), f.state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := captureCLI(t, f.project, "", "submit-binding", "--repo", f.project, "--store", f.store, "--session-id", "root", "--ticket-id", "TEST-100", "--ticket-title", "Previous enrollment", "--ticket-type", "fix", "--request", inboxCredentialFromHook(t, reply))
+	if err != nil {
+		t.Fatalf("queue existing binding: %s %v", out, err)
+	}
+	cmd := exec.Command(fixtureCaptureManager(), "--al-project", f.project, "capture", "reconcile", "--repo", f.project, "--ticket-id", "TEST-100")
+	cmd.Dir = f.project
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("reconcile existing enrollment: %s %v", out, err)
+	}
+	waitCorrectionLedger(t, ledger, "root", 83)
+	status, err := capture.WorkerStatus(store.CoordinationDirectory())
+	if err != nil || status.Executable != fixtureCaptureEngine() {
+		t.Fatalf("upgrade used the wrong worker for pending generation: %+v %v", status, err)
+	}
+}

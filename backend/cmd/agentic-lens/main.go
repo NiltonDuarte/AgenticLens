@@ -31,6 +31,10 @@ import (
 )
 
 func runGenerate(args []string) {
+	runGeneration(args, nil)
+}
+
+func runGeneration(args []string, protection *capture.ProtectedPublication) {
 	snapshotCutoff := time.Now().UTC()
 	genFlags := flag.NewFlagSet("generate", flag.ExitOnError)
 
@@ -52,7 +56,7 @@ func runGenerate(args []string) {
 	codexHomeFlag := genFlags.String("codex-home", "", "Explicit Codex source store; otherwise selected local telemetry.sources.codex.home")
 	anomaliesFlag := genFlags.Bool("anomalies", false, "Display anomalies and health flags; generation.metrics.anomalies=false reports disabled and never re-enables analysis")
 	captureDirFlag := genFlags.String("capture-dir", "", "Automatic capture registry override; ignored by manual generation")
-	autoFlag := genFlags.Bool("capture-auto", false, "Native lifecycle publication (registered owners only)")
+	autoFlag := genFlags.Bool("capture-auto", false, "Native lifecycle publication of registered owners. Protected workers retain the admitted private publication state.")
 	maxSessionsFlag := genFlags.Int("max-sessions", 0, "Explicit positive capture session budget; otherwise selected local policy")
 	maxBytesFlag := genFlags.Int64("max-source-bytes", 0, "Explicit positive capture source-byte budget; otherwise selected local policy")
 
@@ -78,6 +82,16 @@ func runGenerate(args []string) {
 	if projectErr != nil {
 		fmt.Fprintln(os.Stderr, projectErr)
 		os.Exit(1)
+	}
+	if protection != nil {
+		if !*autoFlag || *captureDirFlag == "" {
+			fmt.Fprintln(os.Stderr, "Protected generation requires automatic capture and the admitted worker state")
+			os.Exit(1)
+		}
+		if err := protection.Validate(project); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 	loadConfig := adaptersconfig.LoadManualGeneration
 	if *autoFlag {
@@ -214,6 +228,12 @@ func runGenerate(args []string) {
 				}
 			}
 		}()
+		if protection != nil {
+			if err := verifyProtectedWriter(project, protection.Home, *captureDirFlag); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+		}
 		selectedPolicy, policyErr := admission.ResolveCapture(*captureDirFlag)
 		policy = selectedPolicy
 		if policyErr != nil {
@@ -289,7 +309,11 @@ func runGenerate(args []string) {
 	// This prevents an earlier source view from publishing after a later generation.
 	if *jsonOutputFlag != "" {
 		lockCtx, lockCancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		publicationLock, lockErr := capture.AcquirePublication(lockCtx, *jsonOutputFlag, project)
+		acquire := capture.AcquirePublication
+		if protection != nil {
+			acquire = protection.Acquire
+		}
+		publicationLock, lockErr := acquire(lockCtx, *jsonOutputFlag, project)
 		lockCancel()
 		if lockErr != nil {
 			fmt.Fprintln(os.Stderr, "Error acquiring ledger publication ownership:", lockErr)
