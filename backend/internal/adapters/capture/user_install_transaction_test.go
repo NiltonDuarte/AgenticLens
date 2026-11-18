@@ -140,7 +140,7 @@ func stopUserTransactionAt(t *testing.T, f userTransactionFixture, target string
 			if index < 0 || index >= len(changePaths) {
 				t.Fatalf("applied checkpoint lacks actual journal change: %d", index)
 			}
-			desired := map[string]string{"legacy-hooks": f.legacyHooks, "home-hooks": filepath.Join(f.options.Home, "hooks.json")}[target]
+			desired := map[string]string{"legacy-hooks": f.legacyHooks, "home-hooks": filepath.Join(f.options.Home, "hooks.json"), "codex-config": filepath.Join(f.options.Home, "config.toml")}[target]
 			if changePaths[index] == desired {
 				return interrupted
 			}
@@ -182,9 +182,14 @@ func assertCompletedUserMigration(t *testing.T, f userTransactionFixture, databa
 }
 
 func TestUserInstallationDurablePrefixesRecoverExplicitMigration(t *testing.T) {
-	for _, target := range []string{"journaled", "legacy-hooks", "home-hooks", "before-commit"} {
+	for _, target := range []string{"journaled", "legacy-hooks", "home-hooks", "codex-config", "before-commit"} {
 		t.Run(target, func(t *testing.T) {
 			f := newUserTransactionFixture(t)
+			configPath := filepath.Join(f.options.Home, "config.toml")
+			if err := os.WriteFile(configPath, []byte("[sandbox_workspace_write]\nwritable_roots = ['/private/user-choice'] # personal\n"), 0640); err != nil {
+				t.Fatal(err)
+			}
+			f.paths = append(f.paths, configPath)
 			before := snapshotUserArtifacts(t, f.paths)
 			database := mustReadUserInstall(t, f.pendingDB)
 			stopUserTransactionAt(t, f, target)

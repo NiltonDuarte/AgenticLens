@@ -100,6 +100,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		return capture.LaunchWorker(next, project, state)
 	}
 	started := time.Now()
+	var inboxCursor int
 	var lastPass time.Time
 	var nextAttempt time.Time
 	var lastFailure string
@@ -141,6 +142,21 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		rowsForActivity, activityErr := s.List(context.Background())
 		if activityErr != nil {
 			return activityErr
+		}
+		inboxCtx, inboxCancel := context.WithTimeout(context.Background(), min(time.Until(started.Add(time.Duration(policy.MaxLifetimeMS)*time.Millisecond)), time.Duration(policy.PassTimeoutMS)*time.Millisecond))
+		accepted, inboxErr := s.ConsumeCodexBindings(inboxCtx, cfg.Telemetry.Sources.CodexHome, rowsForActivity, &inboxCursor, policy.MaxSessions, policy.MaxSourceBytes)
+		inboxCancel()
+		if inboxErr != nil {
+			if err := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "binding", Outcome: "failed", Detail: inboxErr.Error()}); err != nil {
+				return err
+			}
+		}
+		if accepted > 0 {
+			lastActivity = time.Now()
+			req, err = s.PublicationRequest(context.Background())
+			if err != nil {
+				return err
+			}
 		}
 		active, activityDetail := captureWorkerActive(project, rowsForActivity, policy.MaxSourceBytes)
 		if activityDetail != "" {
@@ -355,6 +371,13 @@ func automaticCaptureEnabled(project, state string) (bool, error) {
 	if err != nil || !policy.Enabled {
 		return false, err
 	}
+	cfg, err := adaptersconfig.Load(project)
+	if err != nil {
+		return false, err
+	}
+	if err := capture.CheckInstalledInboxIsolation(project, cfg.Telemetry.Sources.CodexHome); err != nil {
+		return false, err
+	}
 	location, err := capture.PreviewStateLocation(state, project)
 	if err != nil {
 		return false, err
@@ -368,10 +391,6 @@ func automaticCaptureEnabled(project, state string) (bool, error) {
 	}
 	// A migrated user integration remains active independently of its preserved
 	// inactive legacy receipt; fresh native adoption needs no project receipt.
-	cfg, err := adaptersconfig.Load(project)
-	if err != nil {
-		return false, err
-	}
 	if cfg.Telemetry.Sources.CodexHome != "" {
 		installed, err := capture.UserCodexInstalled(cfg.Telemetry.Sources.CodexHome)
 		if err != nil || installed {

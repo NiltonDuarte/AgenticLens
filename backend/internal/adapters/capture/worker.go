@@ -13,10 +13,12 @@ import (
 	"time"
 )
 
+const requestPublicationSQL = `CREATE TABLE IF NOT EXISTS publication_request (worktree_id INTEGER NOT NULL,singleton INTEGER NOT NULL CHECK(singleton=1), generation INTEGER NOT NULL, acknowledged INTEGER NOT NULL, requested_at INTEGER NOT NULL,PRIMARY KEY(worktree_id,singleton)); INSERT INTO publication_request VALUES(?,1,1,0,?) ON CONFLICT(worktree_id,singleton) DO UPDATE SET generation=generation+1,requested_at=excluded.requested_at`
+
 // RequestPublication commits a generation before native worker launch. A worker
 // acknowledges only the generation captured before its source/publication pass.
 func (s *Store) RequestPublication(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS publication_request (worktree_id INTEGER NOT NULL,singleton INTEGER NOT NULL CHECK(singleton=1), generation INTEGER NOT NULL, acknowledged INTEGER NOT NULL, requested_at INTEGER NOT NULL,PRIMARY KEY(worktree_id,singleton)); INSERT INTO publication_request VALUES(?,1,1,0,?) ON CONFLICT(worktree_id,singleton) DO UPDATE SET generation=generation+1,requested_at=excluded.requested_at`, s.worktreeID, time.Now().UnixMilli())
+	_, err := s.db.ExecContext(ctx, requestPublicationSQL, s.worktreeID, time.Now().UnixMilli())
 	return err
 }
 

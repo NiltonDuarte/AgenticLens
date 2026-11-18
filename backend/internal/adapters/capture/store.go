@@ -535,6 +535,11 @@ func (s *Store) list(ctx context.Context, limit int) ([]domain.CaptureRegistrati
 	return result, rows.Err()
 }
 func (s *Store) Change(ctx context.Context, id domain.CaptureIdentity, change func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
+	return s.change(ctx, id, false, change)
+}
+
+// schedule atomically hands an accepted binding to the publication worker.
+func (s *Store) change(ctx context.Context, id domain.CaptureIdentity, schedule bool, change func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
 	if err := id.Validate(); err != nil {
 		return domain.CaptureRegistration{}, err
 	}
@@ -632,6 +637,11 @@ func (s *Store) Change(ctx context.Context, id domain.CaptureIdentity, change fu
 	if err != nil {
 		return r, err
 	}
+	if schedule {
+		if _, err := conn.ExecContext(ctx, requestPublicationSQL, s.worktreeID, time.Now().UnixMilli()); err != nil {
+			return r, err
+		}
+	}
 	if _, err = conn.ExecContext(ctx, `COMMIT`); err != nil {
 		return r, err
 	}
@@ -698,32 +708,36 @@ func (s *Store) Bind(ctx context.Context, id domain.CaptureIdentity, ticket, req
 		if request == "" || request != r.Request {
 			return r, errors.New("binding requires the exact request token supplied by this session's hook or capture status")
 		}
-		bound, err := domain.CaptureBinding(r.TicketID, ticket, "")
-		if err != nil {
-			return r, err
-		}
-		if bound == "" {
-			return r, errors.New("binding requires explicit ticket ID")
-		}
-		if s.project != "" && r.Identity.Source == domain.SourceCodex && r.TranscriptPath == "" {
-			path, err := discoverExactCaptureRollout(s.configuration, r.Identity.Store, r.Identity.SessionID)
-			if err != nil {
-				return r, fmt.Errorf("binding source identity unavailable; minimal registration retained: %w", err)
-			}
-			r.TranscriptPath = path
-		}
-		if err := s.validateOwner(ctx, r); err != nil {
-			return r, fmt.Errorf("binding source/project verification failed; minimal registration retained: %w", err)
-		}
-		r.ProjectDirectory = s.project
-		r.ProjectProof = domain.CaptureProjectVerified
-		r.TicketID = bound
-		r.Binding = "explicit_agent_response"
-		r.BindingInstallationID = r.InstallationID
-		r.BindingAcceptedAt = time.Now().UTC().Format(time.RFC3339Nano)
-		r.State = domain.CapturePending
-		return r, nil
+		return s.bindVerified(ctx, r, ticket)
 	})
+}
+
+func (s *Store) bindVerified(ctx context.Context, r domain.CaptureRegistration, ticket string) (domain.CaptureRegistration, error) {
+	bound, err := domain.CaptureBinding(r.TicketID, ticket, "")
+	if err != nil {
+		return r, err
+	}
+	if bound == "" {
+		return r, errors.New("binding requires explicit ticket ID")
+	}
+	if s.project != "" && r.Identity.Source == domain.SourceCodex && r.TranscriptPath == "" {
+		path, err := discoverExactCaptureRollout(s.configuration, r.Identity.Store, r.Identity.SessionID)
+		if err != nil {
+			return r, fmt.Errorf("binding source identity unavailable; minimal registration retained: %w", err)
+		}
+		r.TranscriptPath = path
+	}
+	if err := s.validateOwner(ctx, r); err != nil {
+		return r, fmt.Errorf("binding source/project verification failed; minimal registration retained: %w", err)
+	}
+	r.ProjectDirectory = s.project
+	r.ProjectProof = domain.CaptureProjectVerified
+	r.TicketID = bound
+	r.Binding = "explicit_agent_response"
+	r.BindingInstallationID = r.InstallationID
+	r.BindingAcceptedAt = time.Now().UTC().Format(time.RFC3339Nano)
+	r.State = domain.CapturePending
+	return r, nil
 }
 
 func constructorBusyMillis(ctx context.Context, maximum int64) int64 {

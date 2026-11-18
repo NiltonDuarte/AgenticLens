@@ -28,6 +28,8 @@ type userInstallChange struct {
 	Remove     bool
 	Existed    bool
 	Executable bool
+	Mkdir      bool        `json:",omitempty"`
+	Mode       os.FileMode `json:",omitempty"`
 }
 
 type userInstallJournal struct {
@@ -260,6 +262,8 @@ func validateUserJournalScope(journal userInstallJournal, coordinator string) er
 	resources := map[string]bool{journal.OwnerHome: true}
 	switch journal.source() {
 	case "codex":
+		allowed[filepath.Join(journal.OwnerHome, "config.toml")] = true
+		allowed[filepath.Join(journal.OwnerHome, codexInboxName)] = true
 		allowed[filepath.Join(journal.OwnerHome, "hooks.json")] = true
 		allowed[filepath.Join(journal.OwnerHome, "agenticlens-user-installation.json")] = true
 	case "opencode":
@@ -320,6 +324,10 @@ func validateUserJournalScope(journal userInstallJournal, coordinator string) er
 			return err
 		}
 		target := filepath.Join(parent, filepath.Base(change.Path))
+		inbox := journal.source() == "codex" && target == filepath.Join(journal.OwnerHome, codexInboxName)
+		if change.Mkdir != inbox || (inbox && (change.Remove || change.Existed || len(change.Content) > 0 || len(change.Before) > 0)) || change.Mode&^0777 != 0 {
+			return errors.New("invalid user installation target operation; preserved")
+		}
 		if !allowed[target] || seen[target] {
 			return fmt.Errorf("pending user change target %s is outside unique verified ownership; preserved", change.Path)
 		}
@@ -374,6 +382,29 @@ func recoverUserInstallation(directory string) error {
 func rollbackUserJournal(journal userInstallJournal) error {
 	for i := len(journal.Changes) - 1; i >= 0; i-- {
 		change := journal.Changes[i]
+		if change.Mkdir {
+			info, err := os.Lstat(change.Path)
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				return errors.New("created inbox replaced; preserved")
+			}
+			// Never remove responses or operator files. An empty transaction-created inbox is reversible.
+			entries, err := os.ReadDir(change.Path)
+			if err != nil {
+				return err
+			}
+			if len(entries) == 0 {
+				if err := os.Remove(change.Path); err != nil {
+					return err
+				}
+			}
+			continue
+		}
 		current, err := os.ReadFile(change.Path)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
@@ -388,7 +419,7 @@ func rollbackUserJournal(journal userInstallJournal) error {
 		} else if err != nil || !bytes.Equal(current, change.Content) {
 			return fmt.Errorf("transaction target edited; preserved: %s", change.Path)
 		}
-		if err := apply(fileChange{path: change.Path, content: change.Before, remove: !change.Existed}); err != nil {
+		if err := apply(fileChange{path: change.Path, content: change.Before, remove: !change.Existed, mode: change.Mode}); err != nil {
 			return err
 		}
 		if change.Existed && change.Executable {
@@ -420,7 +451,7 @@ func applyUserInstallationWithCheckpoint(source, home, coordinator, legacyReposi
 		journal.Homes = append(journal.Homes, resources...)
 	}
 	for _, change := range changes {
-		journal.Changes = append(journal.Changes, userInstallChange{Path: change.path, Content: change.content, Before: change.before, Remove: change.remove, Existed: change.existed})
+		journal.Changes = append(journal.Changes, userInstallChange{Path: change.path, Content: change.content, Before: change.before, Remove: change.remove, Existed: change.existed, Mode: change.mode, Mkdir: change.mkdir})
 	}
 	if err := validateUserJournalScope(journal, coordinator); err != nil {
 		return err
@@ -468,6 +499,12 @@ func applyUserInstallationWithCheckpoint(source, home, coordinator, legacyReposi
 		}
 	}
 	for index, change := range changes {
+		if filepath.Base(change.path) == "config.toml" {
+			data, mode, exists, err := readCodexConfigFile(change.path)
+			if err != nil || exists != change.existed || mode != change.mode || !bytes.Equal(data, change.before) {
+				return errors.Join(errors.New("Codex config.toml changed during installation; preserved"), err, recoverUserInstallation(home))
+			}
+		}
 		if applyErr := apply(change); applyErr != nil {
 			return errors.Join(applyErr, recoverUserInstallation(home))
 		}

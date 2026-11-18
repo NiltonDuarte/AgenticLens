@@ -59,9 +59,12 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 }
 func captureCommandAction(args []string, input io.Reader, output io.Writer) (returnErr error) {
 	if len(args) == 0 {
-		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|reconcile|relocate-state|disable|uninstall|protocol")
+		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|submit-binding|reconcile|relocate-state|disable|uninstall|protocol")
 	}
 	command := args[0]
+	if command == "submit-binding" {
+		return captureSubmitBinding(args[1:], output)
+	}
 	if command == "opencode-hook" {
 		return nativeOpenCodeHook(args[1:], input, output)
 	}
@@ -354,6 +357,15 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 
 	if err := ctx.Err(); err != nil {
 		return err
+	}
+	if command == "receive" || command == "worker" {
+		cfg, err := adaptersconfig.Load(project)
+		if err != nil {
+			return err
+		}
+		if err := capture.CheckInstalledInboxIsolation(project, cfg.Telemetry.Sources.CodexHome); err != nil {
+			return err
+		}
 	}
 	s, err := capture.OpenProjectContext(ctx, absState, project)
 	if err != nil {
