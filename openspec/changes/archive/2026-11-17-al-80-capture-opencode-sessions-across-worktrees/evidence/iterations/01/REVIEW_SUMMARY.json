@@ -60,6 +60,48 @@
         }
       ],
       "disposition": "Refuted for the supported 1.19.5 interface. All eleven observed callbacks reached the original worktree instance after the real session resumed from a disabled sibling."
+    },
+    {
+      "finding_id": "SETUP-01",
+      "severity": 8,
+      "issue": "An older pinned engine accepted explicit OpenCode installation and removal while operating on Codex hooks.",
+      "reporters": [
+        {
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "persona": "reviewer-behavior",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. The manager and installer pass an explicit user-source selector that the older engine rejects before capture mutation."
+    },
+    {
+      "finding_id": "SETUP-02",
+      "severity": 7,
+      "issue": "The installer admitted a manager that could install the OpenCode plugin but could not route its callbacks.",
+      "reporters": [
+        {
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "persona": "reviewer-behavior",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. Bootstrap and direct plugin installation check the manager’s OpenCode callback capability before activation."
+    },
+    {
+      "finding_id": "DOC-01",
+      "severity": 2,
+      "issue": "The setup introduction described global OpenCode integration as pending although the setup process already included it.",
+      "reporters": [
+        {
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "persona": "reviewer-behavior",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. The introduction and command examples describe the supported setup path."
     }
   ]
 }
