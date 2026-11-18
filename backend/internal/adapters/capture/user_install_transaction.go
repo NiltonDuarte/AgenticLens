@@ -36,6 +36,7 @@ type userInstallJournal struct {
 	OwnerHome        string                `json:"owner_home"`
 	Coordinator      string                `json:"coordinator"`
 	LegacyRepository string                `json:"legacy_repository,omitempty"`
+	Source           string                `json:"source,omitempty"`
 	Homes            []string              `json:"homes,omitempty"`
 	Changes          []userInstallChange   `json:"changes"`
 }
@@ -186,7 +187,7 @@ func pendingUserHomes(directory string) ([]string, error) {
 func currentUserJournalHomes(journal userInstallJournal) ([]string, error) {
 	homes := userJournalHomes(journal)
 	if journal.LegacyRepository != "" {
-		current, err := legacyUserHomes(journal.LegacyRepository)
+		current, err := legacyHomesFor(journal.source(), journal.LegacyRepository)
 		if err != nil {
 			return nil, err
 		}
@@ -202,7 +203,7 @@ func userJournalHomes(journal userInstallJournal) []string {
 	}
 	for _, change := range journal.Changes {
 		switch filepath.Base(change.Path) {
-		case "hooks.json", "agenticlens-user-installation.json", "agenticlens-installation.json", "install-codex.json":
+		case "hooks.json", "agenticlens-user-installation.json", openCodeReceiptName, "agenticlens-installation.json", "install-codex.json", "install-opencode.json":
 			homes = append(homes, filepath.Dir(change.Path))
 		}
 	}
@@ -257,15 +258,22 @@ func validateUserRecovery(directory string) error {
 func validateUserJournalScope(journal userInstallJournal, coordinator string) error {
 	allowed := map[string]bool{}
 	resources := map[string]bool{journal.OwnerHome: true}
-	for _, name := range []string{"hooks.json", "agenticlens-user-installation.json"} {
-		allowed[filepath.Join(journal.OwnerHome, name)] = true
+	switch journal.source() {
+	case "codex":
+		allowed[filepath.Join(journal.OwnerHome, "hooks.json")] = true
+		allowed[filepath.Join(journal.OwnerHome, "agenticlens-user-installation.json")] = true
+	case "opencode":
+		allowed[openCodePluginPath(journal.OwnerHome)] = true
+		allowed[filepath.Join(journal.OwnerHome, openCodeReceiptName)] = true
+	default:
+		return errors.New("unknown user installation journal source; preserved")
 	}
 	if journal.LegacyRepository == "" {
 		if coordinator != journal.OwnerHome {
 			return errors.New("pending migration lacks legacy ownership; preserved")
 		}
 	} else {
-		legacyResources, err := legacyUserHomes(journal.LegacyRepository)
+		legacyResources, err := legacyHomesFor(journal.source(), journal.LegacyRepository)
 		if err != nil {
 			return fmt.Errorf("pending legacy migration ownership unavailable; preserved: %w", err)
 		}
@@ -280,16 +288,16 @@ func validateUserJournalScope(journal userInstallJournal, coordinator string) er
 		if err != nil {
 			return err
 		}
-		state, err := ReadManifest(stateHome, "codex")
+		state, err := ReadManifest(stateHome, journal.source())
 		if err != nil {
 			return fmt.Errorf("pending legacy state ownership unavailable; preserved: %w", err)
 		}
-		if state.Protocol != ManifestProtocolVersion || state.Source != "codex" || state.Repository != journal.LegacyRepository || state.ConfigPath != filepath.Join(journal.LegacyRepository, ".codex", "hooks.json") {
+		if state.Protocol != ManifestProtocolVersion || state.Source != journal.source() || state.Repository != journal.LegacyRepository || state.ConfigPath != legacyConfigPath(journal.LegacyRepository, journal.source()) {
 			return errors.New("pending legacy state ownership differs; preserved")
 		}
-		allowed[filepath.Join(legacyHome, "hooks.json")] = true
+		allowed[state.ConfigPath] = true
 		allowed[filepath.Join(legacyHome, "agenticlens-installation.json")] = true
-		allowed[manifestPath(stateHome, "codex")] = true
+		allowed[manifestPath(stateHome, journal.source())] = true
 		resources[legacyHome] = true
 		resources[stateHome] = true
 	}
@@ -392,7 +400,7 @@ func rollbackUserJournal(journal userInstallJournal) error {
 	return nil
 }
 
-func applyUserInstallationWithCheckpoint(home, coordinator, legacyRepository string, changes []fileChange, checkpoint func(userInstallStage, int) error) error {
+func applyUserInstallationWithCheckpoint(source, home, coordinator, legacyRepository string, changes []fileChange, checkpoint func(userInstallStage, int) error) error {
 	if legacyRepository != "" {
 		var err error
 		legacyRepository, err = absolute(legacyRepository)
@@ -401,8 +409,11 @@ func applyUserInstallationWithCheckpoint(home, coordinator, legacyRepository str
 		}
 	}
 	journal := userInstallJournal{Version: userInstallJournalVersion, Kind: userInstallJournalKind, OwnerHome: home, Coordinator: coordinator, LegacyRepository: legacyRepository, Homes: []string{home}}
+	if source != "codex" {
+		journal.Source = source
+	}
 	if legacyRepository != "" {
-		resources, err := legacyUserHomes(legacyRepository)
+		resources, err := legacyHomesFor(source, legacyRepository)
 		if err != nil {
 			return err
 		}
@@ -485,4 +496,12 @@ func applyUserInstallationWithCheckpoint(home, coordinator, legacyRepository str
 		return removeUserReference(reference)
 	}
 	return nil
+}
+
+// Existing version-two journals predate OpenCode user installation.
+func (journal userInstallJournal) source() string {
+	if journal.Source == "" {
+		return "codex"
+	}
+	return journal.Source
 }

@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"agenticlens/internal/adapters/config"
@@ -24,6 +25,10 @@ const Protocol = 1
 func Run(args []string, input io.Reader, output, diagnostic io.Writer) error {
 	if len(args) == 2 && args[0] == "engine" && args[1] == "protocol" {
 		return errors.New("this executable is the AgenticLens manager, not an engine")
+	}
+	if len(args) == 2 && args[0] == "manager" && args[1] == "opencode-hook-protocol" {
+		_, err := fmt.Fprintln(output, "1")
+		return err
 	}
 	if len(args) == 2 && args[0] == "manager" && args[1] == "protocol" {
 		_, err := fmt.Fprintln(output, Protocol)
@@ -69,14 +74,20 @@ parsed:
 		case "versions":
 			return listVersions(project, args[1:], output)
 		case "codex-hook":
-			return codexHook(input, output, diagnostic)
+			return nativeHook("Codex", []string{"capture", "user-hook"}, input, output, diagnostic)
+		case "opencode-hook":
+			if len(args) < 2 {
+				return errors.New("opencode-hook requires receive, request or bind")
+			}
+			return nativeHook("OpenCode", append([]string{"capture", "opencode-hook"}, args[1:]...), input, output, diagnostic)
 		}
 	}
 	entry, err := resolveProject(project, standalone(args) && !resolve && !cache)
 	if err != nil {
 		return err
 	}
-	if err := validateCaptureRepository(args, entry.Project); err != nil {
+	args, err = prepareCaptureArgs(args, entry.Project)
+	if err != nil {
 		return err
 	}
 	if cache {
@@ -100,11 +111,11 @@ parsed:
 
 // Capture flags use Go flag arity. Consume values before interpreting later
 // tokens so a literal "--repo" title cannot change project selection.
-func validateCaptureRepository(args []string, selected string) error {
+func prepareCaptureArgs(args []string, selected string) ([]string, error) {
 	if len(args) < 2 || args[0] != "capture" {
-		return nil
+		return args, nil
 	}
-	repository := ""
+	repository, source := "", ""
 	stateDirectory, projectName := "", ""
 	for index := 2; index < len(args); index++ {
 		argument := args[index]
@@ -112,15 +123,17 @@ func validateCaptureRepository(args []string, selected string) error {
 			break
 		}
 		name, value, inline := strings.Cut(strings.TrimLeft(argument, "-"), "=")
-		if name == "repo" || name == "state-dir" || name == "project-name" {
+		if name == "repo" || name == "state-dir" || name == "project-name" || name == "source" {
 			if !inline {
 				index++
 				if index >= len(args) {
-					return fmt.Errorf("capture --%s requires a value", name)
+					return nil, fmt.Errorf("capture --%s requires a value", name)
 				}
 				value = args[index]
 			}
 			switch name {
+			case "source":
+				source = value
 			case "repo":
 				repository = value
 			case "state-dir":
@@ -139,30 +152,35 @@ func validateCaptureRepository(args []string, selected string) error {
 			index++
 		}
 	}
+	// Earlier engines accepted --source opencode on user installation but
+	// operated on Codex. Send an option they reject during flag parsing.
+	if source == "opencode" && (args[1] == "install-user" || args[1] == "uninstall-user") {
+		args = slices.Insert(slices.Clone(args), 2, "--user-source", source)
+	}
 	if repository == "" {
-		return nil
+		return args, nil
 	}
 	// Retained-state inspection validates the explicit registry and stored
 	// project identity in the engine, even when its checkout no longer exists.
 	if args[1] == "inspect-state" && stateDirectory != "" && projectName != "" {
-		return nil
+		return args, nil
 	}
 	root, err := config.ProjectRoot(repository)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	wanted, err := os.Stat(root)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	actual, err := os.Stat(selected)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !os.SameFile(wanted, actual) {
-		return errors.New("capture --repo differs from selected project; supply matching --al-project DIR before capture")
+		return nil, errors.New("capture --repo differs from selected project; supply matching --al-project DIR before capture")
 	}
-	return nil
+	return args, nil
 }
 
 func defaultRoot() (string, error) {
@@ -234,13 +252,13 @@ func execute(path string, args []string, input io.Reader, output, diagnostic io.
 	return command.Run()
 }
 
-func codexHook(input io.Reader, output, diagnostic io.Writer) error {
+func nativeHook(harness string, engineArgs []string, input io.Reader, output, diagnostic io.Writer) error {
 	body, err := io.ReadAll(io.LimitReader(input, 65537))
 	if err != nil {
 		return err
 	}
 	if len(body) > 65536 {
-		return errors.New("Codex hook input exceeds 64 KiB")
+		return fmt.Errorf("%s hook input exceeds 64 KiB", harness)
 	}
 	var context struct {
 		WorkingDirectory string `json:"cwd"`
@@ -248,10 +266,10 @@ func codexHook(input io.Reader, output, diagnostic io.Writer) error {
 		Event            string `json:"hook_event_name"`
 	}
 	if err := json.Unmarshal(body, &context); err != nil {
-		return fmt.Errorf("Codex hook context: %w", err)
+		return fmt.Errorf("%s hook context: %w", harness, err)
 	}
 	if !filepath.IsAbs(context.WorkingDirectory) {
-		return errors.New("native Codex callback requires absolute session cwd")
+		return fmt.Errorf("native %s callback requires absolute session cwd", harness)
 	}
 	if context.SessionID == "" || context.Event == "" {
 		return errors.New("hook requires session_id and hook_event_name")
@@ -273,7 +291,10 @@ func codexHook(input io.Reader, output, diagnostic io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(configuration.Telemetry.Sources.CodexHome) == "" {
+	if harness == "OpenCode" && strings.TrimSpace(configuration.Telemetry.Sources.OpenCodeDatabasePath) == "" {
+		return errors.New("selected local configuration requires telemetry.sources.opencode.database_path")
+	}
+	if harness == "Codex" && strings.TrimSpace(configuration.Telemetry.Sources.CodexHome) == "" {
 		return errors.New("selected local configuration requires telemetry.sources.codex.home")
 	}
 	entry, err := config.ResolveEntrypoint(project)
@@ -288,7 +309,7 @@ func codexHook(input io.Reader, output, diagnostic io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return execute(native, []string{"capture", "user-hook"}, bytes.NewReader(body), output, diagnostic, project)
+	return execute(native, engineArgs, bytes.NewReader(body), output, diagnostic, project)
 }
 
 func listVersions(project string, args []string, output io.Writer) error {

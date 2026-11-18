@@ -16,10 +16,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-65](to-do/AL-65%20recommend%20safe%20source%20backed%20backfill%20defaults.md)
 
-- **AL-80**: Capture OpenCode sessions across worktrees
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-80](to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
-
 - **AL-71**: Keep dashboard requests and live data reliable
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-71](to-do/AL-71%20keep%20dashboard%20requests%20and%20live%20data%20reliable.md)
