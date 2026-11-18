@@ -373,20 +373,17 @@ func TestCaptureSamePinOtherProjectInstallPreservesAcknowledgedActiveWorker(t *t
 	checksum := fmt.Sprintf("%x", sha256.Sum256(readCaptureFile(t, cliBinaryPath)))
 	managerChecksum := fmt.Sprintf("%x", sha256.Sum256(readCaptureFile(t, managerBinaryPath)))
 	installer := filepath.Join("..", "..", "..", ".agents", "skills", "agentic-lens-setup", "scripts", "download.sh")
-	install := func(project string, captureSource bool) {
+	install := func(project string) {
 		t.Helper()
 		ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
 		defer cancel()
 		args := []string{installer, "--project", project, "--local-manager-bin", managerBinaryPath, "--manager-sha256", managerChecksum, "--local-bin", cliBinaryPath, "--sha256", checksum, "--dest", wrappers, "--force"}
-		if captureSource {
-			args = append(args, "--capture-source", "codex", "--capture-store", f.store, "--capture-state-dir", f.state)
-		}
 		command := exec.CommandContext(ctx, "bash", args...)
 		if out, err := command.CombinedOutput(); err != nil {
 			t.Fatalf("production explicit installer: %v %s", err, out)
 		}
 	}
-	install(f.project, true)
+	install(f.project)
 	entry, err := adaptersconfig.ResolveEntrypoint(f.project)
 	if err != nil {
 		t.Fatal(err)
@@ -478,7 +475,7 @@ func TestCaptureSamePinOtherProjectInstallPreservesAcknowledgedActiveWorker(t *t
 	if err := os.WriteFile(filepath.Join(second, ".agenticlens-config.yaml"), shared, 0600); err != nil {
 		t.Fatal(err)
 	}
-	install(second, false)
+	install(second)
 	after, err := os.Stat(native)
 	if err != nil || !os.SameFile(before, after) || !before.ModTime().Equal(after.ModTime()) {
 		t.Fatalf("identical same-pin install changed active native identity: %v", err)

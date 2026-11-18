@@ -184,15 +184,17 @@ func TestNativeStatusShowsObservedStagesWithoutProjectReceipt(t *testing.T) {
 }
 
 func TestNativeSubagentStartUsesProvenChildTranscriptWithoutRelabelingParent(t *testing.T) {
-	f := newCaptureGenerationFixture(t)
+	f := newCodexInboxFixture(t)
 	rootPath := f.write(t, 17)
 	f.bind(t, rootPath)
-	local := "telemetry:\n  capture:\n  sources:\n    codex:\n      home: '" + filepath.ToSlash(f.store) + "'\n"
-	if err := writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
-		t.Fatal(err)
+	codexInboxOperation(t, f.project, "install-user")
+	// Admit the protected project before reserving the worker lease used to
+	// isolate source ownership checks from automatic publication.
+	admit := exec.Command(fixtureCaptureEngine(), "capture", "admit-protected-worktree", "--repo", f.project, "--protected-codex-home", f.store)
+	admit.Dir = f.project
+	if out, err := admit.CombinedOutput(); err != nil {
+		t.Fatalf("admit native callback fixture: %s %v", out, err)
 	}
-	// Provision only the selected executable; user adoption has no project manifest.
-	prepareCaptureInstall(t, f.project, []string{"install", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state})
 	childPath := filepath.Join(f.store, "sessions", "child.jsonl")
 	_, tail, found := strings.Cut(string(readCaptureFile(t, rootPath)), "\n")
 	if !found {
@@ -221,7 +223,7 @@ func TestNativeSubagentStartUsesProvenChildTranscriptWithoutRelabelingParent(t *
 	}
 	invoke := func() ([]byte, error) {
 		t.Helper()
-		command := exec.Command(managerBinaryPath, "codex-hook")
+		command := exec.Command(fixtureCaptureManager(), "codex-hook")
 		command.Dir = t.TempDir()
 		command.Stdin = strings.NewReader(string(payload))
 		return command.CombinedOutput()
