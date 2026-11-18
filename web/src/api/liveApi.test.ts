@@ -698,15 +698,13 @@ describe('liveApi Streaming and Boundary Layer', () => {
       await expect(fetchLiveTrace('ses-missing')).rejects.toThrow(/HTTP 404.*ses-missing/i);
     });
 
-    it('rejects with typed Error on server HTTP 500 error', async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-      });
-      vi.stubGlobal('fetch', mockFetch);
+    it('preserves the selected trace read failure from the server envelope', async () => {
+      const response = new Response(JSON.stringify({
+        error: 'database_error', message: 'Reading session trace failed', status_code: 500,
+      }), {status: 500});
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
 
-      await expect(fetchLiveTrace('ses-error-500')).rejects.toThrow(/HTTP 500/i);
+      await expect(fetchLiveTrace('ses-error-500')).rejects.toThrow(/HTTP 500.*Reading session trace failed/i);
     });
 
     it('rejects with typed Error on network failure', async () => {

@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "DATA-01",
+      "severity": 5,
+      "issue": "A failed per-session trace read replaced observed tree anomalies with empty arrays.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Corrected partial polling and REST tree failure handling. Healthy sibling trace updates and recovery remain observable."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 2,
+      "issue": "The source-selection matrix lacked a retained regression for denied access to a regular SQLite file.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Added a Linux production server test. The unprivileged run passed and the privileged-runner code compiled."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 2,
+      "issue": "An older pending REST trace response could overwrite a newer diagnostic without a test failure.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Added the response-order regression and retained the existing behavior."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 4,
+      "issue": "An unselected active session could keep an obsolete failure after a complete reconnect or fallback tree.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Reconcile scoped source failures when the client accepts a complete current tree."
+    },
+    {
+      "finding_id": "BEH-01",
+      "severity": 4,
+      "issue": "An older fallback tree request could erase a newer manual failure or reinstate an obsolete failure after recovery.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Order fallback and manual tree observations together."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 4,
+      "issue": "An older selected-trace source error could reappear after a newer complete tree demonstrated recovery.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Reconcile source-read errors with successful complete observations for the affected session."
+    },
+    {
+      "finding_id": "TEST-03",
+      "severity": 1,
+      "issue": "The cross-path diagnostic tests use identical successful trees and do not directly assert ordering of two different successful payloads.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Accepted coverage limit. The test reviewer ran a distinct-payload probe that passed the candidate and caught a deliberately broken guard; retained tests cover diagnostic ordering and stale manual responses."
+    }
+  ]
+}

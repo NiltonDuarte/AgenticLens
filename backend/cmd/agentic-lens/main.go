@@ -449,6 +449,13 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
 			os.Exit(1)
 		}
+		if captureResult != nil {
+			for _, registration := range captureResult.Registrations {
+				if registration.State == domain.CaptureFailed || registration.State == domain.CapturePending {
+					fmt.Fprintf(os.Stderr, "Incomplete capture extraction for owner %s; accepted history retained: %s\n", registration.Identity.SessionID, registration.Detail)
+				}
+			}
+		}
 		if precedenceErr := filterCapturePrecedence(sessions, captureResult); precedenceErr != nil {
 			fmt.Fprintln(os.Stderr, "Capture checkpoint comparison:", precedenceErr)
 			os.Exit(1)
@@ -890,26 +897,17 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 
-	if optional, localErr := adaptersconfig.Load(filepath.Dir(projCfg.ConfigPath)); localErr != nil {
+	optional, localErr := adaptersconfig.Load(filepath.Dir(projCfg.ConfigPath))
+	if localErr != nil {
 		fmt.Fprintln(os.Stderr, "Optional hydration unavailable:", localErr)
 	} else {
 		projCfg = optional
 	}
-	liveService := live.NewLiveServiceWithCodexHome(nil, projCfg, projCfg.Telemetry.Sources.CodexHome)
-	if strings.TrimSpace(*dbPathFlag) != "" || projCfg.Telemetry.Sources.OpenCodeDatabasePath != "" {
-		dbPath, pathErr := adaptersconfig.ResolveOpenCodePath(*dbPathFlag, projCfg.Telemetry.Sources.OpenCodeDatabasePath)
-		policyErr := errors.Join(adaptersconfig.ValidateDatabasePolicy(projCfg), adaptersconfig.ValidateActivityPolicy(projCfg), adaptersconfig.ValidatePollingPolicy(projCfg), adaptersconfig.ValidateAnomalyPolicy(projCfg))
-		if pathErr != nil || policyErr != nil {
-			fmt.Fprintln(os.Stderr, "Optional live source unavailable:", errors.Join(pathErr, policyErr))
-		} else if hook, hookErr := live.OpenReadOnlyHook(dbPath, projCfg.Database.BusyTimeoutMs); hookErr != nil {
-			fmt.Fprintln(os.Stderr, "Optional live source unavailable:", hookErr)
-		} else {
-			liveService = live.NewLiveServiceWithCodexHome(hook, projCfg, projCfg.Telemetry.Sources.CodexHome)
-			if startErr := liveService.Start(context.Background()); startErr != nil {
-				fmt.Fprintln(os.Stderr, startErr)
-				os.Exit(1)
-			}
-		}
+	liveService := live.OpenSelectedService(projCfg, *dbPathFlag, localErr)
+	if startErr := liveService.Start(context.Background()); startErr != nil {
+		fmt.Fprintln(os.Stderr, "Live telemetry:", startErr)
+	} else {
+		fmt.Println("Live telemetry active (OpenCode v1)")
 	}
 
 	srv := adaptershttp.NewServerWithConfig(workspacesDir, staticFS, projCfg, liveService)

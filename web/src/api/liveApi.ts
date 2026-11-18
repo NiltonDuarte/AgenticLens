@@ -14,7 +14,13 @@ export type ConnectionStatus =
   | 'paused'
   | 'error';
 
+export interface LiveSourceDiagnostic {
+  readonly message: string;
+  readonly session_id?: string;
+}
+
 export interface LiveStreamCallbacks {
+  readonly onSourceDiagnostic?: (diagnostic: LiveSourceDiagnostic) => void;
   readonly onSessionTree: (tree: LiveSessionTree) => void;
   readonly onAnomalyAlert?: ((alert: LiveAnomalyAlert) => void) | undefined;
   readonly onTraceUpdate?: ((trace: LiveTraceView) => void) | undefined;
@@ -135,11 +141,34 @@ export function parseLiveTraceView(data: unknown, fallbackSessionId: string): Li
   };
 }
 
+// A server response can describe an unsupported or failing source even when
+// the transport works. Keep that distinction when polling falls back to REST.
+export class LiveResponseError extends Error {
+  constructor(message: string, readonly isSourceReadFailure: boolean) {
+    super(message);
+  }
+}
+
+async function liveResponseError(response: Response, fallback: string): Promise<LiveResponseError> {
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    // A proxy or older server may return an empty or non-JSON error body.
+  }
+  const message = isRecord(body) && typeof body.message === 'string' && body.message.trim()
+    ? body.message : fallback;
+  const code = isRecord(body) ? body.error : undefined;
+  const isSourceReadFailure = (response.status === 500 && code === 'database_error') ||
+    (response.status === 503 && (code === 'source_unavailable' || code === 'source_unsupported'));
+  return new LiveResponseError(`HTTP ${response.status}: ${message}`, isSourceReadFailure);
+}
+
 export async function fetchLiveSessionTree(): Promise<LiveSessionTree> {
   try {
     const res = await fetch('/api/live/sessions');
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: Failed to fetch live sessions`);
+      throw await liveResponseError(res, 'Failed to fetch live sessions');
     }
     const data: unknown = await res.json();
     return parseLiveSessionTree(data);
@@ -157,7 +186,7 @@ export async function fetchLiveTrace(sessionId: string): Promise<LiveTraceView> 
   try {
     const res = await fetch(`/api/live/sessions/${encoded}/trace`);
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: Failed to fetch live trace for session ${cleanId}`);
+      throw await liveResponseError(res, `Failed to fetch live trace for session ${cleanId}`);
     }
     const data: unknown = await res.json();
     return parseLiveTraceView(data, cleanId);
@@ -169,15 +198,36 @@ export async function fetchLiveTrace(sessionId: string): Promise<LiveTraceView> 
   }
 }
 
-export function subscribeToLiveStream(callbacks: LiveStreamCallbacks, pollIntervalMs: number | undefined): () => void {
+// Compare completed observations by request start order. A newer pending
+// request does not prevent an older completed request from supplying data.
+export class LiveReadOrder {
+  private issued = 0;
+  private acceptedTree = 0;
+
+  begin(): number {
+    return ++this.issued;
+  }
+
+  acceptTree(request: number): boolean {
+    if (request <= this.acceptedTree) return false;
+    this.acceptedTree = request;
+    return true;
+  }
+
+  get treeRevision(): number {
+    return this.acceptedTree;
+  }
+}
+
+export function subscribeToLiveStream(
+  callbacks: LiveStreamCallbacks, pollIntervalMs: number | undefined, reads = new LiveReadOrder(),
+): () => void {
   let isClosed = false;
   let eventSource: EventSource | null = null;
   let pollingTimer: ReturnType<typeof setInterval> | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let sseConsecutiveErrors = 0;
   let pollingConsecutiveErrors = 0;
-  let nextPoll = 0;
-  let lastAcceptedPoll = -1;
   let reconnectDelayMs = 1000;
   let sseDirectlyFailed = false;
 
@@ -217,11 +267,10 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks, pollInterv
 
     const poll = async () => {
       if (isClosed) return;
-      const request = nextPoll++;
+      const request = reads.begin();
       try {
         const tree = await fetchLiveSessionTree();
-        if (!isClosed && request > lastAcceptedPoll) {
-          lastAcceptedPoll = request;
+        if (!isClosed && reads.acceptTree(request)) {
           pollingConsecutiveErrors = 0;
           callbacks.onStatusChange?.('fallback-polling');
           if (isClosed) return;
@@ -236,8 +285,7 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks, pollInterv
           }
         }
       } catch (err: unknown) {
-        if (!isClosed && request > lastAcceptedPoll) {
-          lastAcceptedPoll = request;
+        if (!isClosed && reads.acceptTree(request)) {
           pollingConsecutiveErrors++;
           const error = err instanceof Error ? err : new Error(String(err));
           callbacks.onError?.(error);
@@ -278,26 +326,49 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks, pollInterv
       return;
     }
 
+    // Events already queued by a previous connection must not supersede the
+    // current subscription's snapshot or diagnostics after a reconnect.
+    const source = eventSource;
     eventSource.onopen = () => {
-      if (isClosed) return;
+      if (source !== eventSource || isClosed) return;
       sseConsecutiveErrors = 0;
       reconnectDelayMs = 1000;
       callbacks.onStatusChange?.('connected');
     };
 
     eventSource.addEventListener('session_tree', (event: MessageEvent<string>) => {
-      if (isClosed) return;
+      if (source !== eventSource || isClosed) return;
       try {
         const parsed: unknown = JSON.parse(event.data);
-        callbacks.onSessionTree(parseLiveSessionTree(parsed));
+        const tree = parseLiveSessionTree(parsed);
+        reads.acceptTree(reads.begin());
+        callbacks.onSessionTree(tree);
       } catch (err: unknown) {
         const error = err instanceof Error ? err : new Error(String(err));
         callbacks.onError?.(error);
       }
     });
 
+    eventSource.addEventListener('source_diagnostic', (event: MessageEvent<string>) => {
+      if (source !== eventSource || isClosed) return;
+      try {
+        const data: unknown = JSON.parse(event.data);
+        if (!isRecord(data) || data.error !== 'database_error' || typeof data.message !== 'string' ||
+            (data.session_id !== undefined && typeof data.session_id !== 'string')) {
+          throw new Error('Invalid live source diagnostic');
+        }
+        reads.acceptTree(reads.begin());
+        callbacks.onSourceDiagnostic?.({
+          message: data.message,
+          ...(typeof data.session_id === 'string' ? { session_id: data.session_id } : {}),
+        });
+      } catch (err: unknown) {
+        callbacks.onError?.(err instanceof Error ? err : new Error(String(err)));
+      }
+    });
+
     eventSource.addEventListener('anomaly_alert', (event: MessageEvent<string>) => {
-      if (isClosed) return;
+      if (source !== eventSource || isClosed) return;
       try {
         const data: unknown = JSON.parse(event.data);
         callbacks.onAnomalyAlert?.(parseLiveAnomalyAlert(data));
@@ -308,7 +379,7 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks, pollInterv
     });
 
     eventSource.addEventListener('trace_update', (event: MessageEvent<string>) => {
-      if (isClosed) return;
+      if (source !== eventSource || isClosed) return;
       try {
         const data: unknown = JSON.parse(event.data);
         const sessionId = isRecord(data) && typeof data.session_id === 'string' ? data.session_id : '';
@@ -320,7 +391,7 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks, pollInterv
     });
 
     eventSource.onerror = () => {
-      if (isClosed) return;
+      if (source !== eventSource || isClosed) return;
       sseConsecutiveErrors++;
       const error = new Error('SSE connection error');
       callbacks.onError?.(error);

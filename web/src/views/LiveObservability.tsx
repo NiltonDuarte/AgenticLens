@@ -8,6 +8,8 @@ import type {
 import {
   type ConnectionStatus,
   fetchLiveSessionTree,
+  LiveResponseError,
+  LiveReadOrder,
   subscribeToLiveStream,
 } from '../api/liveApi';
 import { LiveSessionTree } from '../components/LiveSessionTree';
@@ -51,13 +53,35 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
   const [sessionTree, setSessionTree] = useState<LiveSessionTreeType | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [treeDiagnostic, setTreeDiagnostic] = useState<string | null>(null);
+  const [traceDiagnostics, setTraceDiagnostics] = useState<ReadonlyMap<string, string>>(new Map());
+  const [reads] = useState(() => new LiveReadOrder());
   const [retryCount, setRetryCount] = useState(0);
 
   const selectedNode = selectedSessionId
     ? findSessionNode(sessionTree?.root_sessions ?? [], selectedSessionId)
     : null;
-  const { trace: traceView, loading: loadingTrace, error: traceError, onTraceUpdate, captureRefresh } =
-    useLiveTrace(selectedSessionId, isPaused, selectedNode);
+  const clearTraceDiagnostic = useCallback((id: string) => {
+    setTraceDiagnostics((previous) => {
+      if (!previous.has(id)) return previous;
+      const next = new Map(previous);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const { trace: traceView, loading: loadingTrace, error: traceError, onTraceUpdate, onTraceReadFailure, onCompleteTree, captureRefresh } =
+    useLiveTrace(selectedSessionId, isPaused, selectedNode, clearTraceDiagnostic, reads);
+
+  const acceptTree = useCallback((tree: LiveSessionTreeType) => {
+    onCompleteTree(sessionIds(tree.root_sessions), reads.treeRevision);
+    setSessionTree(tree);
+    setTreeDiagnostic(null);
+    setErrorMessage(null);
+    // A complete tree requires a successful trace read for every included
+    // session. It also supersedes diagnostics for sessions that have left.
+    setTraceDiagnostics((previous) => previous.size ? new Map() : previous);
+  }, [onCompleteTree, reads]);
 
   const handleSelectSession = useCallback((sessionId: string) => {
     setSelectedSessionId(sessionId);
@@ -73,6 +97,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
     setRetryCount((prev) => prev + 1);
   }, []);
 
+  const fallbackPolling = useRef(false);
   const manualOwner = useRef<object | null>(null);
   useLayoutEffect(() => {
     manualOwner.current = {};
@@ -83,19 +108,22 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
     const owner = manualOwner.current;
     const refreshTrace = captureRefresh();
     refreshTrace();
+    const revision = reads.begin();
     try {
       const tree = await fetchLiveSessionTree();
-      if (manualOwner.current !== owner) return;
-      setSessionTree(tree);
-      setErrorMessage(null);
+      if (manualOwner.current !== owner || !reads.acceptTree(revision)) return;
+      acceptTree(tree);
+      if (fallbackPolling.current) setConnectionStatus('fallback-polling');
     } catch (err: unknown) {
-      if (manualOwner.current !== owner) return;
-      setErrorMessage(err instanceof Error ? err.message : String(err));
+      if (manualOwner.current !== owner || !reads.acceptTree(revision)) return;
+      if (err instanceof LiveResponseError) setTreeDiagnostic(err.message);
+      else setErrorMessage(err instanceof Error ? err.message : String(err));
     }
-  }, [captureRefresh]);
+  }, [acceptTree, captureRefresh, reads]);
 
   // Reactive streaming lifecycle
   useEffect(() => {
+    fallbackPolling.current = false;
     if (isPaused) {
       setConnectionStatus('paused');
       return;
@@ -105,8 +133,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
     const unsubscribe = subscribeToLiveStream({
       onSessionTree: (tree) => {
         if (!subscribed) return;
-        setSessionTree(tree);
-        setErrorMessage(null);
+        acceptTree(tree);
       },
       onAnomalyAlert: (alert: LiveAnomalyAlert) => {
         if (!subscribed) return;
@@ -124,22 +151,47 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
           };
         });
       },
-      onTraceUpdate: (trace) => { if (subscribed) onTraceUpdate(trace); },
+      onTraceUpdate: (trace) => {
+        if (!subscribed) return;
+        clearTraceDiagnostic(trace.session_id);
+        onTraceUpdate(trace);
+      },
+      onSourceDiagnostic: (diagnostic) => {
+        if (!subscribed) return;
+        const id = diagnostic.session_id;
+        if (id === undefined) {
+          setTreeDiagnostic(diagnostic.message);
+        } else {
+          onTraceReadFailure(id);
+          setTraceDiagnostics((previous) => new Map(previous).set(id, diagnostic.message));
+        }
+      },
       onStatusChange: (status) => {
         if (!subscribed) return;
+        if (status === 'fallback-polling') fallbackPolling.current = true;
         setConnectionStatus(status);
       },
       onError: (err) => {
         if (!subscribed) return;
-        setErrorMessage(err.message);
+        if (err instanceof LiveResponseError) {
+          setTreeDiagnostic(err.message);
+        } else {
+          setErrorMessage(err.message);
+        }
       },
-    }, pollIntervalMs);
+    }, pollIntervalMs, reads);
 
     return () => {
       subscribed = false;
       unsubscribe();
     };
-  }, [isPaused, retryCount, onTraceUpdate, pollIntervalMs]);
+  }, [isPaused, retryCount, acceptTree, clearTraceDiagnostic, onTraceUpdate, onTraceReadFailure, pollIntervalMs, reads]);
+
+  const sourceMessage = [
+    ...(treeDiagnostic ? [treeDiagnostic] : []),
+    ...Array.from(traceDiagnostics, ([id, message]) => `Session ${id}: ${message}`),
+    ...(traceError ? [traceError] : []),
+  ].join(' · ');
 
   return (
     <div className="live-observability-view" data-testid="live-observability-view">
@@ -151,7 +203,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
             {connectionStatus === 'fallback-polling' && 'Fallback Polling (REST)'}
             {connectionStatus === 'connecting' && 'Connecting...'}
             {connectionStatus === 'paused' && 'Paused'}
-            {connectionStatus === 'error' && 'Connection Error'}
+            {connectionStatus === 'error' && (treeDiagnostic ? 'Live source error' : 'Connection Error')}
           </span>
 
           <span className="status-bar-stat">
@@ -168,9 +220,9 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
             </span>
           )}
 
-          {(traceError || errorMessage) && connectionStatus !== 'error' && (
+          {(sourceMessage || errorMessage) && connectionStatus !== 'error' && (
             <span className="status-bar-error" role="alert">
-              Error: {traceError || errorMessage}
+              Error: {sourceMessage || errorMessage}
             </span>
           )}
         </div>
@@ -202,7 +254,8 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
         >
           <div className="live-connection-error-content">
             <span className="live-connection-error-text">
-              Unable to connect to live AgenticLens server. Ensure ./bin/agentic-lens server is running.
+              {sourceMessage ||
+                'Unable to connect to live AgenticLens server. Ensure ./bin/agentic-lens server is running.'}
             </span>
             <button
               type="button"
@@ -236,7 +289,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
             onSelectSession={handleSelectSession}
             onSelectTicket={onSelectTicket}
           /> : <div className="empty-state" role="status">
-            {errorMessage || connectionStatus === 'error' ? 'Live session data unavailable.' : 'Waiting for live session data.'}
+            {treeDiagnostic || errorMessage || connectionStatus === 'error' ? 'Live session data unavailable.' : 'Waiting for live session data.'}
           </div>}
         </div>
 

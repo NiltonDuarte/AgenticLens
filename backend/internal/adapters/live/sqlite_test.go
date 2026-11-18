@@ -780,13 +780,6 @@ func TestLiveTraceSurvivesChildSessionLookupFailure(t *testing.T) {
 	if _, err := rwDB.Exec(`INSERT INTO part (id,session_id,message_id,time_created,time_updated,data) VALUES ('task','parent','message',?,?,?)`, now+3, now+4, `{"type":"tool","tool":"task","state":{"status":"completed","input":{"subagent_type":"coder","description":"Implement feature"},"output":{"session_id":"child"}}}`); err != nil {
 		t.Fatal(err)
 	}
-	// Keep required trace tables usable while making the optional child lookup fail.
-	if _, err := rwDB.Exec(`ALTER TABLE session DROP COLUMN parent_id`); err != nil {
-		t.Fatalf("failed to arrange child lookup failure: %v", err)
-	}
-	if err := rwDB.Close(); err != nil {
-		t.Fatal(err)
-	}
 
 	hook, err := live.OpenReadOnlyHook(dbPath, 5000)
 	if err != nil {
@@ -795,6 +788,14 @@ func TestLiveTraceSurvivesChildSessionLookupFailure(t *testing.T) {
 	defer hook.Close()
 	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
+
+	// Keep required trace tables usable while making the optional child lookup fail.
+	if _, err := rwDB.Exec(`ALTER TABLE session DROP COLUMN parent_id`); err != nil {
+		t.Fatalf("failed to arrange child lookup failure: %v", err)
+	}
+	if err := rwDB.Close(); err != nil {
+		t.Fatal(err)
+	}
 
 	trace, err := service.GetSessionTrace(context.Background(), "parent")
 	if err != nil {

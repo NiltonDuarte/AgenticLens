@@ -2,6 +2,8 @@
 import hashlib
 import os
 from pathlib import Path
+import shutil
+import shlex
 import subprocess
 import tarfile
 import tempfile
@@ -126,6 +128,103 @@ class PlatformSupportTest(unittest.TestCase):
                         for name in names:
                             with archive.extractfile(name) as binary:
                                 self.assertEqual(binary.read(), expected_binaries['bin/' + name])
+
+
+class ReleaseVerificationTest(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix='agenticlens-release-')
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.release = self.root / 'dist'
+        self.bin = self.release / 'bin'
+        self.bin.mkdir(parents=True)
+        self.manifest = self.release / 'SHA256SUMS'
+        (self.root / 'README.md').write_text('release fixture')
+        self.host = '/'.join(subprocess.check_output(
+            ['go', 'env', 'GOHOSTOS', 'GOHOSTARCH'], text=True).splitlines())
+        self.foreign = next(p.replace('-', '/') for p in TARGETS if p != self.host.replace('/', '-'))
+        self.probes = self.root / 'probes'
+        self.env = dict(os.environ, AL_RELEASE_PROBES=str(self.probes))
+        for platform in (self.host, self.foreign):
+            for kind in ('agentic-lens', 'agentic-lens-engine'):
+                name = kind + '-' + platform.replace('/', '-')
+                binary = self.bin / name
+                binary.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$AL_RELEASE_PROBES"\n')
+                binary.chmod(0o700)
+
+    def make_release(self, goal, platform=None):
+        return subprocess.run(
+            ['make', '-f', str(ROOT / 'Makefile'), goal, 'PLATFORMS=' + (platform or self.host),
+             'VERSION=v9.8.7', 'GIT_COMMIT=fixture', 'BUILD_DATE=fixture', 'RELEASE_DIR=dist'],
+            cwd=self.root, env=self.env, capture_output=True, text=True, timeout=30)
+
+    def success(self, result):
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_only_verified_host_artifacts_are_probed(self):
+        self.success(self.make_release('release-package', self.foreign))
+        self.success(self.make_release('release-verify', self.foreign))
+        self.assertFalse(self.probes.exists(), 'release-verify executed a stale host file')
+
+        self.success(self.make_release('release-package'))
+        self.success(self.make_release('release-verify'))
+        self.assertEqual(self.probes.read_text().splitlines(),
+                         ['--manager-version --json', 'version', 'version --short', 'version --json'])
+        self.probes.unlink()
+        records = self.manifest.read_text().splitlines(keepends=True)
+        self.assertEqual(len(records), 3)
+        extra = self.release / 'unselected'
+        extra.write_bytes(b'unselected release file')
+        unexpected = hashlib.sha256(extra.read_bytes()).hexdigest() + '  unselected\n'
+        cases = {
+            'partial': records[:1],
+            'duplicate': records + records[:1],
+            'unexpected': records + [unexpected],
+            'malformed': records + ['invalid checksum record\n'],
+            'wrong digest': ['0' * 64 + records[0][64:]] + records[1:],
+        }
+        for case, lines in cases.items():
+            with self.subTest(case=case):
+                self.manifest.write_text(''.join(lines))
+                result = self.make_release('release-verify')
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertFalse(self.probes.exists())
+        self.manifest.write_text(''.join(records))
+        archive = next(self.release.glob('*' + self.host.replace('/', '-') + '.tar.gz'))
+        archive.unlink()
+        for case in ('missing', 'directory'):
+            with self.subTest(input=case):
+                if case == 'directory':
+                    archive.mkdir()
+                result = self.make_release('release-verify')
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertFalse(self.probes.exists())
+
+    def test_failed_manifest_generation_preserves_previous_manifest(self):
+        self.success(self.make_release('release-package'))
+        before = self.manifest.read_bytes()
+        commands = self.root / 'commands'
+        commands.mkdir()
+        self.env['PATH'] = str(commands) + os.pathsep + self.env['PATH']
+        hasher = shlex.quote(shutil.which('sha256sum'))
+        for producer, code in [('sha256sum', 7), ('sha256sum', 0), ('sort', 7)]:
+            with self.subTest(producer=producer, code=code):
+                stub = commands / producer
+                output = hasher + ' "$1"' if producer == 'sha256sum' else 'echo partial'
+                stub.write_text(f'#!/bin/sh\n{output}\nexit {code}\n')
+                stub.chmod(0o700)
+                for repeated in (False, True):
+                    if repeated:
+                        self.manifest.write_bytes(before)
+                    else:
+                        self.manifest.unlink(missing_ok=True)
+                    result = self.make_release('release-package')
+                    self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                    if repeated:
+                        self.assertEqual(self.manifest.read_bytes(), before)
+                    else:
+                        self.assertFalse(self.manifest.exists())
+                stub.unlink()
 
 
 if __name__ == '__main__':

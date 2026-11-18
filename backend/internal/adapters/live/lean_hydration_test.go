@@ -70,6 +70,13 @@ func TestHydrationMixedSourcesRetainsUsableOwnersAndNativePayloads(t *testing.T)
 	if !reflect.DeepEqual(second, first) {
 		t.Fatal("unchanged hydration accumulated or changed rows")
 	}
+	// A machine with only the configured Codex home still owns this rollout.
+	codexOnly := live.NewLiveServiceWithCodexHome(nil, testProjectConfig(), home)
+	defer codexOnly.Close()
+	withoutSQLite, err := codexOnly.HydrateWorkspaceEvents(context.Background(), "TEST-MIXED", domain.AgenticMetricsLedger{Facts: facts})
+	if err != nil || withoutSQLite.Availability != domain.TracePartial || !reflect.DeepEqual(withoutSQLite.Coverage.CompleteSessionIDs, []string{"codex-owner"}) || len(withoutSQLite.Events) != 1 || withoutSQLite.Events[0].CallID != "native-call" {
+		t.Fatalf("missing live SQLite source hid independent Codex owner: %+v (%v)", withoutSQLite, err)
+	}
 	if err = os.Remove(sourcePath); err != nil {
 		t.Fatal(err)
 	}

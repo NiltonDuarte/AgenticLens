@@ -143,9 +143,15 @@ func CaptureChildPage(ctx context.Context, db *sql.DB, parent, after string, lim
 // CaptureProjectDirectory reads authoritative per-session directory metadata.
 // Older layouts without it remain unresolved rather than borrowing caller cwd.
 func CaptureProjectDirectory(ctx context.Context, db *sql.DB, id string) (string, error) {
+	directory, _, err := CaptureSessionContext(ctx, db, id)
+	return directory, err
+}
+
+// CaptureSessionContext reads only exact native routing and ancestry metadata.
+func CaptureSessionContext(ctx context.Context, db *sql.DB, id string) (string, string, error) {
 	family, err := detectSchemaFamily(db)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	table := "session"
 	if family == schemaFamilyV2 {
@@ -153,14 +159,14 @@ func CaptureProjectDirectory(ctx context.Context, db *sql.DB, id string) (string
 	}
 	columns, err := tableColumns(db)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if !columns[table]["directory"] {
-		return "", errors.New("source schema has no authoritative session directory")
+		return "", "", errors.New("source schema has no authoritative session directory")
 	}
-	var directory string
-	err = db.QueryRowContext(ctx, `SELECT directory FROM `+table+` WHERE id=?`, id).Scan(&directory)
-	return directory, err
+	var directory, parent string
+	err = db.QueryRowContext(ctx, "SELECT directory, COALESCE(parent_id, '') FROM "+table+" WHERE id=?", id).Scan(&directory, &parent)
+	return directory, parent, err
 }
 
 // CaptureSourceFingerprint probes cumulative source revision without decoding bodies.

@@ -1,0 +1,5 @@
+# FIX-18 — Report the selected source's live capability
+
+A running dashboard can serve historical data even when its selected database cannot supply live sessions. Operators need the reason at startup and when opening the live view. AL-67 F03 identified a successful database open followed by failing v1 queries. AL-63 CAP-02 recorded the failure on a clean v2 store and the misleading partial result on a mixed store. [Roadmap ticket](../../../../alspaces/plan/done/FIX-18%20report%20unsupported%20live%20telemetry%20accurately.md) · [F03](../../../../alspaces/AL-67/ARCHITECTURE_ASSESSMENT.md) · [CAP-02 and its November 17 correction](../../al-63-verify-source-capabilities-across-harnesses/CAPABILITIES.md)
+
+Classify live capability during server composition. Carry the reason through the live sessions, trace and stream endpoints to the dashboard, including failures that first appear during polling. Keep the historical reader and ledger-backed routes available. The change adds no v2 or Codex live reader. [Observable acceptance](specs/live-source-reporting/spec.md)

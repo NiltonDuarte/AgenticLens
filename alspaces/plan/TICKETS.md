@@ -12,13 +12,9 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## Ready
 
-- **AL-65**: Recommend safe source-backed backfill defaults
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-65](to-do/AL-65%20recommend%20safe%20source%20backed%20backfill%20defaults.md)
-
-- **AL-80**: Capture OpenCode sessions across worktrees
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-80](to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
+- **AL-94**: Make explicit backfill repeatable and report refresh coverage
+  - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-95
+  - **File**: [AL-94](to-do/AL-94%20make%20explicit%20backfill%20repeatable%20and%20report%20refresh%20coverage.md)
 
 - **AL-71**: Keep dashboard requests and live data reliable
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
@@ -27,10 +23,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **AL-72**: Make dashboard interactions accurate and accessible
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-72](to-do/AL-72%20make%20dashboard%20interactions%20accurate%20and%20accessible.md)
-
-- **AL-73**: Verify release artifacts before installation
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-73](to-do/AL-73%20verify%20release%20artifacts%20before%20installation.md)
 
 - **AL-74**: Make regression checks reliable and remove unused code
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
@@ -69,14 +61,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL2-9](to-do/AL2-9%20evaluate%20optional%20ledger%20signatures.md)
 
-- **FIX-18**: Report unsupported live telemetry accurately
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [FIX-18](to-do/FIX-18%20report%20unsupported%20live%20telemetry%20accurately.md)
-
-- **FIX-19**: Reject ambiguous Codex session snapshots
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [FIX-19](to-do/FIX-19%20reject%20ambiguous%20codex%20session%20snapshots.md)
-
 - **FIX-20**: Stop source reads when callers cancel
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [FIX-20](to-do/FIX-20%20stop%20source%20reads%20when%20callers%20cancel.md)
@@ -86,6 +70,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **File**: [REV-7](to-do/REV-7%20review%20source%20read%20guarantees.md)
 
 ## Blocked
+
+- **AL-95**: Preview source-backed defaults and decide on rollout
+  - **Status**: Blocked; **Blocked by**: AL-94; **Blocks**: None
+  - **File**: [AL-95](to-do/AL-95%20preview%20source%20backed%20defaults%20and%20decide%20on%20rollout.md)
 
 - **AL2-4**: Monitor and refresh remote Git projects
   - **Status**: Blocked; **Blocked by**: AL2-3; **Blocks**: AL2-5
