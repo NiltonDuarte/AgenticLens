@@ -61,7 +61,30 @@ func tableColumns(db *sql.DB) (map[string]map[string]bool, error) {
 	return out, nil
 }
 
+// UnsupportedLayoutError reports a completed schema inspection that ruled out
+// the requested operation. Database read failures retain their original cause.
+type UnsupportedLayoutError string
+
+func (e UnsupportedLayoutError) Error() string { return string(e) }
+
+// CheckLiveSchema validates the v1 query surface. Historical extraction additionally
+// requires native message and part update timestamps.
+func CheckLiveSchema(db *sql.DB) error {
+	family, err := classifySchemaFamily(db, true)
+	if err != nil {
+		return err
+	}
+	if family == schemaFamilyV2 {
+		return UnsupportedLayoutError("OpenCode v2 live observation is unsupported; live queries require v1")
+	}
+	return nil
+}
+
 func detectSchemaFamily(db *sql.DB) (schemaFamily, error) {
+	return classifySchemaFamily(db, false)
+}
+
+func classifySchemaFamily(db *sql.DB, liveQueries bool) (schemaFamily, error) {
 	all, err := tableColumns(db)
 	if err != nil {
 		return "", err
@@ -88,6 +111,9 @@ func detectSchemaFamily(db *sql.DB) (schemaFamily, error) {
 			}
 			missing := []string{}
 			for _, col := range cols {
+				if liveQueries && col == "time_updated" && (table == "message" || table == "part") {
+					continue
+				}
 				if !actual[col] {
 					missing = append(missing, col)
 				}
@@ -121,18 +147,10 @@ func detectSchemaFamily(db *sql.DB) (schemaFamily, error) {
 			}
 		}
 	}
-	if (present[schemaFamilyV1] && present[schemaFamilyV2]) || (complete[schemaFamilyV1] && present[schemaFamilyV2]) || (complete[schemaFamilyV2] && present[schemaFamilyV1]) {
-		observed := make([]string, 0, len(all))
-		for name := range all {
-			observed = append(observed, name)
-		}
-		sort.Strings(observed)
-		return "", fmt.Errorf("unsupported mixed OpenCode schema family layout: observed tables [%s], incomplete structures [%s]; v1 requires session/message/part and v2 requires session_v2/session_message. Inspect or select a clean database", strings.Join(observed, ", "), strings.Join(issues, "; "))
-	}
-	if complete[schemaFamilyV1] {
+	if complete[schemaFamilyV1] && !present[schemaFamilyV2] {
 		return schemaFamilyV1, nil
 	}
-	if complete[schemaFamilyV2] {
+	if complete[schemaFamilyV2] && !present[schemaFamilyV1] {
 		return schemaFamilyV2, nil
 	}
 	observed := make([]string, 0, len(all))
@@ -140,5 +158,13 @@ func detectSchemaFamily(db *sql.DB) (schemaFamily, error) {
 		observed = append(observed, name)
 	}
 	sort.Strings(observed)
-	return "", fmt.Errorf("unsupported OpenCode database schema family layout: observed tables [%s]; missing or incomplete required structures [%s]. Supported schema families require complete v1 session/message/part or v2 session_v2/session_message layouts; use --db-path to point to a supported database", strings.Join(observed, ", "), strings.Join(issues, "; "))
+	sort.Strings(issues)
+	if present[schemaFamilyV1] && present[schemaFamilyV2] {
+		return "", UnsupportedLayoutError(fmt.Sprintf("unsupported mixed OpenCode schema family layout: observed tables [%s], incomplete structures [%s]; v1 requires session/message/part and v2 requires session_v2/session_message. Inspect or select a clean database", strings.Join(observed, ", "), strings.Join(issues, "; ")))
+	}
+	reason := "unknown layout"
+	if len(issues) > 0 {
+		reason = "malformed layout"
+	}
+	return "", UnsupportedLayoutError(fmt.Sprintf("unsupported OpenCode database schema family (%s): observed tables [%s]; missing or incomplete required structures [%s]. Use --db-path to select a complete OpenCode database", reason, strings.Join(observed, ", "), strings.Join(issues, "; ")))
 }

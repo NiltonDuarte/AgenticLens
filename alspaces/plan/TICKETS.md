@@ -61,10 +61,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL2-9](to-do/AL2-9%20evaluate%20optional%20ledger%20signatures.md)
 
-- **FIX-18**: Report unsupported live telemetry accurately
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [FIX-18](to-do/FIX-18%20report%20unsupported%20live%20telemetry%20accurately.md)
-
 - **FIX-20**: Stop source reads when callers cancel
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [FIX-20](to-do/FIX-20%20stop%20source%20reads%20when%20callers%20cancel.md)
