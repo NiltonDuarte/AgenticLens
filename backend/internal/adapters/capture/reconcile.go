@@ -452,6 +452,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			break
 		}
 		r := registrations[i]
+		priorSourceBytes := budget.readBytes
 		attempted[IdentityKey(r.Identity)] = true
 		used++
 		budget.sessions--
@@ -555,8 +556,17 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			return nil, nil, updateErr
 		}
 		registrations[i] = updated
-		if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,ticket) DO UPDATE SET identity=excluded.identity`, s.worktreeID, ticket, IdentityKey(r.Identity)); err != nil {
-			return nil, nil, err
+		if priorSourceBytes > 0 && (errors.Is(extractErr, opencode.ErrCaptureBudget) || errors.Is(extractErr, codex.ErrDiscoveryBudget)) {
+			// Retry the first owner starved by earlier work before that work on
+			// the next pass. Keep this continuation across refresh-class calls.
+			// A source that fails with the full pass allowance still advances,
+			// so a permanently oversized owner cannot pin the rotation.
+			budget.refreshCursorHeld = true
+		}
+		if !budget.refreshCursorHeld {
+			if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,ticket) DO UPDATE SET identity=excluded.identity`, s.worktreeID, ticket, IdentityKey(r.Identity)); err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 	// Native child metadata is request-local. Resolve only successfully read

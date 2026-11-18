@@ -56,12 +56,13 @@ func (class workClass) cursorKind() string {
 }
 
 type workBudget struct {
-	codexDiscovery   *codex.DiscoveryBudget
-	bytes            int64
-	sessions         int
-	readBytes        int64
-	attempts         int
-	discoveryPending bool
+	codexDiscovery    *codex.DiscoveryBudget
+	refreshCursorHeld bool
+	bytes             int64
+	sessions          int
+	readBytes         int64
+	attempts          int
+	discoveryPending  bool
 }
 
 func (b *workBudget) charge(bytes int64) {
