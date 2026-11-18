@@ -59,18 +59,24 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 }
 func captureCommandAction(args []string, input io.Reader, output io.Writer) (returnErr error) {
 	// Only the native hook and worker dispatches carry this private selection
-	// context. It may name only the actual harness home, never a project hint.
+	// context. Codex supplies its actual runtime home. Mixed-source hooks and
+	// workers may instead carry the home recorded for their admitted project.
 	home := ""
 	if len(args) >= 3 && args[len(args)-2] == "--protected-codex-home" {
 		switch args[0] {
-		case "user-hook", "opencode-hook", "worker":
+		case "user-hook", "opencode-hook", "worker", "admit-protected-worktree":
 		default:
 			return errors.New("protected Codex selection applies only to native hooks and their worker")
 		}
 		home = args[len(args)-1]
-		same, err := capture.SameStore(adaptersconfig.RuntimeCodexHome(), home)
-		if err != nil || !same {
-			return errors.New("protected Codex home must match the native runtime home")
+		if !filepath.IsAbs(home) {
+			return errors.New("protected Codex home must be absolute")
+		}
+		if args[0] == "user-hook" || args[0] == "admit-protected-worktree" {
+			same, err := capture.SameStore(adaptersconfig.RuntimeCodexHome(), home)
+			if err != nil || !same {
+				return errors.New("protected Codex home must match the native runtime home")
+			}
 		}
 		args = args[:len(args)-2]
 	}
@@ -237,6 +243,12 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 	if err != nil {
 		return err
 	}
+	if command == "admit-protected-worktree" {
+		if !policy.Enabled || protectedHome == "" || len(provided) != 1 || !provided["repo"] {
+			return errors.New("protected worktree admission requires enabled capture, its repository and actual Codex home")
+		}
+		return admitProtectedCapture(project, protectedHome, policy.StateDir)
+	}
 	if !policy.Enabled && *userLevel && *source == "opencode" {
 		_, err := io.WriteString(output, "{}\n")
 		return err
@@ -308,8 +320,21 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 		}
 	}
 	admittedHome := protectedHome
+	if admittedHome != "" && (command == "worker" || *source == "opencode") {
+		recorded, err := adaptersconfig.ProtectedCodexProjectHome(project)
+		if err != nil {
+			return err
+		}
+		if recorded == "" {
+			return errors.New("protected worker or OpenCode callback requires an admitted project")
+		}
+		same, err := capture.SameStore(recorded, admittedHome)
+		if err != nil || !same {
+			return errors.New("protected Codex home differs from project admission")
+		}
+	}
 	if command == "worker" || *userLevel {
-		protectedHome, err = captureWorkerHome(protectedHome)
+		protectedHome, err = captureWorkerHome(project, protectedHome)
 		if err != nil {
 			return err
 		}

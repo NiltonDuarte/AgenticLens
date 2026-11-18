@@ -40,6 +40,19 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			}
 		}
 	}()
+	// Admission and worker ownership use the same lease. A process queued by
+	// ordinary routing before admission rechecks authority before native probes.
+	admitted, err := captureWorkerHome(project, protectedHome)
+	if err != nil {
+		return err
+	}
+	if admitted != protectedHome {
+		if err := lock.Close(); err != nil {
+			return err
+		}
+		held = false
+		return launchCaptureWorker("", project, state, admitted)
+	}
 	cfg, err := adaptersconfig.Load(project)
 	if err != nil {
 		return err
@@ -97,14 +110,9 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		home, err := captureWorkerHome(protectedHome)
-		if err != nil {
-			return err
-		}
-		if home != "" {
-			return launchCaptureWorker("", project, state, home)
-		}
-		next, err := capture.WorkerSuccessor(ctx, project, state)
+		err = launchSelectedCaptureWorker(project, state, protectedHome, func() (string, error) {
+			return capture.WorkerSuccessor(ctx, project, state)
+		})
 		if err != nil {
 			// A later disable can also stop successor validation normally. Keep
 			// actual policy/state errors and enabled takeover failures visible.
@@ -118,7 +126,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			diagnosticErr := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "worker", Outcome: "failed", Detail: "Worker release/installation changed, but automatic successor validation failed. Pending work remains in the original namespace. Verify the exact pin, selected native/protocol, owned integration and configured state; retry capture reconcile. Cause: " + err.Error()})
 			return errors.Join(fmt.Errorf("native worker retired; pending work retained; selected-native takeover unavailable: %w", err), diagnosticErr)
 		}
-		return launchCaptureWorker(next, project, state, protectedHome)
+		return nil
 	}
 	started := time.Now()
 	var lastPass time.Time
@@ -162,7 +170,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		}
 		inboxCtx, inboxCancel := context.WithTimeout(context.Background(), min(time.Until(started.Add(time.Duration(policy.MaxLifetimeMS)*time.Millisecond)), time.Duration(policy.PassTimeoutMS)*time.Millisecond))
 		lastRegistration := scan.Last
-		accepted, inboxErr := s.ScanCodexBindings(inboxCtx, cfg.Telemetry.Sources.CodexHome, rowsForActivity, &scan, req.Generation, policy.MaxSessions, policy.MaxSourceBytes)
+		accepted, inboxErr := s.ScanCodexBindings(inboxCtx, protectedHome, rowsForActivity, &scan, req.Generation, policy.MaxSessions, policy.MaxSourceBytes)
 		inboxCancel()
 		madeInboxProgress = madeInboxProgress || lastRegistration != scan.Last
 		proofPending := errors.Is(inboxErr, capture.ErrBindingProofPending)
@@ -309,7 +317,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), min(remaining, time.Duration(policy.PassTimeoutMS)*time.Millisecond))
 				publisher := binary
-				home, err := captureWorkerHome(protectedHome)
+				home, err := captureWorkerHome(project, protectedHome)
 				if err != nil {
 					cancel()
 					return err
@@ -334,12 +342,22 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 						return retire()
 					}
 				}
-				cmd := exec.CommandContext(ctx, publisher, args...)
-				cmd.Dir = project
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				err = cmd.Run()
+				generate := func() error {
+					cmd := exec.CommandContext(ctx, publisher, args...)
+					cmd.Dir = project
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+					return cmd.Run()
+				}
+				if home == "" {
+					err = adaptersconfig.WithOrdinaryCapture(project, generate)
+				} else {
+					err = generate()
+				}
 				cancel()
+				if errors.Is(err, adaptersconfig.ErrProtectedCodexProject) {
+					return retire()
+				}
 				if err != nil {
 					success = false
 					lastFailure = err.Error()
@@ -414,22 +432,13 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	if !current {
 		return retire()
 	}
-	home, err := captureWorkerHome(protectedHome)
-	if err != nil {
-		return err
-	}
-	if home != "" {
-		return launchCaptureWorker("", project, state, home)
-	}
-	entry, err := adaptersconfig.ResolveEntrypoint(project)
-	if err != nil {
-		return err
-	}
-	preferred, err := entry.NativePath(adaptersconfig.RuntimeCodexHome(), cfg.Telemetry.Sources.CodexHome)
-	if err != nil {
-		return err
-	}
-	return launchCaptureWorker(preferred, project, state, protectedHome)
+	return launchSelectedCaptureWorker(project, state, protectedHome, func() (string, error) {
+		entry, err := adaptersconfig.ResolveEntrypoint(project)
+		if err != nil {
+			return "", err
+		}
+		return entry.NativePath(adaptersconfig.RuntimeCodexHome(), cfg.Telemetry.Sources.CodexHome)
+	})
 }
 
 // Disabled policy stops new passes and handoffs. A publication already committing

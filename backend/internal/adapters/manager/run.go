@@ -4,6 +4,7 @@ package manager
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/filesystem"
@@ -299,21 +301,21 @@ func nativeHook(harness string, engineArgs []string, input io.Reader, output, di
 	if len(body) > 65536 {
 		return fmt.Errorf("%s hook input exceeds 64 KiB", harness)
 	}
-	var context struct {
+	var event struct {
 		WorkingDirectory string `json:"cwd"`
 		SessionID        string `json:"session_id"`
 		Event            string `json:"hook_event_name"`
 	}
-	if err := json.Unmarshal(body, &context); err != nil {
+	if err := json.Unmarshal(body, &event); err != nil {
 		return fmt.Errorf("%s hook context: %w", harness, err)
 	}
-	if !filepath.IsAbs(context.WorkingDirectory) {
+	if !filepath.IsAbs(event.WorkingDirectory) {
 		return fmt.Errorf("native %s callback requires absolute session cwd", harness)
 	}
-	if context.SessionID == "" || context.Event == "" {
+	if event.SessionID == "" || event.Event == "" {
 		return errors.New("hook requires session_id and hook_event_name")
 	}
-	shared, err := config.FindConfigFile(context.WorkingDirectory)
+	shared, err := config.FindConfigFile(event.WorkingDirectory)
 	if err != nil {
 		return err
 	}
@@ -341,35 +343,70 @@ func nativeHook(harness string, engineArgs []string, input io.Reader, output, di
 		return err
 	}
 	home := config.RuntimeCodexHome()
-	protected := harness == "Codex"
-	if !protected {
-		protected, err = config.ProtectedCodexInstalled(home)
+	if harness == "Codex" {
+		actual, err := filesystem.PhysicalPath(home)
+		if err != nil {
+			return err
+		}
+		configured, err := filesystem.PhysicalPath(configuration.Telemetry.Sources.CodexHome)
+		if err != nil {
+			return err
+		}
+		if actual != configured {
+			return fmt.Errorf("configured Codex source %s differs from established runtime source %s", configured, actual)
+		}
+	}
+	if harness != "Codex" {
+		err := config.WithOrdinaryCapture(project, func() error {
+			entry, err := config.ResolveEntrypoint(project)
+			if err != nil {
+				return err
+			}
+			native, _, err := selectEngine(entry, home, configuration.Telemetry.Sources.CodexHome)
+			if err != nil {
+				return err
+			}
+			return execute(native, engineArgs, bytes.NewReader(body), output, diagnostic, project)
+		})
+		if !errors.Is(err, config.ErrProtectedCodexProject) {
+			return err
+		}
+		home, err = config.ProtectedCodexProjectHome(project)
+		if err != nil {
+			return err
+		}
+		if home == "" {
+			return errors.New("protected admission changed during callback; retry after checking operator setup")
+		}
+	}
+	actual, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	if _, err := config.ProtectedCodexManager(project, home, actual); err != nil {
+		return err
+	}
+	native, err := config.ResolveProtectedCodexEngine(project, home)
+	if err != nil {
+		return err
+	}
+	if harness == "Codex" {
+		err := config.PrepareProtectedCodexProject(project, home, func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			cmd := exec.CommandContext(ctx, native, "capture", "admit-protected-worktree", "--repo", project, "--protected-codex-home", home)
+			cmd.Dir, cmd.Stderr = project, diagnostic
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("protected capture admission failed; check the current worker or install a compatible protected engine: %w", err)
+			}
+			return nil
+		})
 		if err != nil {
 			return err
 		}
 	}
-	var native string
-	if protected {
-		actual, executableErr := os.Executable()
-		if executableErr != nil {
-			return executableErr
-		}
-		if _, err := config.ProtectedCodexManager(project, home, actual); err != nil {
-			return err
-		}
-		native, err = config.ResolveProtectedCodexEngine(project, home)
-		engineArgs = append(engineArgs, "--protected-codex-home", home)
-	} else {
-		entry, resolveErr := config.ResolveEntrypoint(project)
-		if resolveErr != nil {
-			return resolveErr
-		}
-		native, _, err = selectEngine(entry, home, configuration.Telemetry.Sources.CodexHome)
-	}
-	if err != nil {
-		return err
-	}
-	return execute(native, engineArgs, bytes.NewReader(body), output, diagnostic, project)
+	return execute(native, append(engineArgs, "--protected-codex-home", home), bytes.NewReader(body), output, diagnostic, project)
+
 }
 
 func listVersions(project string, args []string, output io.Writer) error {

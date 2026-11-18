@@ -3,6 +3,7 @@ package main_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -254,6 +255,31 @@ func verifyLateCodexSubmission(t *testing.T, ownerCount int) {
 		if err := os.Rename(saved, path); err != nil {
 			t.Fatal(err)
 		}
+		// The previous release speaks the ordinary engine interface, but cannot
+		// run protected workers. Provision it through the operator installer.
+		priorEngine := filepath.Join(t.TempDir(), "prior-engine")
+		build := exec.Command("go", "build", "-o", priorEngine, "../../../scripts/tests/fixtures/entrypoint_probe.go")
+		if out, err := build.CombinedOutput(); err != nil {
+			t.Fatalf("build prior protocol fixture: %s %v", out, err)
+		}
+		hostDir := filepath.Dir(path)
+		if err := os.Rename(hostDir, hostDir+".saved"); err != nil {
+			t.Fatal(err)
+		}
+		install := exec.Command(fixtureCaptureManager(), "--al-project", f.project, "install", "v9.8.7", "--install-root", filepath.Join(os.Getenv("HOME"), ".agenticlens"), "--local-bin", priorEngine, "--sha256", fmt.Sprintf("%x", sha256.Sum256(readCaptureFile(t, priorEngine))))
+		if out, err := install.CombinedOutput(); err != nil {
+			t.Fatalf("provision prior protocol: %s %v", out, err)
+		}
+		rejected, oldErr := postToolUse(command)
+		if err := os.Rename(hostDir, hostDir+".previous"); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(hostDir+".saved", hostDir); err != nil {
+			t.Fatal(err)
+		}
+		if oldErr == nil || !bytes.Contains(rejected, []byte("worker protocol")) || !bytes.Equal(responseBefore, readCaptureFile(t, slot)) || !bytes.Equal(ledgerBefore, readCaptureFile(t, ledgerPath)) {
+			t.Fatalf("prior protocol consumed pending work or missed repair diagnostic: %s %v", rejected, oldErr)
+		}
 		settings := filepath.Join(f.store, "config.toml")
 		prior := readCaptureFile(t, settings)
 		enlarged := append(slices.Clone(prior), []byte(fmt.Sprintf("\n[profiles.fixture.sandbox_workspace_write]\nwritable_roots = [%q]\n", filepath.Dir(path)))...)
@@ -273,7 +299,29 @@ func verifyLateCodexSubmission(t *testing.T, ownerCount int) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
 	defer cancel()
+	var expectedBuild domain.BuildInfo
+	buildInfo, err := exec.Command(fixtureCaptureEngine(), "version", "--json").Output()
+	if err != nil || json.Unmarshal(buildInfo, &expectedBuild) != nil || expectedBuild.Version != "v9.8.7" {
+		t.Fatalf("read installed build identity: %s %v", buildInfo, err)
+	}
+	var firstPass, successor capture.WorkerProgress
 	for ctx.Err() == nil {
+		if ownerCount > 1 && successor.PID == 0 {
+			current, err := capture.WorkerStatus(store.CoordinationDirectory())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if current.BindingScan.Generation == before.Generation+1 && current.PID > 0 {
+				if current.Build != expectedBuild || current.Executable != fixtureCaptureEngine() {
+					t.Fatalf("unverified worker in binding sweep: %+v", current)
+				}
+				if firstPass.PID == 0 && current.BindingScan.Remaining > 0 {
+					firstPass = current
+				} else if firstPass.PID != 0 && current.PID != firstPass.PID && current.BindingScan.Remaining < firstPass.BindingScan.Remaining && current.BindingScan.Last != firstPass.BindingScan.Last {
+					successor = current
+				}
+			}
+		}
 		if ownerCount == 1 && pendingSource != "" {
 			records, err := store.Diagnostics(ctx)
 			if err != nil {
@@ -309,6 +357,9 @@ func verifyLateCodexSubmission(t *testing.T, ownerCount int) {
 				t.Fatalf("worker used unexpected engine %q: %v", prog.Executable, err)
 			}
 			if ownerCount > 1 {
+				if successor.PID == 0 {
+					t.Fatalf("no successor observed completing first process's protected sweep: first=%+v current=%+v", firstPass, prog)
+				}
 				// The one-session budget exercises delivery of the binding. A
 				// complete scan of these twelve rollouts for ledger generation
 				// needs a separate, larger source budget.

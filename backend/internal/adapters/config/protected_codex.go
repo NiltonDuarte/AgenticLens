@@ -143,9 +143,10 @@ func CheckProtectedCodexPaths(project, home string, paths ...string) error {
 }
 
 type codexCaptureReceipt struct {
-	Protocol int    `json:"protocol"`
-	Manager  string `json:"manager"`
-	Inbox    bool   `json:"binding_inbox"`
+	Protocol int               `json:"protocol"`
+	Manager  string            `json:"manager"`
+	Inbox    bool              `json:"binding_inbox"`
+	Groups   []json.RawMessage `json:"groups"`
 }
 
 func readCodexCaptureReceipt(home string) (codexCaptureReceipt, error) {
@@ -161,16 +162,6 @@ func readCodexCaptureReceipt(home string) (codexCaptureReceipt, error) {
 		return r, errors.New("invalid Codex user installation receipt; explicitly repair setup")
 	}
 	return r, nil
-}
-
-// ProtectedCodexInstalled signals shared worker routing from the operator's
-// user installation receipt. Absent receipts are ordinary independent capture.
-func ProtectedCodexInstalled(home string) (bool, error) {
-	r, err := readCodexCaptureReceipt(home)
-	if errors.Is(err, os.ErrNotExist) {
-		return false, nil
-	}
-	return r.Inbox, err
 }
 
 const protectedEngineLimit = 256 << 20
