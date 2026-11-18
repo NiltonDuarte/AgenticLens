@@ -39,6 +39,10 @@ func InstallUserCodex(ctx context.Context, options UserInstallOptions) (InstallR
 }
 
 func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOptions, checkpoint func(userInstallStage, int) error) (result InstallResult, returnErr error) {
+	return installUser(ctx, options, "codex", checkpoint)
+}
+
+func installUser(ctx context.Context, options UserInstallOptions, source string, checkpoint func(userInstallStage, int) error) (result InstallResult, returnErr error) {
 	result = InstallResult{DryRun: options.DryRun, Changes: []PlannedChange{}}
 	home, err := absolute(options.Home)
 	if err != nil {
@@ -61,9 +65,14 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 		if err := validateManagerEntrypoint(manager); err != nil {
 			return result, fmt.Errorf("native manager unavailable: %w", err)
 		}
+		if source == "opencode" {
+			if err := validateInstallNativeOutput(ctx, manager, "1", "OpenCode user hook protocol", "manager", "opencode-hook-protocol"); err != nil {
+				return result, fmt.Errorf("install a manager with OpenCode user hook support: %w", err)
+			}
+		}
 	}
 	if !options.Remove && options.Repository != "" {
-		if err := checkLegacyUserConflicts(ctx, options.Repository, options.LegacyRepository); err != nil {
+		if err := checkUserConflicts(ctx, source, options.Repository, options.LegacyRepository); err != nil {
 			return result, err
 		}
 	}
@@ -73,7 +82,7 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 		if options.Remove {
 			return result, errors.New("legacy migration requires user-hook installation")
 		}
-		legacyHomes, err := legacyUserHomes(options.LegacyRepository)
+		legacyHomes, err := legacyHomesFor(source, options.LegacyRepository)
 		if err != nil {
 			return result, err
 		}
@@ -89,8 +98,17 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 		if err != nil {
 			return result, err
 		}
+		leasedProjects := map[string]bool{}
 		for _, project := range projects {
-			directory := filepath.Join(project, ".codex")
+			if source == "opencode" && !options.DryRun && !leasedProjects[project] {
+				lock, err := lockOpenCodeProject(project)
+				if err != nil {
+					return result, err
+				}
+				leasedProjects[project] = true
+				defer func() { returnErr = errors.Join(returnErr, lock.Close()) }()
+			}
+			directory := filepath.Join(project, "."+source)
 			info, err := os.Stat(directory)
 			if errors.Is(err, os.ErrNotExist) {
 				continue
@@ -126,6 +144,24 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 			}
 			locks = append(locks, pending...)
 		}
+		// Every OpenCode instance loads its XDG directory. Coordinate activation
+		// there even when writing the plugin into an additional custom directory.
+		// The primary-home lease below covers default-only installs and recovery.
+		var loadedHomeLease string
+		if source == "opencode" {
+			homes, err := loadedOpenCodeHomes(home)
+			if err != nil {
+				return result, err
+			}
+			if len(homes) > 1 {
+				loadedHomeLease = homes[1]
+				lease, err := acquireInstallLock(loadedHomeLease)
+				if err != nil {
+					return result, err
+				}
+				defer func() { returnErr = errors.Join(returnErr, lease.Close()) }()
+			}
+		}
 		sort.Strings(locks)
 		if err := os.MkdirAll(root, 0700); err != nil {
 			return result, err
@@ -151,6 +187,10 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 				continue
 			}
 			seen[directory] = true
+			if directory == loadedHomeLease {
+				// A pending migration may also name this already-held home.
+				continue
+			}
 			if directory == home {
 				if err := os.MkdirAll(directory, 0700); err != nil {
 					return result, err
@@ -183,7 +223,7 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 			}
 		}
 		if options.LegacyRepository != "" {
-			fresh, err := legacyUserHomes(options.LegacyRepository)
+			fresh, err := legacyHomesFor(source, options.LegacyRepository)
 			if err != nil {
 				return result, err
 			}
@@ -192,7 +232,7 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 			}
 		}
 		if options.LegacyRepository == "" && options.Repository != "" && !options.Remove {
-			if err := checkLegacyUserConflicts(ctx, options.Repository, ""); err != nil {
+			if err := checkUserConflicts(ctx, source, options.Repository, ""); err != nil {
 				return result, err
 			}
 		}
@@ -212,7 +252,7 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 	}
 
 	if !options.Remove && options.Repository != "" {
-		if err := checkLegacyUserConflicts(ctx, options.Repository, options.LegacyRepository); err != nil {
+		if err := checkUserConflicts(ctx, source, options.Repository, options.LegacyRepository); err != nil {
 			return result, err
 		}
 	}
@@ -220,7 +260,7 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 	// prefix can have removed hooks or changed the active bit; pre-recovery plans
 	// would reject recoverable state or silently leave restored legacy callbacks.
 	if options.LegacyRepository != "" {
-		legacyChanges, err = legacyUserChanges(options.LegacyRepository)
+		legacyChanges, err = legacyChangesFor(source, options.LegacyRepository)
 		if err != nil {
 			return result, err
 		}
@@ -231,101 +271,16 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 			}
 		}
 	}
-	hooksPath := filepath.Join(home, "hooks.json")
-	receiptPath := filepath.Join(home, "agenticlens-user-installation.json")
-	receipt := userInstallation{Protocol: userCaptureOwnershipProtocol}
-	prior, err := os.ReadFile(receiptPath)
-	if err == nil {
-		if err := json.Unmarshal(prior, &receipt); err != nil {
-			return result, err
-		}
-		if receipt.Protocol != userCaptureOwnershipProtocol {
-			return result, errors.New("unsupported user capture ownership protocol")
-		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return result, err
+	var own []fileChange
+	if source == "codex" {
+		own, result.Manifest, err = planCodexUser(home, manager, options.Remove)
+	} else {
+		own, result.Manifest, err = planOpenCodeUser(home, manager, options.Remove)
 	}
-	if options.Remove && len(prior) == 0 {
-		return result, errors.New("no owned user capture installation; refusing removal")
-	}
-	content, err := os.ReadFile(hooksPath)
-	exists := err == nil
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return result, err
-	}
-	config := map[string]json.RawMessage{}
-	if exists {
-		if err := json.Unmarshal(content, &config); err != nil {
-			return result, fmt.Errorf("user hooks invalid; preserved: %w", err)
-		}
-	}
-	hooks := map[string][]json.RawMessage{}
-	if raw := config["hooks"]; len(raw) > 0 {
-		if err := json.Unmarshal(raw, &hooks); err != nil {
-			return result, err
-		}
-	}
-	for _, owned := range receipt.Groups {
-		kept := []json.RawMessage{}
-		matches := 0
-		for _, group := range hooks[owned.Event] {
-			if jsonEqual(group, owned.Value) {
-				matches++
-			} else {
-				kept = append(kept, group)
-			}
-		}
-		if matches != 1 {
-			return result, fmt.Errorf("owned user %s hook changed or duplicated; preserved", owned.Event)
-		}
-		if len(kept) == 0 {
-			delete(hooks, owned.Event)
-		} else {
-			hooks[owned.Event] = kept
-		}
-	}
-	for _, groups := range hooks {
-		for _, group := range groups {
-			if strings.Contains(string(group), userHookMarker) || strings.Contains(string(group), marker) {
-				return result, errors.New("unowned/legacy AgenticLens user hook conflict; preserve and explicitly migrate before installation")
-			}
-		}
-	}
-	if receipt.Manager != "" && receipt.Manager != manager {
-		return result, errors.New("user manager location differs from owned hooks; explicitly uninstall before relocating")
-	}
-	next := userInstallation{Protocol: userCaptureOwnershipProtocol, Manager: manager, Groups: []OwnedGroup{}}
-	changes := append([]fileChange(nil), legacyChanges...)
-	if !options.Remove {
-		command, err := staticCommand([]string{manager, "codex-hook"})
-		if err != nil {
-			return result, err
-		}
-		for _, event := range []string{"SessionStart", "UserPromptSubmit", "SubagentStart", "SubagentStop", "Stop", "SessionEnd"} {
-			group, err := codexHookGroup(event, command)
-			if err != nil {
-				return result, err
-			}
-			group = json.RawMessage(strings.ReplaceAll(string(group), marker, userHookMarker))
-			hooks[event] = append(hooks[event], group)
-			next.Groups = append(next.Groups, OwnedGroup{event, group})
-		}
-	}
-	raw, err := json.Marshal(hooks)
 	if err != nil {
 		return result, err
 	}
-	config["hooks"] = raw
-	after, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		return result, err
-	}
-	changes = append(changes, fileChange{path: hooksPath, content: after, before: content, existed: exists})
-	body, err := json.MarshalIndent(next, "", "  ")
-	if err != nil {
-		return result, err
-	}
-	changes = append(changes, fileChange{path: receiptPath, content: body, before: prior, existed: len(prior) > 0})
+	changes := append(legacyChanges, own...)
 	// Preserve file identity when owned hook artifacts are unchanged.
 	effective := make([]fileChange, 0, len(changes))
 	for _, change := range changes {
@@ -342,7 +297,7 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 		}
 		result.Changes = append(result.Changes, PlannedChange{change.path, action})
 	}
-	result.Manifest = Manifest{Source: "codex", ConfigPath: hooksPath, Binary: manager, Active: len(next.Groups) > 0, Capability: "User hooks installed; native trust and runtime coverage require observed evidence"}
+
 	if options.DryRun {
 		return result, nil
 	}
@@ -360,7 +315,7 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 			return result, errors.New("user installation changed during planning; retry")
 		}
 	}
-	if err := applyUserInstallationWithCheckpoint(home, coordinator, options.LegacyRepository, changes, checkpoint); err != nil {
+	if err := applyUserInstallationWithCheckpoint(source, home, coordinator, options.LegacyRepository, changes, checkpoint); err != nil {
 		return result, err
 	}
 	return result, nil
@@ -385,4 +340,103 @@ func asUserJournalChanges(changes []fileChange) []userInstallChange {
 		result = append(result, userInstallChange{Path: change.path})
 	}
 	return result
+}
+
+func planCodexUser(home, manager string, remove bool) ([]fileChange, Manifest, error) {
+	hooksPath := filepath.Join(home, "hooks.json")
+	receiptPath := filepath.Join(home, "agenticlens-user-installation.json")
+	receipt := userInstallation{Protocol: userCaptureOwnershipProtocol}
+	prior, err := os.ReadFile(receiptPath)
+	if err == nil {
+		if err := json.Unmarshal(prior, &receipt); err != nil {
+			return nil, Manifest{}, err
+		}
+		if receipt.Protocol != userCaptureOwnershipProtocol {
+			return nil, Manifest{}, errors.New("unsupported user capture ownership protocol")
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, Manifest{}, err
+	}
+	if remove && len(prior) == 0 {
+		return nil, Manifest{}, errors.New("no owned user capture installation; refusing removal")
+	}
+	content, err := os.ReadFile(hooksPath)
+	exists := err == nil
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, Manifest{}, err
+	}
+	config := map[string]json.RawMessage{}
+	if exists {
+		if err := json.Unmarshal(content, &config); err != nil {
+			return nil, Manifest{}, fmt.Errorf("user hooks invalid; preserved: %w", err)
+		}
+	}
+	hooks := map[string][]json.RawMessage{}
+	if raw := config["hooks"]; len(raw) > 0 {
+		if err := json.Unmarshal(raw, &hooks); err != nil {
+			return nil, Manifest{}, err
+		}
+	}
+	for _, owned := range receipt.Groups {
+		kept := []json.RawMessage{}
+		matches := 0
+		for _, group := range hooks[owned.Event] {
+			if jsonEqual(group, owned.Value) {
+				matches++
+			} else {
+				kept = append(kept, group)
+			}
+		}
+		if matches != 1 {
+			return nil, Manifest{}, fmt.Errorf("owned user %s hook changed or duplicated; preserved", owned.Event)
+		}
+		if len(kept) == 0 {
+			delete(hooks, owned.Event)
+		} else {
+			hooks[owned.Event] = kept
+		}
+	}
+	for _, groups := range hooks {
+		for _, group := range groups {
+			if strings.Contains(string(group), userHookMarker) || strings.Contains(string(group), marker) {
+				return nil, Manifest{}, errors.New("unowned/legacy AgenticLens user hook conflict; preserve and explicitly migrate before installation")
+			}
+		}
+	}
+	if receipt.Manager != "" && receipt.Manager != manager {
+		return nil, Manifest{}, errors.New("user manager location differs from owned hooks; explicitly uninstall before relocating")
+	}
+	next := userInstallation{Protocol: userCaptureOwnershipProtocol, Manager: manager, Groups: []OwnedGroup{}}
+	var changes []fileChange
+	if !remove {
+		command, err := staticCommand([]string{manager, "codex-hook"})
+		if err != nil {
+			return nil, Manifest{}, err
+		}
+		for _, event := range []string{"SessionStart", "UserPromptSubmit", "SubagentStart", "SubagentStop", "Stop", "SessionEnd"} {
+			group, err := codexHookGroup(event, command)
+			if err != nil {
+				return nil, Manifest{}, err
+			}
+			group = json.RawMessage(strings.ReplaceAll(string(group), marker, userHookMarker))
+			hooks[event] = append(hooks[event], group)
+			next.Groups = append(next.Groups, OwnedGroup{event, group})
+		}
+	}
+	raw, err := json.Marshal(hooks)
+	if err != nil {
+		return nil, Manifest{}, err
+	}
+	config["hooks"] = raw
+	after, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return nil, Manifest{}, err
+	}
+	changes = append(changes, fileChange{path: hooksPath, content: after, before: content, existed: exists})
+	body, err := json.MarshalIndent(next, "", "  ")
+	if err != nil {
+		return nil, Manifest{}, err
+	}
+	changes = append(changes, fileChange{path: receiptPath, content: body, before: prior, existed: len(prior) > 0})
+	return changes, Manifest{Source: "codex", ConfigPath: hooksPath, Binary: manager, Active: len(next.Groups) > 0, Capability: "User hooks installed; native trust and runtime coverage require observed evidence"}, nil
 }

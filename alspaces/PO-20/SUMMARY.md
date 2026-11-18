@@ -11,7 +11,7 @@ No application code, tests, runtime scripts or machine-local integrations are ch
 - [SPEC.md](SPEC.md): problem, personas, user stories, requirements F1-F6, architectural constraints and acceptance criteria.
 - [CAPTURE_VISION_AND_GAPS.md](CAPTURE_VISION_AND_GAPS.md): closed decision record and observed integration gaps.
 - [AL-79](../plan/to-do/AL-79%20capture%20codex%20sessions%20across%20worktrees.md): Ready; shared native runtime and end-to-end user-level Codex capture.
-- [AL-80](../plan/to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md): Blocked by AL-79; global OpenCode integration using that runtime.
+- [AL-80](../plan/done/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md): Blocked by AL-79; global OpenCode integration using that runtime.
 - [AL-81](../plan/to-do/AL-81%20generate%20metrics%20without%20capture%20registry%20access.md): Ready; manual generation independent of capture state.
 - [Roadmap](../plan/TICKETS.md): ticket statuses and reciprocal dependency metadata.
 - [Draft PR #125](https://github.com/NiltonDuarte/AgenticLens/pull/125): specification and backlog delivery on `docs/PO-20-user-level-worktree-capture`.

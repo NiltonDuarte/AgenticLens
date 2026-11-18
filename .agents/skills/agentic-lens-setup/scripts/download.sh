@@ -13,7 +13,8 @@ Usage: download.sh --project DIR [--version EXACT_ENGINE_TAG] [--dest USER_BIN_D
   --local-bin PATH --sha256 HASH  Verified offline engine
   --init-config                  Create an explicit incomplete shared scaffold
   --all-platforms | --include-host OS-ARCH  Cache additional engine platforms
-  --capture-source codex|opencode --capture-store ABSOLUTE_PATH
+  --capture-source codex --capture-store ABSOLUTE_CODEX_HOME
+  --capture-source opencode       Install into effective OpenCode user config
   --capture-state-dir PATH
   --force                        Repair an immutable engine cache leaf
   --dry-run                      No network or destination writes
@@ -40,13 +41,24 @@ done
 PROJECT="$(CDPATH= cd -P -- "$PROJECT" && pwd -P)"
 [[ "$DEST" == /* ]] || DEST="$PWD/$DEST"
 [[ -z "$SOURCE" || "$SOURCE" == codex || "$SOURCE" == opencode ]] || fail 'capture source must be codex or opencode'
-if [[ -n "$SOURCE" ]]; then [[ "$STORE" == /* ]] || fail 'capture requires an explicit absolute source store'
+if [[ "$SOURCE" == codex ]]; then [[ "$STORE" == /* ]] || fail 'Codex installation requires an explicit absolute source store'
+elif [[ "$SOURCE" == opencode ]]; then [[ -z "$STORE$STATE" ]] || fail 'Configure the OpenCode database and capture state in local project settings; the user plugin uses the effective OpenCode config directory'
 elif [[ -n "$STORE$STATE" ]]; then fail 'capture options require --capture-source'; fi
 exact() { [[ ${#1} -le 128 && "$1" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]; }
 digest() {
  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
  elif command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
  else fail 'Installation requires sha256sum or shasum'; fi
+}
+verify_digest() {
+ local actual expected
+ actual="$(digest "$1")" || fail "Could not compute SHA256 for $1"
+ expected="$(printf %s "$2" | tr A-F a-f)"
+ [[ "$actual" == "$expected" ]] || fail "$3 checksum mismatch"
+}
+valid_repository() {
+ local LC_ALL=C
+ [[ "$1" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && "/$1/" != */./* && "/$1/" != */../* ]]
 }
 fetch() {
  if command -v curl >/dev/null 2>&1; then curl -fsSL --connect-timeout 10 --max-time 120 -o "$2" "$1"
@@ -75,28 +87,43 @@ cleanup() {
 }
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
+manager_digest=''
 if [[ -n "$MANAGER" ]]; then
  [[ -f "$MANAGER" && "$MANAGER_SHA" =~ ^[a-fA-F0-9]{64}$ ]] || fail '--local-manager-bin requires --manager-sha256'
  cp -- "$MANAGER" "$STAGE/manager"
- [[ "$(digest "$STAGE/manager")" == "$(printf %s "$MANAGER_SHA" | tr A-F a-f)" ]] || fail 'Local manager checksum mismatch'
+ manager_digest=$MANAGER_SHA
+ verify_digest "$STAGE/manager" "$manager_digest" 'Local manager'
 elif [[ -x "$ENTRYPOINT" ]] && [[ "$("$ENTRYPOINT" manager protocol 2>/dev/null || true)" == 1 ]]; then
  cp -- "$ENTRYPOINT" "$STAGE/manager"
 else
  MANAGER_VERSION=${MANAGER_VERSION:-$VERSION}
  exact "$MANAGER_VERSION" || fail 'First installation requires exact --manager-version or verified --local-manager-bin'
  if ((DRY)); then printf 'Manager release: %s\nNative configuration validation pending bootstrap; no network or destination writes.\n' "$MANAGER_VERSION"; exit 0; fi
- base="https://github.com/${AGENTIC_LENS_REPO:-NiltonDuarte/AgenticLens}/releases/download/$MANAGER_VERSION"
+ repo=${AGENTIC_LENS_REPO:-NiltonDuarte/AgenticLens}
+ valid_repository "$repo" || fail 'AGENTIC_LENS_REPO must be an owner/repository name'
+ base="https://github.com/$repo/releases/download/$MANAGER_VERSION"
  fetch "$base/SHA256SUMS" "$STAGE/SHA256SUMS"
  name="agentic-lens-$PLATFORM"
+ manager_digest="$(LC_ALL=C awk -v name="$name" '
+   $2==name || $2=="*"name || $2=="bin/"name || $2=="*bin/"name {
+     count++
+     if (NF != 2 || length($1) != 64 || $1 !~ /^[[:xdigit:]]+$/) malformed=1
+     digest=$1
+   }
+   END { if (count != 1 || malformed) exit 1; print digest }
+ ' "$STAGE/SHA256SUMS")" || fail 'Missing, malformed or ambiguous manager checksum'
  fetch "$base/$name" "$STAGE/manager"
- expected="$(awk -v name="$name" '$2==name || $2=="*"name || $2=="bin/"name || $2=="*bin/"name {n++; v=$1} END {if(n!=1) exit 1; print v}' "$STAGE/SHA256SUMS")" || fail 'Missing/ambiguous manager checksum'
- [[ "$expected" =~ ^[a-fA-F0-9]{64}$ && "$(digest "$STAGE/manager")" == "$(printf %s "$expected" | tr A-F a-f)" ]] || fail 'Manager release checksum mismatch'
+ verify_digest "$STAGE/manager" "$manager_digest" 'Manager release'
 fi
 MANAGER="$STAGE/manager"
 magic="$(od -An -tx1 -N4 "$MANAGER" | tr -d ' \n')"
 case "$OS:$magic" in linux:7f454c46|darwin:cffaedfe|darwin:cefaedfe|darwin:feedfacf|darwin:feedface|darwin:cafebabe) ;; *) fail 'Bootstrap is not a native manager' ;; esac
 chmod 700 "$MANAGER"
 [[ "$("$MANAGER" manager protocol)" == 1 ]] || fail 'Native manager interface unavailable'
+if [[ "$SOURCE" == opencode ]]; then
+ hook_protocol="$("$MANAGER" manager opencode-hook-protocol)" || fail 'OpenCode capture requires a manager with the opencode-hook route; explicitly update the manager'
+ [[ "$hook_protocol" == 1 ]] || fail 'Incompatible OpenCode user hook protocol; explicitly update the manager'
+fi
 actual_manager_version="$("$MANAGER" --manager-version --short)"
 exact "$actual_manager_version" || fail 'Manager has no exact version identity'
 [[ -z "$MANAGER_VERSION" || "$MANAGER_VERSION" == "$actual_manager_version" ]] || fail 'Manager version mismatch'
@@ -117,7 +144,7 @@ PIN=${VALUES[0]} INSTALL_ROOT=${VALUES[2]}
 if ((!INIT)); then PROJECT=${VALUES[1]}; fi
 if [[ -n "$ENGINE" ]]; then
  [[ -f "$ENGINE" && "$ENGINE_SHA" =~ ^[a-fA-F0-9]{64}$ ]] || fail '--local-bin requires --sha256'
- [[ "$(digest "$ENGINE")" == "$(printf %s "$ENGINE_SHA" | tr A-F a-f)" ]] || fail 'Local engine checksum mismatch'
+ verify_digest "$ENGINE" "$ENGINE_SHA" 'Local engine'
  ((${#PLATFORMS[@]}==1)) || fail '--local-bin cannot install foreign platforms'
 fi
 if ((DRY)); then
@@ -135,15 +162,20 @@ for item in "${PLATFORMS[@]}"; do
  [[ -z "$ENGINE" ]] || args+=(--local-bin "$ENGINE" --sha256 "$ENGINE_SHA")
  "$MANAGER" "${args[@]}"
 done
-"$MANAGER" self-update --version "$MANAGER_VERSION" --local-bin "$MANAGER" --sha256 "$(digest "$MANAGER")" --dest "$ENTRYPOINT"
+# Reuse the admitted release/local digest; an existing manager came from the installed entrypoint.
+if [[ -z "$manager_digest" ]]; then
+ manager_digest="$(digest "$MANAGER")" || fail 'Could not compute installed manager SHA256'
+fi
+"$MANAGER" self-update --version "$MANAGER_VERSION" --local-bin "$MANAGER" --sha256 "$manager_digest" --dest "$ENTRYPOINT"
 if ((INIT)); then
  printf 'Configuration incomplete: review explicit shared and local policy before completing setup.\n'
  printf 'Complete only this unchanged owned scaffold, preserving local settings:\n  (cd -P -- %q && %q --al-project %q init --complete-scaffold --agenticlens-version %q --settings APPROVED_SHARED.yaml --workspace-root DIR --local-settings APPROVED_LOCAL.yaml)\n' "$PROJECT" "$ENTRYPOINT" "$PROJECT" "$PIN"
 fi
 if [[ -n "$SOURCE" ]]; then
  ((INIT==0)) || fail 'Complete project configuration before capture installation'
- args=(capture install --source "$SOURCE" --store "$STORE" --repo "$PROJECT" --wrapper "$ENTRYPOINT")
- if [[ "$SOURCE" == codex ]]; then args=(capture install-user --repo "$PROJECT" --entrypoint "$ENTRYPOINT" --store "$STORE"); fi
+ args=(capture install-user --repo "$PROJECT" --entrypoint "$ENTRYPOINT")
+ if [[ "$SOURCE" == opencode ]]; then args+=(--user-source opencode); else args+=(--source codex); fi
+ [[ -z "$STORE" ]] || args+=(--store "$STORE")
  [[ -z "$STATE" ]] || args+=(--state-dir "$STATE")
  "$ENTRYPOINT" --al-project "$PROJECT" "${args[@]}"
 else printf 'Binary installation only; lifecycle capture not configured.\n'; fi
