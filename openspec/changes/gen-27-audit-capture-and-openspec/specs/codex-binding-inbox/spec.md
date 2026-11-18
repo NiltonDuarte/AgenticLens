@@ -43,3 +43,24 @@ The trusted Codex callback SHALL provide a sandbox-compatible way for the agent 
 
 - **WHEN** authoritative project or source identity cannot yet be verified for an otherwise valid response
 - **THEN** the worker preserves accepted history, keeps the pending work visible and retries through the capture lifecycle.
+
+### Requirement: Select an operator-installed engine for trusted Codex capture
+
+Trusted Codex callbacks and workers acting on their behalf SHALL execute only an operator-installed engine from a verified location outside the workspace and the sandbox’s writable grants. The trusted selection SHALL precede executable probes and survive worker restarts and handoffs.
+
+#### Scenario: Capture from a development worktree
+
+- **WHEN** Codex invokes a trusted lifecycle or binding wake hook in a worktree configured with a local engine
+- **THEN** capture uses the protected installation and preserves the normal workspace-specific capture policy, ticket binding and destination.
+- **WHEN** the worker restarts or hands work to a successor
+- **THEN** the successor meets the same installation and path checks, including when the project captures multiple sources.
+
+#### Scenario: Protected installation cannot be verified
+
+- **WHEN** the protected executable is unavailable, incompatible, modified, or reachable through a sandbox-writable location
+- **THEN** capture reports the installation problem before executing an unverified candidate, preserves pending work and previously published facts, and performs no automatic download.
+
+#### Scenario: Ordinary development and OpenCode use
+
+- **WHEN** an operator invokes the ordinary CLI in a development checkout or uses the supported OpenCode integration
+- **THEN** ordinary development engine selection and independent OpenCode capture retain their supported behavior.
