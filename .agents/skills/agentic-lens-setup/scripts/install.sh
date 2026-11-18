@@ -53,6 +53,15 @@ case "$VERSION" in
     *[!A-Za-z0-9._+-]*|.|..|"") echo "Error: Invalid release tag: $VERSION" >&2; exit 1 ;;
 esac
 
+valid_repository() {
+    local LC_ALL=C
+    [[ "$1" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && "/$1/" != */./* && "/$1/" != */../* ]]
+}
+if [[ -z "$SOURCE_DIR" ]] && ! valid_repository "$REPO"; then
+    echo 'Error: AGENTIC_LENS_REPO must be an owner/repository name' >&2
+    exit 1
+fi
+
 FILES=(
     agentic-lens-setup/SKILL.md
     agentic-lens-setup/scripts/install.sh

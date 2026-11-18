@@ -916,43 +916,40 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": Codex source unavailable")
 				continue
 			}
-			paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: s.codexHome, SessionID: owner.ID})
-			if err != nil || len(paths) == 0 {
-				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": Codex native session unavailable")
+			path, err := codex.DiscoverExactRolloutPath(s.codexHome, owner.ID)
+			if err != nil {
+				diagnostic := err.Error()
+				if errors.Is(err, codex.ErrOwnerUnavailable) {
+					diagnostic = codex.ErrOwnerUnavailable.Error()
+				}
+				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": "+diagnostic)
 				continue
 			}
-			found := false
-			for _, path := range paths {
-				transcript, parseErr := codex.ParseRolloutPath(path)
-				if parseErr != nil {
-					response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": "+parseErr.Error())
-					continue
-				}
-				id := transcript.ThreadID
-				if id == "" {
-					id = transcript.SessionID
-				}
-				if id != owner.ID {
-					continue
-				}
-				if transcript.ParentThread != "" && (owner.ParentID == nil || *owner.ParentID != transcript.ParentThread) {
-					response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": source parent contradicts recorded owner")
-					continue
-				}
-				transcripts = append(transcripts, transcript)
-				if len(transcript.Warnings) == 0 || len(transcript.Events) > 0 {
-					codexObserved = true
-				}
-				found = true
-				if len(transcript.Warnings) == 0 {
-					response.Coverage.CompleteSessionIDs = append(response.Coverage.CompleteSessionIDs, owner.ID)
-				} else {
-					response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": incomplete Codex source records")
-				}
-				break
+			transcript, parseErr := codex.ParseRolloutPath(path)
+			if parseErr != nil {
+				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": "+parseErr.Error())
+				continue
 			}
-			if !found {
+			id := transcript.ThreadID
+			if id == "" {
+				id = transcript.SessionID
+			}
+			if id != owner.ID {
 				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": exact Codex native session unavailable")
+				continue
+			}
+			if transcript.ParentThread != "" && (owner.ParentID == nil || *owner.ParentID != transcript.ParentThread) {
+				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": source parent contradicts recorded owner")
+				continue
+			}
+			transcripts = append(transcripts, transcript)
+			if len(transcript.Warnings) == 0 || len(transcript.Events) > 0 {
+				codexObserved = true
+			}
+			if len(transcript.Warnings) == 0 {
+				response.Coverage.CompleteSessionIDs = append(response.Coverage.CompleteSessionIDs, owner.ID)
+			} else {
+				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": incomplete Codex source records")
 			}
 		default:
 			response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": unsupported source")

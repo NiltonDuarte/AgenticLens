@@ -67,6 +67,56 @@ class CaptureDistributionTest(DistributionFixture):
         self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
         self.assertEqual(self.requests(), [])
 
+    def test_opencode_bootstrap_requires_matching_callback_interfaces(self):
+        user_config = self.root / 'OpenCode config'
+        codex = Path(self.env['CODEX_HOME'])
+        state = self.root / 'capture state'
+        fresh = self.snapshot_owned_paths(user_config, codex, state)
+        for role, manager, engine, fixture_env in [
+            ('manager', self.probe, self.application, {'AL_PROBE_PREVIOUS_MANAGER': str(self.manager)}),
+            ('engine', self.manager, self.probe, {'AL_PROBE_PREVIOUS_ENGINE': str(self.application)}),
+        ]:
+            with self.subTest(previous=role):
+                env = dict(self.env, OPENCODE_CONFIG_DIR=str(user_config), **fixture_env)
+                args = ('--local-manager-bin', manager, '--manager-sha256', digest(manager),
+                        '--local-bin', engine, '--sha256', digest(engine), '--force')
+                self.succeeds(self.install(*args, env=env))
+                result = self.install(*args, '--capture-source', 'opencode', env=env)
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(self.snapshot_owned_paths(user_config, codex, state), fresh)
+
+                # Exercise direct activation independently of the downloader's manager probe.
+                entrypoint = self.dest / 'agentic-lens'
+                command = ['capture', 'install-user', '--source', 'opencode', '--repo', str(self.repo),
+                           '--entrypoint', str(entrypoint)]
+                if role == 'manager':
+                    direct = subprocess.run([str(self.application), *command], cwd=self.repo, env=env,
+                                            capture_output=True, text=True, timeout=10)
+                else:
+                    direct = self.launch(*command, env=env)
+                self.assertNotEqual(direct.returncode, 0, direct.stdout + direct.stderr)
+                self.assertEqual(self.snapshot_owned_paths(user_config, codex, state), fresh)
+
+                if role == 'engine':
+                    codex_args = ['--repo', self.repo, '--store', codex, '--entrypoint', entrypoint]
+                    self.succeeds(self.launch('capture', 'install-user', *codex_args, env=env))
+                    before = self.snapshot_owned_paths(codex, user_config)
+                    failed = self.launch('capture', 'uninstall-user', '--source=opencode', '--repo', self.repo,
+                                         '--entrypoint', entrypoint, env=env)
+                    self.assertNotEqual(failed.returncode, 0, failed.stdout + failed.stderr)
+                    self.assertEqual(self.snapshot_owned_paths(codex, user_config), before)
+
+        env = dict(self.env, OPENCODE_CONFIG_DIR=str(user_config))
+        existing_codex = self.snapshot_owned_paths(codex)
+        self.succeeds(self.install_local('--force', '--capture-source', 'opencode', env=env))
+        plugin = user_config / 'plugins/agenticlens-capture.ts'
+        receipt = json.loads((user_config / 'agenticlens-opencode-user-installation.json').read_text())
+        self.assertEqual(receipt['manager'], str(self.dest / 'agentic-lens'))
+        self.assertEqual(receipt['plugin_hash'], digest(plugin))
+        self.assertEqual(self.snapshot_owned_paths(codex), existing_codex)
+        self.assertFalse(state.exists())
+        self.assertEqual(self.requests(), [])
+
     def test_both_installers_install_native_user_capture_with_literal_paths(self):
         store = self.root / "source $(touch INJECTED)"; store.mkdir()
         for script in [ROOT / 'scripts/download-agentic-lens.sh', SETUP / 'download.sh']:

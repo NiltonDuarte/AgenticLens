@@ -449,6 +449,13 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
 			os.Exit(1)
 		}
+		if captureResult != nil {
+			for _, registration := range captureResult.Registrations {
+				if registration.State == domain.CaptureFailed || registration.State == domain.CapturePending {
+					fmt.Fprintf(os.Stderr, "Incomplete capture extraction for owner %s; accepted history retained: %s\n", registration.Identity.SessionID, registration.Detail)
+				}
+			}
+		}
 		if precedenceErr := filterCapturePrecedence(sessions, captureResult); precedenceErr != nil {
 			fmt.Fprintln(os.Stderr, "Capture checkpoint comparison:", precedenceErr)
 			os.Exit(1)

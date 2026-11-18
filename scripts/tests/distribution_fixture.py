@@ -109,6 +109,8 @@ if os.environ.get('AL_FETCH_FAIL', 'UNMATCHABLE') in url:
     target.write_text('partial transfer'); sys.exit(23)
 if '/.agents/skills/' in url:
     shutil.copyfile(pathlib.Path(os.environ['AL_FIXTURE_SOURCE']) / '.agents/skills' / url.split('/.agents/skills/', 1)[1], target)
+elif url.endswith('/SHA256SUMS') and 'AL_FIXTURE_MANIFEST' in os.environ:
+    shutil.copyfile(os.environ['AL_FIXTURE_MANIFEST'], target)
 elif url.endswith('/SHA256SUMS'):
     release = pathlib.Path(os.environ['AL_FIXTURE_RELEASE'])
     checksum = hashlib.sha256(release.read_bytes()).hexdigest()

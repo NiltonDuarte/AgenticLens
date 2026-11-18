@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "ARCH-01",
+      "severity": 8,
+      "issue": "Registered automatic generation bypassed duplicate snapshot discovery.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed: validate registered snapshot uniqueness before extraction and expose incomplete owners."
+    },
+    {
+      "finding_id": "ARCH-02",
+      "severity": 6,
+      "issue": "Per-owner uniqueness scans exceeded the capture pass source-read allowance.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed: share and charge discovery reads to the operation allowance; preserve pending owners."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 2,
+      "issue": "Claimed cross-store collision checkpoints discarded accepted history.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Refuted: source-store identities checkpoint independently; collection collision blocks ledger publication and retains degraded collection evidence. Existing recovery test and independent data verifier confirm the contract."
+    },
+    {
+      "finding_id": "ARCH-03",
+      "severity": 4,
+      "issue": "Discovery candidate allowance reset between refresh scheduler passes.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: operation workBudget retains discovery state across refresh passes; cross-pass regression added. Test reviewer Luna confirmed the supplied coverage gap, without separate discovery credit."
+    },
+    {
+      "finding_id": "BEH-INT-01",
+      "severity": 7,
+      "issue": "Repeated bounded Codex reads could indefinitely defer a fitting OpenCode owner on the same ticket.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed in 136504cb. The scheduler retains the continuation for an owner deferred by earlier work and advances past an owner that exhausts a full allowance. Mixed-source red/green tests verify progress and preservation."
+    }
+  ]
+}
