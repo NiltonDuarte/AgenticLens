@@ -112,7 +112,7 @@ Native integration evidence must name the actual harness/version/interface and s
 Two end-to-end tickets are the smallest practical batch that keeps each session bounded and each delivery independently usable. One ticket per layer would fragment ownership; one ticket for both harness integrations would combine distinct runtime APIs, trust/binding flows and real-source verification into an unnecessarily broad delivery.
 
 1. [AL-79: Native user-level Codex capture with worktree configuration and development builds](../plan/to-do/AL-79%20capture%20codex%20sessions%20across%20worktrees.md) — Ready; no ticket prerequisite. Delivers the common engine/configuration/binary/lifecycle behavior and a real Codex path end to end.
-2. [AL-80: Global OpenCode capture using the shared worktree runtime](../plan/to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md) — Blocked by AL-79. Adds the TypeScript global adapter, runtime binding and native OpenCode parity using the same core rules.
+2. [AL-80: Global OpenCode capture using the shared worktree runtime](../plan/done/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md) — Blocked by AL-79. Adds the TypeScript global adapter, runtime binding and native OpenCode parity using the same core rules.
 
 Related existing work remains separately owned: AL-70 configuration/path propagation corrections, AL-73 release/checksum reliability, AL-78 open-turn feedback effectiveness, and AL-63 source capability audit. They are coordination points, not artificial prerequisites. Revalidate their current state and avoid duplicating their unrelated scope.
 

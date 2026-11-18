@@ -177,7 +177,7 @@ func TestCoverageSummaryDoesNotPublishLocalPathsOrBindingToken(t *testing.T) {
 	}
 }
 
-func TestReconcileChargesEachSourceOnceAndContinuesBudgetedWork(t *testing.T) {
+func TestReconcileChargesDiscoveryAndExtractionOnceAndContinuesBudgetedWork(t *testing.T) {
 	ctx := context.Background()
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
@@ -187,12 +187,17 @@ func TestReconcileChargesEachSourceOnceAndContinuesBudgetedWork(t *testing.T) {
 	path := filepath.Join(store, "sessions", "root.jsonl")
 	contents := writeRollout(t, path, "root", "", 10)
 	registerBound(t, s, store, path, "root", "TEST-100")
-	result, err := s.Reconcile(ctx, "TEST-100", "tester", 1, int64(len(contents)), fixtureGenerationPolicy())
+	// One complete uniqueness inspection and one extraction fit exactly.
+	allowance := 2 * int64(len(contents))
+	result, err := s.Reconcile(ctx, "TEST-100", "tester", 1, allowance, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(result.Registrations) != 1 || result.Registrations[0].State != domain.CaptureCurrent {
-		t.Fatalf("exact one-source budget was charged again: %+v", result)
+		t.Fatalf("exact discovery-plus-extraction budget did not refresh the owner: %+v", result)
+	}
+	if result.SourceBytes != allowance || result.SourceAttempts != 1 {
+		t.Fatalf("discovery/extraction was omitted or charged twice: %+v", result)
 	}
 	for _, id := range []string{"second", "third"} {
 		path := filepath.Join(store, "sessions", id+".jsonl")
@@ -275,7 +280,11 @@ func TestReconcileFailedReadsConsumeSharedByteBudget(t *testing.T) {
 		size = int64(len(contents))
 		registerBound(t, s, store, path, id, "TEST-100")
 	}
-	result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 2, size, fixtureGenerationPolicy())
+	// Exact uniqueness inspection reads both source files before the first parse.
+	// Allow that discovery plus one malformed parse so this test still reaches
+	// the failed-read branch and leaves the second owner pending.
+	allowance := 3 * size
+	result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 2, allowance, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,8 +300,8 @@ func TestReconcileFailedReadsConsumeSharedByteBudget(t *testing.T) {
 	if failed != 1 || pending != 1 {
 		t.Fatalf("failed parsing escaped the shared byte budget: failed=%d pending=%d rows=%+v", failed, pending, result.Registrations)
 	}
-	if result.SourceBytes != size || result.SourceAttempts > 2 {
-		t.Fatalf("incorrect failed-read accounting: bytes=%d attempts=%d budget=%d", result.SourceBytes, result.SourceAttempts, size)
+	if result.SourceBytes != allowance || result.SourceAttempts > 2 {
+		t.Fatalf("incorrect failed-read accounting: bytes=%d attempts=%d budget=%d", result.SourceBytes, result.SourceAttempts, allowance)
 	}
 }
 
@@ -352,6 +361,9 @@ func TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities(t *te
 	path := filepath.Join(store, "sessions", "bound.jsonl")
 	contents := writeRollout(t, path, boundID.SessionID, "", 10)
 	registerBound(t, s, store, path, boundID.SessionID, "TEST-100")
+	// All candidates must be inspected for exact uniqueness, but only the
+	// bound owner consumes a ticket refresh attempt or contributes facts.
+	discoveryBytes := int64(len(contents))
 	unassigned := []string{}
 	for n := 0; len(unassigned) < 4; n++ {
 		id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: store, SessionID: fmt.Sprintf("unassigned-%d", n)}
@@ -359,18 +371,22 @@ func TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities(t *te
 			continue
 		}
 		path := filepath.Join(store, "sessions", id.SessionID+".jsonl")
-		writeRollout(t, path, id.SessionID, "", 99)
+		discoveryBytes += int64(len(writeRollout(t, path, id.SessionID, "", 99)))
 		if _, err := s.Register(ctx, id, path, "SessionStart"); err != nil {
 			t.Fatal(err)
 		}
 		unassigned = append(unassigned, id.SessionID)
 	}
-	result, err := s.Reconcile(ctx, "TEST-100", "tester", 1, int64(len(contents)), fixtureGenerationPolicy())
+	allowance := discoveryBytes + int64(len(contents))
+	result, err := s.Reconcile(ctx, "TEST-100", "tester", 1, allowance, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(result.Sessions) != 1 || result.Sessions[0].ID != boundID.SessionID || len(result.Registrations) != 1 || result.Registrations[0].State != domain.CaptureCurrent {
 		t.Fatalf("unassigned roots starved ticket: %+v", result)
+	}
+	if result.SourceAttempts != 1 || result.SourceBytes != allowance {
+		t.Fatalf("unassigned candidates consumed ticket attempts or escaped discovery accounting: %+v", result)
 	}
 	summary := capture.CoverageSummary(result)
 	for _, id := range unassigned {
@@ -513,27 +529,29 @@ func TestReconcileSchedulerEventuallyRefreshesOwnerWhenFailedMetadataConsumesByt
 		t.Fatal("fixture did not establish the old owner snapshot")
 	}
 	bad := filepath.Join(store, "sessions", "a-malformed.jsonl")
-	if err := os.WriteFile(bad, []byte("{"+strings.Repeat("x", 1023)), 0600); err != nil {
+	failedMetadata := []byte("{" + strings.Repeat("x", 1023))
+	if err := os.WriteFile(bad, failedMetadata, 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := capture.ReceiveCodex(ctx, s, capture.HookInput{SessionID: "root", Event: "SubagentStop", TranscriptPath: rootPath, AgentTranscriptPath: bad}, store, "/binary", "/state"); err != nil {
 		t.Fatal(err)
 	}
 	growing := append(append([]byte{}, old...), []byte(`{"timestamp":"2026-01-01T00:00:03Z","type":"token_usage_record","payload":{"thread_id":"root","turn_id":"two","usage":{"input_tokens":20,"output_tokens":3}}}`+"\n")...)
-	if len(growing) != 509 {
-		t.Fatalf("review schedule requires a 509-byte fitting owner, got %d", len(growing))
-	}
+	// The refresh-first class fits both candidate inspections plus extraction.
+	// A metadata-first class consumes enough of this same allowance to block
+	// that refresh, so class rotation remains necessary for progress.
+	allowance := int64(len(failedMetadata) + 2*len(growing))
 	if err := os.WriteFile(rootPath, growing, 0600); err != nil {
 		t.Fatal(err)
 	}
 	progress := false
 	for pass := 0; pass < 8; pass++ {
-		result, err := s.Reconcile(ctx, "TEST-100", "tester", 2, 1024, fixtureGenerationPolicy())
+		result, err := s.Reconcile(ctx, "TEST-100", "tester", 2, allowance, fixtureGenerationPolicy())
 		if err != nil {
 			t.Fatal(err)
 		}
-		if result.SourceBytes > 1024 || result.SourceAttempts > 2 {
-			t.Fatalf("scheduler exceeded unchanged pass budget: %+v", result)
+		if result.SourceBytes > allowance || result.SourceAttempts > 2 {
+			t.Fatalf("scheduler exceeded shared discovery/extraction pass budget: %+v", result)
 		}
 		if result.PendingChildren < 1 {
 			t.Fatal("scheduler discarded unresolved malformed metadata to make progress")

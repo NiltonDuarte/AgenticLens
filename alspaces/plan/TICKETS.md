@@ -16,10 +16,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-95
   - **File**: [AL-94](to-do/AL-94%20make%20explicit%20backfill%20repeatable%20and%20report%20refresh%20coverage.md)
 
-- **AL-80**: Capture OpenCode sessions across worktrees
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-80](to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
-
 - **AL-71**: Keep dashboard requests and live data reliable
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-71](to-do/AL-71%20keep%20dashboard%20requests%20and%20live%20data%20reliable.md)
@@ -27,10 +23,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **AL-72**: Make dashboard interactions accurate and accessible
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-72](to-do/AL-72%20make%20dashboard%20interactions%20accurate%20and%20accessible.md)
-
-- **AL-73**: Verify release artifacts before installation
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-73](to-do/AL-73%20verify%20release%20artifacts%20before%20installation.md)
 
 - **AL-74**: Make regression checks reliable and remove unused code
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
@@ -72,10 +64,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **FIX-18**: Report unsupported live telemetry accurately
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [FIX-18](to-do/FIX-18%20report%20unsupported%20live%20telemetry%20accurately.md)
-
-- **FIX-19**: Reject ambiguous Codex session snapshots
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [FIX-19](to-do/FIX-19%20reject%20ambiguous%20codex%20session%20snapshots.md)
 
 - **FIX-20**: Stop source reads when callers cancel
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None

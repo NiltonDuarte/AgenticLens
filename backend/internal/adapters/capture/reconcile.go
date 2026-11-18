@@ -246,10 +246,11 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 
 // sourceRead never enters registry serialization or diagnostic publication.
 type sourceRead struct {
-	configuration domain.ProjectConfig
-	policy        *domain.GenerationPolicy
-	transcripts   []codex.Transcript
-	events        domain.SourceEvents
+	configuration   domain.ProjectConfig
+	policy          *domain.GenerationPolicy
+	transcripts     []codex.Transcript
+	discoveryBudget *codex.DiscoveryBudget
+	events          domain.SourceEvents
 }
 
 func extractExact(ctx context.Context, r domain.CaptureRegistration, budget int64, user string, source ...*sourceRead) ([]domain.SessionFact, int64, string, error) {
@@ -268,8 +269,32 @@ func extractExactAt(ctx context.Context, r domain.CaptureRegistration, budget in
 		if path == "" {
 			return nil, 0, "", errors.New("exact Codex transcript path not registered; wait for an authoritative hook")
 		}
-		if err := codex.ValidateRolloutStore(r.Identity.Store, path); err != nil {
-			return nil, 0, "", err
+		// A uniqueness scan is part of this source read, not a fresh allowance
+		// per owner. Keep actual discovery usage separate from file revision.
+		var discoveryBudget *codex.DiscoveryBudget
+		if len(source) > 0 && source[0].discoveryBudget != nil {
+			discoveryBudget = source[0].discoveryBudget
+			discoveryBudget.MaxSourceBytes = discoveryBudget.SourceBytesRead + budget
+		} else {
+			maxSessions := 1
+			if len(source) > 0 {
+				var err error
+				discoveryBudget, err = captureDiscoveryBudget(source[0].configuration)
+				if err != nil {
+					return nil, 0, "", err
+				}
+				maxSessions = discoveryBudget.MaxSessions
+			}
+			discoveryBudget = &codex.DiscoveryBudget{MaxSessions: maxSessions, MaxSourceBytes: budget}
+			if len(source) > 0 {
+				source[0].discoveryBudget = discoveryBudget
+			}
+		}
+		before := discoveryBudget.SourceBytesRead
+		uniquenessErr := validateRegisteredCodexSnapshot(r, discoveryBudget)
+		budget -= discoveryBudget.SourceBytesRead - before
+		if uniquenessErr != nil {
+			return nil, 0, "", uniquenessErr
 		}
 		file, err := os.Open(path)
 		if err != nil {
@@ -414,7 +439,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			return nil, nil, err
 		}
 	}
-	source := sourceRead{policy: captureGenerationPolicy(policies), configuration: s.configuration}
+	source := sourceRead{policy: captureGenerationPolicy(policies), configuration: s.configuration, discoveryBudget: budget.codexDiscovery}
 	used := 0
 	refreshed := map[string]bool{}
 	for _, i := range indexes {
@@ -427,6 +452,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			break
 		}
 		r := registrations[i]
+		priorSourceBytes := budget.readBytes
 		attempted[IdentityKey(r.Identity)] = true
 		used++
 		budget.sessions--
@@ -466,16 +492,27 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			if parseErr != nil {
 				return nil, nil, parseErr
 			}
+			discoveryBytesBefore := int64(0)
+			if source.discoveryBudget != nil {
+				discoveryBytesBefore = source.discoveryBudget.SourceBytesRead
+			}
 			fresh, revision, updatedAt, extractErr = extractExactAt(ctx, r, budget.bytes, user, cutoff, &source)
+			budget.codexDiscovery = source.discoveryBudget
+			if source.discoveryBudget != nil {
+				budget.charge(source.discoveryBudget.SourceBytesRead - discoveryBytesBefore)
+			}
 		}
 		budget.charge(revision)
 		updated, updateErr := s.Change(ctx, r.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 			if extractErr != nil {
 				current.State = domain.CaptureFailed
-				current.Detail = "Source snapshot unavailable or invalid; previous facts preserved. Run capture reconcile after source flush and inspect source configuration."
+				current.Detail = "Source snapshot unavailable or invalid; previous facts preserved: " + extractErr.Error()
 				if errors.Is(extractErr, opencode.ErrCaptureBudget) {
 					current.State = domain.CapturePending
 					current.Detail = "Source byte budget reached; increase --max-source-bytes or continue reconciliation; previous facts preserved"
+				} else if errors.Is(extractErr, codex.ErrDiscoveryBudget) {
+					current.State = domain.CapturePending
+					current.Detail = "Codex discovery session/byte budget reached; increase configured source limits or continue reconciliation; previous facts preserved"
 				}
 				return current, nil
 			}
@@ -519,13 +556,33 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			return nil, nil, updateErr
 		}
 		registrations[i] = updated
-		if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,ticket) DO UPDATE SET identity=excluded.identity`, s.worktreeID, ticket, IdentityKey(r.Identity)); err != nil {
-			return nil, nil, err
+		if priorSourceBytes > 0 && (errors.Is(extractErr, opencode.ErrCaptureBudget) || errors.Is(extractErr, codex.ErrDiscoveryBudget)) {
+			// Retry the first owner starved by earlier work before that work on
+			// the next pass. Keep this continuation across refresh-class calls.
+			// A source that fails with the full pass allowance still advances,
+			// so a permanently oversized owner cannot pin the rotation.
+			budget.refreshCursorHeld = true
+		}
+		if !budget.refreshCursorHeld {
+			if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,ticket) DO UPDATE SET identity=excluded.identity`, s.worktreeID, ticket, IdentityKey(r.Identity)); err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 	// Native child metadata is request-local. Resolve only successfully read
 	// owners before saving the final lean snapshots; budgets bound these reads.
 	if len(source.transcripts) > 0 {
+		seenTranscriptOwners := make(map[string]bool)
+		for _, transcript := range source.transcripts {
+			id := transcript.ThreadID
+			if id == "" {
+				id = transcript.SessionID
+			}
+			if seenTranscriptOwners[id] {
+				return nil, nil, fmt.Errorf("session identity collision: %s exists in multiple registered source stores; canonical ledger cannot distinguish these owners", id)
+			}
+			seenTranscriptOwners[id] = true
+		}
 		combined, combineErr := codex.CombineTranscriptsWithPolicy(source.transcripts, policies...)
 		if combineErr != nil {
 			return nil, nil, combineErr

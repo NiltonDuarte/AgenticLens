@@ -1,5 +1,7 @@
 # AL-73: Verify release artifacts before installation
 
+[Execution change](../../../openspec/changes/archive/2026-11-17-al-73-verify-release-artifacts-before-installation/proposal.md)
+
 ## Goal
 
 Installers replace binaries only with verified release artifacts and report failures accurately; release verification rejects incomplete checksum inventories.

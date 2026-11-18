@@ -41,7 +41,19 @@ func TestMain(m *testing.M) {
 			os.Exit(0)
 		}
 	}
+	// Both the effective OpenCode plugin directory and its XDG peer are
+	// inspected for duplicate loading when the legacy installer runs.
+	configRoot, err := os.MkdirTemp("", "capture-opencode-config-*")
+	if err != nil {
+		panic(err)
+	}
+	for _, key := range []string{"XDG_CONFIG_HOME", "OPENCODE_CONFIG_DIR"} {
+		if err := os.Setenv(key, filepath.Join(configRoot, key)); err != nil {
+			panic(err)
+		}
+	}
 	code := m.Run()
+	os.RemoveAll(configRoot)
 	if installationManagerRoot != "" {
 		os.RemoveAll(installationManagerRoot)
 	}

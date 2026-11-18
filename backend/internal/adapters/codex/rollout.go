@@ -1051,6 +1051,21 @@ func CombineTranscriptsWithPolicy(transcripts []Transcript, policies ...domain.G
 	if len(transcripts) == 0 {
 		return Transcript{}, errors.New("cannot combine an empty Codex transcript set")
 	}
+	// Validate native owners before relationship resolution or fact grouping can
+	// hide repeated snapshots behind a single normalized session.
+	seenOwners := make(map[string]bool)
+	for _, transcript := range transcripts {
+		owners := transcript.sessions
+		if owners == nil {
+			owners = []domain.SessionFact{{ID: transcript.sessionIDOrThread()}}
+		}
+		for _, owner := range owners {
+			if seenOwners[owner.ID] {
+				return Transcript{}, fmt.Errorf("incomplete Codex transcript set: owner %s has ambiguous snapshots", owner.ID)
+			}
+			seenOwners[owner.ID] = true
+		}
+	}
 	transcripts = resolveSourceChildren(transcripts)
 	combined := Transcript{RecordKinds: make(map[string]int64), EventKinds: make(map[string]int64), sessions: []domain.SessionFact{}, completeOwners: []string{}}
 	for index, transcript := range transcripts {

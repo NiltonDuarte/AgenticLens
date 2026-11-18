@@ -169,6 +169,24 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 	if _, err = validateStatePlacement(repo, logicalRegistryDirectory(dir)); err != nil {
 		return result, err
 	}
+	// A legacy project installation must not activate a second plugin or
+	// create files in the user's OpenCode config directory.
+	if options.Source == "opencode" && !options.Remove {
+		if !options.DryRun {
+			lock, err := lockOpenCodeProject(repo)
+			if err != nil {
+				return result, err
+			}
+			defer func() { returnErr = errors.Join(returnErr, lock.Close()) }()
+		}
+		active, err := loadedOpenCodePlugin("")
+		if err != nil {
+			return result, err
+		}
+		if active != "" {
+			return result, fmt.Errorf("OpenCode project plugin would duplicate the user plugin at %s; preserve the user installation", active)
+		}
+	}
 	if !options.DryRun {
 		lock, e := acquireInstallLock(dir)
 		if e != nil {

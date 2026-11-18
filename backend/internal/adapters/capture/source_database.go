@@ -6,6 +6,7 @@ import (
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
 	"fmt"
+	"path/filepath"
 )
 
 func openOpenCodeSource(cfg domain.ProjectConfig, path string) (*opencode.OpenCodeDB, error) {
@@ -47,4 +48,29 @@ func discoverExactCaptureRollout(cfg domain.ProjectConfig, store, id string) (st
 		return "", err
 	}
 	return codex.DiscoverExactRolloutPathWithBudget(store, id, budget)
+}
+
+// validateRegisteredCodexSnapshot checks uniqueness without replacing the hook's
+// registered source path. A registration is a binding, not authority to choose
+// between multiple native snapshots for the same owner.
+func validateRegisteredCodexSnapshot(r domain.CaptureRegistration, budget *codex.DiscoveryBudget) error {
+	if err := codex.ValidateRolloutStore(r.Identity.Store, r.TranscriptPath); err != nil {
+		return err
+	}
+	path, err := codex.DiscoverExactRolloutPathWithBudget(r.Identity.Store, r.Identity.SessionID, budget)
+	if err != nil {
+		return err
+	}
+	registered, err := filepath.EvalSymlinks(r.TranscriptPath)
+	if err != nil {
+		return err
+	}
+	selected, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return err
+	}
+	if registered != selected {
+		return fmt.Errorf("exact Codex owner %s does not match its registered source path", r.Identity.SessionID)
+	}
+	return nil
 }
