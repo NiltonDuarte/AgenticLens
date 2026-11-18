@@ -26,8 +26,16 @@ func Run(args []string, input io.Reader, output, diagnostic io.Writer) error {
 	if len(args) == 2 && args[0] == "engine" && args[1] == "protocol" {
 		return errors.New("this executable is the AgenticLens manager, not an engine")
 	}
-	if len(args) == 2 && args[0] == "manager" && (args[1] == "opencode-hook-protocol" || args[1] == "codex-binding-wake-protocol") {
+	if len(args) == 2 && args[0] == "manager" && (args[1] == "opencode-hook-protocol" || args[1] == "codex-binding-wake-protocol" || args[1] == "protected-codex-hook-protocol") {
 		_, err := fmt.Fprintln(output, "1")
+		return err
+	}
+	if len(args) == 3 && args[0] == "manager" && args[1] == "protected-codex-version" {
+		version, err := config.ProtectedCodexVersion(args[2], domain.GetBuildInfo().Version)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(output, version)
 		return err
 	}
 	if len(args) == 2 && args[0] == "manager" && args[1] == "protocol" {
@@ -99,6 +107,17 @@ parsed:
 		}
 		_, err = fmt.Fprintf(output, "%s\n%s\n%s\n%s\n", entry.Version, entry.Project, entry.InstallRoot, path)
 		return err
+	}
+	if len(codexHomes) > 1 && !resolve {
+		manager, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		native, err := config.ResolveProtectedCodexEngine(entry.Project, codexHomes[1], manager)
+		if err != nil {
+			return err
+		}
+		return execute(native, args, input, output, diagnostic, "")
 	}
 	native, identity, err := selectEngine(entry, codexHomes...)
 	if err != nil {
@@ -317,23 +336,36 @@ func nativeHook(harness string, engineArgs []string, input io.Reader, output, di
 	if harness == "Codex" && strings.TrimSpace(configuration.Telemetry.Sources.CodexHome) == "" {
 		return errors.New("selected local configuration requires telemetry.sources.codex.home")
 	}
-	entry, err := config.ResolveEntrypoint(project)
-	if err != nil {
-		return err
-	}
 	if !policy.Enabled {
 		_, err := io.WriteString(output, "{}\n")
 		return err
 	}
-	homes := []string{config.RuntimeCodexHome(), configuration.Telemetry.Sources.CodexHome}
-	manager, err := os.Executable()
-	if err != nil {
-		return err
+	home := config.RuntimeCodexHome()
+	protected := harness == "Codex"
+	if !protected {
+		protected, err = config.ProtectedCodexInstalled(home)
+		if err != nil {
+			return err
+		}
 	}
-	if _, err := config.OutsideCodexInbox(manager, homes...); err != nil {
-		return err
+	var native string
+	if protected {
+		actual, executableErr := os.Executable()
+		if executableErr != nil {
+			return executableErr
+		}
+		if _, err := config.ProtectedCodexManager(project, home, actual); err != nil {
+			return err
+		}
+		native, err = config.ResolveProtectedCodexEngine(project, home)
+		engineArgs = append(engineArgs, "--protected-codex-home", home)
+	} else {
+		entry, resolveErr := config.ResolveEntrypoint(project)
+		if resolveErr != nil {
+			return resolveErr
+		}
+		native, _, err = selectEngine(entry, home, configuration.Telemetry.Sources.CodexHome)
 	}
-	native, _, err := selectEngine(entry, homes...)
 	if err != nil {
 		return err
 	}

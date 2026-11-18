@@ -58,6 +58,26 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 	return err
 }
 func captureCommandAction(args []string, input io.Reader, output io.Writer) (returnErr error) {
+	// Only the native hook and worker dispatches carry this private selection
+	// context. It may name only the actual harness home, never a project hint.
+	home := ""
+	if len(args) >= 3 && args[len(args)-2] == "--protected-codex-home" {
+		switch args[0] {
+		case "user-hook", "opencode-hook", "worker":
+		default:
+			return errors.New("protected Codex selection applies only to native hooks and their worker")
+		}
+		home = args[len(args)-1]
+		same, err := capture.SameStore(adaptersconfig.RuntimeCodexHome(), home)
+		if err != nil || !same {
+			return errors.New("protected Codex home must match the native runtime home")
+		}
+		args = args[:len(args)-2]
+	}
+	return captureAction(args, input, output, home)
+}
+
+func captureAction(args []string, input io.Reader, output io.Writer, protectedHome string) (returnErr error) {
 	if len(args) == 0 {
 		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|submit-binding|reconcile|relocate-state|disable|uninstall|protocol")
 	}
@@ -66,16 +86,20 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		return captureSubmitBinding(args[1:], output)
 	}
 	if command == "opencode-hook" {
-		return nativeOpenCodeHook(args[1:], input, output)
+		return nativeOpenCodeHook(args[1:], input, output, protectedHome)
 	}
 	if command == "user-hook" {
-		return nativeCodexUserHook(input, output, os.Stderr)
+		return nativeCodexUserHook(input, output, protectedHome)
 	}
 	if command == "relocate-state" {
 		return relocateCaptureCommand(args[1:], output)
 	}
 	if command == "inspect-state" {
 		return inspectCaptureStateCommand(args[1:], output)
+	}
+	if command == "protected-worker-protocol" {
+		_, err := fmt.Fprintln(output, 1)
+		return err
 	}
 	if command == "protocol" {
 		_, err := fmt.Fprintln(output, capture.HandlerProtocolVersion)
@@ -283,6 +307,18 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 			return err
 		}
 	}
+	admittedHome := protectedHome
+	if command == "worker" || *userLevel {
+		protectedHome, err = captureWorkerHome(protectedHome)
+		if err != nil {
+			return err
+		}
+		if protectedHome != "" {
+			if err := checkProtectedCaptureState(project, protectedHome, policy.StateDir); err != nil {
+				return err
+			}
+		}
+	}
 	absState, err := capture.ProjectState(policy.StateDir, project)
 	if err != nil {
 		return err
@@ -367,6 +403,12 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 			return err
 		}
 	}
+	if command == "worker" && admittedHome == "" && protectedHome != "" {
+		if err := releaseAdmission(); err != nil {
+			return err
+		}
+		return launchCaptureWorker("", project, absState, protectedHome)
+	}
 	s, err := capture.OpenProjectContext(ctx, absState, project)
 	if err != nil {
 		return err
@@ -385,7 +427,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		}
 	}
 	if command == "worker" {
-		return captureWorker(s, project, s.CoordinationDirectory(), policy)
+		return captureWorker(s, project, s.CoordinationDirectory(), policy, protectedHome)
 	}
 	absState = s.CoordinationDirectory()
 	handoffAccepted := false
@@ -409,7 +451,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 					returnErr = errors.Join(returnErr, fmt.Errorf("selected native executable unavailable; durable work retained: %w", nativeErr))
 					return
 				}
-				if e := capture.LaunchWorker(native, project, absState); e != nil {
+				if e := launchCaptureWorker(native, project, absState, protectedHome); e != nil {
 					diagnosticErr := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "worker", Outcome: "failed", Detail: "Native worker launch failed. Verify the selected executable and capture state permissions; retry capture reconcile."})
 					returnErr = errors.Join(returnErr, fmt.Errorf("worker launch failed; durable registration retained; inspect capture diagnostics: %w", e), diagnosticErr)
 				}

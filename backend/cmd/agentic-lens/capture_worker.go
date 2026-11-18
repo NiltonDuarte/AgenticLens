@@ -16,7 +16,7 @@ import (
 	"agenticlens/internal/domain"
 )
 
-func captureWorker(s *capture.Store, project, state string, policy domain.CaptureConfig) (returnErr error) {
+func captureWorker(s *capture.Store, project, state string, policy domain.CaptureConfig, protectedHome string) (returnErr error) {
 	if err := policy.ValidateWorker(); err != nil {
 		return err
 	}
@@ -48,14 +48,22 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	if err != nil {
 		return err
 	}
-	fence, err := newCaptureWorkerFence(project, state, binary, cfg)
+	fence, err := newCaptureWorkerFence(project, state, binary, cfg, protectedHome)
 	if err != nil {
 		return err
 	}
 	binary = fence.binary
 	previous, err := capture.WorkerStatus(state)
 	if err != nil {
-		return err
+		if !errors.Is(err, capture.ErrInvalidWorkerStatus) {
+			return err
+		}
+		// The progress file is replaceable operational evidence. Restart the
+		// inbox sweep from registrations; accepted ledger facts stay intact.
+		if err := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "worker", Outcome: "recovered", Detail: "Invalid worker status. Restarting the bounded binding scan from registered sessions."}); err != nil {
+			return err
+		}
+		previous = capture.WorkerProgress{}
 	}
 	scan := previous.BindingScan
 	madeInboxProgress := false
@@ -84,11 +92,18 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			return err
 		}
 		active, _ := captureWorkerActive(project, rows, policy.MaxSourceBytes)
-		if pending.Generation == pending.Acknowledged && !active && scan.Remaining == 0 {
+		if pending.Generation == pending.Acknowledged && !active && scan.Remaining == 0 && time.Now().UnixMilli() >= scan.RetryUntil {
 			return nil
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
+		home, err := captureWorkerHome(protectedHome)
+		if err != nil {
+			return err
+		}
+		if home != "" {
+			return launchCaptureWorker("", project, state, home)
+		}
 		next, err := capture.WorkerSuccessor(ctx, project, state)
 		if err != nil {
 			// A later disable can also stop successor validation normally. Keep
@@ -103,7 +118,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			diagnosticErr := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "worker", Outcome: "failed", Detail: "Worker release/installation changed, but automatic successor validation failed. Pending work remains in the original namespace. Verify the exact pin, selected native/protocol, owned integration and configured state; retry capture reconcile. Cause: " + err.Error()})
 			return errors.Join(fmt.Errorf("native worker retired; pending work retained; selected-native takeover unavailable: %w", err), diagnosticErr)
 		}
-		return capture.LaunchWorker(next, project, state)
+		return launchCaptureWorker(next, project, state, protectedHome)
 	}
 	started := time.Now()
 	var lastPass time.Time
@@ -150,12 +165,22 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		accepted, inboxErr := s.ScanCodexBindings(inboxCtx, cfg.Telemetry.Sources.CodexHome, rowsForActivity, &scan, req.Generation, policy.MaxSessions, policy.MaxSourceBytes)
 		inboxCancel()
 		madeInboxProgress = madeInboxProgress || lastRegistration != scan.Last
+		proofPending := errors.Is(inboxErr, capture.ErrBindingProofPending)
+		firstPending := proofPending && scan.RetryUntil == 0
+		if firstPending {
+			scan.RetryUntil = time.Now().Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli()
+		}
 		if err := capture.WriteWorkerProgress(state, capture.WorkerProgress{BindingScan: scan, Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "running", Heartbeat: now.UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: nextAttempt.UnixMilli(), Detail: lastFailure + fmt.Sprintf(" generation=%d acknowledged=%d pass_timeout_ms=%d max_sessions=%d max_source_bytes=%d", req.Generation, req.Acknowledged, policy.PassTimeoutMS, policy.MaxSessions, policy.MaxSourceBytes)}); err != nil {
 			return err
 		}
 
-		if inboxErr != nil {
-			if err := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "binding", Outcome: "failed", Detail: inboxErr.Error()}); err != nil {
+		if inboxErr != nil && (!proofPending || firstPending) {
+			outcome, detail := "failed", inboxErr.Error()
+			if proofPending {
+				outcome = "pending"
+				detail += fmt.Sprintf(". Authenticated response retained. Source verification retries until %s and resumes on the next native callback or reconcile.", time.UnixMilli(scan.RetryUntil).UTC().Format(time.RFC3339))
+			}
+			if err := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "binding", Outcome: outcome, Detail: detail}); err != nil {
 				return err
 			}
 		}
@@ -170,7 +195,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		if activityDetail != "" {
 			lastFailure = activityDetail
 		}
-		if scan.Remaining == 0 && !active && time.Since(lastActivity) >= time.Duration(policy.IdleMS)*time.Millisecond && now.UnixMilli()-req.RequestedAt >= int64(policy.IdleMS) && req.Generation == req.Acknowledged {
+		if scan.Remaining == 0 && time.Now().UnixMilli() >= scan.RetryUntil && !active && time.Since(lastActivity) >= time.Duration(policy.IdleMS)*time.Millisecond && now.UnixMilli()-req.RequestedAt >= int64(policy.IdleMS) && req.Generation == req.Acknowledged {
 			// Release before checking again: an event racing shutdown either starts a
 			// new owner or is seen here. Never consume a generation without a pass.
 			if err = lock.Close(); err != nil {
@@ -193,7 +218,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				if !current {
 					return retire()
 				}
-				return capture.LaunchWorker(binary, project, state)
+				return launchCaptureWorker(binary, project, state, protectedHome)
 			}
 			return nil
 		}
@@ -283,7 +308,33 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 					return err
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), min(remaining, time.Duration(policy.PassTimeoutMS)*time.Millisecond))
-				cmd := exec.CommandContext(ctx, binary, args...)
+				publisher := binary
+				home, err := captureWorkerHome(protectedHome)
+				if err != nil {
+					cancel()
+					return err
+				}
+				if home != "" {
+					if protectedHome == "" {
+						cancel()
+						return retire()
+					}
+					publisher, err = adaptersconfig.ResolveProtectedCodexEngine(project, home)
+					if err != nil {
+						cancel()
+						return err
+					}
+					info, err := os.Stat(publisher)
+					if err != nil {
+						cancel()
+						return err
+					}
+					if !os.SameFile(info, fence.artifact) {
+						cancel()
+						return retire()
+					}
+				}
+				cmd := exec.CommandContext(ctx, publisher, args...)
 				cmd.Dir = project
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
@@ -344,7 +395,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	// pending work restarts on the next supported lifecycle/reconcile integration.
 	// An unfinished inbox sweep can hand off if this owner advanced its saved
 	// cursor. Publication failures still stop retries once the sweep finishes.
-	if (!successfulPass || lastFailure != "") && !(madeInboxProgress && scan.Remaining > 0) {
+	if (!successfulPass || lastFailure != "") && !(madeInboxProgress && scan.Remaining > 0) && time.Now().UnixMilli() >= scan.RetryUntil {
 		return fmt.Errorf("native worker lifetime exhausted; pending generation retained for next integration event: %s", lastFailure)
 	}
 	// A healthy finite owner transfers active work to another bounded native process.
@@ -363,6 +414,13 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	if !current {
 		return retire()
 	}
+	home, err := captureWorkerHome(protectedHome)
+	if err != nil {
+		return err
+	}
+	if home != "" {
+		return launchCaptureWorker("", project, state, home)
+	}
 	entry, err := adaptersconfig.ResolveEntrypoint(project)
 	if err != nil {
 		return err
@@ -371,7 +429,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	if err != nil {
 		return err
 	}
-	return capture.LaunchWorker(preferred, project, state)
+	return launchCaptureWorker(preferred, project, state, protectedHome)
 }
 
 // Disabled policy stops new passes and handoffs. A publication already committing

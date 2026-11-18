@@ -13,12 +13,35 @@ import (
 // captureWorkerFence retains admitted executable bytes and checks operational
 // disablement. A newly preferred build does not retire an active worker.
 type captureWorkerFence struct {
-	binary   string
-	artifact os.FileInfo
-	sources  domain.TelemetrySourcePaths
+	binary        string
+	artifact      os.FileInfo
+	sources       domain.TelemetrySourcePaths
+	protectedHome string
 }
 
-func newCaptureWorkerFence(project, state, binary string, cfg domain.ProjectConfig) (captureWorkerFence, error) {
+func newCaptureWorkerFence(project, state, binary string, cfg domain.ProjectConfig, protectedHome string) (captureWorkerFence, error) {
+	if protectedHome != "" {
+		selected, err := adaptersconfig.ResolveProtectedCodexEngine(project, protectedHome)
+		if err != nil {
+			return captureWorkerFence{}, err
+		}
+		running := binary
+		if runtime.GOOS == "linux" {
+			running = "/proc/self/exe"
+		}
+		actual, err := os.Stat(running)
+		if err != nil {
+			return captureWorkerFence{}, err
+		}
+		installed, err := os.Stat(selected)
+		if err != nil {
+			return captureWorkerFence{}, err
+		}
+		if !os.SameFile(actual, installed) {
+			return captureWorkerFence{}, fmt.Errorf("running worker does not match the protected operator installation at %s; pending work retained", selected)
+		}
+		return captureWorkerFence{binary: selected, artifact: installed, sources: cfg.Telemetry.Sources, protectedHome: protectedHome}, nil
+	}
 	source := binary
 	if runtime.GOOS == "linux" {
 		source = "/proc/self/exe"
@@ -47,6 +70,20 @@ func (f captureWorkerFence) current(project, state string) (bool, error) {
 		return false, err
 	}
 
+	home, err := captureWorkerHome(f.protectedHome)
+	if err != nil {
+		return false, err
+	}
+	if home != f.protectedHome {
+		// Operator adoption while a legacy worker was active. Retire before
+		// its next publication or project-selected successor.
+		return false, nil
+	}
+	if home != "" {
+		if err := checkProtectedCaptureState(project, home, state); err != nil {
+			return false, err
+		}
+	}
 	info, err := os.Stat(f.binary)
 	if err != nil {
 		return false, fmt.Errorf("worker native artifact unavailable; pending work retained: %w", err)

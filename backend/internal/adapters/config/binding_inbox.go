@@ -49,8 +49,7 @@ func BindingStatePaths(project string) ([]string, error) {
 // CodexInboxName is the directory explicitly granted by the user installer.
 const CodexInboxName = "agenticlens-binding-inbox"
 
-// RuntimeCodexHome identifies the native client's settings home. It is used
-// solely to exclude its writable inbox from executable selection.
+// RuntimeCodexHome identifies the native client's user-controlled settings home.
 func RuntimeCodexHome() string {
 	if home := os.Getenv("CODEX_HOME"); home != "" {
 		return home

@@ -19,7 +19,7 @@ import (
 
 // nativeOpenCodeHook accepts routing identity only from the plugin's session
 // context. Binding tool arguments are restricted to the user's ticket response.
-func nativeOpenCodeHook(args []string, input io.Reader, output io.Writer) error {
+func nativeOpenCodeHook(args []string, input io.Reader, output io.Writer, protectedHome string) error {
 	if len(args) == 0 {
 		return errors.New("OpenCode callback requires an operation")
 	}
@@ -80,7 +80,7 @@ func nativeOpenCodeHook(args []string, input io.Reader, output io.Writer) error 
 	if err != nil {
 		return err
 	}
-	return captureCommandAction(command, bytes.NewReader(body), output)
+	return captureAction(command, bytes.NewReader(body), output, protectedHome)
 }
 
 // Re-read source selection under the native capture admission before opening

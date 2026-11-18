@@ -137,5 +137,8 @@ func WorkerSuccessor(ctx context.Context, project, state string) (string, error)
 	if !remaining {
 		return "", errors.New("capture integrations disabled during native takeover; pending work retained")
 	}
-	return native, nil
+	// Legacy operator installations report their selected logical location.
+	// Probes above used its checked physical target. Protected workers use
+	// LaunchProtectedWorker and never consult a project executable.
+	return current.NativeCandidatePath()
 }

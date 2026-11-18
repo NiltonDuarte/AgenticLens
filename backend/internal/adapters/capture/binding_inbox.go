@@ -39,6 +39,10 @@ type bindingEnvelope struct {
 
 const bindingEnvelopeLimit = 8192
 
+// ErrBindingProofPending identifies source failures after the exact response
+// has been authenticated. The worker retries only under a finite allowance.
+var ErrBindingProofPending = errors.New("source proof pending")
+
 var errBindingBudget = errors.New("binding inbox byte budget reached")
 
 func (t BindingTicket) validate(cfg domain.TicketConfig) error {
@@ -253,6 +257,7 @@ type BindingScan struct {
 	Generation int64  `json:"generation"`
 	Last       string `json:"last,omitempty"`
 	Remaining  int    `json:"remaining"`
+	RetryUntil int64  `json:"retry_until,omitempty"`
 }
 
 func (s *Store) ScanCodexBindings(ctx context.Context, home string, rows []domain.CaptureRegistration, scan *BindingScan, generation int64, maxSessions int, maxBytes int64) (int, error) {
@@ -271,11 +276,13 @@ func (s *Store) ScanCodexBindings(ctx context.Context, home string, rows []domai
 		}
 	}
 	if generation != scan.Generation {
+		scan.RetryUntil = 0
 		scan.Generation = generation
 		scan.Remaining = len(eligible)
 	}
 	scan.Remaining = min(scan.Remaining, len(eligible))
 	if len(eligible) == 0 {
+		scan.RetryUntil = 0
 		return 0, nil
 	}
 	cursor := sort.Search(len(eligible), func(i int) bool { return IdentityKey(eligible[i].Identity) > scan.Last }) % len(eligible)
@@ -367,8 +374,8 @@ func (s *Store) consumeCodexBindings(ctx context.Context, home string, rows []do
 			*cursor = index
 			return accepted, visited - 1, errors.Join(firstErr, err)
 		}
-		if err != nil && firstErr == nil {
-			firstErr = fmt.Errorf("Codex binding for session %s: %w", r.Identity.SessionID, err)
+		if err != nil && (firstErr == nil || (errors.Is(err, ErrBindingProofPending) && !errors.Is(firstErr, ErrBindingProofPending))) {
+			firstErr = errors.Join(firstErr, fmt.Errorf("Codex binding for session %s: %w", r.Identity.SessionID, err))
 		}
 	}
 	return accepted, visited, firstErr

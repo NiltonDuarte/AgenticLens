@@ -74,6 +74,16 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 			return result, err
 		}
 		if source == "codex" {
+			// The hook embeds this manager. Verify the operator's installation
+			// evidence before probing it or accepting the installed hook.
+			if _, err := adaptersconfig.ProtectedCodexManager(options.Repository, home, manager); err != nil {
+				return result, err
+			}
+			if options.Repository != "" {
+				if _, err := adaptersconfig.ResolveProtectedCodexEngine(options.Repository, home, manager); err != nil {
+					return result, err
+				}
+			}
 			inbox, err := CodexBindingInbox(home)
 			if err != nil {
 				return result, err
@@ -89,7 +99,7 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 			if err := validateInstallNativeOutput(ctx, manager, "1", "OpenCode user hook protocol", "manager", "opencode-hook-protocol"); err != nil {
 				return result, fmt.Errorf("install a manager with OpenCode user hook support: %w", err)
 			}
-		} else if err := validateInstallNativeOutput(ctx, manager, "1", "Codex binding wake protocol", "manager", "codex-binding-wake-protocol"); err != nil {
+		} else if err := validateInstallNativeOutput(ctx, manager, "1", "protected Codex capture protocol", "manager", "protected-codex-hook-protocol"); err != nil {
 			return result, fmt.Errorf("install a manager with Codex binding inbox support: %w", err)
 		}
 	}

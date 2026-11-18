@@ -730,13 +730,13 @@ func (s *Store) bindVerified(ctx context.Context, r domain.CaptureRegistration, 
 			path, err = codex.DiscoverExactRolloutPathWithBudget(r.Identity.Store, r.Identity.SessionID, budget)
 		}
 		if err != nil {
-			return r, fmt.Errorf("binding source identity unavailable; minimal registration retained: %w", err)
+			return r, fmt.Errorf("%w: binding source identity unavailable; minimal registration retained: %w", ErrBindingProofPending, err)
 		}
 		r.TranscriptPath = path
 	}
 	if s.project != "" {
 		if err := validateOwnerSource(ctx, s.project, r, s.configuration, false, budget); err != nil {
-			return r, fmt.Errorf("binding source/project verification failed; minimal registration retained: %w", err)
+			return r, fmt.Errorf("%w: binding source/project verification failed; minimal registration retained: %w", ErrBindingProofPending, err)
 		}
 	}
 	if err := ctx.Err(); err != nil {
