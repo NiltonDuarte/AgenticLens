@@ -23,3 +23,5 @@ The user expects backfill to follow sessions already recorded in a ledger and re
 Discovery only: no application, schema, runtime or new test changes. Use existing evidence and disposable probes; label unavailable and unexecuted cases. Preserve the original AL-55 ledger. [Prior reconciliation](../../PO-19/SPEC.md) records shipped foundations and historical limits.
 
 [Engineering rules](../../../TECHNICAL_GUIDELINES.md) and [relevant regression boundaries](../../../docs/REGRESSION_PREVENTION.md) apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.
+
+[Discovery recommendation and delivery](../../../openspec/changes/al-65-recommend-safe-source-backed-backfill-defaults/delivery.md)
