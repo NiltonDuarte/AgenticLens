@@ -60,11 +60,21 @@ func TestUserHooksInstallIdempotentAndOwnedRemoval(t *testing.T) {
 	if err := json.Unmarshal(first, &doc); err != nil {
 		t.Fatal(err)
 	}
-	if !doc.Foreign || len(doc.Hooks) != 6 || len(doc.Hooks["Stop"]) != 2 {
+	if !doc.Foreign || len(doc.Hooks) != 7 || len(doc.Hooks["Stop"]) != 2 {
 		t.Fatalf("additive owned groups incorrect: %+v", doc)
 	}
 	for event, groups := range doc.Hooks {
-		if len(groups) == 0 || !strings.Contains(string(groups[len(groups)-1]), "codex-hook") {
+		expected := "codex-hook"
+		if event == "PostToolUse" {
+			expected = "codex-binding-wake"
+			var filter struct {
+				Matcher string `json:"matcher"`
+			}
+			if len(groups) != 1 || json.Unmarshal(groups[0], &filter) != nil || filter.Matcher != "^Bash$" {
+				t.Fatalf("post-tool wake must select the Bash tool: %s", groups)
+			}
+		}
+		if len(groups) == 0 || !strings.Contains(string(groups[len(groups)-1]), expected) {
 			t.Fatalf("missing native dispatch for %s: %s", event, groups)
 		}
 	}
@@ -74,6 +84,39 @@ func TestUserHooksInstallIdempotentAndOwnedRemoval(t *testing.T) {
 	}
 	if receipt.Protocol != 2 || receipt.Manager != binary {
 		t.Fatalf("hook receipt owns the wrong manager path/protocol: %+v", receipt)
+	}
+	// Recreate the supported six-event installation predating the inbox hook.
+	// The upgraded installer must recognize those owned groups and preserve
+	// the original events alongside the user's Stop callback.
+	oldReceipt := receipt
+	oldReceipt.Groups = nil
+	for _, group := range receipt.Groups {
+		if group.Event != "PostToolUse" {
+			oldReceipt.Groups = append(oldReceipt.Groups, group)
+		}
+	}
+	if len(oldReceipt.Groups) != 6 {
+		t.Fatalf("expected six historical events: %+v", oldReceipt.Groups)
+	}
+	delete(doc.Hooks, "PostToolUse")
+	writeJSON := func(path string, body []byte, err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, body, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	oldConfig, err := json.Marshal(doc)
+	writeJSON(hooksPath, oldConfig, err)
+	oldState, err := json.Marshal(oldReceipt)
+	writeJSON(filepath.Join(home, "agenticlens-user-installation.json"), oldState, err)
+	if _, err := InstallUserCodex(context.Background(), opts); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first, mustReadUserInstall(t, hooksPath)) {
+		t.Fatal("upgraded installation differs from a fresh one")
 	}
 	beforeManager, err := os.Stat(binary)
 	if err != nil {
@@ -208,7 +251,7 @@ func init() {
 		} else {
 			fmt.Println(HandlerProtocolVersion)
 		}
-	case "manager protocol", "dispatch protocol":
+	case "manager protocol", "dispatch protocol", "manager codex-binding-wake-protocol":
 		if os.Getenv("AL79_CAPTURE_NATIVE_FIXTURE") == "bad-manager" {
 			fmt.Println("0")
 		} else {

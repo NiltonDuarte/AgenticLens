@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"agenticlens/internal/domain"
+	"github.com/pelletier/go-toml/v2"
 )
 
 type userTransactionFixture struct {
@@ -175,7 +176,7 @@ func assertCompletedUserMigration(t *testing.T, f userTransactionFixture, databa
 		}
 	}
 	home := mustReadUserInstall(t, filepath.Join(f.options.Home, "hooks.json"))
-	if !bytes.Contains(home, []byte("foreign home callback")) || bytes.Count(home, []byte(userHookMarker)) != 6 {
+	if !bytes.Contains(home, []byte("foreign home callback")) || bytes.Count(home, []byte(userHookMarker)) != 7 {
 		t.Fatalf("global migration lost foreign content or duplicated owned hooks: %s", home)
 	}
 
@@ -386,7 +387,85 @@ func TestUserRecoveryRejectsResourcesAddedAfterDiscovery(t *testing.T) {
 	if _, err := os.Stat(journalPath); !os.IsNotExist(err) {
 		t.Fatalf("resumed recovery retained old journal: %v", err)
 	}
-	if hooks := mustReadUserInstall(t, filepath.Join(f.options.Home, "hooks.json")); bytes.Count(hooks, []byte(userHookMarker)) != 6 {
+	if hooks := mustReadUserInstall(t, filepath.Join(f.options.Home, "hooks.json")); bytes.Count(hooks, []byte(userHookMarker)) != 7 {
 		t.Fatalf("resumed home installation missing owned hooks: %s", hooks)
+	}
+}
+
+func TestCodexInboxRollbackPreservesDirectoryCreatedByUser(t *testing.T) {
+	f := newUserTransactionFixture(t)
+	inbox := filepath.Join(f.options.Home, "agenticlens-binding-inbox")
+	var foreign os.FileInfo
+	_, err := installUserCodexWithCheckpoint(context.Background(), f.options, func(stage userInstallStage, _ int) error {
+		if stage != userInstallJournaled {
+			return nil
+		}
+		if err := os.Mkdir(inbox, 0700); err != nil {
+			t.Fatal(err)
+		}
+		var err error
+		foreign, err = os.Stat(inbox)
+		return err
+	})
+	if foreign == nil {
+		t.Fatal("fixture did not reach concurrent directory creation")
+	}
+	if err == nil {
+		t.Fatal("installer unexpectedly claimed a directory created during installation")
+	}
+	retained, err := os.Stat(inbox)
+	if err != nil || !os.SameFile(foreign, retained) {
+		t.Fatalf("installation removed or replaced user's directory: %v", err)
+	}
+}
+
+func TestCodexInboxInstallInEmptySandboxTable(t *testing.T) {
+	f := newUserTransactionFixture(t)
+	path := filepath.Join(f.options.Home, "config.toml")
+	if err := os.WriteFile(path, []byte("# settings\n[sandbox_workspace_write]"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := InstallUserCodex(context.Background(), f.options); err != nil {
+		t.Fatal(err)
+	}
+	inbox := filepath.Join(f.options.Home, "agenticlens-binding-inbox")
+	written := mustReadUserInstall(t, path)
+	var cfg struct {
+		Sandbox struct {
+			Roots []string `toml:"writable_roots"`
+		} `toml:"sandbox_workspace_write"`
+	}
+	if err := toml.Unmarshal(written, &cfg); err != nil || !reflect.DeepEqual(cfg.Sandbox.Roots, []string{inbox}) {
+		t.Fatalf("empty sandbox table did not receive exactly its inbox permission: %q, %v", written, err)
+	}
+}
+
+func TestCodexInboxInstallPreservesConcurrentAtomicSave(t *testing.T) {
+	f := newUserTransactionFixture(t)
+	settings := filepath.Join(f.options.Home, "config.toml")
+	if err := os.WriteFile(settings, []byte("model = 'existing'\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	userSave := []byte("model = 'user-change'\n")
+	saved := false
+	_, err := installUserCodexWithCheckpoint(context.Background(), f.options, func(stage userInstallStage, _ int) error {
+		if stage != userInstallConfigDisplaced {
+			return nil
+		}
+		temp := filepath.Join(f.options.Home, ".editor-save")
+		if err := os.WriteFile(temp, userSave, 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(temp, settings); err != nil {
+			t.Fatal(err)
+		}
+		saved = true
+		return nil
+	})
+	if !saved || err == nil {
+		t.Fatalf("installer must report conflict after editor saved: saved=%t, err=%v", saved, err)
+	}
+	if got := mustReadUserInstall(t, settings); !bytes.Equal(got, userSave) {
+		t.Fatalf("installer overwrote user settings: %q", got)
 	}
 }

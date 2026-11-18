@@ -26,7 +26,7 @@ func Run(args []string, input io.Reader, output, diagnostic io.Writer) error {
 	if len(args) == 2 && args[0] == "engine" && args[1] == "protocol" {
 		return errors.New("this executable is the AgenticLens manager, not an engine")
 	}
-	if len(args) == 2 && args[0] == "manager" && args[1] == "opencode-hook-protocol" {
+	if len(args) == 2 && args[0] == "manager" && (args[1] == "opencode-hook-protocol" || args[1] == "codex-binding-wake-protocol") {
 		_, err := fmt.Fprintln(output, "1")
 		return err
 	}
@@ -73,6 +73,8 @@ parsed:
 			return installEngine(project, args[1:], output)
 		case "versions":
 			return listVersions(project, args[1:], output)
+		case "codex-binding-wake":
+			return codexBindingWake(input, output, diagnostic)
 		case "codex-hook":
 			return nativeHook("Codex", []string{"capture", "user-hook"}, input, output, diagnostic)
 		case "opencode-hook":

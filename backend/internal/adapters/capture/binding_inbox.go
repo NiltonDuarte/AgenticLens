@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -82,11 +83,19 @@ func CheckInstalledInboxIsolation(project, home string) error {
 	if home == "" {
 		return nil
 	}
-	installed, err := CodexInboxInstalled(home)
-	if err != nil || !installed {
+	// The registry is shared by both harnesses. Prove path separation even
+	// when the Codex inbox is missing. Its availability matters only when
+	// offering or processing a Codex binding.
+	home, err := CanonicalStore(home)
+	if err != nil {
 		return err
 	}
-	path, err := CodexBindingInbox(home)
+	installed, receiptErr := codexInboxInReceipt(home)
+	if receiptErr == nil && !installed {
+		return nil
+	}
+	// If the receipt cannot be read, conservatively check the potential grant.
+	path, err := absolute(filepath.Join(home, codexInboxName))
 	if err != nil {
 		return err
 	}
@@ -213,6 +222,10 @@ func needsExplicitBinding(r domain.CaptureRegistration) bool {
 	return r.TicketID == "" || r.TicketTitle == "" || (r.InstallationID != "" && r.BindingInstallationID != r.InstallationID)
 }
 
+func eligibleCodexBinding(home string, r domain.CaptureRegistration) bool {
+	return r.Identity.Source == domain.SourceCodex && r.Identity.Store == home && r.CallbackObservedAt != "" && needsExplicitBinding(r)
+}
+
 // ConsumeCodexBindings probes only challenge-derived entries belonging to this
 // project's observed sessions. A rolling cursor bounds probes without allowing
 // old unassigned registrations or malformed submissions to starve later ones.
@@ -224,15 +237,7 @@ func (s *Store) ConsumeCodexBindings(ctx context.Context, home string, rows []do
 	if err != nil {
 		return 0, err
 	}
-	installed, err := CodexInboxInstalled(home)
-	if err != nil || !installed {
-		return 0, err
-	}
-	dir, err := openBindingInbox(home)
-	if err != nil {
-		return 0, err
-	}
-	defer unix.Close(dir)
+	dir := -1
 	accepted := 0
 	var firstErr error
 	for n := 0; n < min(len(rows), maxSessions) && maxBytes > 0; n++ {
@@ -241,8 +246,19 @@ func (s *Store) ConsumeCodexBindings(ctx context.Context, home string, rows []do
 		}
 		r := rows[*cursor%len(rows)]
 		*cursor = (*cursor + 1) % len(rows)
-		if r.Identity.Source != domain.SourceCodex || r.Identity.Store != home || r.CallbackObservedAt == "" || !needsExplicitBinding(r) {
+		if !eligibleCodexBinding(home, r) {
 			continue
+		}
+		if dir < 0 {
+			installed, err := CodexInboxInstalled(home)
+			if err != nil || !installed {
+				return accepted, err
+			}
+			dir, err = openBindingInbox(home)
+			if err != nil {
+				return accepted, err
+			}
+			defer unix.Close(dir)
 		}
 		credential := inboxCredential(s.project, r)
 		name := slotName(credential)

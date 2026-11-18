@@ -48,7 +48,16 @@ func CodexInboxInstalled(home string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	content, _, exists, err := readCodexConfigFile(filepath.Join(filepath.Dir(path), "agenticlens-user-installation.json"))
+	installed, err := codexInboxInReceipt(filepath.Dir(path))
+	if err != nil || !installed {
+		return false, err
+	}
+	_, err = os.Lstat(path)
+	return err == nil, err
+}
+
+func codexInboxInReceipt(home string) (bool, error) {
+	content, _, exists, err := readCodexConfigFile(filepath.Join(home, "agenticlens-user-installation.json"))
 	if err != nil || !exists {
 		return false, err
 	}
@@ -59,11 +68,7 @@ func CodexInboxInstalled(home string) (bool, error) {
 	if receipt.Protocol != userCaptureOwnershipProtocol {
 		return false, errors.New("unsupported user capture ownership protocol")
 	}
-	if !receipt.BindingInbox || len(receipt.Groups) == 0 {
-		return false, nil
-	}
-	_, err = os.Lstat(path)
-	return err == nil, err
+	return receipt.BindingInbox && len(receipt.Groups) > 0, nil
 }
 
 func CheckCodexInboxSeparation(project, home, inbox string) error {

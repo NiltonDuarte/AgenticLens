@@ -522,9 +522,14 @@ func codexHookGroup(event, command string) (json.RawMessage, error) {
 	if event == "SessionStart" || event == "UserPromptSubmit" || event == "SubagentStart" {
 		handler.Limit = 1000
 	}
+	var matcher string
+	if event == "PostToolUse" {
+		matcher = "^Bash$"
+	}
 	return json.Marshal(struct {
-		Hooks []typeofHandler `json:"hooks"`
-	}{[]typeofHandler{handler}})
+		Matcher string          `json:"matcher,omitempty"`
+		Hooks   []typeofHandler `json:"hooks"`
+	}{matcher, []typeofHandler{handler}})
 }
 
 type typeofHandler = struct {

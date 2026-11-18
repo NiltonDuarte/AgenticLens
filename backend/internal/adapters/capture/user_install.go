@@ -72,6 +72,8 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 			if err := validateInstallNativeOutput(ctx, manager, "1", "OpenCode user hook protocol", "manager", "opencode-hook-protocol"); err != nil {
 				return result, fmt.Errorf("install a manager with OpenCode user hook support: %w", err)
 			}
+		} else if err := validateInstallNativeOutput(ctx, manager, "1", "Codex binding wake protocol", "manager", "codex-binding-wake-protocol"); err != nil {
+			return result, fmt.Errorf("install a manager with Codex binding inbox support: %w", err)
 		}
 	}
 	if !options.Remove && options.Repository != "" {
@@ -430,11 +432,15 @@ func planCodexUser(home, manager, project string, remove bool) ([]fileChange, Ma
 		return nil, Manifest{}, err
 	}
 	if !remove {
-		command, err := staticCommand([]string{manager, "codex-hook"})
-		if err != nil {
-			return nil, Manifest{}, err
-		}
-		for _, event := range []string{"SessionStart", "UserPromptSubmit", "SubagentStart", "SubagentStop", "Stop", "SessionEnd"} {
+		for _, event := range []string{"SessionStart", "UserPromptSubmit", "SubagentStart", "SubagentStop", "Stop", "SessionEnd", "PostToolUse"} {
+			action := "codex-hook"
+			if event == "PostToolUse" {
+				action = "codex-binding-wake"
+			}
+			command, err := staticCommand([]string{manager, action})
+			if err != nil {
+				return nil, Manifest{}, err
+			}
 			group, err := codexHookGroup(event, command)
 			if err != nil {
 				return nil, Manifest{}, err

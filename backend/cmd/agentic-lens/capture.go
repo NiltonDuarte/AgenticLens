@@ -449,6 +449,11 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 			return e
 		}
 		if *source == "codex" {
+			if *userLevel && value.Event == "PostToolUse" {
+				// A successful handoff requests publication and wakes the bounded
+				// worker. Only the worker verifies and applies the queued response.
+				return json.NewEncoder(output).Encode(capture.HookOutput{})
+			}
 			native, e := os.Executable()
 			if e != nil {
 				return e

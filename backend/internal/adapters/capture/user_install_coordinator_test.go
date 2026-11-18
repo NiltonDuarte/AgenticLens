@@ -379,7 +379,7 @@ func TestUserMigrationPublicInstallPreservesDeletedOwner(t *testing.T) {
 		if err := json.Unmarshal(mustReadUserInstall(t, filepath.Join(f.options.Home, "agenticlens-user-installation.json")), &receipt); err != nil {
 			t.Fatal(err)
 		}
-		if receipt.Protocol != userCaptureOwnershipProtocol || len(receipt.Groups) != 6 || bytes.Count(mustReadUserInstall(t, filepath.Join(f.options.Home, "hooks.json")), []byte(userHookMarker)) != 6 {
+		if receipt.Protocol != userCaptureOwnershipProtocol || len(receipt.Groups) != 7 || bytes.Count(mustReadUserInstall(t, filepath.Join(f.options.Home, "hooks.json")), []byte(userHookMarker)) != 7 {
 			t.Fatalf("fresh owner lacks complete native hook ownership: %+v", receipt)
 		}
 		if !bytes.Equal(database, mustReadUserInstall(t, f.pendingDB)) {
