@@ -56,6 +56,20 @@
         }
       ],
       "disposition": "Fixed: operation workBudget retains discovery state across refresh passes; cross-pass regression added. Test reviewer Luna confirmed the supplied coverage gap, without separate discovery credit."
+    },
+    {
+      "finding_id": "BEH-INT-01",
+      "severity": 7,
+      "issue": "Repeated bounded Codex reads could indefinitely defer a fitting OpenCode owner on the same ticket.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed in 136504cb. The scheduler retains the continuation for an owner deferred by earlier work and advances past an owner that exhausts a full allowance. Mixed-source red/green tests verify progress and preservation."
     }
   ]
 }

@@ -16,3 +16,10 @@
 Review questions: behavior follows generation/backfill/hydration diagnostics and usable siblings; data examines completeness, accepted history and relationship conflicts; architecture examines shared owner-ambiguity guards and FCIS boundaries; tests examines actual consumer reachability and meaningful preservation/multiplicity oracles. Separate report paths use focus/profile suffixes. Parent owns consolidated verdict.
 
 - [x] Coder/tester: correct ARCH-01 registered capture path bypass and verify automatic generation preserves accepted history on ambiguity.
+
+## Ordered integration
+
+- [x] Merge the AL-80 and AL-73 main revision, verify both roadmap closures and trace shared worker routing.
+- [x] Reproduce mixed-source starvation through actual reconciliation on the merge and compare the AL-80 parent.
+- [x] Correct cursor continuation, verify bounded progress and re-review the affected integration.
+- [x] Run integrated make, refresh source-backed evidence and publish the verified PR head.

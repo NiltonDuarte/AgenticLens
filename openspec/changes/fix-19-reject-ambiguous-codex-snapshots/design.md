@@ -27,3 +27,7 @@ Architecture review (Sol 6.1/high) confirmed ARCH-01: registered capture-auto ge
 Architecture re-review confirmed ARCH-02: restarting exact discovery for every registered owner could exceed an operation's source-read budget. The correction must share an operation-local allowance and account discovery reads, retaining incomplete results when exhausted. This preserves existing bounded-capture guarantees within iteration 01; no new authority or acceptance rule is introduced.
 
 Review-model steering: the user changed future Sol dispatches to exact gpt-6.2-sol/high after the completed reviews above. Completed Sol 6.1/high and Luna 6/medium evidence remains valid with its original attribution. Any new review dispatch must reload the local policy. The three shared policy/reference edits are user-owned and excluded from this delivery. Acceptance is unchanged.
+
+## Ordered integration with AL-80
+
+Management requested integration of main at `4e86badf` into FIX-19. The original acceptance and independent source identities continue to apply. The shared worker must allow a fitting OpenCode owner to refresh under bounded repeated reconciliation. On merge `54230a76`, integration review reproduced a cursor that advanced past such an owner after a Codex scan spent the allowance. The correction belongs to capture reconciliation and its tester-owned mixed-source regression. Verification covers progress across passes, preservation of pending facts, limits on each pass, and the existing rotation away from a genuinely oversized owner.
