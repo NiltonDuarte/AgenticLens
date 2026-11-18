@@ -65,6 +65,23 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 		return result, err
 	}
 	if !options.Remove {
+		codexHomes := []string{adaptersconfig.RuntimeCodexHome()}
+		if source == "codex" {
+			codexHomes = append(codexHomes, home)
+		}
+		manager, err = adaptersconfig.OutsideCodexInbox(manager, codexHomes...)
+		if err != nil {
+			return result, err
+		}
+		if source == "codex" {
+			inbox, err := CodexBindingInbox(home)
+			if err != nil {
+				return result, err
+			}
+			if err := CheckCodexInboxSeparation(options.Repository, home, inbox); err != nil {
+				return result, err
+			}
+		}
 		if err := validateManagerEntrypoint(manager); err != nil {
 			return result, fmt.Errorf("native manager unavailable: %w", err)
 		}

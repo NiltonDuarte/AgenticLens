@@ -100,6 +100,7 @@ func LaunchWorker(binary, project, state string) error {
 
 // WorkerProgress is local operational evidence, never source telemetry.
 type WorkerProgress struct {
+	BindingScan BindingScan      `json:"binding_scan"`
 	Executable  string           `json:"executable,omitempty"`
 	Build       domain.BuildInfo `json:"build"`
 	PID         int              `json:"pid"`

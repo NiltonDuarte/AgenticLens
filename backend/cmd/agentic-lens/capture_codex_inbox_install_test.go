@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters/capture"
@@ -156,5 +157,71 @@ func TestCodexInboxPreexistingGrantAndConflictPreflight(t *testing.T) {
 				t.Fatal("installer modified an existing user grant or conflicting configuration")
 			}
 		})
+	}
+}
+
+func TestCodexInboxRejectsExecutableSettingsInsideWritableDirectory(t *testing.T) {
+	for _, setting := range []string{"install_root", "binary_dir", "manager"} {
+		t.Run(setting, func(t *testing.T) {
+			f := newCodexInboxFixture(t)
+			inbox := filepath.Join(f.store, "agenticlens-binding-inbox")
+			manager := managerBinaryPath
+			if setting == "manager" {
+				if err := os.Mkdir(inbox, 0700); err != nil {
+					t.Fatal(err)
+				}
+				manager = filepath.Join(inbox, "manager")
+				// Only an inert placeholder is needed to check path preflight.
+				if err := os.WriteFile(manager, []byte("ordinary file"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				configureInboxExecutablePath(t, f, setting, inbox)
+			}
+			cmd := exec.Command(cliBinaryPath, "capture", "install-user", "--user-source", "codex", "--repo", f.project, "--entrypoint", manager, "--dry-run")
+			out, err := cmd.CombinedOutput()
+			if err == nil || !strings.Contains(strings.ToLower(string(out)), "inside the codex binding inbox") {
+				t.Fatalf("expected isolated-path diagnosis for %s: %s %v", setting, out, err)
+			}
+			for _, name := range []string{"hooks.json", "config.toml", "agenticlens-user-installation.json"} {
+				if _, err := os.Stat(filepath.Join(f.store, name)); !os.IsNotExist(err) {
+					t.Fatalf("failed preflight created %s: %v", name, err)
+				}
+			}
+		})
+	}
+}
+
+func configureInboxExecutablePath(t *testing.T, f captureGenerationFixture, setting, inbox string) {
+	t.Helper()
+	path := filepath.Join(f.project, ".agenticlens-config.yaml")
+	body := readCaptureFile(t, path)
+	key := []byte("agenticlens:\n")
+	newBody := bytes.Replace(body, key, append(key, []byte(fmt.Sprintf("  %s: %q\n", setting, filepath.Join(inbox, "selected-build")))...), 1)
+	if bytes.Equal(body, newBody) {
+		t.Fatal("missing fixture executable configuration")
+	}
+	if err := os.WriteFile(path, newBody, 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCodexHookRejectsEngineInRuntimeInboxForDifferentProject(t *testing.T) {
+	installed := newCodexInboxFixture(t)
+	codexInboxOperation(t, installed.project, "install-user")
+	project := newCodexInboxFixture(t)
+	t.Setenv("CODEX_HOME", installed.store)
+	configureInboxExecutablePath(t, project, "binary_dir", filepath.Join(installed.store, "agenticlens-binding-inbox"))
+	input, err := json.Marshal(capture.HookInput{SessionID: "new-root", Event: "SessionStart", WorkingDirectory: project.project})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(managerBinaryPath, "codex-hook")
+	cmd.Stdin = bytes.NewReader(input)
+	out, err := cmd.CombinedOutput()
+	// There is no executable at the configured location. Admission should
+	// diagnose the path itself before trying to inspect an engine.
+	if err == nil || !strings.Contains(strings.ToLower(string(out)), "inside the codex binding inbox") || strings.Contains(string(out), "no such file") {
+		t.Fatalf("expected runtime inbox exclusion before native lookup: %s %v", out, err)
 	}
 }

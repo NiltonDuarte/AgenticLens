@@ -37,21 +37,32 @@ type Entrypoint struct {
 	InstallRoot string
 }
 
-// NativePath selects the executing environment, never the installing host.
-func (e Entrypoint) NativePath() (string, error) {
+// NativeCandidatePath selects the configured host artifact without probing it.
+func (e Entrypoint) NativeCandidatePath() (string, error) {
 	if e.BinaryDir != "" {
-		name := "agentic-lens-engine-" + runtime.GOOS + "-" + runtime.GOARCH
-		development := filepath.Join(e.BinaryDir, name)
-		if _, err := os.Lstat(development); err == nil {
-			if _, err := ValidateNativeExecutable(development); err != nil {
-				return "", fmt.Errorf("development output %s: %w", development, err)
-			}
-			return development, nil
-		} else {
-			return "", fmt.Errorf("development output %s: %w", development, err)
-		}
+		return filepath.Join(e.BinaryDir, "agentic-lens-engine-"+runtime.GOOS+"-"+runtime.GOARCH), nil
 	}
 	return e.CachedNativePath()
+}
+
+// NativePath validates the selected development output before use.
+func (e Entrypoint) NativePath(codexHomes ...string) (string, error) {
+	native, err := e.NativeCandidatePath()
+	if err != nil {
+		return "", err
+	}
+	if len(codexHomes) != 0 {
+		native, err = OutsideCodexInbox(native, codexHomes...)
+		if err != nil {
+			return "", err
+		}
+	}
+	if e.BinaryDir != "" {
+		if _, err := ValidateNativeExecutable(native); err != nil {
+			return "", fmt.Errorf("development output %s: %w", native, err)
+		}
+	}
+	return native, nil
 }
 
 // CachedNativePath identifies only the exact shared pin; provisioning is explicit.

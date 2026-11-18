@@ -53,6 +53,12 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		return err
 	}
 	binary = fence.binary
+	previous, err := capture.WorkerStatus(state)
+	if err != nil {
+		return err
+	}
+	scan := previous.BindingScan
+	madeInboxProgress := false
 	retire := func() error {
 		// Disablement may race an earlier policy read and make the fence false.
 		// It stops this owner without a superseded diagnostic or successor.
@@ -78,7 +84,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			return err
 		}
 		active, _ := captureWorkerActive(project, rows, policy.MaxSourceBytes)
-		if pending.Generation == pending.Acknowledged && !active {
+		if pending.Generation == pending.Acknowledged && !active && scan.Remaining == 0 {
 			return nil
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -100,7 +106,6 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		return capture.LaunchWorker(next, project, state)
 	}
 	started := time.Now()
-	var inboxCursor int
 	var lastPass time.Time
 	var nextAttempt time.Time
 	var lastFailure string
@@ -126,9 +131,6 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			return retire()
 		}
 		now := time.Now()
-		if err := capture.WriteWorkerProgress(state, capture.WorkerProgress{Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "running", Heartbeat: now.UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: nextAttempt.UnixMilli(), Detail: lastFailure + fmt.Sprintf(" generation=%d acknowledged=%d pass_timeout_ms=%d max_sessions=%d max_source_bytes=%d", req.Generation, req.Acknowledged, policy.PassTimeoutMS, policy.MaxSessions, policy.MaxSourceBytes)}); err != nil {
-			return err
-		}
 		remaining := time.Duration(policy.MaxLifetimeMS)*time.Millisecond - time.Since(started)
 		if remaining <= 0 {
 			break
@@ -144,8 +146,14 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			return activityErr
 		}
 		inboxCtx, inboxCancel := context.WithTimeout(context.Background(), min(time.Until(started.Add(time.Duration(policy.MaxLifetimeMS)*time.Millisecond)), time.Duration(policy.PassTimeoutMS)*time.Millisecond))
-		accepted, inboxErr := s.ConsumeCodexBindings(inboxCtx, cfg.Telemetry.Sources.CodexHome, rowsForActivity, &inboxCursor, policy.MaxSessions, policy.MaxSourceBytes)
+		lastRegistration := scan.Last
+		accepted, inboxErr := s.ScanCodexBindings(inboxCtx, cfg.Telemetry.Sources.CodexHome, rowsForActivity, &scan, req.Generation, policy.MaxSessions, policy.MaxSourceBytes)
 		inboxCancel()
+		madeInboxProgress = madeInboxProgress || lastRegistration != scan.Last
+		if err := capture.WriteWorkerProgress(state, capture.WorkerProgress{BindingScan: scan, Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "running", Heartbeat: now.UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: nextAttempt.UnixMilli(), Detail: lastFailure + fmt.Sprintf(" generation=%d acknowledged=%d pass_timeout_ms=%d max_sessions=%d max_source_bytes=%d", req.Generation, req.Acknowledged, policy.PassTimeoutMS, policy.MaxSessions, policy.MaxSourceBytes)}); err != nil {
+			return err
+		}
+
 		if inboxErr != nil {
 			if err := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "binding", Outcome: "failed", Detail: inboxErr.Error()}); err != nil {
 				return err
@@ -162,7 +170,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		if activityDetail != "" {
 			lastFailure = activityDetail
 		}
-		if !active && time.Since(lastActivity) >= time.Duration(policy.IdleMS)*time.Millisecond && now.UnixMilli()-req.RequestedAt >= int64(policy.IdleMS) && req.Generation == req.Acknowledged {
+		if scan.Remaining == 0 && !active && time.Since(lastActivity) >= time.Duration(policy.IdleMS)*time.Millisecond && now.UnixMilli()-req.RequestedAt >= int64(policy.IdleMS) && req.Generation == req.Acknowledged {
 			// Release before checking again: an event racing shutdown either starts a
 			// new owner or is seen here. Never consume a generation without a pass.
 			if err = lock.Close(); err != nil {
@@ -288,7 +296,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 						return e
 					}
 					fmt.Fprintln(os.Stderr, "automatic publication pending:", err)
-					if e := capture.WriteWorkerProgress(state, capture.WorkerProgress{Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "failure", Heartbeat: time.Now().UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: time.Now().Add(backoff * 2).UnixMilli(), Detail: err.Error()}); e != nil {
+					if e := capture.WriteWorkerProgress(state, capture.WorkerProgress{BindingScan: scan, Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "failure", Heartbeat: time.Now().UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: time.Now().Add(backoff * 2).UnixMilli(), Detail: err.Error()}); e != nil {
 						return e
 					}
 				}
@@ -334,7 +342,9 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	}
 	// Failed publication cannot create an unbounded retry process chain. Durable
 	// pending work restarts on the next supported lifecycle/reconcile integration.
-	if !successfulPass || lastFailure != "" {
+	// An unfinished inbox sweep can hand off if this owner advanced its saved
+	// cursor. Publication failures still stop retries once the sweep finishes.
+	if (!successfulPass || lastFailure != "") && !(madeInboxProgress && scan.Remaining > 0) {
 		return fmt.Errorf("native worker lifetime exhausted; pending generation retained for next integration event: %s", lastFailure)
 	}
 	// A healthy finite owner transfers active work to another bounded native process.
@@ -357,7 +367,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	if err != nil {
 		return err
 	}
-	preferred, err := entry.NativePath()
+	preferred, err := entry.NativePath(adaptersconfig.RuntimeCodexHome(), cfg.Telemetry.Sources.CodexHome)
 	if err != nil {
 		return err
 	}

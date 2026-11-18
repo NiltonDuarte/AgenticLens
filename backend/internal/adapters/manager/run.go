@@ -88,7 +88,7 @@ parsed:
 	if err != nil {
 		return err
 	}
-	args, err = prepareCaptureArgs(args, entry.Project)
+	args, codexHomes, err := prepareCaptureArgs(args, entry.Project)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ parsed:
 		_, err = fmt.Fprintf(output, "%s\n%s\n%s\n%s\n", entry.Version, entry.Project, entry.InstallRoot, path)
 		return err
 	}
-	native, identity, err := selectEngine(entry)
+	native, identity, err := selectEngine(entry, codexHomes...)
 	if err != nil {
 		return err
 	}
@@ -113,11 +113,11 @@ parsed:
 
 // Capture flags use Go flag arity. Consume values before interpreting later
 // tokens so a literal "--repo" title cannot change project selection.
-func prepareCaptureArgs(args []string, selected string) ([]string, error) {
+func prepareCaptureArgs(args []string, selected string) ([]string, []string, error) {
 	if len(args) < 2 || args[0] != "capture" {
-		return args, nil
+		return args, nil, nil
 	}
-	repository, source := "", ""
+	repository, source, store, userSource := "", "", "", ""
 	stateDirectory, projectName := "", ""
 	for index := 2; index < len(args); index++ {
 		argument := args[index]
@@ -125,15 +125,19 @@ func prepareCaptureArgs(args []string, selected string) ([]string, error) {
 			break
 		}
 		name, value, inline := strings.Cut(strings.TrimLeft(argument, "-"), "=")
-		if name == "repo" || name == "state-dir" || name == "project-name" || name == "source" {
+		if name == "user-source" || name == "store" || name == "repo" || name == "state-dir" || name == "project-name" || name == "source" {
 			if !inline {
 				index++
 				if index >= len(args) {
-					return nil, fmt.Errorf("capture --%s requires a value", name)
+					return nil, nil, fmt.Errorf("capture --%s requires a value", name)
 				}
 				value = args[index]
 			}
 			switch name {
+			case "user-source":
+				userSource = value
+			case "store":
+				store = value
 			case "source":
 				source = value
 			case "repo":
@@ -159,30 +163,44 @@ func prepareCaptureArgs(args []string, selected string) ([]string, error) {
 	if source == "opencode" && (args[1] == "install-user" || args[1] == "uninstall-user") {
 		args = slices.Insert(slices.Clone(args), 2, "--user-source", source)
 	}
+	var homes []string
+	if args[1] == "install-user" {
+		homes = []string{config.RuntimeCodexHome()}
+		if source != "opencode" && userSource != "opencode" {
+			if store == "" {
+				cfg, err := config.Load(selected)
+				if err != nil {
+					return nil, nil, err
+				}
+				store = cfg.Telemetry.Sources.CodexHome
+			}
+			homes = append(homes, store)
+		}
+	}
 	if repository == "" {
-		return args, nil
+		return args, homes, nil
 	}
 	// Retained-state inspection validates the explicit registry and stored
 	// project identity in the engine, even when its checkout no longer exists.
 	if args[1] == "inspect-state" && stateDirectory != "" && projectName != "" {
-		return args, nil
+		return args, homes, nil
 	}
 	root, err := config.ProjectRoot(repository)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	wanted, err := os.Stat(root)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	actual, err := os.Stat(selected)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if !os.SameFile(wanted, actual) {
-		return nil, errors.New("capture --repo differs from selected project; supply matching --al-project DIR before capture")
+		return nil, nil, errors.New("capture --repo differs from selected project; supply matching --al-project DIR before capture")
 	}
-	return args, nil
+	return args, homes, nil
 }
 
 func defaultRoot() (string, error) {
@@ -227,8 +245,8 @@ func standalone(args []string) bool {
 	}
 }
 
-func selectEngine(entry config.Entrypoint) (string, domain.BuildInfo, error) {
-	native, err := entry.NativePath()
+func selectEngine(entry config.Entrypoint, sourceHome ...string) (string, domain.BuildInfo, error) {
+	native, err := entry.NativePath(sourceHome...)
 	if err != nil {
 		return "", domain.BuildInfo{}, err
 	}
@@ -236,7 +254,7 @@ func selectEngine(entry config.Entrypoint) (string, domain.BuildInfo, error) {
 	if err != nil {
 		return "", identity, fmt.Errorf("engine %s unavailable or incompatible; explicitly install %s: %w", native, entry.Version, err)
 	}
-	development := entry.BinaryDir != "" && filepath.Dir(native) == entry.BinaryDir
+	development := entry.BinaryDir != ""
 	if !development && identity.Version != entry.Version {
 		return "", identity, fmt.Errorf("cached engine identity %s differs from exact pin %s", identity.Version, entry.Version)
 	}
@@ -307,7 +325,15 @@ func nativeHook(harness string, engineArgs []string, input io.Reader, output, di
 		_, err := io.WriteString(output, "{}\n")
 		return err
 	}
-	native, _, err := selectEngine(entry)
+	homes := []string{config.RuntimeCodexHome(), configuration.Telemetry.Sources.CodexHome}
+	manager, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	if _, err := config.OutsideCodexInbox(manager, homes...); err != nil {
+		return err
+	}
+	native, _, err := selectEngine(entry, homes...)
 	if err != nil {
 		return err
 	}

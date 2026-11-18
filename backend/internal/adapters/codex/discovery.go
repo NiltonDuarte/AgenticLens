@@ -240,6 +240,9 @@ func listRolloutPathsWithBudget(home string, budget *DiscoveryBudget) ([]string,
 			return nil, fmt.Errorf("accessing Codex %s directory: %w", directory, err)
 		}
 		err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+			if err := budget.checkDeadline(); err != nil {
+				return err
+			}
 			if walkErr != nil {
 				return walkErr
 			}
@@ -269,15 +272,12 @@ func inspectRolloutWithBudget(path, nonce string, budget *DiscoveryBudget) (cand
 	if err := budget.claim(path); err != nil {
 		return candidate, err
 	}
-	file, err := os.Open(path)
+	file, info, err := openRolloutSource(path)
 	if err != nil {
 		return rolloutCandidate{}, err
 	}
 	defer func() { err = errors.Join(err, file.Close()) }()
-	info, err := file.Stat()
-	if err != nil {
-		return candidate, err
-	}
+
 	sourceSize := info.Size()
 	var reader io.Reader = file
 	if strings.HasSuffix(path, ".gz") {
@@ -407,6 +407,9 @@ func DiscoverExactRolloutPathWithBudget(home, sessionID string, budget *Discover
 	selected := ""
 	for _, path := range paths {
 		candidate, e := inspectRolloutWithBudget(path, "", budget)
+		if err := budget.checkDeadline(); err != nil {
+			return "", err
+		}
 		if e != nil {
 			if errors.Is(e, ErrDiscoveryBudget) {
 				return "", e

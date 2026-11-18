@@ -15,7 +15,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const codexInboxName = "agenticlens-binding-inbox"
+const codexInboxName = config.CodexInboxName
 
 // CodexBindingInbox resolves the private home before joining the sole directory
 // the installer grants. Never resolve a symlink at the writable leaf.
@@ -77,6 +77,25 @@ func CheckCodexInboxSeparation(project, home, inbox string) error {
 		configured, err := config.BindingStatePaths(project)
 		if err != nil {
 			return err
+		}
+		// An installation can precede project setup. Where a shared pin exists,
+		// resolve its actual development or cached output without running it.
+		shared, err := config.FindConfigFile(project)
+		if err != nil {
+			return err
+		}
+		if shared != "" {
+			entry, err := config.ResolveEntrypoint(project)
+			if err != nil {
+				return err
+			}
+			native, err := entry.NativeCandidatePath()
+			if err != nil {
+				return err
+			}
+			if _, err := config.OutsideCodexInbox(native, home); err != nil {
+				return err
+			}
 		}
 		paths = append(paths, configured...)
 	}

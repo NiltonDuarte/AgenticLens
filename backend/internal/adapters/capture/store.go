@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
 	"agenticlens/internal/domain/migration"
 	"modernc.org/sqlite"
@@ -708,11 +709,11 @@ func (s *Store) Bind(ctx context.Context, id domain.CaptureIdentity, ticket, req
 		if request == "" || request != r.Request {
 			return r, errors.New("binding requires the exact request token supplied by this session's hook or capture status")
 		}
-		return s.bindVerified(ctx, r, ticket)
+		return s.bindVerified(ctx, r, ticket, nil)
 	})
 }
 
-func (s *Store) bindVerified(ctx context.Context, r domain.CaptureRegistration, ticket string) (domain.CaptureRegistration, error) {
+func (s *Store) bindVerified(ctx context.Context, r domain.CaptureRegistration, ticket string, budget *codex.DiscoveryBudget) (domain.CaptureRegistration, error) {
 	bound, err := domain.CaptureBinding(r.TicketID, ticket, "")
 	if err != nil {
 		return r, err
@@ -721,14 +722,25 @@ func (s *Store) bindVerified(ctx context.Context, r domain.CaptureRegistration, 
 		return r, errors.New("binding requires explicit ticket ID")
 	}
 	if s.project != "" && r.Identity.Source == domain.SourceCodex && r.TranscriptPath == "" {
-		path, err := discoverExactCaptureRollout(s.configuration, r.Identity.Store, r.Identity.SessionID)
+		var path string
+		var err error
+		if budget == nil {
+			path, err = discoverExactCaptureRollout(s.configuration, r.Identity.Store, r.Identity.SessionID)
+		} else {
+			path, err = codex.DiscoverExactRolloutPathWithBudget(r.Identity.Store, r.Identity.SessionID, budget)
+		}
 		if err != nil {
 			return r, fmt.Errorf("binding source identity unavailable; minimal registration retained: %w", err)
 		}
 		r.TranscriptPath = path
 	}
-	if err := s.validateOwner(ctx, r); err != nil {
-		return r, fmt.Errorf("binding source/project verification failed; minimal registration retained: %w", err)
+	if s.project != "" {
+		if err := validateOwnerSource(ctx, s.project, r, s.configuration, false, budget); err != nil {
+			return r, fmt.Errorf("binding source/project verification failed; minimal registration retained: %w", err)
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return r, err
 	}
 	r.ProjectDirectory = s.project
 	r.ProjectProof = domain.CaptureProjectVerified

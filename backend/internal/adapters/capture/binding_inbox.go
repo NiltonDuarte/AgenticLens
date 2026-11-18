@@ -13,10 +13,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
+	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
 	"golang.org/x/sys/unix"
 )
@@ -36,6 +38,8 @@ type bindingEnvelope struct {
 }
 
 const bindingEnvelopeLimit = 8192
+
+var errBindingBudget = errors.New("binding inbox byte budget reached")
 
 func (t BindingTicket) validate(cfg domain.TicketConfig) error {
 	id, ok := domain.NormalizeTicketID(t.ID, cfg)
@@ -141,6 +145,9 @@ func SubmitCodexBinding(project, home, sessionID, credential string, ticket Bind
 	if !installed {
 		return errors.New("Codex binding inbox is not installed")
 	}
+	if err := CheckInstalledInboxIsolation(project, id.Store); err != nil {
+		return err
+	}
 	dir, err := openBindingInbox(id.Store)
 	if err != nil {
 		return fmt.Errorf("open Codex binding inbox; verify the installed integration: %w", err)
@@ -159,7 +166,8 @@ func SubmitCodexBinding(project, home, sessionID, credential string, ticket Bind
 	if err != nil {
 		return err
 	}
-	defer unix.Unlinkat(dir, name, 0)
+	// A failed submission can leave a random temporary entry. The directory
+	// is shared with concurrent submitters; never unlink a replaced pathname.
 	f := os.NewFile(uintptr(fd), name)
 	_, err = f.Write(body)
 	if err == nil {
@@ -197,14 +205,18 @@ func readBindingEnvelope(dir int, name string, remaining *int64) (bindingEnvelop
 		return env, errors.New("binding inbox entry must be a single-link bounded regular file")
 	}
 	if st.Size > *remaining {
-		return env, errors.New("binding inbox byte budget reached")
+		return env, errBindingBudget
 	}
-	body, err := io.ReadAll(io.LimitReader(f, min(*remaining, bindingEnvelopeLimit)+1))
+	body, err := io.ReadAll(io.LimitReader(f, min(*remaining, bindingEnvelopeLimit)))
 	*remaining -= int64(len(body))
 	if err != nil {
 		return env, err
 	}
-	if int64(len(body)) != st.Size {
+	var after unix.Stat_t
+	if err := unix.Fstat(fd, &after); err != nil {
+		return env, err
+	}
+	if int64(len(body)) != st.Size || after.Size != st.Size {
 		return env, errors.New("binding inbox entry changed while reading")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(body))
@@ -230,21 +242,71 @@ func eligibleCodexBinding(home string, r domain.CaptureRegistration) bool {
 // project's observed sessions. A rolling cursor bounds probes without allowing
 // old unassigned registrations or malformed submissions to starve later ones.
 func (s *Store) ConsumeCodexBindings(ctx context.Context, home string, rows []domain.CaptureRegistration, cursor *int, maxSessions int, maxBytes int64) (int, error) {
-	if home == "" || len(rows) == 0 {
+	accepted, _, err := s.consumeCodexBindings(ctx, home, rows, cursor, maxSessions, maxBytes)
+	return accepted, err
+}
+
+// BindingScan persists the last registration inspected and the amount of work
+// left in a sweep for the most recent publication request. A bounded successor
+// can finish a wake even when one process lifetime is shorter than a full sweep.
+type BindingScan struct {
+	Generation int64  `json:"generation"`
+	Last       string `json:"last,omitempty"`
+	Remaining  int    `json:"remaining"`
+}
+
+func (s *Store) ScanCodexBindings(ctx context.Context, home string, rows []domain.CaptureRegistration, scan *BindingScan, generation int64, maxSessions int, maxBytes int64) (int, error) {
+	if home == "" {
+		scan.Remaining = 0
 		return 0, nil
 	}
 	home, err := CanonicalStore(home)
 	if err != nil {
 		return 0, err
 	}
+	var eligible []domain.CaptureRegistration
+	for _, r := range rows { // Store.List orders these by IdentityKey.
+		if eligibleCodexBinding(home, r) {
+			eligible = append(eligible, r)
+		}
+	}
+	if generation != scan.Generation {
+		scan.Generation = generation
+		scan.Remaining = len(eligible)
+	}
+	scan.Remaining = min(scan.Remaining, len(eligible))
+	if len(eligible) == 0 {
+		return 0, nil
+	}
+	cursor := sort.Search(len(eligible), func(i int) bool { return IdentityKey(eligible[i].Identity) > scan.Last }) % len(eligible)
+	accepted, visited, err := s.consumeCodexBindings(ctx, home, eligible, &cursor, maxSessions, maxBytes)
+	if visited > 0 {
+		scan.Last = IdentityKey(eligible[(cursor+len(eligible)-1)%len(eligible)].Identity)
+		scan.Remaining = max(0, scan.Remaining-visited)
+	}
+	return accepted, err
+}
+
+func (s *Store) consumeCodexBindings(ctx context.Context, home string, rows []domain.CaptureRegistration, cursor *int, maxSessions int, maxBytes int64) (int, int, error) {
+	if home == "" || len(rows) == 0 {
+		return 0, 0, nil
+	}
+	home, err := CanonicalStore(home)
+	if err != nil {
+		return 0, 0, err
+	}
 	dir := -1
 	accepted := 0
 	var firstErr error
-	for n := 0; n < min(len(rows), maxSessions) && maxBytes > 0; n++ {
+	visited := 0
+	budget := codex.DiscoveryBudget{Context: ctx, MaxSessions: maxSessions, MaxSourceBytes: maxBytes}
+	for visited < min(len(rows), maxSessions) && budget.SourceBytesRead < maxBytes {
 		if err := ctx.Err(); err != nil {
-			return accepted, errors.Join(firstErr, err)
+			return accepted, visited, errors.Join(firstErr, err)
 		}
-		r := rows[*cursor%len(rows)]
+		visited++
+		index := *cursor % len(rows)
+		r := rows[index]
 		*cursor = (*cursor + 1) % len(rows)
 		if !eligibleCodexBinding(home, r) {
 			continue
@@ -252,17 +314,20 @@ func (s *Store) ConsumeCodexBindings(ctx context.Context, home string, rows []do
 		if dir < 0 {
 			installed, err := CodexInboxInstalled(home)
 			if err != nil || !installed {
-				return accepted, err
+				return accepted, visited, err
 			}
 			dir, err = openBindingInbox(home)
 			if err != nil {
-				return accepted, err
+				return accepted, visited, err
 			}
 			defer unix.Close(dir)
 		}
 		credential := inboxCredential(s.project, r)
 		name := slotName(credential)
-		env, err := readBindingEnvelope(dir, name, &maxBytes)
+		sharedAllowance := budget.SourceBytesRead > 0 || budget.SessionsRead > 0
+		remaining := maxBytes - budget.SourceBytesRead
+		env, err := readBindingEnvelope(dir, name, &remaining)
+		budget.SourceBytesRead = maxBytes - remaining
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
@@ -280,7 +345,7 @@ func (s *Store) ConsumeCodexBindings(ctx context.Context, home string, rows []do
 				if !needsExplicitBinding(current) || current.CallbackObservedAt == "" || inboxCredential(s.project, current) != credential {
 					return current, errors.New("binding request is no longer pending")
 				}
-				bound, e := s.bindVerified(ctx, current, env.Ticket.ID)
+				bound, e := s.bindVerified(ctx, current, env.Ticket.ID, &budget)
 				if e != nil {
 					return current, e
 				}
@@ -292,17 +357,19 @@ func (s *Store) ConsumeCodexBindings(ctx context.Context, home string, rows []do
 			})
 			if err == nil {
 				accepted++
-				// Acceptance and its publication generation are already durable.
-				// A duplicate file cannot rebind a completed registration.
-				err = unix.Unlinkat(dir, name, 0)
-				if errors.Is(err, os.ErrNotExist) {
-					err = nil
-				}
+				// A completed registration rejects replays. Leave the slot in place:
+				// a replacement after our read belongs to its writer.
 			}
+		}
+		// A response that only exceeded the remainder gets first use of the
+		// next pass. One that exceeds a whole pass cannot starve later owners.
+		if sharedAllowance && (errors.Is(err, errBindingBudget) || errors.Is(err, codex.ErrDiscoveryBudget)) {
+			*cursor = index
+			return accepted, visited - 1, errors.Join(firstErr, err)
 		}
 		if err != nil && firstErr == nil {
 			firstErr = fmt.Errorf("Codex binding for session %s: %w", r.Identity.SessionID, err)
 		}
 	}
-	return accepted, firstErr
+	return accepted, visited, firstErr
 }

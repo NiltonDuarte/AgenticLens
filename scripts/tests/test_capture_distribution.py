@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import signal
 import select
@@ -13,6 +14,19 @@ from distribution_fixture import DistributionFixture, ROOT, SETUP, build_probe, 
 
 
 class CaptureDistributionTest(DistributionFixture):
+    def assert_user_hooks(self, hooks, unrelated=None):
+        events = {'SessionStart', 'UserPromptSubmit', 'SubagentStart', 'SubagentStop', 'Stop', 'SessionEnd', 'PostToolUse'}
+        self.assertEqual(set(hooks), events)
+        for event, groups in hooks.items():
+            owned = [group for group in groups if group != unrelated]
+            self.assertEqual(len(owned), 1, event)
+            handlers = owned[0]['hooks']
+            self.assertEqual(len(handlers), 1, event)
+            action = 'codex-binding-wake' if event == 'PostToolUse' else 'codex-hook'
+            self.assertEqual(shlex.split(handlers[0]['command']), [str(self.dest / 'agentic-lens'), action])
+            if event == 'PostToolUse':
+                self.assertEqual(owned[0].get('matcher'), '^Bash$')
+
     def install_native_reporting_probe(self):
         application = build_app(self.pin)
         self.succeeds(self.install_local('--force', probe=application))
@@ -123,13 +137,7 @@ class CaptureDistributionTest(DistributionFixture):
             with self.subTest(script=script):
                 self.succeeds(self.install_local('--capture-source', 'codex', '--capture-store', store, script=script))
                 hooks = json.loads((store / 'hooks.json').read_text())['hooks']
-                self.assertEqual(set(hooks), {'SessionStart', 'UserPromptSubmit', 'SubagentStart', 'SubagentStop', 'Stop', 'SessionEnd'})
-                for groups in hooks.values():
-                    self.assertEqual(len(groups), 1)
-                    command = groups[0]['hooks'][0]['command']
-                    self.assertIn(str(self.dest / 'agentic-lens'), command)
-                    self.assertIn('codex-hook', command)
-                    self.assertNotIn(str(store), command)
+                self.assert_user_hooks(hooks)
                 self.assertFalse((self.repo / 'INJECTED').exists())
         self.assertEqual(self.requests(), [])
 
@@ -142,16 +150,7 @@ class CaptureDistributionTest(DistributionFixture):
         self.succeeds(self.install_local('--capture-source', 'codex', '--capture-store', home, probe=application))
         installed = json.loads(hooks.read_text())['hooks']
         self.assertIn(unrelated, installed['SessionStart'])
-        self.assertEqual(set(installed), {'SessionStart', 'UserPromptSubmit', 'SubagentStart', 'SubagentStop', 'Stop', 'SessionEnd'})
-        for event, groups in installed.items():
-            owned = [group for group in groups if group != unrelated]
-            self.assertEqual(len(owned), 1, event)
-            command = owned[0]['hooks'][0]['command']
-            self.assertIn(str(self.dest / 'agentic-lens'), command)
-            self.assertIn('codex-hook', command)
-            self.assertNotIn(str(self.repo), command)
-            self.assertNotIn(str(home), command)
-            self.assertNotIn('python', command.lower())
+        self.assert_user_hooks(installed, unrelated)
         self.assertFalse((self.repo / '.codex').exists())
         self.assertFalse((self.root / 'capture state').exists())
         self.assertFalse((self.dest / 'agentic-lens.dispatcher').exists())
@@ -396,7 +395,7 @@ class CaptureDistributionTest(DistributionFixture):
         self.assertEqual(json.loads(project_hooks.read_text())['hooks'], {'SessionStart': [foreign]})
         self.assertFalse(json.loads(anchor.read_text())['active'])
         self.assertEqual(pending.read_bytes(), b'preserve existing capture state')
-        self.assertEqual(len(json.loads((source / 'hooks.json').read_text())['hooks']), 6)
+        self.assert_user_hooks(json.loads((source / 'hooks.json').read_text())['hooks'])
         self.assertFalse((worktree / '.codex/hooks.json').exists())
         self.assertEqual(self.requests(), [])
 
