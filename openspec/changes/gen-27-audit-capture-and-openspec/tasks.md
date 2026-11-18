@@ -8,8 +8,8 @@
 ## Iteration 02 — One-time setup for Codex binding
 
 - [x] 2.1 Verify the previous broad grant, roll it back and record the approved dedicated inbox boundary.
-- [ ] 2.2 Install only the inbox grant with preview, migration, recovery, idempotent reinstallation and ownership-aware uninstall.
-- [ ] 2.3 Implement authenticated sandbox submission and bounded trusted worker consumption on the native Codex path.
+- [x] 2.2 Install only the inbox grant with preview, migration, recovery, idempotent reinstallation and ownership-aware uninstall.
+- [x] 2.3 Implement authenticated sandbox submission and bounded trusted worker consumption on the native Codex path.
 - [ ] 2.4 Verify binding in a fresh workspace-write root without a per-run flag, preserved private state and existing owners, rejection/retry behavior, and the installer lifecycle.
 - [ ] 2.5 Complete integrated checks and review, then retain delivery and final telemetry evidence.
 
@@ -20,9 +20,9 @@ For the corrected candidate, review behavior (callback through publication), dat
 ## Iteration 03 — Protected selection for trusted Codex callbacks
 
 - [x] 3.1 Record the observed worktree executable exposure, approved scope and selected acceptance.
-- [ ] 3.2 Update manager callback selection and setup checks using operator-controlled installation evidence; check path and identity before any probe. Preserve ordinary CLI and OpenCode selection.
-- [ ] 3.3 Carry protected execution through capture worker retention, restart and successor selection. Preserve pending requests on installation or compatibility failures.
-- [ ] 3.4 Verify native selection, unavailable or mismatched installation, workspace-controlled configuration, startup and handoff, ordinary CLI development behavior, and independent OpenCode publication. Reuse existing manager distribution, worker-switch and inbox regression fixtures.
+- [x] 3.2 Update manager callback selection and setup checks using operator-controlled installation evidence; check path and identity before any probe. Preserve ordinary CLI and OpenCode selection.
+- [x] 3.3 Carry protected execution through capture worker retention, restart and successor selection. Preserve pending requests on installation or compatibility failures.
+- [x] 3.4 Verify native selection, unavailable or mismatched installation, workspace-controlled configuration, startup and handoff, ordinary CLI development behavior, and independent OpenCode publication. Reuse existing manager distribution, worker-switch and inbox regression fixtures.
 - [ ] 3.5 Exercise the supported live installation and native fresh-root binding with private executables and state outside sandbox grants. Run integrated checks, re-review changed boundaries and record delivery evidence.
 
 Iteration 03 review covers callback installation and worker behavior, integrity of operator installation records, manager/engine separation, test effectiveness, and the writable-path boundary. Each focus reviews the same frozen product revision under gpt-6.2-sol/high and gpt-6-luna/medium; the coordinator retains findings, dissent and coverage in iteration 03 evidence. The live check uses a fresh native workspace-write session, the ordinary installed hook, the exact root registration, prior ledger owners and the published summary.
