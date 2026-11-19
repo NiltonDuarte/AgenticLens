@@ -29,3 +29,7 @@ Recover source-proven nested Codex sessions and shorten the interval between nat
 The verified Linux amd64 package passed the native gate with Codex 0.170.0 and OpenCode 1.19.5. Both clients captured the root, two direct children and a grandchild and left an unrelated session out. The first commits with native completion evidence reported zero provisional seconds after 1.125 seconds and 1.272 seconds respectively.
 
 The full integrated `make -j2` and OpenSpec strict validation passed.
+
+## Pull request record
+
+[AgenticLens PR 156](https://github.com/NiltonDuarte/AgenticLens/pull/156)
