@@ -1,0 +1,367 @@
+{
+  "archive_sha256": "7349b8ab01e8dd79b2bab06101bc7eb8f8a5d02ce3476465c976fc980d928631",
+  "candidate": "v3.0.0-rc.0+al96.dev7",
+  "candidate_base": "a5c8a25e739418c360a68371996bb6f2ae240760",
+  "engine_sha256": "d7c54b6823246b08bdcf72a632c65b75973e811d4bda49f386921e7bcc2eb1db",
+  "manager_sha256": "a343c97e26f258374c603e53668b03c0d8bafe94f797507e032ae7f6ffb90472",
+  "manual_only_prior_evidence": [
+    "OpenCode 2.2.0 standalone"
+  ],
+  "platform": "linux/amd64",
+  "result": "passed",
+  "runner_content_sha256": "f4faee9d165bee4dae78c090ecae59450f3346894faa5e5ab16053d04bdcf0a5",
+  "runs": [
+    {
+      "after_completion": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "01a1f553-6851-7fe0-ac1e-81b3911094b6": 0,
+          "01a1f553-6bc7-7c81-8dd2-6d6fedfe41b2": 0,
+          "01a1f553-6e79-7252-9e8a-5ad7b7107ac6": 0,
+          "01a1f553-7269-7eb1-b999-4b0eaad4f0a5": 0
+        },
+        "native_measured_seconds": 9,
+        "per_session": {
+          "01a1f553-6851-7fe0-ac1e-81b3911094b6": {
+            "active_seconds": 5,
+            "measured_seconds": 5,
+            "provisional_seconds": 0
+          },
+          "01a1f553-6bc7-7c81-8dd2-6d6fedfe41b2": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "01a1f553-6e79-7252-9e8a-5ad7b7107ac6": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "01a1f553-7269-7eb1-b999-4b0eaad4f0a5": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          }
+        },
+        "rendered_active_duration": "0m 9s",
+        "ticket_active_seconds": 9,
+        "ticket_measured_seconds": 9,
+        "ticket_provisional_seconds": 0
+      },
+      "after_resume": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "01a1f553-6851-7fe0-ac1e-81b3911094b6": 0,
+          "01a1f553-6bc7-7c81-8dd2-6d6fedfe41b2": 0,
+          "01a1f553-6e79-7252-9e8a-5ad7b7107ac6": 0,
+          "01a1f553-7269-7eb1-b999-4b0eaad4f0a5": 0
+        },
+        "native_measured_seconds": 10,
+        "per_session": {
+          "01a1f553-6851-7fe0-ac1e-81b3911094b6": {
+            "active_seconds": 6,
+            "measured_seconds": 6,
+            "provisional_seconds": 0
+          },
+          "01a1f553-6bc7-7c81-8dd2-6d6fedfe41b2": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "01a1f553-6e79-7252-9e8a-5ad7b7107ac6": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "01a1f553-7269-7eb1-b999-4b0eaad4f0a5": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          }
+        },
+        "rendered_active_duration": "0m 10s",
+        "ticket_active_seconds": 10,
+        "ticket_measured_seconds": 10,
+        "ticket_provisional_seconds": 0
+      },
+      "before_completion": {
+        "ledger_updated_at": "2026-11-19T19:40:50.817919+00:00",
+        "native_intervals": {
+          "01a1f553-6851-7fe0-ac1e-81b3911094b6": {
+            "active_seconds": 4,
+            "measured_seconds": 0,
+            "native_completed_intervals": 0,
+            "native_latest_completion_epoch": null,
+            "open_intervals": [
+              {
+                "activity_epoch_ms": 1795117246579,
+                "id": "01a1f553-6869-7fb1-a816-9ebbdfffeb3a",
+                "model": "gpt-5.4",
+                "started_epoch_ms": 1795117246579
+              }
+            ],
+            "provisional_seconds": 4,
+            "published_completion_checkpoint": null
+          },
+          "01a1f553-6bc7-7c81-8dd2-6d6fedfe41b2": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "native_completed_intervals": 1,
+            "native_latest_completion_epoch": 1795117249.073,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-19T19:40:49.073Z"
+          },
+          "01a1f553-6e79-7252-9e8a-5ad7b7107ac6": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "native_completed_intervals": 1,
+            "native_latest_completion_epoch": 1795117248.783,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-19T19:40:48.783Z"
+          },
+          "01a1f553-7269-7eb1-b999-4b0eaad4f0a5": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "native_completed_intervals": 1,
+            "native_latest_completion_epoch": 1795117249.966,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-19T19:40:49.966Z"
+          }
+        },
+        "per_session": {
+          "01a1f553-6851-7fe0-ac1e-81b3911094b6": {
+            "active_seconds": 4,
+            "measured_seconds": 0,
+            "provisional_seconds": 4
+          },
+          "01a1f553-6bc7-7c81-8dd2-6d6fedfe41b2": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "01a1f553-6e79-7252-9e8a-5ad7b7107ac6": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "01a1f553-7269-7eb1-b999-4b0eaad4f0a5": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          }
+        },
+        "publication_observed_at": "2026-11-19T19:40:50.859306728Z",
+        "rendered_active_duration": "0m 8s",
+        "source_duration_cutoff": "2026-11-19T19:40:50.648040345Z",
+        "source_reconciliation_completed_at": "2026-11-19T19:40:50.800962822Z",
+        "ticket_active_seconds": 8,
+        "ticket_measured_seconds": 4,
+        "ticket_provisional_seconds": 4
+      },
+      "binding_accepted_at": "2026-11-19T19:40:48.166071526Z",
+      "binding_to_first_publication_seconds": 0.885,
+      "completion_to_commit_seconds": 1.118,
+      "excluded_native_session": "01a1f553-61cd-7a93-b113-0499a542bbac",
+      "expected_version": "codex-cli 0.170.0",
+      "first_completion_commit": "2026-11-19T19:40:52.334828226Z",
+      "first_published_at": "2026-11-19T19:40:49.050802432Z",
+      "harness_version": "codex-cli 0.170.0",
+      "native_completion_epoch": 1795117251.217,
+      "native_tree": {
+        "01a1f553-6851-7fe0-ac1e-81b3911094b6": null,
+        "01a1f553-6bc7-7c81-8dd2-6d6fedfe41b2": "01a1f553-6851-7fe0-ac1e-81b3911094b6",
+        "01a1f553-6e79-7252-9e8a-5ad7b7107ac6": "01a1f553-6bc7-7c81-8dd2-6d6fedfe41b2",
+        "01a1f553-7269-7eb1-b999-4b0eaad4f0a5": "01a1f553-6851-7fe0-ac1e-81b3911094b6"
+      },
+      "nested_delegation_offered": true,
+      "published_tree": {
+        "01a1f553-6851-7fe0-ac1e-81b3911094b6": null,
+        "01a1f553-6bc7-7c81-8dd2-6d6fedfe41b2": "01a1f553-6851-7fe0-ac1e-81b3911094b6",
+        "01a1f553-6e79-7252-9e8a-5ad7b7107ac6": "01a1f553-6bc7-7c81-8dd2-6d6fedfe41b2",
+        "01a1f553-7269-7eb1-b999-4b0eaad4f0a5": "01a1f553-6851-7fe0-ac1e-81b3911094b6"
+      },
+      "result": "passed",
+      "resumed_completion_to_commit_seconds": 0.974,
+      "source": "codex"
+    },
+    {
+      "after_completion": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "ses_e0aac0667ffe8d4dbRVzl76JsD": 0,
+          "ses_e0aac105effe0YtGKOrQheaQiB": 0,
+          "ses_e0aac1577ffe7ekquwSx8SR4Zx": 0,
+          "ses_e0aac223cffetOz91G7Zh2jvU5": 0
+        },
+        "native_measured_seconds": 13,
+        "per_session": {
+          "ses_e0aac0667ffe8d4dbRVzl76JsD": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e0aac105effe0YtGKOrQheaQiB": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e0aac1577ffe7ekquwSx8SR4Zx": {
+            "active_seconds": 3,
+            "measured_seconds": 3,
+            "provisional_seconds": 0
+          },
+          "ses_e0aac223cffetOz91G7Zh2jvU5": {
+            "active_seconds": 8,
+            "measured_seconds": 8,
+            "provisional_seconds": 0
+          }
+        },
+        "rendered_active_duration": "0m 13s",
+        "ticket_active_seconds": 13,
+        "ticket_measured_seconds": 13,
+        "ticket_provisional_seconds": 0
+      },
+      "after_resume": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "ses_e0aac0667ffe8d4dbRVzl76JsD": 0,
+          "ses_e0aac105effe0YtGKOrQheaQiB": 0,
+          "ses_e0aac1577ffe7ekquwSx8SR4Zx": 0,
+          "ses_e0aac223cffetOz91G7Zh2jvU5": 0
+        },
+        "native_measured_seconds": 15,
+        "per_session": {
+          "ses_e0aac0667ffe8d4dbRVzl76JsD": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e0aac105effe0YtGKOrQheaQiB": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e0aac1577ffe7ekquwSx8SR4Zx": {
+            "active_seconds": 3,
+            "measured_seconds": 3,
+            "provisional_seconds": 0
+          },
+          "ses_e0aac223cffetOz91G7Zh2jvU5": {
+            "active_seconds": 10,
+            "measured_seconds": 10,
+            "provisional_seconds": 0
+          }
+        },
+        "rendered_active_duration": "0m 15s",
+        "ticket_active_seconds": 15,
+        "ticket_measured_seconds": 15,
+        "ticket_provisional_seconds": 0
+      },
+      "before_completion": {
+        "ledger_updated_at": "2026-11-19T19:41:26.139101+00:00",
+        "native_intervals": {
+          "ses_e0aac0667ffe8d4dbRVzl76JsD": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "native_completed_intervals": 2,
+            "native_latest_completion_epoch": 1795117284.917,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-19T19:41:24.917Z"
+          },
+          "ses_e0aac105effe0YtGKOrQheaQiB": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "native_completed_intervals": 2,
+            "native_latest_completion_epoch": 1795117282.379,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-19T19:41:22.379Z"
+          },
+          "ses_e0aac1577ffe7ekquwSx8SR4Zx": {
+            "active_seconds": 3,
+            "measured_seconds": 3,
+            "native_completed_intervals": 3,
+            "native_latest_completion_epoch": 1795117283.056,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-19T19:41:23.056Z"
+          },
+          "ses_e0aac223cffetOz91G7Zh2jvU5": {
+            "active_seconds": 8,
+            "measured_seconds": 7,
+            "native_completed_intervals": 3,
+            "native_latest_completion_epoch": 1795117285.004,
+            "open_intervals": [
+              {
+                "activity_epoch_ms": 1795117285571,
+                "id": "msg_1f553fe95001WBYvHPNWs02Ece",
+                "model": "mock-model",
+                "started_epoch_ms": 1795117285013
+              }
+            ],
+            "provisional_seconds": 1,
+            "published_completion_checkpoint": null
+          }
+        },
+        "per_session": {
+          "ses_e0aac0667ffe8d4dbRVzl76JsD": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e0aac105effe0YtGKOrQheaQiB": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e0aac1577ffe7ekquwSx8SR4Zx": {
+            "active_seconds": 3,
+            "measured_seconds": 3,
+            "provisional_seconds": 0
+          },
+          "ses_e0aac223cffetOz91G7Zh2jvU5": {
+            "active_seconds": 8,
+            "measured_seconds": 7,
+            "provisional_seconds": 1
+          }
+        },
+        "publication_observed_at": "2026-11-19T19:41:26.173955497Z",
+        "rendered_active_duration": "0m 13s",
+        "source_duration_cutoff": "2026-11-19T19:41:25.999618185Z",
+        "source_reconciliation_completed_at": "2026-11-19T19:41:26.118981701Z",
+        "ticket_active_seconds": 13,
+        "ticket_measured_seconds": 12,
+        "ticket_provisional_seconds": 1
+      },
+      "binding_accepted_at": "2026-11-19T19:41:19.38747363Z",
+      "binding_to_first_publication_seconds": 5.248,
+      "completion_to_commit_seconds": 1.017,
+      "excluded_native_session": "ses_e0aac3517ffeYGRNueouWDqCKx",
+      "expected_version": "1.19.5",
+      "first_completion_commit": "2026-11-19T19:41:27.446673941Z",
+      "first_published_at": "2026-11-19T19:41:24.635753461Z",
+      "harness_version": "1.19.5",
+      "native_completion_epoch": 1795117286.43,
+      "native_tree": {
+        "ses_e0aac0667ffe8d4dbRVzl76JsD": "ses_e0aac223cffetOz91G7Zh2jvU5",
+        "ses_e0aac105effe0YtGKOrQheaQiB": "ses_e0aac1577ffe7ekquwSx8SR4Zx",
+        "ses_e0aac1577ffe7ekquwSx8SR4Zx": "ses_e0aac223cffetOz91G7Zh2jvU5",
+        "ses_e0aac223cffetOz91G7Zh2jvU5": null
+      },
+      "nested_delegation_offered": true,
+      "published_tree": {
+        "ses_e0aac0667ffe8d4dbRVzl76JsD": "ses_e0aac223cffetOz91G7Zh2jvU5",
+        "ses_e0aac105effe0YtGKOrQheaQiB": "ses_e0aac1577ffe7ekquwSx8SR4Zx",
+        "ses_e0aac1577ffe7ekquwSx8SR4Zx": "ses_e0aac223cffetOz91G7Zh2jvU5",
+        "ses_e0aac223cffetOz91G7Zh2jvU5": null
+      },
+      "result": "passed",
+      "resumed_completion_to_commit_seconds": 0.934,
+      "source": "opencode"
+    }
+  ]
+}

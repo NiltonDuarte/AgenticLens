@@ -18,6 +18,10 @@ import (
 )
 
 func (s *Store) QueueChildStart(ctx context.Context, store, parent, agent string) error {
+	return s.queueCodexChildStart(ctx, store, parent, agent, true)
+}
+
+func (s *Store) queueCodexChildStart(ctx context.Context, store, parent, agent string, nativeCallback bool) error {
 	if agent == "" {
 		return errors.New("SubagentStart requires its opaque agent_id")
 	}
@@ -26,7 +30,48 @@ func (s *Store) QueueChildStart(ctx context.Context, store, parent, agent string
 		return normalizeErr
 	}
 	store = canonicalStore
-	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS pending_starts(worktree_id INTEGER NOT NULL,store TEXT,parent TEXT,agent TEXT,PRIMARY KEY(worktree_id,store,parent,agent)); INSERT OR IGNORE INTO pending_starts VALUES(?,?,?,?)`, s.worktreeID, store, parent, agent)
+	return s.withRegistrationWrite(ctx, func(conn *sql.Conn) error {
+		inserted, err := conn.ExecContext(ctx, `INSERT OR IGNORE INTO pending_starts VALUES(?,?,?,?)`, s.worktreeID, store, parent, agent)
+		if err != nil {
+			return err
+		}
+		count, err := inserted.RowsAffected()
+		if err != nil || (count == 0 && !nativeCallback) {
+			return err
+		}
+		// New lifecycle evidence can request another bounded sweep.
+		// Rereading the same accepted source hint cannot.
+		identity := domain.CaptureIdentity{Source: domain.SourceCodex, Store: store, SessionID: parent}
+		_, err = conn.ExecContext(ctx, `DELETE FROM discovery_cursor WHERE worktree_id=? AND parent=? AND path=''`, s.worktreeID, IdentityKey(identity))
+		return err
+	})
+}
+
+// queueCodexSourceStarts records hints from an accepted native parent read.
+// Already proven child edges require no further source discovery.
+func (s *Store) queueCodexSourceStarts(ctx context.Context, parent domain.CaptureRegistration, hints []string, known map[string]domain.CaptureRegistration) error {
+	for _, hint := range hints {
+		id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: parent.Identity.Store, SessionID: hint}
+		if existing := known[IdentityKey(id)]; existing.ProjectProof == domain.CaptureProjectVerified && existing.ParentID == parent.Identity.SessionID {
+			continue
+		}
+		if err := s.queueCodexChildStart(ctx, parent.Identity.Store, parent.Identity.SessionID, hint, false); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Store) reopenCodexChildSweep(ctx context.Context, parent domain.CaptureIdentity) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM discovery_cursor WHERE worktree_id=? AND parent=? AND path=''`, s.worktreeID, IdentityKey(parent))
+	return err
+}
+
+func (s *Store) reopenTicketCodexChildSweeps(ctx context.Context, ticket string) error {
+	_, err := s.db.ExecContext(ctx, `
+DELETE FROM discovery_cursor WHERE worktree_id=? AND path='' AND parent IN (
+	SELECT identity FROM registrations WHERE worktree_id=? AND source='codex' AND ticket=?
+)`, s.worktreeID, s.worktreeID, ticket)
 	return err
 }
 
@@ -124,10 +169,10 @@ func readMetadata(ctx context.Context, path string, budget *workBudget) (codex.T
 	}
 	return codex.ParseRollout(strings.NewReader(scanner.Text() + "\n"))
 }
-func (s *Store) inheritChild(ctx context.Context, parent domain.CaptureRegistration, id, path string) error {
+func (s *Store) inheritChild(ctx context.Context, parent domain.CaptureRegistration, id, path string) (bool, error) {
 	identity := domain.CaptureIdentity{Source: parent.Identity.Source, Store: parent.Identity.Store, SessionID: id}
 	if err := s.validateOwner(ctx, domain.CaptureRegistration{Identity: identity, TranscriptPath: path}); err != nil {
-		return nil
+		return false, nil
 	}
 	_, err := s.Change(ctx, identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 		if r.TicketID != "" && (r.Binding == "explicit_agent_response" || r.Binding == "explicit_manual_selection") {
@@ -163,7 +208,7 @@ func (s *Store) inheritChild(ctx context.Context, parent domain.CaptureRegistrat
 		r.State = domain.CapturePending
 		return r, nil
 	})
-	return err
+	return err == nil, err
 }
 
 // recoverChildren acts only for proven ticket parents. Unassigned roots are not
@@ -196,12 +241,16 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 		if parent.Identity.Source != domain.SourceCodex {
 			continue
 		}
-		table := "pending_children"
-		if class == workStarts {
-			table = "pending_starts"
-		}
 		var count int
-		if err = s.db.QueryRowContext(ctx, `SELECT count(*) FROM `+table+` WHERE worktree_id=? AND store=? AND parent=?`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID).Scan(&count); err != nil {
+		if class == workStarts {
+			err = s.db.QueryRowContext(ctx, `
+SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
+	AND NOT EXISTS (SELECT 1 FROM discovery_cursor WHERE worktree_id=? AND parent=? AND path='')
+`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID, s.worktreeID, IdentityKey(parent.Identity)).Scan(&count)
+		} else {
+			err = s.db.QueryRowContext(ctx, `SELECT count(*) FROM pending_children WHERE worktree_id=? AND store=? AND parent=?`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID).Scan(&count)
+		}
+		if err != nil {
 			return 0, err
 		}
 		if count > 0 {
@@ -264,7 +313,7 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 				if existing, ok := known[IdentityKey(identity)]; ok && existing.TicketID == ticket && existing.ParentID == parent.Identity.SessionID {
 					continue
 				}
-				if e = s.inheritChild(ctx, parent, id, ""); e != nil {
+				if _, e = s.inheritChild(ctx, parent, id, ""); e != nil {
 					return 0, e
 				}
 			}
@@ -311,7 +360,14 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 				if transcript.ThreadID == "" || transcript.ParentThread != parent.Identity.SessionID {
 					continue
 				}
-				if e = s.inheritChild(ctx, parent, transcript.ThreadID, path); e != nil {
+				verified, e := s.inheritChild(ctx, parent, transcript.ThreadID, path)
+				if e != nil {
+					return 0, e
+				}
+				if !verified {
+					continue
+				}
+				if e = s.clearExactCodexStart(ctx, parent, transcript.ThreadID); e != nil {
 					return 0, e
 				}
 				if _, e = s.db.ExecContext(ctx, `DELETE FROM pending_children WHERE worktree_id=? AND store=? AND path=?`, s.worktreeID, parent.Identity.Store, path); e != nil {
@@ -333,10 +389,13 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 		if e != nil && !errors.Is(e, sql.ErrNoRows) {
 			return 0, e
 		}
+		if e == nil && cursor == "" {
+			continue
+		}
 		last := ""
 		visited := 0
 		maxEntries := max(16, budget.sessions*16)
-		walkErr := filepath.WalkDir(parent.Identity.Store, func(path string, entry fs.DirEntry, walkErr error) error {
+		walkErr := walkCodexCaptureRollouts(parent.Identity.Store, func(path string, entry fs.DirEntry, walkErr error) error {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
@@ -365,17 +424,16 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 			if transcript.ThreadID == "" || transcript.ParentThread != parent.Identity.SessionID {
 				return nil
 			}
-			if e = s.inheritChild(ctx, parent, transcript.ThreadID, path); e != nil {
+			verified, e := s.inheritChild(ctx, parent, transcript.ThreadID, path)
+			if e != nil || !verified {
 				return e
 			}
-			// Equality is checked against authoritative metadata, never assumed from agent_id.
-			_, e = s.db.ExecContext(ctx, `DELETE FROM pending_starts WHERE worktree_id=? AND store=? AND parent=? AND agent=?`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID, transcript.ThreadID)
-			return e
+			return s.clearExactCodexStart(ctx, parent, transcript.ThreadID)
 		})
 		if walkErr != nil {
 			return 0, walkErr
 		}
-		// A completed walk restarts from the beginning next pass to observe late source flushes.
+		// A completed sweep remains closed until new evidence or explicit reconciliation.
 		if visited <= maxEntries && budget.sessions > 0 && budget.bytes > 0 {
 			last = ""
 		}
@@ -385,6 +443,57 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 	}
 	pending, _, err := s.pendingChildWork(ctx, ticket, parents)
 	return pending, err
+}
+
+// walkCodexCaptureRollouts preserves cursor ordering while excluding package,
+// config, and cache trees outside the selected native rollout directories.
+func walkCodexCaptureRollouts(store string, visit fs.WalkDirFunc) error {
+	for _, tree := range []string{"archived_sessions", "sessions"} {
+		root := filepath.Join(store, tree)
+		stopped := false
+		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+			err := visit(path, entry, walkErr)
+			stopped = errors.Is(err, fs.SkipAll)
+			return err
+		})
+		if err != nil || stopped {
+			return err
+		}
+	}
+	return nil
+}
+
+// clearExactCodexStart matches a hint only after verifying the child's own
+// authoritative session and parent identities.
+func (s *Store) clearExactCodexStart(ctx context.Context, parent domain.CaptureRegistration, child string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM pending_starts WHERE worktree_id=? AND store=? AND parent=? AND agent=?`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID, child)
+	return err
+}
+
+// CodexChildDiscoveryCursors reports unstarted and incomplete sweeps of bound
+// parents. An unresolved hint after a complete sweep remains diagnostic
+// evidence without keeping a terminal worker alive.
+func (s *Store) CodexChildDiscoveryCursors(ctx context.Context) (map[string]string, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT r.identity,coalesce(c.path,'')
+FROM registrations r
+LEFT JOIN discovery_cursor c ON c.worktree_id=r.worktree_id AND c.parent=r.identity
+WHERE r.worktree_id=? AND r.source='codex' AND r.ticket<>'' AND (c.path IS NULL OR c.path<>'')
+  AND EXISTS (SELECT 1 FROM pending_starts p WHERE p.worktree_id=r.worktree_id AND p.store=r.store AND p.parent=r.session_id)
+`, s.worktreeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	cursors := make(map[string]string)
+	for rows.Next() {
+		var parent, cursor string
+		if err := rows.Scan(&parent, &cursor); err != nil {
+			return nil, err
+		}
+		cursors[parent] = cursor
+	}
+	return cursors, rows.Err()
 }
 
 func (s *Store) pendingChildWork(ctx context.Context, ticket string, parents []domain.CaptureRegistration) (int, bool, error) {

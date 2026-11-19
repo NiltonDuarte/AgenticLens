@@ -4,6 +4,8 @@
 
 Ship v3 only after a repeatable end-to-end test proves that the installed capture integration automatically records a development session and every same-ticket descendant in the ticket’s `agentic_metrics.json`.
 
+[OpenSpec change](../../../openspec/changes/al-96-verify-automatic-ticket-metrics-capture-end-to-end-for-v3/proposal.md)
+
 ## Context
 
 Automatic capture follows explicit ticket binding. In GEN-27, Codex bound a root and child, but their first ledger required manual generation. AL-80 demonstrated native OpenCode capture on a supported version. V3 needs evidence from the packaged candidate, including first publication. [Setup manual](../../../docs/SETUP_MANUAL.md#automatic-publication-policy) · [GEN-27 audit](https://github.com/NiltonDuarte/AgenticLens/pull/146) · [AL-80](../done/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)

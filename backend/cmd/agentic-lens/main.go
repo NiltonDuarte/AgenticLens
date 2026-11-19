@@ -160,23 +160,6 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	location, resolveErr := adapters.SelectWorkspacePublication(projCfg, *ticketIDFlag, *jsonOutputFlag)
-	if resolveErr != nil {
-		fmt.Fprintln(os.Stderr, "Ledger destination required:", resolveErr)
-		os.Exit(1)
-	}
-	if *jsonOutputFlag != "" {
-		for _, issue := range location.Diagnostics {
-			fmt.Fprintf(os.Stderr, "Warning at %s: %s\n", issue.Path, issue.Message)
-		}
-	}
-	*jsonOutputFlag = location.LedgerPath
-	effectiveSummary, err := resolveGenerationSummaryPath(project, projCfg, *appendFlag, provided["append"], *jsonOutputFlag, *ticketIDFlag)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	*appendFlag = effectiveSummary
 	if *autoFlag && (*sessionIDFlag != "" || *nonceFlag != "") {
 		fmt.Fprintln(os.Stderr, "--capture-auto requires registered ticket owners and cannot be combined with --session-id or --nonce")
 		os.Exit(1)
@@ -277,6 +260,44 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		}
 		*captureDirFlag = resolvedState
 	}
+	var initialLease *capture.InitialPublicationLease
+	if *ticketIDFlag != "" && (*autoFlag || *jsonOutputFlag != "") {
+		key := adapters.PublicationTicketKey(strings.TrimSpace(*ticketIDFlag), projCfg.Ticket)
+		lockCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		initialLease, err = capture.AcquireInitialPublication(lockCtx, project, key, protection)
+		cancel()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error acquiring ticket publication ownership:", err)
+			os.Exit(1)
+		}
+		defer func() {
+			if err := initialLease.Close(); err != nil {
+				fmt.Fprintln(os.Stderr, "Ticket publication unlock:", err)
+			}
+		}()
+	}
+	location, initialSelection, resolveErr := adapters.SelectGenerationWorkspacePublication(projCfg, *ticketIDFlag, *jsonOutputFlag, initialLease, *autoFlag)
+	if resolveErr != nil {
+		fmt.Fprintln(os.Stderr, "Ledger destination required:", resolveErr)
+		if *autoFlag {
+			if e := recordGenerationPublication(project, *captureDirFlag, *ticketIDFlag, "failed", "", "", nil, resolveErr.Error()); e != nil {
+				fmt.Fprintln(os.Stderr, "Cannot persist destination failure:", e)
+			}
+		}
+		os.Exit(1)
+	}
+	if *jsonOutputFlag != "" {
+		for _, issue := range location.Diagnostics {
+			fmt.Fprintf(os.Stderr, "Warning at %s: %s\n", issue.Path, issue.Message)
+		}
+	}
+	*jsonOutputFlag = location.LedgerPath
+	effectiveSummary, err := resolveGenerationSummaryPath(project, projCfg, *appendFlag, provided["append"], *jsonOutputFlag, *ticketIDFlag)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	*appendFlag = effectiveSummary
 	destinations := []string{*jsonOutputFlag, *appendFlag}
 	for _, dest := range destinations {
 		if dest != "" {
@@ -305,7 +326,15 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			fmt.Fprintln(os.Stderr, "Releasing ledger selection:", closeErr)
 			os.Exit(1)
 		}
+		if initialSelection != nil {
+			paths := authorizedPublicationPaths(*jsonOutputFlag, *appendFlag)
+			if err := adapters.ValidatePreparedWorkspacePublication(projCfg, *ticketIDFlag, *jsonOutputFlag, paths, publicationLock, initialSelection); err != nil {
+				fmt.Fprintln(os.Stderr, "Initial publication destination unavailable:", err)
+				os.Exit(1)
+			}
+		}
 	}
+	recoveredInitial := false
 	if *jsonOutputFlag != "" {
 		recovered, e := adapters.RecoverPublication(*jsonOutputFlag, authorizedPublicationPaths(*jsonOutputFlag, *appendFlag))
 		if e != nil {
@@ -313,7 +342,8 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			os.Exit(1)
 		}
 		if recovered {
-			fmt.Fprintln(os.Stderr, "Recovered interrupted publication: restored prior accepted artifact set before source reads")
+			recoveredInitial = initialSelection != nil
+			fmt.Fprintln(os.Stderr, "Recovered interrupted publication before source reads")
 		}
 	}
 	activeSource := selectedSource
@@ -339,9 +369,35 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		os.Exit(1)
 	}
 
+	if cachedFacts != nil {
+		initialSelection = nil
+	} else if provided["json-output"] && initialLease != nil {
+		owner := capture.PublicationOwner(*jsonOutputFlag)
+		initialSelection, err = adapters.AdmitExplicitInitialPublication(projCfg, activeTicketID, *jsonOutputFlag, initialLease, owner, protection != nil)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Initial publication destination unavailable:", err)
+			os.Exit(1)
+		}
+	}
+	if initialSelection != nil && *autoFlag && (strings.TrimSpace(*ticketTitleFlag) == "" || strings.TrimSpace(*ticketTypeFlag) == "") {
+		fmt.Fprintln(os.Stderr, "First automatic publication requires an explicit ticket title and conventional type in the binding")
+		os.Exit(1)
+	}
 	if cachedFacts != nil && (cachedFacts.TicketID == nil || strings.TrimSpace(*cachedFacts.TicketID) != activeTicketID) {
 		fmt.Fprintln(os.Stderr, "Existing ledger ticket conflicts with requested ticket; refusing relabel")
 		os.Exit(1)
+	}
+	if recoveredInitial {
+		if err := adapters.ValidateRecoveredInitialWorkspace(projCfg, activeTicketID, *jsonOutputFlag, cachedFacts != nil); err != nil {
+			fmt.Fprintln(os.Stderr, "Recovered initial publication; workspace resolution remains incomplete:", err)
+			os.Exit(1)
+		}
+	}
+	if cachedFacts != nil && *autoFlag && !provided["json-output"] && initialLease != nil {
+		if err := initialLease.ObserveExisting(capture.PublicationOwner(*jsonOutputFlag)); err != nil {
+			fmt.Fprintln(os.Stderr, "Recording the existing ledger against its initial selection:", err)
+			os.Exit(1)
+		}
 	}
 
 	if *autoFlag && *jsonOutputFlag != "" {
@@ -459,6 +515,9 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		captureResult, captureErr = reconcileCaptureGenerationAtWithPolicy(project, *captureDirFlag, activeTicketID, snapshotCutoff, policy, generationPolicy)
 		if captureErr != nil {
 			fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
+			if capture.IsRegistryContention(captureErr) {
+				os.Exit(capturePublicationBusyExit)
+			}
 			os.Exit(1)
 		}
 		if captureResult != nil {
@@ -799,12 +858,12 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			publicationPaths = append(publicationPaths, *appendFlag)
 		}
 		if *autoFlag {
-			if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, rerun generate to recover the prior accepted set.", freshSessions); e != nil {
+			if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, later lifecycle publication uses the transaction journal to recover.", freshSessions); e != nil {
 				fmt.Fprintln(os.Stderr, "Cannot persist publication diagnostic:", e)
 				os.Exit(1)
 			}
 		}
-		if e := adapters.BeginPublication(*jsonOutputFlag, publicationPaths); e != nil {
+		if e := adapters.BeginInitialPublication(*jsonOutputFlag, publicationPaths, initialSelection); e != nil {
 			fmt.Fprintln(os.Stderr, "Cannot stage recoverable publication:", e)
 			os.Exit(1)
 		}

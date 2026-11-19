@@ -147,3 +147,169 @@ func readMaintenanceSelection(location WorkspaceLocation) (body []byte, info os.
 	reference, err = root.Open(".")
 	return body, location.directoryInfo, reference, err
 }
+
+// PrepareWorkspacePublication records an empty destination using the same
+// ticket and directory leases that will protect its first publication.
+func PrepareWorkspacePublication(ctx context.Context, cfg domain.ProjectConfig, project, ticket, path string, protection *capture.ProtectedPublication) (returnErr error) {
+	key := PublicationTicketKey(ticket, cfg.Ticket)
+	lease, err := capture.AcquireInitialPublication(ctx, project, key, protection)
+	if err != nil {
+		return err
+	}
+	defer func() { returnErr = errors.Join(returnErr, lease.Close()) }()
+
+	location, err := initialWorkspaceLocation(cfg, path)
+	if err != nil {
+		return err
+	}
+	defer func() { returnErr = errors.Join(returnErr, location.Close()) }()
+	owner, err := location.AcquirePublicationWithProtection(ctx, project, protection)
+	if err != nil {
+		return err
+	}
+	defer func() { returnErr = errors.Join(returnErr, owner.Close()) }()
+
+	if err := validateEmptyFirstPublication(cfg, ticket, location.LedgerPath); err != nil {
+		return err
+	}
+	return lease.Prepare(owner)
+}
+
+func initialWorkspaceLocation(cfg domain.ProjectConfig, path string) (WorkspaceLocation, error) {
+	if filepath.Base(path) != "agentic_metrics.json" {
+		return WorkspaceLocation{}, errors.New("first-publication destination must name agentic_metrics.json")
+	}
+	dir, err := filesystem.PhysicalPath(filepath.Dir(path))
+	if err != nil {
+		return WorkspaceLocation{}, err
+	}
+	policy, err := workspaceDirectoryPolicy(cfg, dir)
+	if err != nil {
+		return WorkspaceLocation{}, err
+	}
+	location := WorkspaceLocation{Path: dir, LedgerPath: filepath.Join(dir, "agentic_metrics.json"), Artifacts: policy}
+	_, err = location.retainPublicationDirectory()
+	return location, err
+}
+
+func validateEmptyFirstPublication(cfg domain.ProjectConfig, ticket, ledger string) error {
+	if err := CheckPublication(ledger); err != nil {
+		return err
+	}
+	if _, err := capture.LstatPublicationFile(ledger); err == nil {
+		return errors.New("first-publication destination already contains a ledger")
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	// A complete ticket lookup is required even when a directory is explicit.
+	// Validation of ordinary explicit generation otherwise distinguishes bad
+	// individual ledgers from unavailable workspace discovery.
+	if _, err := ResolveTicketLocation(cfg, ticket, ""); !workspaceNotFound(err) {
+		if err == nil {
+			return errors.New("the ticket already has a canonical ledger")
+		}
+		return err
+	}
+	return ValidateInitialLedgerDestination(cfg, ticket, ledger)
+}
+
+func workspaceNotFound(err error) bool {
+	var locationErr *WorkspaceResolutionError
+	return errors.As(err, &locationErr) && locationErr.Outcome == "not_found"
+}
+
+// SelectGenerationWorkspacePublication resolves current ledger identity first
+// for lifecycle writers. A private selection can establish the first output
+// only if discovery proves absence or identifies its exact pending recovery.
+func SelectGenerationWorkspacePublication(cfg domain.ProjectConfig, ticket, path string, lease *capture.InitialPublicationLease, automatic bool) (WorkspaceLocation, *capture.InitialPublication, error) {
+	location, resolveErr := SelectWorkspacePublication(cfg, ticket, path)
+	if resolveErr == nil || path != "" || !automatic || lease == nil {
+		return location, nil, resolveErr
+	}
+	selection, err := lease.Read()
+	if err != nil {
+		return WorkspaceLocation{}, nil, errors.Join(err, location.Close())
+	}
+	if selection != nil && errors.Is(CheckPublication(selection.Path), ErrPublicationPending) {
+		// A private journal can recover its own exact destination even
+		// when another interrupted workspace prevents complete discovery.
+		if err := location.Close(); err != nil {
+			return WorkspaceLocation{}, nil, err
+		}
+		location, err := initialWorkspaceLocation(cfg, selection.Path)
+		return location, selection, err
+	}
+	if !workspaceNotFound(resolveErr) {
+		return location, nil, resolveErr
+	}
+	if selection == nil {
+		return WorkspaceLocation{}, nil, errors.Join(resolveErr, errors.New("run capture prepare-publication to explicitly select the first ledger destination"))
+	}
+	if selection.ExistingLedgerObserved {
+		return WorkspaceLocation{}, nil, errors.New("first-publication selection was retired after observing an existing ledger")
+	}
+	if selection.CommittedTransaction != "" {
+		return WorkspaceLocation{}, nil, errors.New("first-publication selection was consumed; resolve or recover the existing ledger")
+	}
+	location, err = initialWorkspaceLocation(cfg, selection.Path)
+	return location, selection, err
+}
+
+// AdmitExplicitInitialPublication runs after owned baseline recovery. An
+// interrupted first replacement may have appeared occupied during selection.
+func AdmitExplicitInitialPublication(cfg domain.ProjectConfig, ticket, ledger string, lease *capture.InitialPublicationLease, owner *capture.PublicationLock, protected bool) (*capture.InitialPublication, error) {
+	selection, err := lease.Read()
+	if err != nil {
+		return nil, err
+	}
+	if selection == nil || selection.Closed() {
+		if protected {
+			return nil, errors.New("protected first publication requires an operator-prepared destination")
+		}
+		return nil, ValidateInitialLedgerDestination(cfg, ticket, ledger)
+	}
+	if selection.Path != ledger {
+		return nil, errors.New("a different first-publication destination is already selected for this ticket")
+	}
+	if owner.DirectoryIdentity() != selection.Directory {
+		return nil, errors.New("first-publication directory no longer matches the prepared destination")
+	}
+	return selection, validateEmptyFirstPublication(cfg, ticket, ledger)
+}
+
+// ValidatePreparedWorkspacePublication checks identity and exact recovery
+// authority once the destination is held, before any artifact or source read.
+func ValidatePreparedWorkspacePublication(cfg domain.ProjectConfig, ticket, ledger string, paths []string, owner *capture.PublicationLock, selection *capture.InitialPublication) error {
+	if filepath.Join(owner.OriginalDirectory(), "agentic_metrics.json") != selection.Path || owner.DirectoryIdentity() != selection.Directory {
+		return errors.New("first-publication directory no longer matches the prepared destination")
+	}
+	pending, err := validateInitialPublicationRecovery(ticket, ledger, paths, selection)
+	if err != nil {
+		return err
+	}
+	if pending {
+		return nil
+	}
+	if selection.Closed() {
+		return errors.New("first-publication selection was already closed")
+	}
+	return validateEmptyFirstPublication(cfg, ticket, ledger)
+}
+
+// ValidateRecoveredInitialWorkspace requires a complete global lookup after
+// exact recovery. A committed baseline already read with the exclusive owner
+// is excluded from this second scan to avoid reacquiring its directory lock.
+func ValidateRecoveredInitialWorkspace(cfg domain.ProjectConfig, ticket, ledger string, hasOwnedBaseline bool) error {
+	owned := ""
+	if hasOwnedBaseline {
+		owned = ledger
+	}
+	_, _, err := resolveTicketLocation(cfg, ticket, "", false, false, owned)
+	if workspaceNotFound(err) {
+		return nil
+	}
+	if err == nil {
+		return errors.New("a canonical ledger conflicts with the recovered first-publication destination")
+	}
+	return err
+}

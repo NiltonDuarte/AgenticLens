@@ -92,6 +92,29 @@ func openRegistryContext(ctx context.Context, directory, name, project string, r
 	return openRegistryModeContext(ctx, directory, name, project, readOnly, "")
 }
 
+// IsRegistryContention identifies exclusively temporary SQLite lock errors.
+// A joined permanent error or expired context retains ordinary failure policy.
+func IsRegistryContention(err error) bool {
+	switch cause := err.(type) {
+	case *sqlite.Error:
+		code := cause.Code() & 255
+		return code == 5 || code == 6 // SQLITE_BUSY or SQLITE_LOCKED
+	case interface{ Unwrap() []error }:
+		causes := cause.Unwrap()
+		if len(causes) == 0 {
+			return false
+		}
+		for _, nested := range causes {
+			if !IsRegistryContention(nested) {
+				return false
+			}
+		}
+		return true
+	default:
+		return err != nil && IsRegistryContention(errors.Unwrap(err))
+	}
+}
+
 // Concurrent first opens can contend while SQLite switches the new database to
 // WAL, before ordinary transaction busy handling applies. Retry only lock errors
 // within the constructor's bounded allowance; all other errors remain explicit.
@@ -99,8 +122,7 @@ func openRegistryModeContext(ctx context.Context, directory, name, project strin
 	retryUntil := time.Now().Add(time.Second)
 	for {
 		store, err := openRegistryAttemptContext(ctx, directory, name, project, readOnly, migrationID)
-		var sqliteErr *sqlite.Error
-		if err == nil || readOnly || !errors.As(err, &sqliteErr) || sqliteErr.Code()&255 != 5 && sqliteErr.Code()&255 != 6 || !time.Now().Before(retryUntil) {
+		if err == nil || readOnly || !IsRegistryContention(err) || !time.Now().Before(retryUntil) {
 			return store, err
 		}
 		timer := time.NewTimer(10 * time.Millisecond)

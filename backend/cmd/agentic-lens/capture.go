@@ -85,7 +85,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 
 func captureAction(args []string, input io.Reader, output io.Writer, protectedHome string) (returnErr error) {
 	if len(args) == 0 {
-		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|submit-binding|reconcile|relocate-state|disable|uninstall|protocol")
+		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|submit-binding|prepare-publication|reconcile|relocate-state|disable|uninstall|protocol")
 	}
 	command := args[0]
 	if command == "publish-protected" {
@@ -98,6 +98,9 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 	}
 	if command == "submit-binding" {
 		return captureSubmitBinding(args[1:], output)
+	}
+	if command == "prepare-publication" {
+		return capturePreparePublication(args[1:], output)
 	}
 	if command == "opencode-hook" {
 		return nativeOpenCodeHook(args[1:], input, output, protectedHome)
@@ -701,22 +704,22 @@ func reconcileCaptureGenerationAtWithPolicy(project, dir, ticket string, cutoff 
 	} else if err != nil {
 		return nil, err
 	}
-	s, err := capture.OpenProject(dir, project)
-	if err != nil {
-		return nil, err
-	}
-	defer s.Close()
 	if err := errors.Join(policy.ValidatePass(), policy.ValidateBudgets()); err != nil {
-		return nil, err
-	}
-	if err := s.SetSourceBudgets(policy.MaxSessions, policy.MaxSourceBytes); err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(policy.PassTimeoutMS)*time.Millisecond)
 	defer cancel()
+	s, err := capture.OpenProjectContext(ctx, dir, project)
+	if err != nil {
+		return nil, fmt.Errorf("opening the capture registry for reconciliation: %w", err)
+	}
+	defer s.Close()
+	if err := s.SetSourceBudgets(policy.MaxSessions, policy.MaxSourceBytes); err != nil {
+		return nil, err
+	}
 	result, err := s.ReconcileAt(ctx, ticket, git.GetGitUser(), policy.MaxSessions, policy.MaxSourceBytes, cutoff, generationPolicies...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reconciling registered owners: %w", err)
 	}
 	return &result, nil
 }

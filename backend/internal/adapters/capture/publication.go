@@ -77,20 +77,9 @@ func acquirePublication(ctx context.Context, path, project string, expected os.F
 	if err != nil {
 		return nil, err
 	}
-	var state string
-	if protection != nil {
-		if err := protection.Validate(selected); err != nil {
-			return nil, err
-		}
-		state = protection.State
-		if err := protection.checkPrivatePath(filepath.Join(state, "publication")); err != nil {
-			return nil, err
-		}
-	} else {
-		state, err = config.ResolvePublicationState(selected)
-		if err != nil {
-			return nil, err
-		}
+	state, err := publicationState(selected, protection)
+	if err != nil {
+		return nil, err
 	}
 	directory, err := openPublicationDirectory(parent)
 	if err != nil {
@@ -145,6 +134,19 @@ func acquirePublication(ctx context.Context, path, project string, expected os.F
 	heldPublications.Unlock()
 	return owner, nil
 }
+func publicationState(project string, protection *ProtectedPublication) (string, error) {
+	if protection == nil {
+		return config.ResolvePublicationState(project)
+	}
+	if err := protection.Validate(project); err != nil {
+		return "", err
+	}
+	if err := protection.checkPrivatePath(filepath.Join(protection.State, "publication")); err != nil {
+		return "", err
+	}
+	return protection.State, nil
+}
+
 func (lock *PublicationLock) Close() error {
 	heldPublications.Lock()
 	delete(heldPublications.owners, lock)

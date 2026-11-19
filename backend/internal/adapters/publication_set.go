@@ -27,7 +27,7 @@ type priorArtifact struct {
 
 // validatePublicationObject requires exact, unique field names. JSON's normal
 // case-insensitive and last-key-wins struct decoding is too permissive here.
-func validatePublicationObject(body []byte, fields []string) error {
+func validatePublicationObject(body []byte, fields []string, optional ...string) error {
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	token, err := decoder.Token()
 	if err != nil {
@@ -37,6 +37,7 @@ func validatePublicationObject(body []byte, fields []string) error {
 		return errors.New("publication metadata must be an object")
 	}
 	seen := map[string]bool{}
+	allowedFields := append(append([]string{}, fields...), optional...)
 	for decoder.More() {
 		token, err = decoder.Token()
 		if err != nil {
@@ -47,7 +48,7 @@ func validatePublicationObject(body []byte, fields []string) error {
 			return errors.New("invalid publication metadata key")
 		}
 		allowed := false
-		for _, field := range fields {
+		for _, field := range allowedFields {
 			if field == key {
 				allowed = true
 			}
@@ -64,8 +65,10 @@ func validatePublicationObject(body []byte, fields []string) error {
 	if _, err := decoder.Token(); err != nil {
 		return err
 	}
-	if len(seen) != len(fields) {
-		return errors.New("incomplete publication metadata")
+	for _, field := range fields {
+		if !seen[field] {
+			return errors.New("incomplete publication metadata")
+		}
 	}
 	return nil
 }
@@ -99,12 +102,13 @@ func (a *priorArtifact) UnmarshalJSON(body []byte) error {
 }
 
 type publicationJournal struct {
-	Version     int             `json:"version"`
-	Ledger      string          `json:"ledger"`
-	Directory   string          `json:"directory"`
-	Project     string          `json:"project"`
-	MemberCount int             `json:"member_count"`
-	Artifacts   []priorArtifact `json:"artifacts"`
+	Version     int                             `json:"version"`
+	Ledger      string                          `json:"ledger"`
+	Directory   string                          `json:"directory"`
+	Project     string                          `json:"project"`
+	MemberCount int                             `json:"member_count"`
+	Artifacts   []priorArtifact                 `json:"artifacts"`
+	Initial     *capture.InitialPublicationLink `json:"initial,omitempty"`
 }
 type pendingPublication struct {
 	Version     int    `json:"version"`
@@ -112,7 +116,7 @@ type pendingPublication struct {
 }
 
 func (j *publicationJournal) UnmarshalJSON(body []byte) error {
-	if err := validatePublicationObject(body, []string{"version", "ledger", "directory", "project", "member_count", "artifacts"}); err != nil {
+	if err := validatePublicationObject(body, []string{"version", "ledger", "directory", "project", "member_count", "artifacts"}, "initial"); err != nil {
 		return err
 	}
 	type wire publicationJournal
@@ -271,6 +275,12 @@ func loadPending(ledger string) (pendingPublication, bool, error) {
 	return pending, true, nil
 }
 func BeginPublication(ledger string, paths []string) error {
+	return BeginInitialPublication(ledger, paths, nil)
+}
+
+// BeginInitialPublication associates a fresh artifact transaction with its
+// private authorization when selection is present.
+func BeginInitialPublication(ledger string, paths []string, selection *capture.InitialPublication) error {
 	if err := CheckPublication(ledger); err != nil {
 		return err
 	}
@@ -305,6 +315,23 @@ func BeginPublication(ledger string, paths []string) error {
 		return err
 	}
 	pending := pendingPublication{Version: 2, Transaction: hex.EncodeToString(token)}
+	if selection != nil {
+		link := selection.Link()
+		record, err := owner.InitialPublicationForTransaction(link, pending.Transaction)
+		if err != nil {
+			return err
+		}
+		if record.Path != filepath.Join(owner.OriginalDirectory(), binding) {
+			return errors.New("first-publication destination changed after selection")
+		}
+		for _, artifact := range j.Artifacts {
+			if artifact.Path == binding && artifact.Present {
+				return errors.New("first-publication destination already contains a ledger")
+			}
+		}
+		j.Version = 3
+		j.Initial = &link
+	}
 	private := privateJournalPath(owner, pending.Transaction)
 	if err := owner.CheckPrivatePath(private); err != nil {
 		return err
@@ -358,7 +385,9 @@ func loadRecovery(ledger string, paths []string) (publicationJournal, pendingPub
 	if err = json.Unmarshal(body, &j); err != nil {
 		return j, pending, true, err
 	}
-	if j.Version != 2 || j.Ledger != binding || j.Directory != owner.DirectoryIdentity() || j.Project != owner.Project() || j.MemberCount != len(targets) || len(j.Artifacts) != len(targets) {
+	supported := (j.Version == 2 && j.Initial == nil) ||
+		(j.Version == 3 && j.Initial != nil && j.Initial.ID != "" && j.Initial.Ticket != "")
+	if !supported || j.Ledger != binding || j.Directory != owner.DirectoryIdentity() || j.Project != owner.Project() || j.MemberCount != len(targets) || len(j.Artifacts) != len(targets) {
 		return j, pending, true, fmt.Errorf("private journal does not match the complete authorized publication set; recovery incomplete")
 	}
 	seen := map[string]bool{}
@@ -381,12 +410,69 @@ func loadRecovery(ledger string, paths []string) (publicationJournal, pendingPub
 	}
 	return j, pending, true, nil
 }
+
+// validateInitialPublicationRecovery admits an initial journal only for the
+// same private selection. At a consumed selection's original directory, an
+// ordinary update can instead prove authority from its own accepted backup.
+func validateInitialPublicationRecovery(ticket, ledger string, paths []string, selection *capture.InitialPublication) (bool, error) {
+	journal, pending, present, err := loadRecovery(ledger, paths)
+	if err != nil || !present {
+		return present, err
+	}
+	if journal.Initial != nil {
+		if selection.ExistingLedgerObserved || *journal.Initial != selection.Link() {
+			return true, errors.New("pending first publication does not match its prepared selection")
+		}
+		owner := capture.PublicationOwner(ledger)
+		_, err = owner.InitialPublicationForTransaction(*journal.Initial, pending.Transaction)
+		return true, err
+	}
+	if !selection.Closed() {
+		return true, errors.New("pending first publication does not match its prepared selection")
+	}
+	for _, artifact := range journal.Artifacts {
+		if artifact.Path != journal.Ledger || !artifact.Present {
+			continue
+		}
+		prior, err := DecodeExistingFactLedger(artifact.Data)
+		if err != nil {
+			return true, fmt.Errorf("pending refresh backup is not an accepted ledger: %w", err)
+		}
+		if prior.TicketID == nil || *prior.TicketID != ticket {
+			return true, errors.New("pending refresh backup belongs to a different ticket")
+		}
+		return true, nil
+	}
+	return true, errors.New("pending refresh does not contain a prior accepted ledger")
+}
+
 func RecoverPublication(ledger string, authorizedPaths []string) (bool, error) {
 	j, pending, present, err := loadRecovery(ledger, authorizedPaths)
 	if err != nil || !present {
 		return present, err
 	}
 	owner := capture.PublicationOwner(ledger)
+	if j.Initial != nil {
+		record, err := owner.InitialPublicationForTransaction(*j.Initial, pending.Transaction)
+		if err != nil {
+			return true, err
+		}
+		if record.CommittedTransaction != "" {
+			digest, err := committedPublicationDigest(owner, j)
+			if err != nil {
+				return true, err
+			}
+			if digest != record.CommittedArtifacts {
+				return true, errors.New("committed first publication changed before finalization; pending indicator retained")
+			}
+			// A visible receipt may follow a failed directory fsync. Repeat
+			// the private durability barrier before removing the indicator.
+			if err := owner.ConsumeInitialPublication(*j.Initial, pending.Transaction, digest); err != nil {
+				return true, err
+			}
+			return true, finishPublication(ledger, pending, owner)
+		}
+	}
 	for _, a := range j.Artifacts {
 		path := filepath.Join(owner.DirectoryPath(), a.Path)
 		if a.Present {
@@ -421,7 +507,7 @@ func finishPublication(ledger string, pending pendingPublication, owner *capture
 	return syncDirectory(filepath.Dir(path))
 }
 func CommitPublication(ledger string, paths []string) error {
-	_, pending, present, err := loadRecovery(ledger, paths)
+	journal, pending, present, err := loadRecovery(ledger, paths)
 	if err != nil {
 		return err
 	}
@@ -448,8 +534,38 @@ func CommitPublication(ledger string, paths []string) error {
 	if err = syncDirectory(owner.DirectoryPath()); err != nil {
 		return err
 	}
+	if journal.Initial != nil {
+		digest, err := committedPublicationDigest(owner, journal)
+		if err != nil {
+			return err
+		}
+		if err := owner.ConsumeInitialPublication(*journal.Initial, pending.Transaction, digest); err != nil {
+			return err
+		}
+	}
 	return finishPublication(ledger, pending, owner)
 }
+
+func committedPublicationDigest(owner *capture.PublicationLock, journal publicationJournal) (string, error) {
+	set := sha256.New()
+	for _, artifact := range journal.Artifacts {
+		f, err := capture.OpenPublicationFile(filepath.Join(owner.DirectoryPath(), artifact.Path), os.O_RDONLY, 0)
+		if err != nil {
+			return "", err
+		}
+		digest := sha256.New()
+		size, readErr := io.Copy(digest, io.LimitReader(f, publicationLimit+1))
+		if err := errors.Join(readErr, f.Close()); err != nil {
+			return "", err
+		}
+		if size > publicationLimit {
+			return "", errors.New("committed first publication exceeds recovery bound")
+		}
+		fmt.Fprintf(set, "%q:%x\n", artifact.Path, digest.Sum(nil))
+	}
+	return hex.EncodeToString(set.Sum(nil)), nil
+}
+
 func readPublishedLedger(path string) ([]byte, error) {
 	if err := CheckPublication(path); err != nil {
 		return nil, err

@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"unicode"
 )
 
 // WorkspaceLocation is an observed ledger location, never a folder-name identity.
@@ -347,16 +348,33 @@ func sameTicket(left, right string, policy domain.TicketConfig) bool {
 	return left == right
 }
 
+// PublicationTicketKey uses the same Unicode equivalence as sameTicket. It
+// coordinates writers without changing recorded ticket spelling.
+func PublicationTicketKey(ticket string, policy domain.TicketConfig) string {
+	if !policy.CaseInsensitive {
+		return ticket
+	}
+	return strings.Map(func(r rune) rune {
+		first := r
+		for next := unicode.SimpleFold(r); next != r; next = unicode.SimpleFold(next) {
+			if next < first {
+				first = next
+			}
+		}
+		return first
+	}, ticket)
+}
+
 // ResolveTicketLocation returns only ledger-backed identity matches; no first-root precedence.
 func ResolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string) (WorkspaceLocation, error) {
-	location, _, err := resolveTicketLocation(cfg, ticket, selection, false, false)
+	location, _, err := resolveTicketLocation(cfg, ticket, selection, false, false, "")
 	return location, err
 }
 
 // resolveTicketReadLocation retains the actual observed directory until its
 // caller completes final read admission. The caller must close the reference.
 func resolveTicketReadLocation(cfg domain.ProjectConfig, ticket, selection string) (WorkspaceLocation, *os.File, error) {
-	return resolveTicketLocation(cfg, ticket, selection, false, true)
+	return resolveTicketLocation(cfg, ticket, selection, false, true, "")
 }
 
 // ResolveMaintenanceLocation selects recorded identity without decoding historical
@@ -364,14 +382,14 @@ func resolveTicketReadLocation(cfg domain.ProjectConfig, ticket, selection strin
 // ownership; an explicit directory may select its recorded ID without a ticket filter.
 // Runtime projections use validated runtime resolution with an explicit ticket ID.
 func ResolveMaintenanceLocation(cfg domain.ProjectConfig, ticket, selection string) (WorkspaceLocation, error) {
-	location, _, err := resolveTicketLocation(cfg, ticket, selection, true, false)
+	location, _, err := resolveTicketLocation(cfg, ticket, selection, true, false, "")
 	return location, err
 }
 
 // ResolveMaintenancePublication selects a legacy or current ledger by recorded
 // identity while retaining the directory used for that advisory read.
 func ResolveMaintenancePublication(cfg domain.ProjectConfig, ticket, selection string) (WorkspaceLocation, error) {
-	location, reference, err := resolveTicketLocation(cfg, ticket, selection, true, true)
+	location, reference, err := resolveTicketLocation(cfg, ticket, selection, true, true, "")
 	if err == nil {
 		location.reference = reference
 	}
@@ -414,7 +432,7 @@ func RecordedLedgerTicket(data []byte) (string, error) {
 	return ticket, nil
 }
 
-func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, maintenance, retainDirectory bool) (resolved WorkspaceLocation, reference *os.File, err error) {
+func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, maintenance, retainDirectory bool, ownedRecoveryPath string) (resolved WorkspaceLocation, reference *os.File, err error) {
 	var retained *os.File
 	defer func() {
 		if err != nil && retained != nil {
@@ -443,6 +461,11 @@ func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, m
 		locations = []WorkspaceLocation{location}
 	}
 	for _, location := range locations {
+		if location.LedgerPath == ownedRecoveryPath {
+			// The caller already read this exact baseline under ownership.
+			// Scan every other directory normally for conflicting ledgers.
+			continue
+		}
 		var identity string
 		var err error
 		var candidateReference *os.File

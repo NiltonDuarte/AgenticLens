@@ -54,12 +54,19 @@ type ReconcileResult struct {
 }
 
 func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64, policies ...domain.GenerationPolicy) (ReconcileResult, error) {
+	// Explicit reconciliation can retry a completed unresolved Codex
+	// sweep. Automatic generation uses ReconcileAt and needs new evidence.
+	if ticket != "" && sessionBudget > 0 && byteBudget > 0 {
+		if err := s.reopenTicketCodexChildSweeps(ctx, ticket); err != nil {
+			return ReconcileResult{}, err
+		}
+	}
 	return s.ReconcileAt(ctx, ticket, user, sessionBudget, byteBudget, time.Now().UTC(), policies...)
 }
 
 // ReconcileAt applies one duration cutoff and transient generation policy across source reads.
 func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64, cutoff time.Time, policies ...domain.GenerationPolicy) (result ReconcileResult, returnErr error) {
-	result = ReconcileResult{Protocol: RegistryProtocolVersion, StartedAt: cutoff.UTC().Format(time.RFC3339Nano), CutoffSemantics: "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion", TicketID: ticket, Limits: []string{"Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.", "Hook installation is not proof of harness trust, agent response or complete source availability."}}
+	result = ReconcileResult{Protocol: RegistryProtocolVersion, StartedAt: cutoff.UTC().Format(time.RFC3339Nano), CutoffSemantics: "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion", TicketID: ticket, Limits: []string{"Only registered, explicitly bound or source-proven inherited sessions are selected. Native descendant discovery can recover a session whose lifecycle hook was absent.", "Hook installation is not proof of harness trust, agent response or complete source availability."}}
 	if sessionBudget < 1 || byteBudget < 1 {
 		return result, errors.New("capture budgets must be positive")
 	}
@@ -536,7 +543,9 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		return nil, nil, err
 	}
 	previousSnapshots := []domain.SessionFact{}
+	known := make(map[string]domain.CaptureRegistration, len(registrations))
 	for _, registration := range registrations {
+		known[IdentityKey(registration.Identity)] = registration
 		if registration.TicketID == ticket {
 			previousSnapshots = append(previousSnapshots, registration.Snapshot...)
 		}
@@ -673,7 +682,20 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		if relocating {
 			archiveAttempts[key] = true
 		}
+		known[key] = updated
 		if refreshed[key] {
+			if updated.TicketID != "" {
+				if updated.Identity.Source == domain.SourceCodex && fingerprintErr == nil && r.SourceFingerprint != fingerprint {
+					if err := s.reopenCodexChildSweep(ctx, updated.Identity); err != nil {
+						return nil, nil, err
+					}
+				}
+				for _, transcript := range read.transcripts {
+					if err := s.queueCodexSourceStarts(ctx, updated, transcript.ChildDiscoveryHints(), known); err != nil {
+						return nil, nil, err
+					}
+				}
+			}
 			acceptedRelocation = acceptedRelocation || relocating
 			source.transcripts = append(source.transcripts, read.transcripts...)
 			source.events = domain.MergeSourceEvents(source.events, read.events)
