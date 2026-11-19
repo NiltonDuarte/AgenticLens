@@ -13,7 +13,9 @@ import (
 	"strings"
 	"testing"
 
+	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
+	"github.com/pelletier/go-toml/v2"
 )
 
 type userTransactionFixture struct {
@@ -24,7 +26,7 @@ type userTransactionFixture struct {
 
 func newUserTransactionFixture(t *testing.T) userTransactionFixture {
 	t.Helper()
-	root := t.TempDir()
+	root := protectedUserFixtureRoot(t)
 	binary, err := compatibleCaptureTestExecutable(t)
 	if err != nil {
 		t.Fatal(err)
@@ -140,7 +142,7 @@ func stopUserTransactionAt(t *testing.T, f userTransactionFixture, target string
 			if index < 0 || index >= len(changePaths) {
 				t.Fatalf("applied checkpoint lacks actual journal change: %d", index)
 			}
-			desired := map[string]string{"legacy-hooks": f.legacyHooks, "home-hooks": filepath.Join(f.options.Home, "hooks.json")}[target]
+			desired := map[string]string{"legacy-hooks": f.legacyHooks, "home-hooks": filepath.Join(f.options.Home, "hooks.json"), "codex-config": filepath.Join(f.options.Home, "config.toml")}[target]
 			if changePaths[index] == desired {
 				return interrupted
 			}
@@ -175,16 +177,21 @@ func assertCompletedUserMigration(t *testing.T, f userTransactionFixture, databa
 		}
 	}
 	home := mustReadUserInstall(t, filepath.Join(f.options.Home, "hooks.json"))
-	if !bytes.Contains(home, []byte("foreign home callback")) || bytes.Count(home, []byte(userHookMarker)) != 6 {
+	if !bytes.Contains(home, []byte("foreign home callback")) || bytes.Count(home, []byte(userHookMarker)) != 7 {
 		t.Fatalf("global migration lost foreign content or duplicated owned hooks: %s", home)
 	}
 
 }
 
 func TestUserInstallationDurablePrefixesRecoverExplicitMigration(t *testing.T) {
-	for _, target := range []string{"journaled", "legacy-hooks", "home-hooks", "before-commit"} {
+	for _, target := range []string{"journaled", "legacy-hooks", "home-hooks", "codex-config", "before-commit"} {
 		t.Run(target, func(t *testing.T) {
 			f := newUserTransactionFixture(t)
+			configPath := filepath.Join(f.options.Home, "config.toml")
+			if err := os.WriteFile(configPath, []byte("[sandbox_workspace_write]\nwritable_roots = ['/private/user-choice'] # personal\n"), 0640); err != nil {
+				t.Fatal(err)
+			}
+			f.paths = append(f.paths, configPath)
 			before := snapshotUserArtifacts(t, f.paths)
 			database := mustReadUserInstall(t, f.pendingDB)
 			stopUserTransactionAt(t, f, target)
@@ -263,7 +270,7 @@ func TestRootRecoveryLocksInterruptedHomeEvenWhenCurrentHomeDiffers(t *testing.T
 				t.Fatal(err)
 			}
 			other := f.options
-			other.Home = filepath.Join(t.TempDir(), "different-current-home")
+			other.Home = filepath.Join(protectedUserFixtureRoot(t), "different-current-home")
 			_, installErr := InstallUserCodex(context.Background(), other)
 			if installErr == nil || !strings.Contains(installErr.Error(), "progress") {
 				lock.Close()
@@ -307,7 +314,7 @@ func TestUserRecoveryRefusesUnmatchedPrivateJournalEdit(t *testing.T) {
 	paths := append(append([]string{}, f.paths...), journalPath, filepath.Join(f.project, ".codex", userInstallPendingFile))
 	before := snapshotUserArtifacts(t, paths)
 	other := f.options
-	other.Home = filepath.Join(t.TempDir(), "different-current-home")
+	other.Home = filepath.Join(protectedUserFixtureRoot(t), "different-current-home")
 	if _, err := InstallUserCodex(context.Background(), other); err == nil || !strings.Contains(err.Error(), "changed") {
 		t.Fatalf("edited private journal bypassed its shared binding: %v", err)
 	}
@@ -381,7 +388,131 @@ func TestUserRecoveryRejectsResourcesAddedAfterDiscovery(t *testing.T) {
 	if _, err := os.Stat(journalPath); !os.IsNotExist(err) {
 		t.Fatalf("resumed recovery retained old journal: %v", err)
 	}
-	if hooks := mustReadUserInstall(t, filepath.Join(f.options.Home, "hooks.json")); bytes.Count(hooks, []byte(userHookMarker)) != 6 {
+	if hooks := mustReadUserInstall(t, filepath.Join(f.options.Home, "hooks.json")); bytes.Count(hooks, []byte(userHookMarker)) != 7 {
 		t.Fatalf("resumed home installation missing owned hooks: %s", hooks)
+	}
+}
+
+func TestCodexInboxRollbackPreservesDirectoryCreatedByUser(t *testing.T) {
+	f := newUserTransactionFixture(t)
+	inbox := filepath.Join(f.options.Home, "agenticlens-binding-inbox")
+	var foreign os.FileInfo
+	_, err := installUserCodexWithCheckpoint(context.Background(), f.options, func(stage userInstallStage, _ int) error {
+		if stage != userInstallJournaled {
+			return nil
+		}
+		if err := os.Mkdir(inbox, 0700); err != nil {
+			t.Fatal(err)
+		}
+		var err error
+		foreign, err = os.Stat(inbox)
+		return err
+	})
+	if foreign == nil {
+		t.Fatal("fixture did not reach concurrent directory creation")
+	}
+	if err == nil {
+		t.Fatal("installer unexpectedly claimed a directory created during installation")
+	}
+	retained, err := os.Stat(inbox)
+	if err != nil || !os.SameFile(foreign, retained) {
+		t.Fatalf("installation removed or replaced user's directory: %v", err)
+	}
+}
+
+func TestCodexInboxInstallInEmptySandboxTable(t *testing.T) {
+	f := newUserTransactionFixture(t)
+	path := filepath.Join(f.options.Home, "config.toml")
+	if err := os.WriteFile(path, []byte("# settings\n[sandbox_workspace_write]"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := InstallUserCodex(context.Background(), f.options); err != nil {
+		t.Fatal(err)
+	}
+	inbox := filepath.Join(f.options.Home, "agenticlens-binding-inbox")
+	written := mustReadUserInstall(t, path)
+	var cfg struct {
+		Sandbox struct {
+			Roots []string `toml:"writable_roots"`
+		} `toml:"sandbox_workspace_write"`
+	}
+	if err := toml.Unmarshal(written, &cfg); err != nil || !reflect.DeepEqual(cfg.Sandbox.Roots, []string{inbox}) {
+		t.Fatalf("empty sandbox table did not receive exactly its inbox permission: %q, %v", written, err)
+	}
+}
+
+func TestCodexInboxInstallPreservesConcurrentAtomicSave(t *testing.T) {
+	f := newUserTransactionFixture(t)
+	settings := filepath.Join(f.options.Home, "config.toml")
+	if err := os.WriteFile(settings, []byte("model = 'existing'\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	userSave := []byte("model = 'user-change'\n")
+	saved := false
+	_, err := installUserCodexWithCheckpoint(context.Background(), f.options, func(stage userInstallStage, _ int) error {
+		if stage != userInstallConfigDisplaced {
+			return nil
+		}
+		temp := filepath.Join(f.options.Home, ".editor-save")
+		if err := os.WriteFile(temp, userSave, 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(temp, settings); err != nil {
+			t.Fatal(err)
+		}
+		saved = true
+		return nil
+	})
+	if !saved || err == nil {
+		t.Fatalf("installer must report conflict after editor saved: saved=%t, err=%v", saved, err)
+	}
+	if got := mustReadUserInstall(t, settings); !bytes.Equal(got, userSave) {
+		t.Fatalf("installer overwrote user settings: %q", got)
+	}
+}
+
+func TestUncommittedUserRemovalKeepsProtectedWorktreeAdmission(t *testing.T) {
+	manager, err := compatibleCaptureTestExecutable(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	installUserFixtureCompanion(t, manager)
+	project := t.TempDir()
+	options := UserInstallOptions{Home: filepath.Join(os.Getenv("HOME"), ".codex"), Entrypoint: manager}
+	ctx := context.Background()
+	if _, err := InstallUserCodex(ctx, options); err != nil {
+		t.Fatal(err)
+	}
+	if err := config.AdmitProtectedCodexProject(project, options.Home); err != nil {
+		t.Fatal(err)
+	}
+	options.Remove = true
+	stop := errors.New("interrupted uninstall before commit")
+	_, err = installUserCodexWithCheckpoint(ctx, options, func(stage userInstallStage, _ int) error {
+		if stage == userInstallBeforeCommit {
+			return stop
+		}
+		return nil
+	})
+	if !errors.Is(err, stop) {
+		t.Fatalf("uninstall never reached precommit checkpoint: %v", err)
+	}
+	var receipt userInstallation
+	if err := json.Unmarshal(mustReadUserInstall(t, filepath.Join(options.Home, "agenticlens-user-installation.json")), &receipt); err != nil || receipt.BindingInbox || len(receipt.Groups) != 0 {
+		t.Fatalf("expected the staged inactive receipt: %+v %v", receipt, err)
+	}
+	if _, err := os.Stat(filepath.Join(options.Home, userInstallPendingFile)); err != nil {
+		t.Fatal(err)
+	}
+	ordinaryRan := false
+	ordinary := func() error { ordinaryRan = true; return nil }
+	if err := config.WithOrdinaryCapture(project, ordinary); err == nil || ordinaryRan {
+		t.Fatalf("uncommitted uninstall released the protected route: %v", err)
+	}
+	if _, err := InstallUserCodex(ctx, options); err != nil {
+		t.Fatalf("recover and finish uninstall: %v", err)
+	}
+	if err := config.WithOrdinaryCapture(project, ordinary); err != nil || !ordinaryRan {
+		t.Fatalf("committed uninstall retained the worktree route: %v", err)
 	}
 }

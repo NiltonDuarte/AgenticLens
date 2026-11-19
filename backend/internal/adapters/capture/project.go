@@ -256,14 +256,14 @@ func ValidateOwner(ctx context.Context, project string, r domain.CaptureRegistra
 // ValidateManualOwner validates authoritative source identity and project membership
 // using the caller's manual configuration. It never accesses capture state.
 func ValidateManualOwner(ctx context.Context, project string, r domain.CaptureRegistration, cfg domain.ProjectConfig) error {
-	return validateOwnerSource(ctx, project, r, cfg, true)
+	return validateOwnerSource(ctx, project, r, cfg, true, nil)
 }
 
 func validateOwnerWithConfig(ctx context.Context, project string, r domain.CaptureRegistration, cfg domain.ProjectConfig) error {
-	return validateOwnerSource(ctx, project, r, cfg, false)
+	return validateOwnerSource(ctx, project, r, cfg, false, nil)
 }
 
-func validateOwnerSource(ctx context.Context, project string, r domain.CaptureRegistration, cfg domain.ProjectConfig, manual bool) error {
+func validateOwnerSource(ctx context.Context, project string, r domain.CaptureRegistration, cfg domain.ProjectConfig, manual bool, budget *codex.DiscoveryBudget) error {
 	// Exact explicit ticket selection, or its source-proven child binding,
 	// authorizes portable source identity across original checkout paths.
 	bound := r.TicketID != "" && r.ProjectDirectory == project && hasExplicitSourceBinding(r)
@@ -286,6 +286,8 @@ func validateOwnerSource(ctx context.Context, project string, r domain.CaptureRe
 		var err error
 		if manual {
 			t, err = codex.ReadSessionContext(path)
+		} else if budget != nil {
+			t, err = codex.ReadSessionContextWithBudget(path, budget)
 		} else {
 			if err := cfg.Telemetry.Capture.ValidateBudgets(); err != nil {
 				return err

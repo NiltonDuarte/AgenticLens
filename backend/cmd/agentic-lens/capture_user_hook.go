@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-func nativeCodexUserHook(input io.Reader, output, diagnostic io.Writer) error {
+func nativeCodexUserHook(input io.Reader, output io.Writer, protectedHome string) error {
 	value, err := capture.ReadHook(input)
 	if err != nil {
 		return err
@@ -50,7 +50,10 @@ func nativeCodexUserHook(input io.Reader, output, diagnostic io.Writer) error {
 		_, err = io.WriteString(output, "{}\n")
 		return err
 	}
-	runtimeHome := os.Getenv("CODEX_HOME")
+	runtimeHome := protectedHome
+	if runtimeHome == "" {
+		runtimeHome = os.Getenv("CODEX_HOME")
+	}
 	if runtimeHome != "" {
 		same, err := capture.SameStore(runtimeHome, store)
 		if err != nil {
@@ -91,5 +94,5 @@ func nativeCodexUserHook(input io.Reader, output, diagnostic io.Writer) error {
 	}
 	// Source metadata may not exist yet. The durable registration retains the
 	// exact pending handoff; the normal bounded worker retries source collection.
-	return captureCommandAction([]string{"receive", "--user-level", "--source", "codex", "--repo", project, "--store", store}, bytes.NewReader(body), output)
+	return captureAction([]string{"receive", "--user-level", "--source", "codex", "--repo", project, "--store", store}, bytes.NewReader(body), output, protectedHome)
 }

@@ -13,11 +13,17 @@ import (
 	"agenticlens/internal/domain"
 )
 
-func TestRegistryRetiredCachedSnapshotsRecoverFromUnchangedNativeSource(t *testing.T) {
-	for _, tc := range []struct{ field, value string }{
-		{"events", "[]"}, {"events_are_partial", "false"}, {"task_links", `[{"subagent_type":"tester","timestamp":"2026-01-01T00:00:01Z","child_reference":"opaque-cache-only"}]`}, {"agent_path", `"/root/cache-only"`}, {"skills", `[{"name":"cache-only","caller_role":"coder","timestamp":"2026-01-01T00:00:01Z","success":true}]`},
+func TestRegistryInvalidCachedSnapshotsRecoverFromUnchangedNativeSource(t *testing.T) {
+	for _, tc := range []struct{ name, field, value string }{
+		{"events", "events", "[]"},
+		{"events_are_partial", "events_are_partial", "false"},
+		{"task_links", "task_links", `[{"subagent_type":"tester","timestamp":"2026-01-01T00:00:01Z","child_reference":"opaque-cache-only"}]`},
+		{"agent_path", "agent_path", `"/root/cache-only"`},
+		{"skills", "skills", `[{"name":"cache-only","caller_role":"coder","timestamp":"2026-01-01T00:00:01Z","success":true}]`},
+		{"missing user", "user", ""},
+		{"blank user", "user", `" "`},
 	} {
-		t.Run(tc.field, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 			dir := t.TempDir()
 			store := openStore(t, dir)
@@ -61,7 +67,11 @@ func TestRegistryRetiredCachedSnapshotsRecoverFromUnchangedNativeSource(t *testi
 			if err = json.Unmarshal(wire["snapshot"], &snapshot); err != nil {
 				t.Fatal(err)
 			}
-			snapshot[0][tc.field] = json.RawMessage(tc.value)
+			if tc.value == "" {
+				delete(snapshot[0], tc.field)
+			} else {
+				snapshot[0][tc.field] = json.RawMessage(tc.value)
+			}
 			wire["snapshot"], err = json.Marshal(snapshot)
 			if err != nil {
 				t.Fatal(err)
@@ -111,12 +121,16 @@ func TestRegistryRetiredCachedSnapshotsRecoverFromUnchangedNativeSource(t *testi
 			if string(afterCallback["snapshot"]) != string(opaque) {
 				t.Fatal("callback discarded old opaque snapshot before source recovery")
 			}
-			recovered, err := store.Reconcile(ctx, "TEST-100", "tester", 20, 1000000, fixtureGenerationPolicy())
+			const selectedGitUser = "selected-git-user"
+			recovered, err := store.Reconcile(ctx, "TEST-100", selectedGitUser, 20, 1000000, fixtureGenerationPolicy())
 			if err != nil {
 				t.Fatal(err)
 			}
 			if len(recovered.RefreshedSessions) != 1 || len(recovered.Sessions) != 1 || !reflect.DeepEqual(recovered.Sessions[0].Skills, initial.Sessions[0].Skills) || len(recovered.Registrations) != 1 || recovered.Registrations[0].SnapshotNeedsRefresh || recovered.Registrations[0].State != domain.CaptureCurrent || recovered.Registrations[0].UpdatedAt != accepted.UpdatedAt || recovered.Registrations[0].SourceFingerprint != accepted.SourceFingerprint {
 				t.Fatalf("unchanged complete native source could not replace old cache: %+v", recovered)
+			}
+			if recovered.Sessions[0].User != selectedGitUser {
+				t.Fatalf("re-extraction used user %q, want %q", recovered.Sessions[0].User, selectedGitUser)
 			}
 			var final map[string]json.RawMessage
 			if err = json.Unmarshal(readRow(), &final); err != nil {

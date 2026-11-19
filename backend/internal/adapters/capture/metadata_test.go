@@ -8,24 +8,29 @@ import (
 )
 
 func TestTicketMetadataConflictOrder(t *testing.T) {
-	for _, field := range []string{"title", "type"} {
-		rows := []domain.CaptureRegistration{{TicketID: "TEST-1", TicketTitle: "one", TicketType: "feat"}, {TicketID: "TEST-1", TicketTitle: "one", TicketType: "feat"}}
-		if field == "title" {
-			rows[1].TicketTitle = "two"
-		} else {
-			rows[1].TicketType = "fix"
+	rows := []domain.CaptureRegistration{
+		{TicketID: "TEST-1", TicketTitle: "one", TicketType: "feat"},
+		{TicketID: "TEST-1", TicketTitle: "two", TicketType: "feat"},
+	}
+	assertMetadata := func(wantTitle string) {
+		t.Helper()
+		title, kind, err := domain.CaptureTicketMetadata(rows, "TEST-1")
+		if err != nil || title != wantTitle || kind != "feat" {
+			t.Fatalf("ticket metadata = (%q, %q, %v); want (%q, feat, nil)", title, kind, err, wantTitle)
 		}
+	}
+	assertMetadata("")
+	rows[0], rows[1] = rows[1], rows[0]
+	assertMetadata("")
+	rows[1] = rows[0]
+	assertMetadata("two")
+
+	rows[1].TicketType = "fix"
+	for range 2 {
 		if _, _, err := domain.CaptureTicketMetadata(rows, "TEST-1"); err == nil {
-			t.Fatal("conflict accepted")
+			t.Fatal("conflicting ticket types accepted")
 		}
 		rows[0], rows[1] = rows[1], rows[0]
-		if _, _, err := domain.CaptureTicketMetadata(rows, "TEST-1"); err == nil {
-			t.Fatal("reverse conflict accepted")
-		}
-		rows[1] = rows[0]
-		if _, _, err := domain.CaptureTicketMetadata(rows, "TEST-1"); err != nil {
-			t.Fatal(err)
-		}
 	}
 }
 func TestSourceProjectDescendantBoundary(t *testing.T) {

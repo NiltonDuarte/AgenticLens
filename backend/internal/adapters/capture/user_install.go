@@ -27,9 +27,12 @@ type UserInstallOptions struct {
 }
 
 type userInstallation struct {
-	Protocol int          `json:"protocol"`
-	Manager  string       `json:"manager"`
-	Groups   []OwnedGroup `json:"groups"`
+	Protocol           int          `json:"protocol"`
+	Manager            string       `json:"manager"`
+	Groups             []OwnedGroup `json:"groups"`
+	BindingInbox       bool         `json:"binding_inbox,omitempty"`
+	OwnsInboxGrant     bool         `json:"owns_inbox_grant,omitempty"`
+	CreatedInboxConfig bool         `json:"created_inbox_config,omitempty"`
 }
 
 // InstallUserCodex owns only unchanged groups in the effective user hooks file.
@@ -62,6 +65,33 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 		return result, err
 	}
 	if !options.Remove {
+		codexHomes := []string{adaptersconfig.RuntimeCodexHome()}
+		if source == "codex" {
+			codexHomes = append(codexHomes, home)
+		}
+		manager, err = adaptersconfig.OutsideCodexInbox(manager, codexHomes...)
+		if err != nil {
+			return result, err
+		}
+		if source == "codex" {
+			// The hook embeds this manager. Verify the operator's installation
+			// evidence before probing it or accepting the installed hook.
+			if _, err := adaptersconfig.ProtectedCodexManager(options.Repository, home, manager); err != nil {
+				return result, err
+			}
+			if options.Repository != "" {
+				if _, err := adaptersconfig.ResolveProtectedCodexEngine(options.Repository, home, manager); err != nil {
+					return result, err
+				}
+			}
+			inbox, err := CodexBindingInbox(home)
+			if err != nil {
+				return result, err
+			}
+			if err := CheckCodexInboxSeparation(options.Repository, home, inbox); err != nil {
+				return result, err
+			}
+		}
 		if err := validateManagerEntrypoint(manager); err != nil {
 			return result, fmt.Errorf("native manager unavailable: %w", err)
 		}
@@ -69,6 +99,8 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 			if err := validateInstallNativeOutput(ctx, manager, "1", "OpenCode user hook protocol", "manager", "opencode-hook-protocol"); err != nil {
 				return result, fmt.Errorf("install a manager with OpenCode user hook support: %w", err)
 			}
+		} else if err := validateInstallNativeOutput(ctx, manager, "1", "protected Codex capture protocol", "manager", "protected-codex-hook-protocol"); err != nil {
+			return result, fmt.Errorf("install a manager with Codex binding inbox support: %w", err)
 		}
 	}
 	if !options.Remove && options.Repository != "" {
@@ -273,7 +305,7 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 	}
 	var own []fileChange
 	if source == "codex" {
-		own, result.Manifest, err = planCodexUser(home, manager, options.Remove)
+		own, result.Manifest, err = planCodexUser(home, manager, options.Repository, options.Remove)
 	} else {
 		own, result.Manifest, err = planOpenCodeUser(home, manager, options.Remove)
 	}
@@ -292,7 +324,9 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 	changes = effective
 	for _, change := range changes {
 		action := "write"
-		if change.remove {
+		if change.mkdir {
+			action = "mkdir"
+		} else if change.remove {
 			action = "remove"
 		}
 		result.Changes = append(result.Changes, PlannedChange{change.path, action})
@@ -307,6 +341,19 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 
 	// Verify previews under the exclusive machine installation lock.
 	for _, change := range changes {
+		if change.mkdir {
+			if _, err := os.Lstat(change.path); !errors.Is(err, os.ErrNotExist) {
+				return result, errors.New("inbox changed during planning; retry")
+			}
+			continue
+		}
+		if filepath.Base(change.path) == "config.toml" {
+			data, mode, exists, err := readCodexConfigFile(change.path)
+			if err != nil || exists != change.existed || mode != change.mode || !bytes.Equal(data, change.before) {
+				return result, errors.Join(errors.New("Codex config.toml changed during planning; retry"), err)
+			}
+			continue
+		}
 		current, err := os.ReadFile(change.path)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return result, err
@@ -315,8 +362,16 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 			return result, errors.New("user installation changed during planning; retry")
 		}
 	}
+	if source == "codex" && !options.Remove {
+		if err := adaptersconfig.PrepareCodexRouteLocks(options.Repository, home); err != nil {
+			return result, err
+		}
+	}
 	if err := applyUserInstallationWithCheckpoint(source, home, coordinator, options.LegacyRepository, changes, checkpoint); err != nil {
 		return result, err
+	}
+	if source == "codex" && options.Remove {
+		return result, adaptersconfig.ReleaseProtectedCodexHome(home)
 	}
 	return result, nil
 }
@@ -342,27 +397,27 @@ func asUserJournalChanges(changes []fileChange) []userInstallChange {
 	return result
 }
 
-func planCodexUser(home, manager string, remove bool) ([]fileChange, Manifest, error) {
+func planCodexUser(home, manager, project string, remove bool) ([]fileChange, Manifest, error) {
 	hooksPath := filepath.Join(home, "hooks.json")
 	receiptPath := filepath.Join(home, "agenticlens-user-installation.json")
 	receipt := userInstallation{Protocol: userCaptureOwnershipProtocol}
-	prior, err := os.ReadFile(receiptPath)
-	if err == nil {
+	prior, _, hasReceipt, err := readCodexConfigFile(receiptPath)
+	if err != nil {
+		return nil, Manifest{}, err
+	}
+	if hasReceipt {
 		if err := json.Unmarshal(prior, &receipt); err != nil {
 			return nil, Manifest{}, err
 		}
 		if receipt.Protocol != userCaptureOwnershipProtocol {
 			return nil, Manifest{}, errors.New("unsupported user capture ownership protocol")
 		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return nil, Manifest{}, err
 	}
 	if remove && len(prior) == 0 {
 		return nil, Manifest{}, errors.New("no owned user capture installation; refusing removal")
 	}
-	content, err := os.ReadFile(hooksPath)
-	exists := err == nil
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	content, _, exists, err := readCodexConfigFile(hooksPath)
+	if err != nil {
 		return nil, Manifest{}, err
 	}
 	config := map[string]json.RawMessage{}
@@ -407,13 +462,20 @@ func planCodexUser(home, manager string, remove bool) ([]fileChange, Manifest, e
 		return nil, Manifest{}, errors.New("user manager location differs from owned hooks; explicitly uninstall before relocating")
 	}
 	next := userInstallation{Protocol: userCaptureOwnershipProtocol, Manager: manager, Groups: []OwnedGroup{}}
-	var changes []fileChange
+	changes, err := planCodexInbox(home, project, remove, receipt, &next)
+	if err != nil {
+		return nil, Manifest{}, err
+	}
 	if !remove {
-		command, err := staticCommand([]string{manager, "codex-hook"})
-		if err != nil {
-			return nil, Manifest{}, err
-		}
-		for _, event := range []string{"SessionStart", "UserPromptSubmit", "SubagentStart", "SubagentStop", "Stop", "SessionEnd"} {
+		for _, event := range []string{"SessionStart", "UserPromptSubmit", "SubagentStart", "SubagentStop", "Stop", "SessionEnd", "PostToolUse"} {
+			action := "codex-hook"
+			if event == "PostToolUse" {
+				action = "codex-binding-wake"
+			}
+			command, err := staticCommand([]string{manager, action})
+			if err != nil {
+				return nil, Manifest{}, err
+			}
 			group, err := codexHookGroup(event, command)
 			if err != nil {
 				return nil, Manifest{}, err

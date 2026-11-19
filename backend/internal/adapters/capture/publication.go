@@ -17,13 +17,14 @@ import (
 // PublicationLock owns operational state and the actual output directory.
 // The directory descriptor survives rename; no disappeared workspace is recreated.
 type PublicationLock struct {
-	root      *os.Root
-	file      *os.File
-	directory *os.File
-	original  string
-	state     string
-	project   string
-	identity  string
+	protection *ProtectedPublication
+	root       *os.Root
+	file       *os.File
+	directory  *os.File
+	original   string
+	state      string
+	project    string
+	identity   string
 }
 
 var heldPublications = struct {
@@ -48,19 +49,20 @@ func waitPublicationLock(ctx context.Context, file *os.File) error {
 	}
 }
 func AcquirePublication(ctx context.Context, path, project string) (*PublicationLock, error) {
-	return acquirePublication(ctx, path, project, nil)
+	return acquirePublication(ctx, path, project, nil, nil)
 }
 
 // AcquireSelectedPublication requires the held directory to match the caller's
-// selection. The caller must retain its directory reference through admission.
-func AcquireSelectedPublication(ctx context.Context, path, project string, expected os.FileInfo) (*PublicationLock, error) {
+// selection and uses the admitted state when protection is supplied. The caller
+// must retain its directory reference through admission.
+func AcquireSelectedPublication(ctx context.Context, path, project string, expected os.FileInfo, protection *ProtectedPublication) (*PublicationLock, error) {
 	if expected == nil {
 		return nil, fmt.Errorf("workspace directory selection is required")
 	}
-	return acquirePublication(ctx, path, project, expected)
+	return acquirePublication(ctx, path, project, expected, protection)
 }
 
-func acquirePublication(ctx context.Context, path, project string, expected os.FileInfo) (*PublicationLock, error) {
+func acquirePublication(ctx context.Context, path, project string, expected os.FileInfo, protection *ProtectedPublication) (*PublicationLock, error) {
 	if strings.TrimSpace(project) == "" {
 		return nil, fmt.Errorf("publication requires an explicit owning project")
 	}
@@ -75,9 +77,20 @@ func acquirePublication(ctx context.Context, path, project string, expected os.F
 	if err != nil {
 		return nil, err
 	}
-	state, err := config.ResolvePublicationState(selected)
-	if err != nil {
-		return nil, err
+	var state string
+	if protection != nil {
+		if err := protection.Validate(selected); err != nil {
+			return nil, err
+		}
+		state = protection.State
+		if err := protection.checkPrivatePath(filepath.Join(state, "publication")); err != nil {
+			return nil, err
+		}
+	} else {
+		state, err = config.ResolvePublicationState(selected)
+		if err != nil {
+			return nil, err
+		}
 	}
 	directory, err := openPublicationDirectory(parent)
 	if err != nil {
@@ -100,7 +113,11 @@ func acquirePublication(ctx context.Context, path, project string, expected os.F
 		return nil, errors.Join(err, directory.Close())
 	}
 	digest := sha256.Sum256([]byte(selected + "\x00" + identity))
-	file, err := os.OpenFile(filepath.Join(state, "publication", hex.EncodeToString(digest[:])+".lock"), os.O_CREATE|os.O_RDWR, 0600)
+	lockPath := filepath.Join(state, "publication", hex.EncodeToString(digest[:])+".lock")
+	if err := protection.checkPrivatePath(lockPath); err != nil {
+		return nil, errors.Join(err, directory.Close())
+	}
+	file, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
 		return nil, errors.Join(err, directory.Close())
 	}
@@ -116,7 +133,7 @@ func acquirePublication(ctx context.Context, path, project string, expected os.F
 	if rootErr != nil || dirErr != nil || !os.SameFile(rootInfo, dirInfo) {
 		return nil, errors.Join(fmt.Errorf("workspace replaced during directory-root admission; retry"), rootErr, dirErr, root.Close(), file.Close(), directory.Close())
 	}
-	owner := &PublicationLock{root: root, file: file, directory: directory, original: parent, state: state, project: selected, identity: identity}
+	owner := &PublicationLock{protection: protection, root: root, file: file, directory: directory, original: parent, state: state, project: selected, identity: identity}
 	// A directory replaced between resolve and admission is never accepted.
 	before, err := directory.Stat()
 	after, e := os.Stat(parent)

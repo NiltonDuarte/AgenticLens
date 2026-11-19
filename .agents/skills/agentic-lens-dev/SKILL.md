@@ -22,15 +22,13 @@ create a feature branch only when needed, never develop on main. Read the matchi
 | Artifact | Content | Usual prose length |
 | --- | --- | --- |
 | `proposal.md` and `specs/<capability>/spec.md` | Selected execution intent and observable acceptance linked to the roadmap ticket. | Concise, sufficient for independent review |
-| `design.md` | Frozen technical contract, explicit approval, owners, decisions and material iteration steering. | 200–400 words before necessary decisions/evidence |
+| `design.md` | Technical contract, explicit approval, owners, decisions and material steering. | 200–400 words before necessary decisions/evidence |
 | `tasks.md` | Current implementation/verification steps and progress; design owns scope. | Proportionate task groups |
 | `delivery.md` | Current outcome, actual verification/review, remaining limits and authored PR context; metrics appended last. | 300–600 words before metrics |
-| `evidence/iterations/<NN>/` | Test/review evidence and permanent compact review findings under canonical retention. | Skill-owned evidence definitions |
+| `evidence/` | Test/review evidence and permanent compact review findings under canonical retention. | Skill-owned evidence definitions |
 | `agentic_metrics.json` | Final CLI-generated session ledger, beside the execution artifacts. | Structured output |
 
-`design.md` records agreed outcomes, approval and boundaries; `tasks.md` describes how the current iteration achieves them. Do not retain parallel editable CONTRACT/PLAN/SUMMARY/PULL_REQUEST documents after transfer into the change. A correction within accepted scope updates
-the plan/implementation, not the approved contract in design. Record acceptance changes as a
-steering delta under repository iteration policy and obtain any renewed approval.
+`design.md` records agreed outcomes, approval and boundaries. `tasks.md` owns the current work and progress. Refine the same work in its active OpenSpec artifacts using the [steering workflow](../../../docs/OPENSPEC_WORKFLOW.md#steering-an-active-change). Apply routine corrections through the current tasks. Record material changes in the design and obtain explicit approval before implementing the changed scope. Keep one editable plan and one delivery summary.
 Use the [shared writing rules](../../../AGENTS.md#artifact-writing-rules).
 Review records and retained findings follow the
 [review lifecycle](../agentic-lens-review/references/parallel-review.md#completed-review-retention).
@@ -52,7 +50,7 @@ unresolved decisions or limits, and the next required action. The parent inspect
 actual artifacts/diffs and reconciles deviations; a successful child turn alone
 does not establish completion. The orchestrator never implements application fixes.
 
-## Iteration lifecycle
+## Development workflow
 
 ### 1. Plan
 
@@ -64,17 +62,14 @@ and tests; select applicable [regression boundaries](../../../docs/REGRESSION_PR
 including cross-machine cases for persistence/refresh. Tests cannot impose a new
 authenticity policy on portable history.
 
-Before advancing, check that acceptance is observable, adjacent guarantees remain
-explicit and unresolved decisions do not make implementation speculative. A
-resumed session or routine correction alone does not require another iteration.
+Before advancing, check that acceptance is observable, adjacent guarantees are explicit and open decisions are settled. When resuming the same change, read its current artifacts and continue from the relevant unchecked tasks.
 
 ### 2. Approve
 
 Present the contract/plan and obtain explicit approval for the proposed scope
 before dispatching a coder. Record the instruction establishing approval. Reuse
 existing explicit approval when acceptance is unchanged; seek renewed approval
-for material boundary changes. A plan file, later iteration number or silence is
-not approval. Dependent coding waits for unresolved scope decisions.
+for material boundary changes. Record explicit approval in the current design before starting dependent coding.
 
 ### 3. Implement
 

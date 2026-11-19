@@ -93,7 +93,7 @@ if [[ -n "$MANAGER" ]]; then
  cp -- "$MANAGER" "$STAGE/manager"
  manager_digest=$MANAGER_SHA
  verify_digest "$STAGE/manager" "$manager_digest" 'Local manager'
-elif [[ -x "$ENTRYPOINT" ]] && [[ "$("$ENTRYPOINT" manager protocol 2>/dev/null || true)" == 1 ]]; then
+elif [[ "$SOURCE" != codex && -x "$ENTRYPOINT" ]] && [[ "$("$ENTRYPOINT" manager protocol 2>/dev/null || true)" == 1 ]]; then
  cp -- "$ENTRYPOINT" "$STAGE/manager"
 else
  MANAGER_VERSION=${MANAGER_VERSION:-$VERSION}
@@ -120,7 +120,9 @@ magic="$(od -An -tx1 -N4 "$MANAGER" | tr -d ' \n')"
 case "$OS:$magic" in linux:7f454c46|darwin:cffaedfe|darwin:cefaedfe|darwin:feedfacf|darwin:feedface|darwin:cafebabe) ;; *) fail 'Bootstrap is not a native manager' ;; esac
 chmod 700 "$MANAGER"
 [[ "$("$MANAGER" manager protocol)" == 1 ]] || fail 'Native manager interface unavailable'
-if [[ "$SOURCE" == opencode ]]; then
+if [[ "$SOURCE" == codex ]]; then
+ [[ "$("$MANAGER" manager protected-codex-hook-protocol)" == 1 ]] || fail 'Codex capture requires a manager supporting protected engine selection'
+elif [[ "$SOURCE" == opencode ]]; then
  hook_protocol="$("$MANAGER" manager opencode-hook-protocol)" || fail 'OpenCode capture requires a manager with the opencode-hook route; explicitly update the manager'
  [[ "$hook_protocol" == 1 ]] || fail 'Incompatible OpenCode user hook protocol; explicitly update the manager'
 fi
@@ -147,8 +149,14 @@ if [[ -n "$ENGINE" ]]; then
  verify_digest "$ENGINE" "$ENGINE_SHA" 'Local engine'
  ((${#PLATFORMS[@]}==1)) || fail '--local-bin cannot install foreign platforms'
 fi
+PROTECTED_PIN=''
+if [[ "$SOURCE" == codex ]]; then
+ PROTECTED_PIN="$("$MANAGER" manager protected-codex-version "$RESOLVE_PROJECT")"
+ exact "$PROTECTED_PIN" || fail 'Protected engine selection requires an exact release'
+fi
 if ((DRY)); then
  printf 'Project: %s\nEngine version: %s\nManager version: %s\nNative command: %s\nEngine cache: %s\n' "$PROJECT" "$PIN" "$MANAGER_VERSION" "$ENTRYPOINT" "$INSTALL_ROOT"
+ if [[ -n "$PROTECTED_PIN" ]]; then printf 'Protected Codex engine: %s under %s/.agenticlens\n' "$PROTECTED_PIN" "$HOME"; fi
  for item in "${PLATFORMS[@]}"; do printf 'Engine artifact: agentic-lens-engine-%s\n' "$item"; done
  printf 'No network or destination writes. Required PATH entry: %s.\n' "$DEST"; exit 0
 fi
@@ -162,6 +170,19 @@ for item in "${PLATFORMS[@]}"; do
  [[ -z "$ENGINE" ]] || args+=(--local-bin "$ENGINE" --sha256 "$ENGINE_SHA")
  "$MANAGER" "${args[@]}"
 done
+if [[ -n "$PROTECTED_PIN" && ( "$INSTALL_ROOT" != "$HOME/.agenticlens" || "$PROTECTED_PIN" != "$PIN" ) ]]; then
+ args=(--al-project "$PROJECT" install "$PROTECTED_PIN" --install-root "$HOME/.agenticlens")
+ ((FORCE==0)) || args+=(--force)
+ if [[ -z "$ENGINE" ]]; then
+  "$MANAGER" "${args[@]}"
+ elif [[ "$PROTECTED_PIN" == "$PIN" ]]; then
+  "$MANAGER" "${args[@]}" --local-bin "$ENGINE" --sha256 "$ENGINE_SHA"
+ else
+  # The one supplied offline artifact is for the project release. The
+  # protected installer will verify the separately provisioned companion.
+  printf 'Codex capture requires the operator-installed companion %s under %s/.agenticlens.\n' "$PROTECTED_PIN" "$HOME"
+ fi
+fi
 # Reuse the admitted release/local digest; an existing manager came from the installed entrypoint.
 if [[ -z "$manager_digest" ]]; then
  manager_digest="$(digest "$MANAGER")" || fail 'Could not compute installed manager SHA256'

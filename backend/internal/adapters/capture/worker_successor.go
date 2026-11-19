@@ -34,7 +34,12 @@ func WorkerSuccessor(ctx context.Context, project, state string) (string, error)
 	if configured.Provisional || !sameEntrypointPath(configured.CoordinationDirectory, state) {
 		return "", errors.New("capture state directory changed; pending work retained in its original namespace for explicit recovery")
 	}
-	native, err := entry.NativePath()
+	cfg, err := adaptersconfig.Load(project)
+	if err != nil {
+		return "", err
+	}
+	codexHomes := []string{adaptersconfig.RuntimeCodexHome(), cfg.Telemetry.Sources.CodexHome}
+	native, err := entry.NativePath(codexHomes...)
 	if err != nil {
 		return "", err
 	}
@@ -63,7 +68,11 @@ func WorkerSuccessor(ctx context.Context, project, state string) (string, error)
 		if manifest.Protocol != ManifestProtocolVersion || manifest.Version != entry.Version || !sameEntrypointPath(manifest.Binary, native) || !sameEntrypointPath(manifest.Repository, project) || !sameEntrypointPath(manifest.StateDir, state) || manifest.TemplateVersion != installationTemplateVersion() || manifest.Wrapper == "" || manifest.SourceStore == "" {
 			return "", errors.New("selected worker installation is incompatible; explicitly refresh setup and recover pending work")
 		}
-		if err := CheckManagerCompatibility(manifest.Wrapper, manifest.WrapperHash); err != nil {
+		wrapper, err := adaptersconfig.OutsideCodexInbox(manifest.Wrapper, codexHomes...)
+		if err != nil {
+			return "", err
+		}
+		if err := CheckManagerCompatibility(wrapper, manifest.WrapperHash); err != nil {
 			return "", fmt.Errorf("selected worker wrapper incompatible; pending work retained: %w", err)
 		}
 	}
@@ -90,7 +99,7 @@ func WorkerSuccessor(ctx context.Context, project, state string) (string, error)
 	if err != nil {
 		return "", err
 	}
-	selected, err := current.NativePath()
+	selected, err := current.NativePath(codexHomes...)
 	if err != nil {
 		return "", err
 	}
@@ -128,5 +137,8 @@ func WorkerSuccessor(ctx context.Context, project, state string) (string, error)
 	if !remaining {
 		return "", errors.New("capture integrations disabled during native takeover; pending work retained")
 	}
-	return native, nil
+	// Legacy operator installations report their selected logical location.
+	// Probes above used its checked physical target. Protected workers use
+	// LaunchProtectedWorker and never consult a project executable.
+	return current.NativeCandidatePath()
 }

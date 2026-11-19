@@ -78,8 +78,10 @@ class DistributionFixture(unittest.TestCase):
         cls.fixture_application = build_app()
         cls.fixture_manager = build_manager()
 
+    fixture_parent = None
+
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='agenticlens distribution ')
+        self.temp = tempfile.TemporaryDirectory(prefix='agenticlens distribution ', dir=self.fixture_parent)
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.repo = self.root / 'adopting project'

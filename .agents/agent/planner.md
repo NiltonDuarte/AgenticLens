@@ -14,9 +14,7 @@ Produce zero-code plans under the
 and [technical guidelines](../../TECHNICAL_GUIDELINES.md).
 
 Ground in configuration, existing modules and tests; cite paths/symbols that
-locate the change. Author the selected change’s design.md technical contract/approval and tasks.md execution plan, linked to proposal/spec acceptance. Keep material iteration deltas in design.md; do not add a parallel contract/plan tree.
-For changed acceptance, read prior decisions and write a delta plan; do not
-rewrite the frozen contract or create an iteration merely for a resumed session.
+locate the change. Maintain its technical contract and approval in `design.md` and its execution plan in `tasks.md`, linked to the proposal and delta specs. For material steering, reconcile the current artifacts with the new decision and retain the source, prior approvals, and verification impact in the design. Follow the [OpenSpec steering workflow](../../docs/OPENSPEC_WORKFLOW.md#steering-an-active-change).
 
 Name the plausible regression and existing coverage owner; plan only missing
 contract cases under the canonical testing policy. Ask about ambiguous product,

@@ -1,6 +1,6 @@
 # Preventing recurring regressions
 
-Use this checklist when a change touches the corresponding boundary. Put the selected cases and their results in the active iteration plan and review.
+Use this checklist when a change touches the corresponding boundary. Plan the selected cases in the active change and record their results in its review.
 
 ## Which document owns the rule?
 
@@ -13,9 +13,9 @@ When changing a shared rule, search active instructions, personas, skill referen
 
 ## Interpret steering against the current accepted scope
 
-Use the [contributor delta format](../CONTRIBUTING.md#71-recording-steering-without-restarting-the-ticket) for material scope changes. Keep the current contract consistent with accepted superseding decisions; do not replay an earlier plan just because it is more detailed. Keep routine merge checks and review fixes within the current iteration when acceptance is unchanged.
+Use the [contributor delta format](../CONTRIBUTING.md#71-recording-steering-without-restarting-the-ticket) for material scope changes. Keep the current contract consistent with accepted superseding decisions; do not replay an earlier plan just because it is more detailed. Update the active change’s tasks and review when routine merge checks or review fixes change the work.
 
-Distinguish intentional feature additions from regressions. Repeated iterations are not themselves failures. Missing or consolidated plans are limits on historical evidence, not a reason to fabricate a steering history.
+Distinguish intentional feature additions from regressions. Record any limits on historical steering evidence.
 
 ## Before implementation
 

@@ -116,7 +116,7 @@ For `capture install`, `--timeout` bounds setup and each required installation p
 
 ### Session binding
 
-- Codex lifecycle feedback supplies a binding request with exact source, session, state directory and a per-session challenge. The agent responds with the supplied native-manager `capture bind` command and the ticket explicitly assigned for the current task. Start and prompt callbacks can deliver context. Shutdown callbacks alone cannot request missing information.
+- Codex lifecycle feedback supplies the command and credentials for the exact session. Use the command it provides with the ticket explicitly assigned for the current task. Inbox-enabled setups supply `capture submit-binding`, which queues a response for the trusted worker to verify. Earlier setups can supply `capture bind`. Start and prompt callbacks can deliver context. Shutdown callbacks alone cannot request missing information.
 - OpenCode's per-session system transform supplies the request. The `agenticlens_bind` tool accepts `ticket` and `request`; its execution context supplies the authoritative session identity. The agent cannot replace the runtime identity through tool arguments.
 - When ticket context is missing, ask the user and retain an unassigned registration. A proven parent may supply inherited binding. Independent roots need their own explicit response. Model, effort, usage and cost still come from authoritative harness records; an agent assertion cannot manufacture them.
 

@@ -12,6 +12,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## Ready
 
+- **AL-96**: Verify automatic ticket metrics capture end to end for v3
+  - **Status**: Ready; **Blocked by**: None; **Blocks**: v3 stable release
+  - **File**: [AL-96](to-do/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md)
+
 - **AL-94**: Make explicit backfill repeatable and report refresh coverage
   - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-95
   - **File**: [AL-94](to-do/AL-94%20make%20explicit%20backfill%20repeatable%20and%20report%20refresh%20coverage.md)

@@ -68,10 +68,16 @@ func (location *WorkspaceLocation) Close() error {
 // AcquirePublication binds ownership to the selected physical directory
 // before any recovery, baseline read or write can use that ownership.
 func (location WorkspaceLocation) AcquirePublication(ctx context.Context, project string) (*capture.PublicationLock, error) {
+	return location.AcquirePublicationWithProtection(ctx, project, nil)
+}
+
+// AcquirePublicationWithProtection also validates the worker's admitted
+// private state when generation runs under protected capture.
+func (location WorkspaceLocation) AcquirePublicationWithProtection(ctx context.Context, project string, protection *capture.ProtectedPublication) (*capture.PublicationLock, error) {
 	if location.reference == nil {
 		return nil, fmt.Errorf("workspace publication requires a retained selection")
 	}
-	return capture.AcquireSelectedPublication(ctx, location.LedgerPath, project, location.directoryInfo)
+	return capture.AcquireSelectedPublication(ctx, location.LedgerPath, project, location.directoryInfo, protection)
 }
 
 // AcquirePublicationRead admits a maintenance preview against the same

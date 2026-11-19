@@ -63,6 +63,11 @@ func main() {
 	if engine := os.Getenv("AL_PROBE_PREVIOUS_ENGINE"); engine != "" {
 		simulatePreviousEngine(engine, os.Args[1:])
 	}
+	// The previous protected worker offered v1, before publication-state pinning.
+	if len(os.Args) == 3 && os.Args[1] == "capture" && os.Args[2] == "protected-worker-protocol" {
+		fmt.Println("1")
+		return
+	}
 	if len(os.Args) == 3 && os.Args[1] == "engine" && os.Args[2] == "protocol" {
 		fmt.Println("1")
 		return

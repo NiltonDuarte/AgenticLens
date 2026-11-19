@@ -306,6 +306,9 @@ func BeginPublication(ledger string, paths []string) error {
 	}
 	pending := pendingPublication{Version: 2, Transaction: hex.EncodeToString(token)}
 	private := privateJournalPath(owner, pending.Transaction)
+	if err := owner.CheckPrivatePath(private); err != nil {
+		return err
+	}
 	if err = capture.MkdirPublicationStateDirectories(filepath.Dir(private), 0700); err != nil {
 		return err
 	}
@@ -336,7 +339,11 @@ func loadRecovery(ledger string, paths []string) (publicationJournal, pendingPub
 	if err != nil {
 		return j, pending, true, err
 	}
-	f, err := capture.OpenPublicationFile(privateJournalPath(owner, pending.Transaction), os.O_RDONLY, 0)
+	private := privateJournalPath(owner, pending.Transaction)
+	if err := owner.CheckPrivatePath(private); err != nil {
+		return j, pending, true, err
+	}
+	f, err := capture.OpenPublicationFile(private, os.O_RDONLY, 0)
 	if err != nil {
 		return j, pending, true, fmt.Errorf("private publication recovery unavailable; pending indicator/artifacts retained: %w", err)
 	}
@@ -398,13 +405,16 @@ func RecoverPublication(ledger string, authorizedPaths []string) (bool, error) {
 	return true, finishPublication(ledger, pending, owner)
 }
 func finishPublication(ledger string, pending pendingPublication, owner *capture.PublicationLock) error {
+	path := privateJournalPath(owner, pending.Transaction)
+	if err := owner.CheckPrivatePath(path); err != nil {
+		return err
+	}
 	if err := capture.RemovePublicationFile(journalPath(ledger)); err != nil {
 		return err
 	}
 	if err := syncDirectory(owner.DirectoryPath()); err != nil {
 		return err
 	}
-	path := privateJournalPath(owner, pending.Transaction)
 	if err := capture.RemovePublicationFile(path); err != nil {
 		return err
 	}

@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import signal
 import select
@@ -13,6 +14,27 @@ from distribution_fixture import DistributionFixture, ROOT, SETUP, build_probe, 
 
 
 class CaptureDistributionTest(DistributionFixture):
+    # The operator's installed manager and engine must be outside the Codex
+    # workspace-write profile's normal /tmp grant.
+    fixture_parent = '/var/tmp'
+
+    def assert_user_hooks(self, hooks, unrelated=None):
+        events = {'SessionStart', 'UserPromptSubmit', 'SubagentStart', 'SubagentStop', 'Stop', 'SessionEnd', 'PostToolUse'}
+        self.assertEqual(set(hooks), events)
+        for event, groups in hooks.items():
+            owned = [group for group in groups if group != unrelated]
+            self.assertEqual(len(owned), 1, event)
+            handlers = owned[0]['hooks']
+            self.assertEqual(len(handlers), 1, event)
+            action = 'codex-binding-wake' if event == 'PostToolUse' else 'codex-hook'
+            self.assertEqual(shlex.split(handlers[0]['command']), [str(self.dest / 'agentic-lens'), action])
+            if event == 'PostToolUse':
+                self.assertEqual(owned[0].get('matcher'), '^Bash$')
+
+    def install_protected_engine(self, engine, env=None):
+        self.succeeds(self.launch('install', self.pin, '--install-root', self.home / '.agenticlens',
+                                  '--local-bin', engine, '--sha256', digest(engine), env=env))
+
     def install_native_reporting_probe(self):
         application = build_app(self.pin)
         self.succeeds(self.install_local('--force', probe=application))
@@ -98,6 +120,7 @@ class CaptureDistributionTest(DistributionFixture):
                 self.assertEqual(self.snapshot_owned_paths(user_config, codex, state), fresh)
 
                 if role == 'engine':
+                    self.install_protected_engine(self.application, env=env)
                     codex_args = ['--repo', self.repo, '--store', codex, '--entrypoint', entrypoint]
                     self.succeeds(self.launch('capture', 'install-user', *codex_args, env=env))
                     before = self.snapshot_owned_paths(codex, user_config)
@@ -123,13 +146,7 @@ class CaptureDistributionTest(DistributionFixture):
             with self.subTest(script=script):
                 self.succeeds(self.install_local('--capture-source', 'codex', '--capture-store', store, script=script))
                 hooks = json.loads((store / 'hooks.json').read_text())['hooks']
-                self.assertEqual(set(hooks), {'SessionStart', 'UserPromptSubmit', 'SubagentStart', 'SubagentStop', 'Stop', 'SessionEnd'})
-                for groups in hooks.values():
-                    self.assertEqual(len(groups), 1)
-                    command = groups[0]['hooks'][0]['command']
-                    self.assertIn(str(self.dest / 'agentic-lens'), command)
-                    self.assertIn('codex-hook', command)
-                    self.assertNotIn(str(store), command)
+                self.assert_user_hooks(hooks)
                 self.assertFalse((self.repo / 'INJECTED').exists())
         self.assertEqual(self.requests(), [])
 
@@ -142,16 +159,7 @@ class CaptureDistributionTest(DistributionFixture):
         self.succeeds(self.install_local('--capture-source', 'codex', '--capture-store', home, probe=application))
         installed = json.loads(hooks.read_text())['hooks']
         self.assertIn(unrelated, installed['SessionStart'])
-        self.assertEqual(set(installed), {'SessionStart', 'UserPromptSubmit', 'SubagentStart', 'SubagentStop', 'Stop', 'SessionEnd'})
-        for event, groups in installed.items():
-            owned = [group for group in groups if group != unrelated]
-            self.assertEqual(len(owned), 1, event)
-            command = owned[0]['hooks'][0]['command']
-            self.assertIn(str(self.dest / 'agentic-lens'), command)
-            self.assertIn('codex-hook', command)
-            self.assertNotIn(str(self.repo), command)
-            self.assertNotIn(str(home), command)
-            self.assertNotIn('python', command.lower())
+        self.assert_user_hooks(installed, unrelated)
         self.assertFalse((self.repo / '.codex').exists())
         self.assertFalse((self.root / 'capture state').exists())
         self.assertFalse((self.dest / 'agentic-lens.dispatcher').exists())
@@ -166,6 +174,20 @@ class CaptureDistributionTest(DistributionFixture):
         self.succeeds(self.launch('capture', 'install-user', '--repo', self.repo, '--entrypoint', manager))
         self.assertTrue(os.path.samestat(admitted, manager.stat()), 'unchanged native user install replaced active manager')
         self.assertEqual(hooks.read_bytes(), before)
+        self.assertEqual(self.requests(), [])
+
+    def test_trusted_callback_requires_protected_worker_protocol(self):
+        self.succeeds(self.install_local('--capture-source', 'codex', '--capture-store', self.env['CODEX_HOME']))
+        self.write_config('v9.8.8')
+        compatible_cli = build_probe(self.pin)
+        self.install_protected_engine(compatible_cli)
+        policy = self.repo / '.agenticlens-config.local.yaml'
+        policy.write_text(policy.read_text().replace('enabled: false', 'enabled: true'))
+        event = json.dumps({'cwd': str(self.repo), 'session_id': 'probe-id', 'hook_event_name': 'SessionStart'})
+        rejected = self.launch('codex-hook', input=event)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('worker protocol', rejected.stderr)
+        self.assertFalse((self.root / 'capture state').exists())
         self.assertEqual(self.requests(), [])
 
     def test_manager_update_is_independent_of_engine_pin_and_hook_ownership(self):
@@ -317,6 +339,7 @@ class CaptureDistributionTest(DistributionFixture):
     def test_user_install_diagnoses_base_legacy_callbacks_and_migrates_only_owned_groups(self):
         application = build_app(self.pin)
         self.succeeds(self.install_local(probe=application))
+        self.install_protected_engine(application)
         source = Path(self.env['CODEX_HOME']); source.mkdir(parents=True, exist_ok=True)
         (source / 'sessions').mkdir()
         state = self.root / 'legacy capture state'
@@ -396,7 +419,7 @@ class CaptureDistributionTest(DistributionFixture):
         self.assertEqual(json.loads(project_hooks.read_text())['hooks'], {'SessionStart': [foreign]})
         self.assertFalse(json.loads(anchor.read_text())['active'])
         self.assertEqual(pending.read_bytes(), b'preserve existing capture state')
-        self.assertEqual(len(json.loads((source / 'hooks.json').read_text())['hooks']), 6)
+        self.assert_user_hooks(json.loads((source / 'hooks.json').read_text())['hooks'])
         self.assertFalse((worktree / '.codex/hooks.json').exists())
         self.assertEqual(self.requests(), [])
 

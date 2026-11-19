@@ -1,9 +1,13 @@
 package codex
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"os"
+
+	"golang.org/x/sys/unix"
 )
 
 // ErrDiscoveryBudget means a scan did not establish a complete selected family.
@@ -16,11 +20,19 @@ var ErrDiscoveryBudget = errors.New("configured Codex source discovery budget re
 // actual decompressed reads still consume the byte allowance. It grants no
 // authority to accept, replace or reject persisted ledger facts.
 type DiscoveryBudget struct {
+	Context         context.Context
 	MaxSessions     int
 	MaxSourceBytes  int64
 	SessionsRead    int
 	SourceBytesRead int64
 	SeenPaths       map[string]bool
+}
+
+func (b *DiscoveryBudget) checkDeadline() error {
+	if b != nil && b.Context != nil {
+		return b.Context.Err()
+	}
+	return nil
 }
 
 func (b *DiscoveryBudget) validate() error {
@@ -46,6 +58,9 @@ func (b *DiscoveryBudget) claim(path string) error {
 	if b == nil {
 		return nil
 	}
+	if err := b.checkDeadline(); err != nil {
+		return err
+	}
 	if b.SeenPaths[path] {
 		return nil
 	}
@@ -60,6 +75,23 @@ func (b *DiscoveryBudget) claim(path string) error {
 	return nil
 }
 
+// A budgeted source must be a regular file. Nonblocking open lets the deadline
+// remain effective when a source path changes before the descriptor is opened.
+func openRolloutSource(path string) (*os.File, os.FileInfo, error) {
+	f, err := os.OpenFile(path, os.O_RDONLY|unix.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+	info, err := f.Stat()
+	if err == nil && !info.Mode().IsRegular() {
+		err = errors.New("Codex source is not a regular file")
+	}
+	if err != nil {
+		return nil, nil, errors.Join(err, f.Close())
+	}
+	return f, info, nil
+}
+
 type discoveryBudgetReader struct {
 	reader        io.Reader
 	budget        *DiscoveryBudget
@@ -70,6 +102,9 @@ type discoveryBudgetReader struct {
 func (r *discoveryBudgetReader) Read(body []byte) (int, error) {
 	if len(body) == 0 {
 		return 0, nil
+	}
+	if err := r.budget.checkDeadline(); err != nil {
+		return 0, err
 	}
 	remaining := r.budget.MaxSourceBytes - r.budget.SourceBytesRead
 	if remaining == 0 {

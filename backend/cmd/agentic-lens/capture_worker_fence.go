@@ -13,12 +13,35 @@ import (
 // captureWorkerFence retains admitted executable bytes and checks operational
 // disablement. A newly preferred build does not retire an active worker.
 type captureWorkerFence struct {
-	binary   string
-	artifact os.FileInfo
-	sources  domain.TelemetrySourcePaths
+	binary        string
+	artifact      os.FileInfo
+	sources       domain.TelemetrySourcePaths
+	protectedHome string
+	publication   capture.ProtectedPublication
 }
 
-func newCaptureWorkerFence(project, state, binary string, cfg domain.ProjectConfig) (captureWorkerFence, error) {
+func newCaptureWorkerFence(project, state, binary string, cfg domain.ProjectConfig, protectedHome string) (captureWorkerFence, error) {
+	if protectedHome != "" {
+		selected, installed, err := runningProtectedEngine(project, protectedHome, binary)
+		if err != nil {
+			return captureWorkerFence{}, err
+		}
+		publication, err := capture.AdmitProtectedPublication(project, protectedHome)
+		if err != nil {
+			return captureWorkerFence{}, err
+		}
+		return captureWorkerFence{binary: selected, artifact: installed, sources: cfg.Telemetry.Sources, protectedHome: protectedHome, publication: publication}, nil
+	}
+	var fence captureWorkerFence
+	err := adaptersconfig.WithOrdinaryCapture(project, func() error {
+		var err error
+		fence, err = ordinaryCaptureWorkerFence(state, binary, cfg.Telemetry.Sources)
+		return err
+	})
+	return fence, err
+}
+
+func ordinaryCaptureWorkerFence(state, binary string, sources domain.TelemetrySourcePaths) (captureWorkerFence, error) {
 	source := binary
 	if runtime.GOOS == "linux" {
 		source = "/proc/self/exe"
@@ -38,7 +61,30 @@ func newCaptureWorkerFence(project, state, binary string, cfg domain.ProjectConf
 	if err != nil {
 		return captureWorkerFence{}, err
 	}
-	return captureWorkerFence{binary: physical, artifact: info, sources: cfg.Telemetry.Sources}, nil
+	return captureWorkerFence{binary: physical, artifact: info, sources: sources}, nil
+}
+
+func runningProtectedEngine(project, protectedHome, binary string) (string, os.FileInfo, error) {
+	selected, err := adaptersconfig.ResolveProtectedCodexEngine(project, protectedHome)
+	if err != nil {
+		return "", nil, err
+	}
+	running := binary
+	if runtime.GOOS == "linux" {
+		running = "/proc/self/exe"
+	}
+	actual, err := os.Stat(running)
+	if err != nil {
+		return "", nil, err
+	}
+	installed, err := os.Stat(selected)
+	if err != nil {
+		return "", nil, err
+	}
+	if !os.SameFile(actual, installed) {
+		return "", nil, fmt.Errorf("running worker does not match the protected operator installation at %s; pending work retained", selected)
+	}
+	return selected, installed, nil
 }
 
 func (f captureWorkerFence) current(project, state string) (bool, error) {
@@ -47,6 +93,20 @@ func (f captureWorkerFence) current(project, state string) (bool, error) {
 		return false, err
 	}
 
+	home, err := captureWorkerHome(project, f.protectedHome)
+	if err != nil {
+		return false, err
+	}
+	if home != f.protectedHome {
+		// Operator adoption while a legacy worker was active. Retire before
+		// its next publication or project-selected successor.
+		return false, nil
+	}
+	if home != "" {
+		if err := checkProtectedCaptureState(project, home, state); err != nil {
+			return false, err
+		}
+	}
 	info, err := os.Stat(f.binary)
 	if err != nil {
 		return false, fmt.Errorf("worker native artifact unavailable; pending work retained: %w", err)

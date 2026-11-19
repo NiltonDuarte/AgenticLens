@@ -165,11 +165,19 @@ func receiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 			return HookOutput{}, err
 		}
 	}
-	if (r.TicketID == "" || r.TicketTitle == "" || (r.InstallationID != "" && r.BindingInstallationID != r.InstallationID)) && (input.Event == "SessionStart" || input.Event == "UserPromptSubmit") {
+	if needsExplicitBinding(r) && (input.Event == "SessionStart" || input.Event == "UserPromptSubmit") {
 		prompt := BindingPrompt(r, binary, directory)
 		if userLevel {
-			// The machine dispatcher already selected this native build. The explicit
-			// binding command remains usable even when no PATH launcher was installed.
+			installed, err := CodexInboxInstalled(sourceStore)
+			if err != nil {
+				return HookOutput{}, err
+			}
+			if installed {
+				command := fmt.Sprintf("%s capture submit-binding --repo %s --store %s --session-id %s --request %s", QuoteArgument(binary), QuoteArgument(s.project), QuoteArgument(sourceStore), QuoteArgument(r.Identity.SessionID), QuoteArgument(inboxCredential(s.project, r)))
+				prompt = "AgenticLens requests explicit ticket binding for this Codex session. If the user has identified its active ticket, execute: " + command + " --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> [--ticket-type <EXPLICIT_TYPE>]. A queued response awaits source verification by the trusted worker. If the ticket is unknown, ask the user. Do not infer ownership."
+				return HookOutput{Context: &HookContext{Event: input.Event, Context: prompt}}, nil
+			}
+			// A pre-inbox installation keeps its explicit binding command until upgraded.
 		} else if len(wrappers) > 0 && wrappers[0] != "" {
 			prompt = WrapperBindingPrompt(r, wrappers[0], s.project, directory)
 		} else if wrapper, e := installedWrapper(directory, "codex"); e == nil {

@@ -1,6 +1,7 @@
 package capture
 
 import (
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 	"context"
 	"database/sql"
@@ -13,10 +14,12 @@ import (
 	"time"
 )
 
+const requestPublicationSQL = `CREATE TABLE IF NOT EXISTS publication_request (worktree_id INTEGER NOT NULL,singleton INTEGER NOT NULL CHECK(singleton=1), generation INTEGER NOT NULL, acknowledged INTEGER NOT NULL, requested_at INTEGER NOT NULL,PRIMARY KEY(worktree_id,singleton)); INSERT INTO publication_request VALUES(?,1,1,0,?) ON CONFLICT(worktree_id,singleton) DO UPDATE SET generation=generation+1,requested_at=excluded.requested_at`
+
 // RequestPublication commits a generation before native worker launch. A worker
 // acknowledges only the generation captured before its source/publication pass.
 func (s *Store) RequestPublication(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS publication_request (worktree_id INTEGER NOT NULL,singleton INTEGER NOT NULL CHECK(singleton=1), generation INTEGER NOT NULL, acknowledged INTEGER NOT NULL, requested_at INTEGER NOT NULL,PRIMARY KEY(worktree_id,singleton)); INSERT INTO publication_request VALUES(?,1,1,0,?) ON CONFLICT(worktree_id,singleton) DO UPDATE SET generation=generation+1,requested_at=excluded.requested_at`, s.worktreeID, time.Now().UnixMilli())
+	_, err := s.db.ExecContext(ctx, requestPublicationSQL, s.worktreeID, time.Now().UnixMilli())
 	return err
 }
 
@@ -69,8 +72,28 @@ func LaunchWorker(binary, project, state string) error {
 	if err != nil {
 		return fmt.Errorf("retaining selected worker build: %w", err)
 	}
-	binary = retained
-	cmd := exec.Command(binary, "capture", "worker", "--repo", project, "--state-dir", state)
+	return startWorkerProcess(retained, project, state, "")
+}
+
+// LaunchProtectedWorker executes only the operator-installed engine verified by
+// the protected selector. No executable is copied into capture or project state.
+func LaunchProtectedWorker(project, state, home string) error {
+	if err := adaptersconfig.CheckProtectedCodexPaths(project, home, state); err != nil {
+		return err
+	}
+	path, err := adaptersconfig.ResolveProtectedCodexEngine(project, home)
+	if err != nil {
+		return err
+	}
+	return startWorkerProcess(path, project, state, home)
+}
+
+func startWorkerProcess(binary, project, state, protectedHome string) error {
+	args := []string{"capture", "worker", "--repo", project, "--state-dir", state}
+	if protectedHome != "" {
+		args = append(args, "--protected-codex-home", protectedHome)
+	}
+	cmd := exec.Command(binary, args...)
 	cmd.Dir = project
 	configureWorkerProcess(cmd)
 	logPath := filepath.Join(state, "worker.log")
@@ -98,6 +121,7 @@ func LaunchWorker(binary, project, state string) error {
 
 // WorkerProgress is local operational evidence, never source telemetry.
 type WorkerProgress struct {
+	BindingScan BindingScan      `json:"binding_scan"`
 	Executable  string           `json:"executable,omitempty"`
 	Build       domain.BuildInfo `json:"build"`
 	PID         int              `json:"pid"`
@@ -129,6 +153,9 @@ func WriteWorkerProgress(directory string, progress WorkerProgress) error {
 	}
 	return os.Rename(name, filepath.Join(directory, "worker-status.json"))
 }
+
+var ErrInvalidWorkerStatus = errors.New("invalid recorded worker status")
+
 func WorkerStatus(directory string) (WorkerProgress, error) {
 	var p WorkerProgress
 	body, err := os.ReadFile(filepath.Join(directory, "worker-status.json"))
@@ -137,7 +164,10 @@ func WorkerStatus(directory string) (WorkerProgress, error) {
 	}
 	if len(body) > 0 {
 		if err = json.Unmarshal(body, &p); err != nil {
-			return p, err
+			return WorkerProgress{}, errors.Join(ErrInvalidWorkerStatus, err)
+		}
+		if p.BindingScan.Remaining < 0 {
+			return WorkerProgress{}, ErrInvalidWorkerStatus
 		}
 	}
 	// Report recorded evidence only. Probing ownership would create/acquire a lock.
