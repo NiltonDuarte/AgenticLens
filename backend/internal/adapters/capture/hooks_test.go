@@ -49,6 +49,7 @@ func TestCodexHookFeedbackBindsOnlyAnExplicitResponse(t *testing.T) {
 	}
 	if _, err = s.Change(ctx, rows[0].Identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 		r.TicketTitle = "Explicit response title"
+		r.TicketType = string(domain.TicketTypeFix)
 		return r, nil
 	}); err != nil {
 		t.Fatal(err)
