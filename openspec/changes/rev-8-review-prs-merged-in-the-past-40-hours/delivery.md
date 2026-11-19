@@ -22,6 +22,8 @@ The final coverage check matched eight additional delegated reviews to their exa
 
 The AgenticLens skills now ask the launcher to track expected runs and pass the ticket explicitly. Each separate session answers its own binding request. The launcher verifies the accepted registration and ledger entry independently. The review skill reuses its existing run roster, including retries. [Shared procedure](../../../.agents/skills/agentic-lens-operator/references/cli.md#independent-session-binding-and-ledger-coverage).
 
+The main integration refresh preserves all 36 earlier sessions and records all four new merge sessions. Native Codex metadata links three to the root. The separate review was recovered by exact native ID. Its automatic binding was unverified in this worktree.
+
 ## Pull request
 
 Supersedes #152 after renaming the branch to use the REV-8 ticket ID. The earlier PR retains its review history.
@@ -33,8 +35,11 @@ Supersedes #152 after renaming the branch to use the REV-8 ticket ID. The earlie
 - Select the exact published engine release in a clean checkout. Direct source builds can exercise the application fixes before the next release.
 - Recover already-bound Codex sessions when their rollout moves to the archive. Verify the native owner, save the path with accepted facts, and exclude superseded source evidence and dependent links from publication.
 - Teach the AgenticLens skills to track independent same-ticket runs, accept each session's own binding, and verify both registry acceptance and ledger coverage.
+- Integrate `main` at `ccd48107`. Protected Codex publication checks both the admitted private state and the retained workspace directory. Inbox binding and publication scheduling commit together.
 
 ### Verification
+- The integrated `VITEST_MAX_WORKERS=2 make -j 3` gate passed at `5f16d31c` after merging `main`. It ran the Go race suites, 1,050 frontend tests, installer and distribution checks, and builds for four platforms. The protected publication regression rejected a same-ticket directory replacement, preserved both ledgers, and admitted a fresh selection with protected state.
+- Focused integration reviews on Sol 6.2/high and Luna 6/medium approved merge commit `c6f2ca11`. The review covered protected publication, atomic binding and scheduling, and compatibility with archived refresh and ticket metadata.
 - The integrated `VITEST_MAX_WORKERS=2 make -j 3` gate passed at `060847c8` on the renamed branch. It ran the Go race suites, 1,050 frontend tests, installer and distribution checks, and builds for four platforms.
 - The iteration 03 integrated `make -j 3` passed at `c1b87c6e`, including the Go race suites, 1,050 frontend tests and four platform builds. The native archived-rollout and SQLite supersession regressions pass.
 
@@ -46,23 +51,24 @@ Supersedes #152 after renaming the branch to use the REV-8 ticket ID. The earlie
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 65
-- **Active Agent Duration:** 4h 18m (recorded duration including 560s provisional)
+- **Software Development Life Cycle Iterations:** 69
+- **Active Agent Duration:** 4h 41m (recorded duration including 796s provisional)
 - **Context Window Health:** BLOATED — Root agent peak 451.1k tokens (100% of 450k healthy ceiling, 1 compactions) | Subagents peak 446.2k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.8 avg turns/run (peak: 3 turns) | Planner 1.0, Coder 2.0, Tester 3.0, Reviewer 1.0, Reviewer-architecture 2.0, Reviewer-behavior 1.7, Reviewer-data 1.7, Reviewer-tests 1.7
-- **Test-to-Production Code Ratio:** 1.4:1 (+1,240 test lines / +909 prod lines)
-- **Code Delivered:** +2,149 / -295 lines across 27 code files (excluding docs)
-- **Reasoning Effort:** 182,406 reasoning tokens (28.6% of generated output)
-- **Tool Health & Self-Correction:** 1,446 tool calls (96 self-corrections, 93.4% success rate)
+- **Subagent Turn Velocity & Thrashing:** 1.7 avg turns/run (peak: 3 turns) | Planner 1.0, Coder 1.8, Tester 2.3, Reviewer 1.0, Reviewer-architecture 2.0, Reviewer-behavior 1.7, Reviewer-data 1.7, Reviewer-tests 1.7
+- **Test-to-Production Code Ratio:** 1.5:1 (+1,337 test lines / +917 prod lines)
+- **Code Delivered:** +2,254 / -312 lines across 29 code files (excluding docs)
+- **Reasoning Effort:** 198,823 reasoning tokens (28.7% of generated output)
+- **Tool Health & Self-Correction:** 1,582 tool calls (110 self-corrections, 93.0% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 15 execution anomalies detected (5 CRITICAL, 10 WARNING).
+- **Status:** 16 execution anomalies detected (6 CRITICAL, 10 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.7k tokens) — Context tokens reached 450.7k, breaching the 450k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (17 cycles) — Subagent roles 'coder' and 'tester' alternated for 17 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (11 cycles) — Subagent roles 'coder' and 'tester' alternated for 11 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (8 cycles) — Subagent roles 'coder' and 'tester' alternated for 8 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (7 cycles) — Subagent roles 'coder' and 'tester' alternated for 7 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (253.8k tokens) — Context tokens reached 253.8k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (251.2k tokens) — Context tokens reached 251.2k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (333.2k tokens) — Context tokens reached 333.2k, breaching the 250k warning ceiling.
@@ -82,23 +88,23 @@ Supersedes #152 after renaming the branch to use the REV-8 ticket ID. The earlie
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 2 | 371,864 | 4,511 | 3,454,464 | 90.3% | 346.6k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **coder** | 3 | 278,716 | 72,495 | 46,573,568 | 99.4% | 445.9k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **tester** | 2 | 274,610 | 58,712 | 60,730,112 | 99.5% | 446.2k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **reviewer** | 2 | 159,749 | 9,888 | 1,584,896 | 90.8% | 100.3k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Unknown** | 15 | 2,628,548 | 209,683 | 163,109,632 | 98.4% | 451.1k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **coder** | 4 | 348,429 | 80,840 | 51,813,504 | 99.3% | 445.9k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **tester** | 3 | 304,345 | 62,665 | 63,444,864 | 99.5% | 446.2k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **reviewer** | 3 | 403,848 | 12,923 | 3,212,800 | 88.8% | 250.7k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **Unknown** | 16 | 2,763,161 | 232,790 | 179,021,696 | 98.5% | 451.1k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations) |
 | **reviewer-architecture** | 3 | 356,044 | 26,474 | 7,977,472 | 95.7% | 166.2k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **reviewer-behavior** | 3 | 592,278 | 27,172 | 10,101,248 | 94.5% | 188.8k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **reviewer-data** | 3 | 341,300 | 29,707 | 7,744,128 | 95.8% | 161.3k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **reviewer-tests** | 3 | 284,190 | 17,686 | 5,134,848 | 94.8% | 125.1k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **Total** | **36** | **5,287,299** | **456,328** | **306,410,368** | **98.3%** | **451.1k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 36 unavailable / 36 invocations)** |
+| **Total** | **40** | **5,765,459** | **494,768** | **331,905,024** | **98.3%** | **451.1k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 40 unavailable / 40 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 14 | 1,226,725 | 56,684 | 8,851,584 | 87.8% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **gpt-6-luna** | 15 | 1,280,626 | 58,790 | 9,102,336 | 87.7% | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
 | **gpt-6.1-sol** | 14 | 1,733,561 | 110,927 | 32,542,592 | 94.9% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
-| **gpt-6.2-sol** | 8 | 2,327,013 | 288,717 | 265,016,192 | 99.1% | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
-| **Total** | **36** | **5,287,299** | **456,328** | **306,410,368** | **98.3%** | **Unavailable (0 observed, 0 partial, 36 unavailable / 36 invocations)** |
+| **gpt-6.2-sol** | 11 | 2,751,272 | 325,051 | 290,260,096 | 99.1% | Unavailable (0 observed, 0 partial, 11 unavailable / 11 invocations) |
+| **Total** | **40** | **5,765,459** | **494,768** | **331,905,024** | **98.3%** | **Unavailable (0 observed, 0 partial, 40 unavailable / 40 invocations)** |
 
-Retained recorded history: 14 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
+Retained recorded history: 15 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
 <!-- agentic-lens:metrics:end -->
