@@ -49,16 +49,29 @@ func waitPublicationLock(ctx context.Context, file *os.File) error {
 	}
 }
 func AcquirePublication(ctx context.Context, path, project string) (*PublicationLock, error) {
-	return acquirePublication(ctx, path, project, nil)
+	return acquirePublication(ctx, path, project, nil, nil)
 }
 
-func acquirePublication(ctx context.Context, path, project string, protection *ProtectedPublication) (*PublicationLock, error) {
+// AcquireSelectedPublication requires the held directory to match the caller's
+// selection and uses the admitted state when protection is supplied. The caller
+// must retain its directory reference through admission.
+func AcquireSelectedPublication(ctx context.Context, path, project string, expected os.FileInfo, protection *ProtectedPublication) (*PublicationLock, error) {
+	if expected == nil {
+		return nil, fmt.Errorf("workspace directory selection is required")
+	}
+	return acquirePublication(ctx, path, project, expected, protection)
+}
+
+func acquirePublication(ctx context.Context, path, project string, expected os.FileInfo, protection *ProtectedPublication) (*PublicationLock, error) {
 	if strings.TrimSpace(project) == "" {
 		return nil, fmt.Errorf("publication requires an explicit owning project")
 	}
 	parent, err := ProjectDirectory(filepath.Dir(path))
 	if err != nil {
 		return nil, err
+	}
+	if expected != nil && parent != filepath.Dir(path) {
+		return nil, fmt.Errorf("workspace moved after selection; resolve and retry")
 	}
 	selected, err := config.ProjectRoot(project)
 	if err != nil {
@@ -79,12 +92,18 @@ func acquirePublication(ctx context.Context, path, project string, protection *P
 			return nil, err
 		}
 	}
-	if err = MkdirPublicationStateDirectories(filepath.Join(state, "publication"), 0700); err != nil {
-		return nil, fmt.Errorf("operational state home unavailable: %w", err)
-	}
 	directory, err := openPublicationDirectory(parent)
 	if err != nil {
 		return nil, fmt.Errorf("workspace moved or unavailable; resolve and retry: %w", err)
+	}
+	if expected != nil {
+		opened, statErr := directory.Stat()
+		if statErr != nil || !os.SameFile(expected, opened) {
+			return nil, errors.Join(fmt.Errorf("workspace changed after selection; resolve and retry"), statErr, directory.Close())
+		}
+	}
+	if err = MkdirPublicationStateDirectories(filepath.Join(state, "publication"), 0700); err != nil {
+		return nil, errors.Join(fmt.Errorf("operational state home unavailable: %w", err), directory.Close())
 	}
 	if err = waitPublicationLock(ctx, directory); err != nil {
 		return nil, errors.Join(err, directory.Close())

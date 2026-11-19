@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
@@ -280,23 +279,14 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				if e != nil || !enabled {
 					return e
 				}
-				location, pathErr := adapters.ResolveTicketLocation(cfg, ticket, "")
-				if pathErr != nil {
-					success = false
-					lastFailure = pathErr.Error()
-					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Detail: "Resolve an existing ledger or explicitly generate its first destination: " + pathErr.Error()}); e != nil {
-						return e
-					}
-					continue
-				}
-				dest := location.LedgerPath
-
-				args := []string{"generate", "--ticket-id", ticket, "--json-output", dest, "--capture-dir", state, "--capture-auto", "--max-sessions", strconv.Itoa(policy.MaxSessions), "--max-source-bytes", strconv.FormatInt(policy.MaxSourceBytes, 10)}
+				// The writer resolves and retains its own directory selection
+				// rather than receiving a path previously selected by this process.
+				args := []string{"generate", "--ticket-id", ticket, "--capture-dir", state, "--capture-auto", "--max-sessions", strconv.Itoa(policy.MaxSessions), "--max-source-bytes", strconv.FormatInt(policy.MaxSourceBytes, 10)}
 				title, kind, metadataErr := domain.CaptureTicketMetadata(rows, ticket)
 				if metadataErr != nil {
 					success = false
 					lastFailure = metadataErr.Error()
-					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Destination: dest, Detail: "Conflicting ticket types prevent publication. Supply one explicit ticket type through capture bind and retry reconciliation."}); e != nil {
+					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Detail: "Conflicting ticket types prevent publication. Supply one explicit ticket type through the binding request and retry reconciliation."}); e != nil {
 						return e
 					}
 					fmt.Fprintln(os.Stderr, "automatic publication pending:", metadataErr)
@@ -364,7 +354,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				if err != nil {
 					success = false
 					lastFailure = err.Error()
-					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Destination: dest, Detail: "Native generation failed or timed out. Source acceptance does not prove publication; inspect diagnostics and recover interrupted output with generate."}); e != nil {
+					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Detail: "Native generation failed or timed out. Inspect the worker output. Automatic publication requires an existing ledger; use explicit generation for the first destination or to recover interrupted output."}); e != nil {
 						return e
 					}
 					fmt.Fprintln(os.Stderr, "automatic publication pending:", err)

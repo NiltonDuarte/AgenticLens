@@ -27,13 +27,14 @@ Before dispatch, load [model-policy.yaml](model-policy.yaml) and follow [model e
 - Give every reviewer the same base/head commit and requirements. For uncommitted code, record a diff/content fingerprint covering changed and relevant untracked files. Include active product/deployment constraints and useful raw test evidence; do not seed an approval or suspected answer. Fresh context is preferred where available. Do not distribute other reviewers' conclusions before their first pass.
 - Freeze product/test edits during this pass. Shared-checkout reviewers may overlap in reading, but cannot change production/test code. Probes must use disposable paths and separate resource names/ports. A reviewer that observes source changes reports stale evidence instead of approving a mixed revision.
 - Dispatch independent focuses concurrently up to actual harness capacity. Reserve capacity for the parent as needed. If all persona/model runs cannot run at once, queue remaining focuses in waves against the same frozen revision; do not drop coverage or pretend sequential work was parallel. Use supported native/delegated tools and report unavailable capabilities. Do not create top-level threads or change models/providers merely to obtain parallelism.
+- Use the existing run roster to track [binding and ledger coverage](../../agentic-lens-operator/references/cli.md#independent-session-binding-and-ledger-coverage) for every separate reviewer session, including retries. Verify bindings as the runs report back. Before declaring telemetry complete, compare the exact native IDs with the ticket ledger and record unresolved coverage in delivery before compacting review records.
 - Each reviewer follows SKILL.md: independently form failure hypotheses, trace relevant unchanged dependencies, seek refuting evidence and report findings with bounded confidence. Coordinate expensive identical tests through the parent rather than running four whole suites. Shared valid test results are reusable; independent reasoning is still required.
 
 ### Dispatch brief
 
 Fill in this brief rather than copying four general review requests:
 
-    Ticket/change: <canonical ticket ID and active OpenSpec change>
+    Ticket/change: <canonical ticket ID, title and active OpenSpec change>
     Role: <registered focus reviewer or explicit persona pointer>; question: <concrete risk>
     Run: <run ID, phase, profile and acknowledged model/effort, report path>
     Evidence: <base/head or immutable fingerprint, raw diff, requirements,
@@ -43,6 +44,8 @@ Fill in this brief rather than copying four general review requests:
     Own: <unique report path only; no product/test edits>
     Shared checkout: preserve others' changes; isolated probes only.
     First pass: investigate independently; do not read sibling conclusions.
+    Capture: answer your own harness binding request for the assigned ticket.
+             Return your native source/session ID if known and the binding outcome.
     Return: reviewed revision, hypotheses/disposition, findings, verification,
             gaps and APPROVED / CHANGES_REQUESTED / INCOMPLETE.
     Parent owns fixes, consolidated verdict, telemetry and publication.

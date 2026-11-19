@@ -84,6 +84,7 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 	if err != nil {
 		return nil, err
 	}
+	defer closeWorkspaceSelections(targetFiles, &report.Warnings)
 
 	report.Warnings = append([]string{}, discoveryDiagnostics...)
 	report.Scanned = len(targetFiles)
@@ -111,8 +112,8 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 	if opts.RecomputeGit {
 		fresh, err := git.ComputeCodeFactsAtRefInDir(e.projectRoot, opts.CodeRef, classificationCfg)
 		if err != nil {
-			for _, metricPath := range targetFiles {
-				report.Results = append(report.Results, TicketMigrationResult{TicketID: func() string { id, _ := recordedTicket(metricPath); return id }(), WorkspacePath: filepath.Dir(metricPath), LedgerPath: metricPath, Error: fmt.Errorf("recomputing Git facts: %w", err)})
+			for _, target := range targetFiles {
+				report.Results = append(report.Results, TicketMigrationResult{TicketID: target.TicketID, WorkspacePath: target.Path, LedgerPath: target.LedgerPath, Error: fmt.Errorf("recomputing Git facts: %w", err)})
 			}
 			report.Warnings = append(report.Warnings, fmt.Sprintf("requested Git measurement failed before publication: %v", err))
 			return report, nil
@@ -177,24 +178,19 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 			Backup:          false,
 			UpdateSummaries: false,
 		}
-		migReport, migErr := migRunner.Run(migOpts)
-		report.SchemaMigration = migReport
-		if migErr != nil {
-			report.Warnings = append(report.Warnings, fmt.Sprintf("Schema migration failed: %v", migErr))
-		} else if migReport != nil {
-			for _, w := range migReport.Errors {
-				report.Warnings = append(report.Warnings, fmt.Sprintf("Schema migration: %s", w))
-			}
+		report.SchemaMigration = migRunner.runSelected(targetFiles, discoveryDiagnostics, migOpts, domain.CurrentSchemaVersion, cfg)
+		for _, w := range report.SchemaMigration.Errors {
+			report.Warnings = append(report.Warnings, fmt.Sprintf("Schema migration: %s", w))
 		}
 	}
 
 	nowISO := opts.SnapshotCutoff.UTC().Format(time.RFC3339Nano)
 
 	// 2. Iterate each discovered workspace with per-ticket error isolation
-	for _, metricPath := range targetFiles {
+	for i, target := range targetFiles {
 		lockCtx, lockCancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		ticketResult := e.processSingleWorkspace(
-			lockCtx, metricPath,
+			lockCtx, target,
 			opts,
 			opencodeDB,
 			gitUser,
@@ -204,9 +200,10 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 		)
 
 		lockCancel()
+		closeWorkspaceSelections(targetFiles[i:i+1], &report.Warnings)
 
 		if ticketResult.Error != nil {
-			report.Warnings = append(report.Warnings, fmt.Sprintf("Workspace %s: %v", metricPath, ticketResult.Error))
+			report.Warnings = append(report.Warnings, fmt.Sprintf("Workspace %s: %v", target.LedgerPath, ticketResult.Error))
 		}
 
 		if ticketResult.RefreshIncomplete {
@@ -255,7 +252,7 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 
 func (e *BackfillEngine) processSingleWorkspace(
 	ctx context.Context,
-	metricPath string,
+	location adapters.WorkspaceLocation,
 	opts BackfillOptions,
 	opencodeDB *opencode.OpenCodeDB,
 	gitUser string,
@@ -263,12 +260,11 @@ func (e *BackfillEngine) processSingleWorkspace(
 	nowISO string,
 	cfg domain.ProjectConfig,
 ) (result TicketMigrationResult) {
-	workspaceDir := filepath.Dir(metricPath)
-	workspaceName, _ := recordedTicket(metricPath)
+	metricPath := location.LedgerPath
 
 	result = TicketMigrationResult{
-		TicketID:      workspaceName,
-		WorkspacePath: workspaceDir,
+		TicketID:      location.TicketID,
+		WorkspacePath: location.Path,
 		LedgerPath:    metricPath,
 	}
 
@@ -280,15 +276,19 @@ func (e *BackfillEngine) processSingleWorkspace(
 		result.Error = fmt.Errorf("resolving ledger publication: %w", err)
 		return result
 	}
+	if canonicalPath != location.LedgerPath {
+		result.Error = fmt.Errorf("workspace ledger moved after selection; resolve and retry")
+		return result
+	}
 	var owner io.Closer
 	if opts.DryRun {
-		directory, e := capture.ReadPublicationDirectory(canonicalPath)
+		directory, e := location.AcquirePublicationRead()
 		err = e
 		if e == nil {
 			owner = directory
 		}
 	} else {
-		publisher, e := capture.AcquirePublication(ctx, canonicalPath, publicationProject(cfg, canonicalPath))
+		publisher, e := location.AcquirePublication(ctx, publicationProject(cfg, canonicalPath))
 		err = e
 		if e == nil {
 			owner = publisher
@@ -405,7 +405,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	needsNormalization := sourceVersion < domain.CurrentSchemaVersion || hasLegacyFactCollections(content)
-	ticketID := workspaceName
+	ticketID := identity
 	if factLedger.TicketID != nil && strings.TrimSpace(*factLedger.TicketID) != "" {
 		ticketID = strings.TrimSpace(*factLedger.TicketID)
 	}
@@ -490,8 +490,8 @@ func (e *BackfillEngine) processSingleWorkspace(
 		for _, owner := range append(append([]domain.SessionFact{}, codexSessions...), otherSessions...) {
 			protected[owner.ID] = true
 		}
-		workspacePaths := []string{workspaceDir}
-		relative, err := filepath.Rel(filepath.Dir(cfg.ConfigPath), workspaceDir)
+		workspacePaths := []string{location.Path}
+		relative, err := filepath.Rel(filepath.Dir(cfg.ConfigPath), location.Path)
 		if err == nil && relative != "." && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
 			workspacePaths = append(workspacePaths, filepath.ToSlash(relative))
 		}

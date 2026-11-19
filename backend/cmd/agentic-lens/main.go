@@ -153,43 +153,24 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			fmt.Fprintln(os.Stderr, pathErr)
 			os.Exit(1)
 		}
-		physical, pathErr := filesystem.PhysicalPath(expanded)
-		if pathErr != nil {
-			fmt.Fprintln(os.Stderr, pathErr)
-			os.Exit(1)
-		}
-		*jsonOutputFlag = physical
+		*jsonOutputFlag = expanded
 	}
 	selectedSource, err := adaptersconfig.ResolveSource(*sourceFlag, projCfg.Telemetry.DefaultSource)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	if *jsonOutputFlag == "" {
-		location, resolveErr := adapters.ResolveTicketLocation(projCfg, *ticketIDFlag, "")
-		if resolveErr != nil {
-			fmt.Fprintln(os.Stderr, "Ledger destination required:", resolveErr)
-			os.Exit(1)
-		}
-		*jsonOutputFlag = location.LedgerPath
-	} else {
-		if _, e := os.Stat(*jsonOutputFlag); errors.Is(e, os.ErrNotExist) {
-			if e = adapters.ValidateInitialLedgerDestination(projCfg, *ticketIDFlag, *jsonOutputFlag); e != nil {
-				fmt.Fprintln(os.Stderr, e)
-				os.Exit(1)
-			}
-			_, discoveryIssues := adapters.DiscoverWorkspaceLocations(projCfg)
-			for _, issue := range discoveryIssues {
-				fmt.Fprintf(os.Stderr, "Warning at %s: %s\n", issue.Path, issue.Message)
-			}
-		} else if e != nil {
-			fmt.Fprintln(os.Stderr, e)
-			os.Exit(1)
-		} else if e = adapters.ValidateLedgerDestinationScope(projCfg, *jsonOutputFlag); e != nil {
-			fmt.Fprintln(os.Stderr, e)
-			os.Exit(1)
+	location, resolveErr := adapters.SelectWorkspacePublication(projCfg, *ticketIDFlag, *jsonOutputFlag)
+	if resolveErr != nil {
+		fmt.Fprintln(os.Stderr, "Ledger destination required:", resolveErr)
+		os.Exit(1)
+	}
+	if *jsonOutputFlag != "" {
+		for _, issue := range location.Diagnostics {
+			fmt.Fprintf(os.Stderr, "Warning at %s: %s\n", issue.Path, issue.Message)
 		}
 	}
+	*jsonOutputFlag = location.LedgerPath
 	effectiveSummary, err := resolveGenerationSummaryPath(project, projCfg, *appendFlag, provided["append"], *jsonOutputFlag, *ticketIDFlag)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -309,11 +290,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 	// This prevents an earlier source view from publishing after a later generation.
 	if *jsonOutputFlag != "" {
 		lockCtx, lockCancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		acquire := capture.AcquirePublication
-		if protection != nil {
-			acquire = protection.Acquire
-		}
-		publicationLock, lockErr := acquire(lockCtx, *jsonOutputFlag, project)
+		publicationLock, lockErr := location.AcquirePublicationWithProtection(lockCtx, project, protection)
 		lockCancel()
 		if lockErr != nil {
 			fmt.Fprintln(os.Stderr, "Error acquiring ledger publication ownership:", lockErr)
@@ -324,6 +301,10 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 				fmt.Fprintln(os.Stderr, "Publication unlock:", closeErr)
 			}
 		}()
+		if closeErr := location.Close(); closeErr != nil {
+			fmt.Fprintln(os.Stderr, "Releasing ledger selection:", closeErr)
+			os.Exit(1)
+		}
 	}
 	if *jsonOutputFlag != "" {
 		recovered, e := adapters.RecoverPublication(*jsonOutputFlag, authorizedPublicationPaths(*jsonOutputFlag, *appendFlag))

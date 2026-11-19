@@ -297,13 +297,7 @@ func validateOwnerSource(ctx context.Context, project string, r domain.CaptureRe
 		if err != nil {
 			return err
 		}
-		if t.ID != r.Identity.SessionID {
-			return errors.New("source identity mismatch")
-		}
-		if bound {
-			return nil
-		}
-		return ValidateProject(project, t.WorkingDirectory)
+		return validateCodexOwnerMetadata(project, r, t)
 	}
 	db, err := openOpenCodeSource(cfg, r.Identity.Store)
 	if err != nil {
@@ -320,6 +314,17 @@ func validateOwnerSource(ctx context.Context, project string, r domain.CaptureRe
 	}
 	return ValidateProject(project, directory)
 }
+
+func validateCodexOwnerMetadata(project string, r domain.CaptureRegistration, metadata codex.SessionMetadataContext) error {
+	if metadata.ID != r.Identity.SessionID {
+		return errors.New("source identity mismatch")
+	}
+	if r.TicketID != "" && r.ProjectDirectory == project && hasExplicitSourceBinding(r) {
+		return nil
+	}
+	return ValidateProject(project, metadata.WorkingDirectory)
+}
+
 func (s *Store) validateOwner(ctx context.Context, r domain.CaptureRegistration) error {
 	if s.project == "" {
 		return nil

@@ -1,0 +1,53 @@
+# REV-8 merged pull request review
+
+**Changes requested at `9308ac77`.** The audit found two defects against requirements delivered in this window. Both survive at the final revision.
+
+## Findings
+
+1. **6/10 · #144 · Generation can update the wrong ledger after a move.** Implicit generation resolves a physical home and passes only its pathname to publication admission. If the directory moves before admission and a same-ticket copy takes its former pathname, admission opens the copy. The later ticket-ID check accepts it. A deterministic disposable probe ran the same resolver, lock, recovery and write sequence and changed the copy while leaving the selected ledger untouched. The equivalent artifact-write and detail-read replacement controls passed. Retain the selected physical directory through admission and retry if it changed. [Generation resolution](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/backend/cmd/agentic-lens/main.go#L154) · [Publication admission](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/backend/cmd/agentic-lens/main.go#L292) · [AL-84 acceptance](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/openspec/changes/al-84-flexible-workspace-layouts-and-openspec/specs/workspace-locations/spec.md#L40).
+2. **5/10 · #151 · A slow SSE subscriber can miss the only recovery snapshot.** The bounded subscriber queue drops a tree event when full, but the server records the recovered tree as sent globally. Subsequent successful polls suppress the unchanged tree. A real SQLite probe filled one subscriber's queue during an outage, restored the database and let that subscriber catch up. A second subscriber saw recovery, while the first received only the stale diagnostics even after another successful poll. The dashboard clears its banner on a tree event. Resynchronize lagging subscribers or make them reconnect for a fresh snapshot. [Queue and drop](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/backend/internal/adapters/live/service.go#L142) · [Deduplication](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/backend/internal/adapters/live/service.go#L228) · [Dashboard diagnostic reset](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/web/src/views/LiveObservability.tsx#L76).
+
+## Existing defects confirmed at the reviewed revision
+
+- **6/10 · Backfill and migration have the same physical-home gap.** Both batch readers reduce selected homes to pathname strings and acquire them later. Disposable runs with real publication leases replaced a later batch target while the first target waited. Backfill and migration both wrote into the replacement, with either the same or a different ticket ID. The baseline already discarded location identity before admission. [Discovery](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/backend/internal/adapters/backfill/discovery.go#L34) · [Backfill admission](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/backend/internal/adapters/backfill/engine.go#L291) · [Migration admission](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/backend/internal/adapters/backfill/migration_runner.go#L111).
+- **6/10 · The repository selects an unavailable engine pin.** The exact GitHub release lookup returned HTTP 404. An existing local executable with that version failed to read the frozen project's policy at `--list`. The pin and incompatible bootstrap configuration were both present before #144. The published release that corresponds to the reviewed head is `v3.0.0-rc.156+9308ac7`. [Shared pin](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/.agenticlens-config.yaml#L16) · [Published candidate](https://github.com/NiltonDuarte/AgenticLens/releases/tag/v3.0.0-rc.156%2B9308ac7).
+- **4/10 · Release Please can attach binaries to an un-installable forced tag.** The advertised `agentic-lens-vX.Y.Z` input is normalized to `vX.Y.Z` for the binary version, but uploads retain the original tag. Remote installers require a `vX.Y.Z` pin and request that exact tag. Source tracing confirms the mismatch for a release available only under the prefixed tag. The workflow and native installer paths are unchanged in the scope. [Publication tag](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/.github/workflows/release-please.yml#L98) · [Downloader URL](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/backend/internal/adapters/manager/install.go#L239).
+- **6/10 · OpenCode task navigation drops source-proven metadata child IDs.** A native task row with `state.metadata.sessionId` and native parent proof produced an empty link in both event and delegation projections. JSON output containing the same ID linked in the control. #133 documents the gap. [Child projection](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/backend/internal/adapters/opencode/skills_tasks.go#L139).
+- **5/10 · Codex failed function outputs undercount errors.** Disposable controls produced one call and zero errors for completed, failed and error outputs, although the source event changes status. #133 documents the gap. [Function output handling](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/backend/internal/adapters/codex/rollout.go#L760).
+
+## Reviewed merges
+
+| PR | Merge UTC | Revision | Disposition |
+| --- | --- | --- | --- |
+| [#144](https://github.com/NiltonDuarte/AgenticLens/pull/144) | Nov 17 19:12:27 | `0e9c8b36` | Generation replacement defect. Discovery, pending state and portable-read checks passed. |
+| [#133](https://github.com/NiltonDuarte/AgenticLens/pull/133) | Nov 17 21:53:26 | `b6ab0471` | Audit claims identify their evidence revision and distinguish existing source defects and observed compatibility. |
+| [#148](https://github.com/NiltonDuarte/AgenticLens/pull/148) | Nov 17 23:47:13 | `54989015` | Release inventory, hash failure and host execution checks passed. The repository pin predates this PR. |
+| [#149](https://github.com/NiltonDuarte/AgenticLens/pull/149) | Nov 18 00:18:29 | `4e86badf` | Worktree routing, disabled capture, exact source admission and protocol rejection passed focused fixtures. Retained native test evidence covers OpenCode 1.19.5. |
+| [#150](https://github.com/NiltonDuarte/AgenticLens/pull/150) | Nov 18 00:46:39 | `69b8c8d8` | Focused tests reject duplicate owners, keep valid sibling owners usable and preserve genuine repeated occurrences. |
+| [#145](https://github.com/NiltonDuarte/AgenticLens/pull/145) | Nov 18 01:08:54 | `fc489ff9` | The recommendation defers any default change until the unchanged-write and preservation requirements pass. |
+| [#151](https://github.com/NiltonDuarte/AgenticLens/pull/151) | Nov 18 01:38:56 | `9308ac77` | SSE recovery can be dropped under backpressure. Existing SQLite recovery and unsupported-source checks passed. |
+
+## Verification and limits
+
+- `make -j 3` passed in a detached Linux checkout at `9308ac77`. It ran Go race/integration and vet, 231 frontend unit and 819 integration tests, type-checking, lint and installation, capture distribution, release revision and orchestration checks. All four native platform targets built. An initial host-only make override leaked into the release fixtures and failed their four-platform assertions. The unrestricted rerun passed.
+- The pinned OpenSpec workflow tests passed. `release-package` and `release-verify` checked four archives and eight raw executables. The matching Linux manager and engine executed. The standalone engine served its embedded JS and CSS, workspace API and an explicit HTTP 503 for an unconfigured live source.
+- Published manifests at RC 152, 154 and 156 each listed all 12 expected records. This check verified inventory shape. The local release check also hashed the actual local artifacts.
+- All nine Pages preview tests passed. GitHub reported a successful production Pages job at the #144 merge revision. Ruby was unavailable in the audit environment. [Pages production job](https://github.com/NiltonDuarte/AgenticLens/actions/runs/44156081637/job/134297140561).
+- Removing tree retry invalidation or swapping in the prior release Makefile made the corresponding existing tests fail in disposable copies. Neither passing control covers the replacement-before-admission or full-subscriber recovery probes above.
+- The Luna data review proposed that invalid local YAML could silently select a machine source from the shared file. The shared loader explicitly clears source fields before returning project configuration. A standalone probe with a valid SQLite path in shared YAML and broken local YAML returned `503 source_unavailable`. [Source reset](https://github.com/NiltonDuarte/AgenticLens/blob/9308ac77/backend/internal/adapters/config/loader.go#L248).
+- This audit ran on Linux. Native macOS execution, fresh OpenCode provider sessions and physical power-loss testing remain unverified.
+
+## Independent review
+
+The discovery passes used frozen candidate `9308ac77` and its first-parent PR diffs. The release specialist focused on #148 and its configuration and installation dependencies. The live specialist focused on #151 and the #150 hydration interaction.
+
+| Focus | `gpt-6.1-sol` / high | `gpt-6-luna` / medium |
+| --- | --- | --- |
+| Behavior and integration | Changes requested for two documented existing source-projection defects. | Approved for the scoped source trace. |
+| Data integrity and failure handling | Changes requested for the existing batch replacement defect. | Changes requested for a proposed shared-source fallback. Refuted with the loader trace and standalone probe above. |
+| Architecture and maintainability | Changes requested for generation writing to a replacement home. | Approved for the scoped source trace. |
+| Test effectiveness | Approved for the scoped tests and disposable controls. | Incomplete locally because the shared checkout lacked embedded assets. The central frozen build created the assets and passed the CLI integration suite. |
+| Release and installer verification | Approved for the PR. Identified the existing prefixed-tag issue. | Approved for the scoped source trace and focused tests. |
+| Live stream and dashboard behavior | Changes requested for missed recovery on a full SSE queue. | Changes requested for the same missed-recovery defect. |
+
+T3 acknowledged Luna model and effort at dispatch. The native reviewer assignments requested Sol/high. Source-session metadata was not used to establish model identity. The coordinator independently reproduced the live finding, verified the release pin against the local version and GitHub, and adjudicated reported findings against the frozen source.

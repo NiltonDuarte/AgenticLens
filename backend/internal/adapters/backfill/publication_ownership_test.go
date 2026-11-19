@@ -66,11 +66,12 @@ func TestManualWritersWaitForFormatterPublication(t *testing.T) {
 			case <-deadline.Done():
 				t.Fatal("formatter did not reach B contention after reading A")
 			}
+			location := selectFixturePublication(t, root, paths[0])
 			writeCtx := &publicationWaitContext{Context: deadline, waiting: make(chan struct{})}
 			writeDone := make(chan error, 1)
 			go func() {
 				if writer == "migration" {
-					res, issues := NewMigrationRunner(nil).migrateWorkspace(writeCtx, paths[0], MigrationOptions{}, domain.CurrentSchemaVersion, domain.ProjectConfig{})
+					res, issues := NewMigrationRunner(nil).migrateWorkspace(writeCtx, location, MigrationOptions{}, domain.CurrentSchemaVersion, domain.ProjectConfig{})
 					if len(issues) > 0 {
 						writeDone <- errors.New(issues[0])
 						return
@@ -81,7 +82,7 @@ func TestManualWritersWaitForFormatterPublication(t *testing.T) {
 					}
 					writeDone <- res.Error
 				} else {
-					res := NewEngine().processSingleWorkspace(writeCtx, paths[0], BackfillOptions{}, nil, "test-user", nil, "2026-01-02T03:04:05Z", domain.ProjectConfig{})
+					res := NewEngine().processSingleWorkspace(writeCtx, location, BackfillOptions{}, nil, "test-user", nil, "2026-01-02T03:04:05Z", domain.ProjectConfig{})
 					writeDone <- res.Error
 				}
 			}()
@@ -152,11 +153,12 @@ func TestManualWritersPreservePendingPublication(t *testing.T) {
 			if err := owner.Close(); err != nil {
 				t.Fatal(err)
 			}
+			location := selectFixturePublication(t, project, path)
 			if writer == "migration" {
-				res, _ := NewMigrationRunner(nil).migrateWorkspace(context.Background(), path, MigrationOptions{}, domain.CurrentSchemaVersion, domain.ProjectConfig{})
+				res, _ := NewMigrationRunner(nil).migrateWorkspace(context.Background(), location, MigrationOptions{}, domain.CurrentSchemaVersion, domain.ProjectConfig{})
 				err = res.Error
 			} else {
-				res := NewEngine().processSingleWorkspace(context.Background(), path, BackfillOptions{}, nil, "", nil, "", domain.ProjectConfig{})
+				res := NewEngine().processSingleWorkspace(context.Background(), location, BackfillOptions{}, nil, "", nil, "", domain.ProjectConfig{})
 				err = res.Error
 			}
 			if err == nil {
@@ -168,4 +170,22 @@ func TestManualWritersPreservePendingPublication(t *testing.T) {
 			}
 		})
 	}
+}
+
+func selectFixturePublication(t *testing.T, project, path string) adapters.WorkspaceLocation {
+	t.Helper()
+	_, cfg, err := adapters.LoadWorkspaceProject(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	location, err := adapters.SelectWorkspacePublication(cfg, "", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := location.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	return location
 }

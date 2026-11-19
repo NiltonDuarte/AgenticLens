@@ -1,7 +1,6 @@
 package capture
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -53,11 +52,6 @@ func (p ProtectedPublication) Validate(project string) error {
 		return errors.New("protected publication project or state changed since worker admission; pending work retained")
 	}
 	return nil
-}
-
-// Acquire uses this verified physical state for both the lock and its journal.
-func (p ProtectedPublication) Acquire(ctx context.Context, ledger, project string) (*PublicationLock, error) {
-	return acquirePublication(ctx, ledger, project, &p)
 }
 
 func (p *ProtectedPublication) checkPrivatePath(path string) error {

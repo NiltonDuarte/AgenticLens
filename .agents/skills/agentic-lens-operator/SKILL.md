@@ -19,6 +19,8 @@ Help users operate an installed AgenticLens release from the repository where th
 4. Make a change only when the user directly requested or already allowed that specific change. Otherwise ask permission before running it. Honor access controls enforced by the adopting repository and host environment; do not add a separate access-control model.
 5. Verify outcomes using command output and persisted ledger state. Report the exact scope, completed work, remaining pending steps, and any errors. Do not infer team-wide completion from one developer's local run.
 
+For work split across separately launched or manually started sessions, follow [independent session binding and ledger coverage](references/cli.md#independent-session-binding-and-ledger-coverage).
+
 ## Migration and Backfill Coordination
 
 Ledgers are shared project records across developers, machines and harnesses. Preserving supported recorded facts does not require the producing machine's private database or logs; local sources are needed for new extraction or missing enrichment. Follow the [portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract); report an installed release's conflicting behavior as a compatibility gap rather than inventing receipts or declaring existing history untrusted.

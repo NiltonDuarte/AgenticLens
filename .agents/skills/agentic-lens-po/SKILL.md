@@ -69,3 +69,6 @@ Developers advance index status to In Progress; completed specifications move to
 plan/done and leave the index under repository lifecycle policy, without a Done
 section. Finish with [final telemetry and PR delivery](../../../AGENTS.md#1-ticketed-and-ad-hoc-work)
 for the PO session only; do not create downstream developer changes or start application development. OpenSpec planning completion/archive does not approve implementation or close roadmap tickets automatically.
+
+If separate sessions contribute to the same PO ticket, verify their bindings and
+ledger entries with the [independent session procedure](../agentic-lens-operator/references/cli.md#independent-session-binding-and-ledger-coverage).
