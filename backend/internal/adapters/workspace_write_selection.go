@@ -342,7 +342,9 @@ func retireTentativeNativeLocation(ctx context.Context, project string, location
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	return nil
+	// A previous recovery may have removed the marker before syncing its
+	// directory. Make its absence durable before replacing the receipt.
+	return syncDirectory(owner.DirectoryPath())
 }
 
 // ValidateCurrentNativePublication confirms the selected directory still has

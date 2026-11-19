@@ -29,6 +29,7 @@ class Owner:
     tools: Counter = field(default_factory=Counter)
     usage: Counter = field(default_factory=Counter)
     model_millis: Counter = field(default_factory=Counter)
+    completed_intervals: dict[str, tuple[str, int, int]] = field(default_factory=dict)
     open_intervals: dict[str, tuple[str, int, int]] = field(default_factory=dict)
     latest_completion: float = 0
     completed: int = 0
@@ -84,7 +85,9 @@ def codex_owners(home):
             if event["type"] == "event_msg" and kind == "task_complete":
                 end = unix_time(event["timestamp"])
                 started = starts.pop(payload["turn_id"])
-                owner.model_millis[version_model] += round(1000 * (end - started))
+                start_ms, end_ms = round(started * 1000), round(end * 1000)
+                owner.completed_intervals[payload["turn_id"]] = (version_model, start_ms, end_ms)
+                owner.model_millis[version_model] += end_ms - start_ms
                 owner.latest_completion = max(owner.latest_completion, end)
                 owner.completed += 1
             if event["type"] == "event_msg" and kind == "token_count":
@@ -122,6 +125,7 @@ def opencode_owners(path):
                 owner = owners[session_id]
                 timing = message["time"]
                 if timing.get("completed") is not None:
+                    owner.completed_intervals[message_id] = (message["modelID"], timing["created"], timing["completed"])
                     owner.model_millis[message["modelID"]] += timing["completed"] - timing["created"]
                     owner.latest_completion = max(owner.latest_completion, timing["completed"] / 1000)
                     owner.completed += 1
@@ -250,17 +254,34 @@ def held_intervals(rollup, expected, root, cutoff, checkpoints=None, *, first_pu
         require((owner.open == 1 and len(owner.open_intervals) == 1) if session_id == root else
                 (owner.open == 0 and owner.completed > 0),
                 f"{session_id}: native held interval or child completion is unproven")
-        require(round(owner.latest_completion * 1000) <= cutoff_ms,
-                f"{session_id}: native completion is later than the held cutoff")
-        durations = owner.model_millis.copy()
+        completed_durations = owner.model_millis
+        provisional_durations = Counter()
+        completed_count, latest_completion = owner.completed, owner.latest_completion
+        later_finishes = []
+        if round(latest_completion * 1000) > cutoff_ms:
+            require(first_publication and session_id == root and len(owner.completed_intervals) == owner.completed,
+                    f"{session_id}: native completion is later than the held cutoff")
+            completed_durations = Counter()
+            completed_count, latest_completion = 0, 0
+            for identifier, (model, start, end) in owner.completed_intervals.items():
+                require(start <= end, f"{session_id}: native completion precedes the interval start")
+                if end <= cutoff_ms:
+                    completed_durations[model] += end - start
+                    completed_count += 1
+                    latest_completion = max(latest_completion, end / 1000)
+                else:
+                    provisional_durations[model] += max(0, cutoff_ms - start)
+                    later_finishes.append({
+                        "id": identifier, "model": model, "started_epoch_ms": start, "finished_epoch_ms": end,
+                    })
         for model, start, activity in owner.open_intervals.values():
             require(start <= activity, f"{session_id}: native activity precedes the interval start")
             if activity <= cutoff_ms:
-                durations[model] += cutoff_ms - start
+                provisional_durations[model] += cutoff_ms - start
             else:
                 require(first_publication, f"{session_id}: no native evidence at the held cutoff")
-        active = sum(duration_seconds(milliseconds) for milliseconds in durations.values())
-        measured = owner.seconds
+        active = sum(duration_seconds(milliseconds) for milliseconds in (completed_durations + provisional_durations).values())
+        measured = sum(duration_seconds(milliseconds) for milliseconds in completed_durations.values())
         fact = recorded[session_id]
         require(fact == {"active_seconds": active, "measured_seconds": measured, "provisional_seconds": active - measured},
                 f"{session_id}: held duration differs from the native intervals at cutoff {cutoff}")
@@ -269,12 +290,14 @@ def held_intervals(rollup, expected, root, cutoff, checkpoints=None, *, first_pu
             require(checkpoint and abs(unix_time(checkpoint) - owner.latest_completion) < 0.001,
                     f"{session_id}: published held snapshot lacks its native child completion checkpoint")
         native[session_id] = {
-            **fact, "native_completed_intervals": owner.completed, "native_latest_completion_epoch": owner.latest_completion or None,
+            **fact, "native_completed_intervals": completed_count, "native_latest_completion_epoch": latest_completion or None,
             "open_intervals": [
                 {"id": identifier, "model": model, "started_epoch_ms": start, "activity_epoch_ms": activity}
                 for identifier, (model, start, activity) in owner.open_intervals.items()
             ],
         }
+        if later_finishes:
+            native[session_id]["later_finishes"] = later_finishes
         if checkpoints is not None:
             native[session_id]["published_completion_checkpoint"] = checkpoint
     if not first_publication:

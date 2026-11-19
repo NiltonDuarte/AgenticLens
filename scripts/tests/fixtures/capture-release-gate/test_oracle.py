@@ -106,6 +106,25 @@ class PendingSnapshotOracleTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "native completion is later than the held cutoff"):
             check_birth(snapshot, "opencode", native, "root", "unrelated", first, reconciliation, settled)
 
+        # The completed source message confirms it was in flight at the
+        # cutoff, even though the next streaming part had not begun.
+        owner.completed = 2
+        owner.model_millis["fixture"] += 2081
+        owner.completed_intervals = {
+            "earlier": ("fixture", 7521, 9521),
+            "repair": ("fixture", 10000, 12081),
+        }
+        evidence = check_birth(inflated, "opencode", native, "root", "unrelated", first, reconciliation, settled)
+        self.assertEqual(evidence["ticket_measured_seconds"], 2)
+        self.assertEqual(evidence["ticket_provisional_seconds"], 2)
+        self.assertEqual(evidence["native_intervals"]["root"]["native_completed_intervals"], 1)
+        prematurely_measured = {**premature, "invocations": [{
+            **root["invocations"][0], "active_duration_seconds": 4,
+        }]}
+        wrong = {**ledger, "sessions": [prematurely_measured]}, "- **Active Agent Duration:** 0m 4s (recorded duration)"
+        with self.assertRaisesRegex(RuntimeError, "held duration differs"):
+            check_birth(wrong, "opencode", native, "root", "unrelated", first, reconciliation, settled)
+
     def test_rejects_empty_first_canonical_ledger_even_with_matching_commit_timestamps(self):
         started = "2026-11-19T19:31:00Z"
         ledger = {"ticket_id": TICKET, "ticket_title": TITLE, "ticket_type": "fix",
