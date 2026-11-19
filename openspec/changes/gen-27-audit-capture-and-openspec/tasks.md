@@ -30,6 +30,6 @@ Iteration 03 review covers callback installation and worker behavior, integrity 
 
 ### Display-title publication correction
 
-- [ ] 3.6 Preserve the existing ledger title during automatic generation and allow publication when registered display titles disagree. Retain canonical ticket ownership, explicit manual title selection and ticket-type validation.
-- [ ] 3.7 Verify the correction through the automatic worker path with matching canonical IDs, conflicting display titles and preserved accepted history. Check canonical-ID fallback for titleless ledgers with conflicting hints, manual title selection and unchanged type conflict handling. Review behavior, portable data and regression coverage.
+- [x] 3.6 Preserve the existing ledger title during automatic generation and allow publication when registered display titles disagree. Retain canonical ticket ownership, explicit manual title selection and ticket-type validation.
+- [x] 3.7 Verify the correction through the automatic worker path with matching canonical IDs, conflicting display titles and preserved accepted history. Check canonical-ID fallback for titleless ledgers with conflicting hints, manual title selection and unchanged type conflict handling. Review behavior, portable data and regression coverage.
 - [ ] 3.8 Reconcile the verified pending binding in the original worktree and verify ledger and summary publication. Record actual outcomes and any remaining source or destination failure.
