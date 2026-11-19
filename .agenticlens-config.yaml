@@ -42,6 +42,9 @@ ticket:
     - prefix: FIX-
       description: Bug fixes, defect remediation, and corrective patches
       ticket_type: fix
+    - prefix: REV-
+      description: Architecture, code, and test suite reviews
+      ticket_type: chore
   # Ignore case while matching; preserve recorded ticket spelling.
   case_insensitive: true
 # Explicit ledger search locations. Roadmap tickets remain in alspaces/plan.
