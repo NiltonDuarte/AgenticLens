@@ -51,6 +51,11 @@ The trusted Codex callback SHALL provide a sandbox-compatible way for the agent 
 - **WHEN** authoritative project or source identity cannot yet be verified for an otherwise valid response
 - **THEN** the worker preserves accepted history, keeps the pending work visible and retries through the capture lifecycle.
 
+#### Scenario: The worker reads a source before binding
+
+- **WHEN** the worker reads a verified native session that has no ticket binding yet
+- **THEN** its snapshot SHALL record the selected worktree’s Git user and keep the session unassigned until an explicit binding or a verified parent establishes the ticket.
+
 #### Scenario: A cached session is missing its user
 
 - **WHEN** a cached session for the selected ticket has an absent or blank user and its original source is unavailable

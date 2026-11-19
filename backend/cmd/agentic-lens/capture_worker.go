@@ -13,6 +13,7 @@ import (
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
 	adaptersconfig "agenticlens/internal/adapters/config"
+	"agenticlens/internal/adapters/git"
 	"agenticlens/internal/domain"
 )
 
@@ -244,7 +245,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				break
 			}
 			unassignedCtx, unassignedCancel := context.WithTimeout(context.Background(), min(remaining, time.Duration(policy.PassTimeoutMS)*time.Millisecond))
-			unassigned, unassignedErr := s.Reconcile(unassignedCtx, "", "", policy.MaxSessions, policy.MaxSourceBytes)
+			unassigned, unassignedErr := s.Reconcile(unassignedCtx, "", git.GetGitUserInDir(project), policy.MaxSessions, policy.MaxSourceBytes)
 			unassignedCancel()
 			if unassignedErr != nil {
 				lastFailure = unassignedErr.Error()
