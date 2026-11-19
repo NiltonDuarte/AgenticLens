@@ -142,6 +142,13 @@ func (s *Store) inheritChild(ctx context.Context, parent domain.CaptureRegistrat
 		}
 		if path != "" {
 			if r.TranscriptPath != "" && r.TranscriptPath != path {
+				if r.Identity.Source == domain.SourceCodex && r.TicketID != "" {
+					if _, pathErr := os.Stat(r.TranscriptPath); errors.Is(pathErr, os.ErrNotExist) {
+						// The bound owner's refresh proves uniqueness and
+						// accepts a relocated path together with fresh facts.
+						return r, nil
+					}
+				}
 				return r, errors.New("conflicting child source path")
 			}
 			r.TranscriptPath = path
