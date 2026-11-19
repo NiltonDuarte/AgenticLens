@@ -47,12 +47,18 @@ node scripts/openspec-change.mjs PO-123 "refine roadmap" --planning
 | `design.md` | Technical contract, writable-path ownership, approval and material steering for development. |
 | `tasks.md` | Current implementation/planning steps and progress, appropriate to the schema. |
 | `delivery.md` | Current outcome, tested revision/diff, actual checks, attributed review, limits and PR context. |
-| `evidence/iterations/<NN>/` | Review/test evidence under canonical attribution and retention rules. |
+| `evidence/` | Review and test evidence tied to a candidate revision, including the [compact findings](../.agents/skills/agentic-lens-review/references/parallel-review.md#completed-review-retention). |
 | `agentic_metrics.json` | Final source-backed session ledger. |
 
 Do not keep parallel editable CONTRACT/PLAN/SUMMARY/PULL_REQUEST copies after transferring execution work into the change. Preserve prior approval, steering, verified evidence and navigation during a transfer; the roadmap ticket remains in place. Existing historical audits and unrelated active owners are not migration targets.
 
-OpenSpec artifact readiness and checked tasks are not user approval or verified delivery. Follow [AGENTS.md](../AGENTS.md) and the owning AgenticLens skill. Generated upstream skills use the `openspec` command name; in this checkout execute their CLI steps through `scripts/openspec.sh` so they use the pinned package. Do not fall back to an older global CLI or silently ignore unsupported fields/commands. A later roadmap edit does not silently change approved execution scope. Record its source, acceptance delta, preserved guarantees and verification impact, obtaining renewed approval only for a material scope change.
+OpenSpec artifact readiness and checked tasks are not user approval or verified delivery. Follow [AGENTS.md](../AGENTS.md) and the owning AgenticLens skill. Generated upstream skills use the `openspec` command name; in this checkout execute their CLI steps through `scripts/openspec.sh` so they use the pinned package. Do not fall back to an older global CLI or silently ignore unsupported fields/commands.
+
+## Steering an active change
+
+OpenSpec treats the current artifacts as the working plan. When the work keeps its intent, revise the same change and resume with `$openspec-apply-change`. Edit the relevant artifacts directly or use `$openspec-update-change` to reconcile them. Update the proposal when the outcome changes, the delta specs when observable behavior changes, `design.md` when decisions or approval change, and `tasks.md` when the work or its verification changes. Start a separate linked change when the intent is fundamentally different or the work can be delivered independently. [OpenSpec guide to editing a change](https://github.com/Fission-AI/OpenSpec/blob/main/docs/editing-changes.md)
+
+Use the [contributor steering format](../CONTRIBUTING.md#71-recording-steering-without-restarting-the-ticket) to record material decisions in the current design. Confirm explicit approval before implementing a material scope change. Identify review runs by the candidate revision and a unique run ID. Retain compact findings at `evidence/REVIEW_SUMMARY.json` and link them from `delivery.md`. Keep existing numbered evidence and its links as historical records.
 
 ## Ledger publication and archive
 

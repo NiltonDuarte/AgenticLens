@@ -23,7 +23,7 @@ Before dispatch, load [model-policy.yaml](model-policy.yaml) and follow [model e
 
 ## Freeze evidence and dispatch independently
 
-- Put the coverage roster in the current change design/tasks for the active iteration: focus, risk question, scope/call paths, evidence owner and unique report path. The parent alone owns the consolidated REVIEW.md. Children write only their assigned reports if the harness permits it; otherwise return content for the parent to save.
+- Record the review scope, call paths and risk questions in the active design. Assign reviewer focuses, evidence owners and unique report paths in the current tasks. The parent alone owns the consolidated REVIEW.md. Children write only their assigned reports if the harness permits it; otherwise return content for the parent to save.
 - Give every reviewer the same base/head commit and requirements. For uncommitted code, record a diff/content fingerprint covering changed and relevant untracked files. Include active product/deployment constraints and useful raw test evidence; do not seed an approval or suspected answer. Fresh context is preferred where available. Do not distribute other reviewers' conclusions before their first pass.
 - Freeze product/test edits during this pass. Shared-checkout reviewers may overlap in reading, but cannot change production/test code. Probes must use disposable paths and separate resource names/ports. A reviewer that observes source changes reports stale evidence instead of approving a mixed revision.
 - Dispatch independent focuses concurrently up to actual harness capacity. Reserve capacity for the parent as needed. If all persona/model runs cannot run at once, queue remaining focuses in waves against the same frozen revision; do not drop coverage or pretend sequential work was parallel. Use supported native/delegated tools and report unavailable capabilities. Do not create top-level threads or change models/providers merely to obtain parallelism.
@@ -33,7 +33,7 @@ Before dispatch, load [model-policy.yaml](model-policy.yaml) and follow [model e
 
 Fill in this brief rather than copying four general review requests:
 
-    Ticket/iteration: <active ticket and iteration>
+    Ticket/change: <canonical ticket ID and active OpenSpec change>
     Role: <registered focus reviewer or explicit persona pointer>; question: <concrete risk>
     Run: <run ID, phase, profile and acknowledged model/effort, report path>
     Evidence: <base/head or immutable fingerprint, raw diff, requirements,
@@ -67,7 +67,7 @@ Map each fix to affected focus owners and dependencies. Re-review the corrected 
 
 When focused investigations have no unresolved blockers or material review gaps, the parent may commit the candidate, integrate main and run the required verification phase. The final consolidated approval is issued only after those checks pass. Integration changes invalidate affected review evidence and require the same impact assessment/re-review; this ordering avoids requiring final approval before its verification can run.
 
-The parent records a compact roster (focus, model/effort, run ID/phase, reviewed revision, report, outcome, any valid carry-forward rationale), deduplicated findings/dispositions, remaining debt, verification and limits in evidence/iterations/<NN>/REVIEW.md. A child approval never independently opens the gate.
+The parent records a compact roster (focus, model/effort, run ID/phase, reviewed revision, report, outcome, any valid carry-forward rationale), deduplicated findings/dispositions, remaining debt, verification and limits in `evidence/REVIEW.md`. A child approval never independently opens the gate.
 
 - CHANGES_REQUESTED when a substantiated blocker remains. Also list any incomplete required reviews so fixing the blocker cannot hide the gaps.
 - INCOMPLETE when no confirmed blocker remains but a required focus, material hypothesis, revision match or necessary verification is unresolved. A cancelled/timed-out/unavailable reviewer is incomplete, not an approval. Recover the missing coverage or report the limitation; do not waive it silently.
@@ -79,7 +79,7 @@ Stop when this gate is satisfied for the requested scope. Do not add endless spe
 
 Apply the [shared writing rules](../../../../AGENTS.md#artifact-writing-rules) to the human-facing summary. This protocol owns review artifact content and retention; group repeated outcomes rather than duplicating run narratives.
 
-Review reports and structured run/finding files support the active investigation, correction loop and approval gate. Once findings are addressed and consolidated approval is issued, the parent compacts them into `evidence/iterations/<NN>/REVIEW_SUMMARY.json` before deleting any source reports. Keep this small structured file permanently and link it from the ticket's `delivery.md`. Then delete individual review reports, consolidated `REVIEW.md`, `REVIEW_RUNS.json`, and `FINDINGS.json` for that completed review; remove stale links. Keep plans, regression tests, telemetry and other required deliverables. Historical audits in unrelated tickets remain outside this cleanup scope.
+Review reports and structured run/finding files support the active investigation, correction loop and approval gate. Once findings are addressed and consolidated approval is issued, the parent compacts them into `evidence/REVIEW_SUMMARY.json` before deleting any source reports. Keep the file permanently and link it from the change’s `delivery.md`, which records the tested revision. When review reopens, carry forward prior findings and discovery credit and add new findings with unique IDs. After retaining the summary and its link, delete the working files for that completed review. These include individual reports, `REVIEW.md`, `REVIEW_RUNS.json` and `FINDINGS.json`. Remove stale links to those working files. Preserve historical evidence in its existing location and keep its links valid.
 
 ### Compact findings format
 

@@ -111,7 +111,7 @@ Open `http://localhost:8085` to view the standalone dashboard.
 
 Preserve the [portable ledger contract](TECHNICAL_GUIDELINES.md#portable-ledger-contract). For persistence, capture, refresh or migration changes, select the [cross-developer/machine scenarios](docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines); a passing test that requires private originating-machine proof does not establish a valid product requirement.
 
-Select the applicable cases in the [regression prevention checklist](docs/REGRESSION_PREVENTION.md) before changing extraction, configuration, hydration, live polling, or distribution. Record evidence in the active iteration review.
+Select the applicable cases in the [regression prevention checklist](docs/REGRESSION_PREVENTION.md) before changing extraction, configuration, hydration, live polling, or distribution. Record evidence against the tested revision in the change’s review.
 
 Use `make test-unit` for fast feedback and `make` for the full gate. `make check`, `make backend-check`, every supported Make integration target and direct compatibility scripts require both Go and frontend units to succeed before boundary work starts. The dependency graph also applies to parallel and mixed goals, such as `make -j8 check test build`; units are not a sibling prerequisite that can race integrations. Frontend dependency preparation is shared with unit execution rather than silently skipping an absent frontend. No persistent unit-success stamp is used.
 
@@ -129,7 +129,7 @@ Follow [TECHNICAL_GUIDELINES.md](TECHNICAL_GUIDELINES.md) for FCIS boundaries, s
 
 Identify the regression and inspect existing tests before writing another case. Follow [test purpose and proportionality](TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality) and the [test review checklist](docs/REGRESSION_PREVENTION.md#adding-reviewing-or-reducing-tests): extend coherent existing coverage, preserve unique assertions when consolidating, and record a specific rationale for deletions. Keep a separate test when it provides independent coverage or clearer failure diagnosis.
 
-Scores and test-to-code ratios are review signals, not quality targets. Include classification/counting assumptions in metric reports and describe what verification actually exercised. A test of workflow text does not prove a release works. Record transferred assertions, actual execution results, and confidence limits in the active iteration review.
+Scores and test-to-code ratios are review signals, not quality targets. Include classification/counting assumptions in metric reports and describe what verification actually exercised. A test of workflow text does not prove a release works. Record transferred assertions, actual execution results, and confidence limits in the change’s review.
 
 ---
 
@@ -178,16 +178,16 @@ Apply the [shared writing rules](AGENTS.md#artifact-writing-rules). Artifact pur
 
 ### 7.1 Recording steering without restarting the ticket
 
-For material scope changes, write a short delta in the next change design and tasks:
+For material steering within the same change, record a short decision in its current `design.md`. Reconcile the active artifacts using the [OpenSpec workflow](docs/OPENSPEC_WORKFLOW.md#steering-an-active-change). Include the following in the decision.
 
 - **Source and intent:** summarize the current user instruction or linked review finding; label inference separately.
 - **Baseline:** link the contract and applicable accepted plan/review, and name the current commit.
 - **Acceptance delta:** state the observable behavior added, removed, or replaced. Name the specific decision superseded and reconcile the current contract when its boundaries change.
 - **Preserved guarantees:** list adjacent behavior that must continue to work; identify affected paths and their owner.
 - **Verification impact:** reuse valid results for unchanged code and select affected checks for the delta. A planned command is not a passing result.
-- **Delivery status:** state proposed, approved, implemented, or verified using actual evidence. Approval persists within its accepted scope; a plan file or iteration number is not approval evidence.
+- **Delivery status:** state proposed, approved, implemented, or verified using actual evidence. Approval persists within its accepted scope. Record renewed approval before implementing a material scope change.
 
-Keep status questions, review corrections, and routine synchronization in the current iteration unless acceptance changes. Consolidate plans when explicitly requested, preserving accepted decisions and verification in the surviving artifacts. A missing plan is not evidence of no steering, and iteration-directory counts are not SDLC telemetry.
+Handle status questions, review corrections and routine synchronization in the current change. Preserve accepted decisions and verification when consolidating its artifacts. Use actual session evidence for SDLC telemetry.
 
 ### Installed release entrypoints
 

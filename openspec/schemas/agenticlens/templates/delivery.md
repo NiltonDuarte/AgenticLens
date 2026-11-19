@@ -5,7 +5,7 @@
 
 ## Verification and review
 <Tested revision/diff, actual commands/results, skipped limits and consolidated review outcome.>
-<Link evidence/iterations/01/REVIEW_SUMMARY.json when available, preserving all discovery credit.>
+<Link evidence/REVIEW_SUMMARY.json when available, preserving all discovery credit.>
 
 ## Limits
 <Unresolved findings, accepted debt with ownership and missing runtime evidence. Omit if empty.>
