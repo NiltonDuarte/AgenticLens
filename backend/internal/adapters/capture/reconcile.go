@@ -34,6 +34,7 @@ func (s *Store) QueueChild(ctx context.Context, store, path, parent string) erro
 }
 
 type ReconcileResult struct {
+	archiveReadGroups     []archiveReadGroup
 	SourceEvents          domain.SourceEvents          `json:"-"`
 	DiagnosticIndex       *DiagnosticIndexProgress     `json:"diagnostic_index,omitempty"`
 	StartedAt             string                       `json:"started_at"`
@@ -65,6 +66,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	budget := &workBudget{bytes: byteBudget, sessions: sessionBudget}
 	refreshed := map[string]bool{}
 	defer func() {
+		result.archiveReadGroups = nil
 		result.Cutoff = time.Now().UTC().Format(time.RFC3339Nano)
 		result.SourceBytes = budget.readBytes
 		result.SourceAttempts = budget.attempts
@@ -157,6 +159,13 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	if err != nil {
 		return result, err
 	}
+	var currentRows map[string]domain.CaptureRegistration
+	if len(result.archiveReadGroups) > 0 {
+		currentRows = make(map[string]domain.CaptureRegistration, len(registrations))
+		for _, row := range registrations {
+			currentRows[IdentityKey(row.Identity)] = row
+		}
+	}
 	staleEvidence := map[string]bool{}
 	for i, owner := range registrations {
 		key := IdentityKey(owner.Identity)
@@ -180,6 +189,9 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	for key, missing := range archiveProjection {
 		delete(refreshed, key)
 		staleEvidence[missing.Identity.SessionID] = true
+	}
+	if err := result.reprojectArchiveFamilies(registrations, currentRows, refreshed, staleEvidence); err != nil {
+		return result, err
 	}
 	result.SourceEvents = withoutCaptureEvidence(result.SourceEvents, staleEvidence)
 	pending, discoveryPending, err := s.pendingChildWork(ctx, ticket, registrations)
@@ -721,6 +733,9 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		}
 	}
 	result.SourceEvents = domain.MergeSourceEvents(result.SourceEvents, source.events)
+	if acceptedRelocation && len(source.transcripts) > 0 {
+		result.recordArchiveReadGroup(registrations, refreshed, source.transcripts, previousSnapshots, *source.policy)
+	}
 	return registrations, refreshed, nil
 }
 

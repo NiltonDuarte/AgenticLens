@@ -202,26 +202,42 @@ func TestReconcileArchivedCodexBudgetRetriesWithoutLosingFacts(t *testing.T) {
 }
 
 func TestReconcileArchivedCodexLateRegistryChangeExcludesSourceEvidence(t *testing.T) {
-	for _, mode := range []string{"accepted", "superseded"} {
+	const stableDelegation = `{"timestamp":"2026-01-01T00:00:03Z","type":"response_item","payload":{"type":"function_call","call_id":"accepted-spawn","name":"spawn_agent","arguments":"{\"agent_type\":\"coder\"}"}}
+{"timestamp":"2026-01-01T00:00:04Z","type":"response_item","payload":{"type":"function_call_output","call_id":"accepted-spawn","output":"{\"session_id\":\"sibling\"}"}}
+`
+	for _, mode := range []string{"accepted", "superseded-before-annotations", "superseded-after-annotations"} {
 		t.Run(mode, func(t *testing.T) {
 			s := openStore(t, t.TempDir())
 			home, active, archive := archivedRolloutFixture(t)
 			parentPath := filepath.Join(active, "parent.jsonl")
 			childPath := filepath.Join(active, "child.jsonl")
-			writeRollout(t, parentPath, "parent", "", 13)
+			siblingPath := filepath.Join(active, "sibling.jsonl")
+			priorParent := writeRollout(t, parentPath, "parent", "", 13)
+			if err := os.WriteFile(parentPath, append(priorParent, []byte(stableDelegation)...), 0600); err != nil {
+				t.Fatal(err)
+			}
 			writeRollout(t, childPath, "child", "parent", 17)
+			writeRollout(t, siblingPath, "sibling", "parent", 19)
 			registerBound(t, s, home, parentPath, "parent", "TEST-100")
 			registerBound(t, s, home, childPath, "child", "TEST-100")
-			before := archivedFixtureOwner(t, reconcileArchiveFixture(t, s, fixtureByteBudget), "child")
+			registerBound(t, s, home, siblingPath, "sibling", "TEST-100")
+			prior := reconcileArchiveFixture(t, s, fixtureByteBudget)
+			before := archivedFixtureOwner(t, prior, "child")
 			if before.State != domain.CaptureCurrent || before.ParentID != "parent" {
 				t.Fatalf("fixture did not establish an accepted child checkpoint: %+v", before)
+			}
+			stableParent := archivedFixtureOwner(t, prior, "parent")
+			if len(stableParent.Snapshot) != 1 || len(stableParent.Snapshot[0].Delegations) != 1 ||
+				stableParent.Snapshot[0].Delegations[0].ChildSession != "sibling" {
+				t.Fatalf("fixture did not accept the independent delegation: %+v", stableParent.Snapshot)
 			}
 
 			// The opaque agent ID is promoted to a native child link only
 			// when a matching child's source participates in grouping.
 			parentBody := writeRollout(t, parentPath, "parent", "", 23)
-			parentBody = append(parentBody, []byte(`{"timestamp":"2026-01-01T00:00:03Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\"}"}}
-{"timestamp":"2026-01-01T00:00:04Z","type":"response_item","payload":{"type":"function_call_output","call_id":"spawn","output":"{\"agent_id\":\"child\"}"}}
+			parentBody = append(parentBody, []byte(stableDelegation)...)
+			parentBody = append(parentBody, []byte(`{"timestamp":"2026-01-01T00:00:05Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\"}"}}
+{"timestamp":"2026-01-01T00:00:06Z","type":"response_item","payload":{"type":"function_call_output","call_id":"spawn","output":"{\"agent_id\":\"child\"}"}}
 `)...)
 			if err := os.WriteFile(parentPath, parentBody, 0600); err != nil {
 				t.Fatal(err)
@@ -236,15 +252,16 @@ func TestReconcileArchivedCodexLateRegistryChangeExcludesSourceEvidence(t *testi
 			if err := os.Rename(childPath, filepath.Join(archive, filepath.Base(childPath))); err != nil {
 				t.Fatal(err)
 			}
-			if mode == "superseded" {
-				supersedeArchiveCheckpoint(t, s)
+			writeRollout(t, siblingPath, "sibling", "parent", 47)
+			if mode != "accepted" {
+				supersedeArchiveCheckpoint(t, s, mode == "superseded-after-annotations")
 			}
 
 			result := reconcileArchiveFixture(t, s, fixtureByteBudget)
 			gotChild := archivedFixtureOwner(t, result, "child")
 			gotParent := archivedFixtureOwner(t, result, "parent")
 			wantInput, wantLink, wantState := int64(29), "child", domain.CaptureCurrent
-			if mode == "superseded" {
+			if mode != "accepted" {
 				wantInput, wantLink, wantState = 41, "", domain.CapturePending
 				if gotChild.SourceFingerprint != "newer-checkpoint" {
 					t.Fatalf("fixture did not supersede the archive observation: %+v", gotChild)
@@ -260,9 +277,12 @@ func TestReconcileArchivedCodexLateRegistryChangeExcludesSourceEvidence(t *testi
 				gotChild.Snapshot[0].Invocations[0].Tokens.Input != wantInput {
 				t.Fatalf("unexpected child snapshot after archive reconciliation: %+v", gotChild)
 			}
-			if len(gotParent.Snapshot) != 1 || len(gotParent.Snapshot[0].Invocations) != 1 ||
-				gotParent.Snapshot[0].Invocations[0].Tokens.Input != 23 || len(gotParent.Snapshot[0].Delegations) != 1 ||
-				gotParent.Snapshot[0].Delegations[0].ChildSession != wantLink {
+			if len(gotParent.Snapshot) != 1 {
+				t.Fatalf("parent snapshot was not retained: %+v", gotParent.Snapshot)
+			}
+			if len(gotParent.Snapshot[0].Invocations) != 1 ||
+				gotParent.Snapshot[0].Invocations[0].Tokens.Input != 23 || len(gotParent.Snapshot[0].Delegations) != 2 ||
+				gotParent.Snapshot[0].Delegations[0].ChildSession != "sibling" || gotParent.Snapshot[0].Delegations[1].ChildSession != wantLink {
 				t.Errorf("parent did not refresh independently of stale child evidence: %+v", gotParent.Snapshot)
 			}
 			wantEvidence := mode == "accepted"
@@ -280,17 +300,29 @@ func TestReconcileArchivedCodexLateRegistryChangeExcludesSourceEvidence(t *testi
 				t.Errorf("unexpected child evidence in publication: events=%v checkpoint=%v parent-link=%v complete=%v refreshed=%v",
 					containsChildEvent, containsChildCheckpoint, containsParentLink, source.CompleteSessionIDs, containsChildRefresh)
 			}
-			for _, session := range result.Sessions {
-				if session.ID == "child" && reflect.DeepEqual(session, gotChild.Snapshot[0]) {
-					return
-				}
+			if !slices.ContainsFunc(source.Events, func(event domain.EventFact) bool {
+				return event.SessionID == "parent" && event.CallID == "accepted-spawn" && event.ChildSessionID == "sibling"
+			}) || !slices.Contains(source.CompleteSessionIDs, "sibling") ||
+				!slices.ContainsFunc(result.RefreshedSessions, func(row domain.SessionFact) bool {
+					return row.ID == "sibling" && len(row.Invocations) == 1 && row.Invocations[0].Tokens.Input == 47
+				}) {
+				t.Error("independent sibling lost its existing linkage or eligible refresh")
 			}
-			t.Fatal("publication dropped the accepted child snapshot")
+			if !slices.ContainsFunc(result.RefreshedSessions, func(row domain.SessionFact) bool {
+				return row.ID == "parent" && reflect.DeepEqual(row, gotParent.Snapshot[0])
+			}) {
+				t.Error("publication omitted the independently refreshed parent or used a stale projection")
+			}
+			if !slices.ContainsFunc(result.Sessions, func(row domain.SessionFact) bool {
+				return row.ID == "child" && reflect.DeepEqual(row, gotChild.Snapshot[0])
+			}) {
+				t.Error("publication dropped the accepted child snapshot")
+			}
 		})
 	}
 }
 
-func supersedeArchiveCheckpoint(t *testing.T, s *capture.Store) {
+func supersedeArchiveCheckpoint(t *testing.T, s *capture.Store, afterAnnotations bool) {
 	t.Helper()
 	db, err := sql.Open("sqlite", filepath.Join(s.RegistryDirectory(), "registry.db"))
 	if err != nil {
@@ -301,19 +333,33 @@ func supersedeArchiveCheckpoint(t *testing.T, s *capture.Store) {
 			t.Error(err)
 		}
 	}()
-	// The trigger forces the same registry state as a concurrent newer
-	// checkpoint, immediately after initial acceptance. It requires no
-	// producer hook, goroutine timing, or sleep between production phases.
+	// The trigger forces the same registry state as an intervening accepted
+	// checkpoint without a producer hook or a goroutine timing dependency.
+	pathChanged := "json_extract(OLD.record, '$.path') != json_extract(NEW.record, '$.path')"
+	prelude, triggerGuard, updateGuard := "", pathChanged, ""
+	if afterAnnotations {
+		if _, err := db.Exec(`CREATE TABLE archive_annotation_writes (count INTEGER NOT NULL);
+INSERT INTO archive_annotation_writes VALUES (0);`); err != nil {
+			t.Fatal(err)
+		}
+		// Grouping writes the child's delegation annotation first, then its
+		// anomaly annotation. Replacing the checkpoint on the second write
+		// leaves grouping complete when final publication loads the rows.
+		triggerGuard = "NOT (" + pathChanged + ") AND instr(json_extract(NEW.record, '$.path'), '/archived_sessions/') != 0"
+		prelude = "UPDATE archive_annotation_writes SET count = count + 1;"
+		updateGuard = " AND (SELECT count FROM archive_annotation_writes) = 2"
+	}
 	_, err = db.Exec(`CREATE TRIGGER supersede_archive_checkpoint AFTER UPDATE ON registrations
-WHEN NEW.session_id = 'child' AND json_extract(OLD.record, '$.path') != json_extract(NEW.record, '$.path')
+WHEN NEW.session_id = 'child' AND (` + triggerGuard + `)
 BEGIN
+	` + prelude + `
 	UPDATE registrations
 	SET record = json_set(CAST(NEW.record AS TEXT),
 		'$.registration.source_fingerprint', 'newer-checkpoint',
 		'$.registration.refreshed_at', '2026-01-02T00:00:00Z',
 		'$.registration.revision', json_extract(NEW.record, '$.registration.revision') + 1,
 		'$.snapshot[0].invocations[0].tokens.input', 41)
-	WHERE worktree_id = NEW.worktree_id AND identity = NEW.identity;
+	WHERE worktree_id = NEW.worktree_id AND identity = NEW.identity` + updateGuard + `;
 END`)
 	if err != nil {
 		t.Fatalf("install fixture checkpoint trigger: %v", err)
