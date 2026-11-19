@@ -1,0 +1,7 @@
+# PO-26: Define the v3 automatic capture release gate
+
+V3 needs release evidence that AgenticLens automatically publishes ticket metrics for an ordinary agentic development session. The user requested a roadmap ticket that launches that workflow, checks the root and every delegated session in the published ledger, and requires fixes for any gaps found.
+
+[AL-96](../../../alspaces/plan/to-do/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md) owns the acceptance criteria. It is ready for development planning and blocks the stable release. The release decision uses the packaged candidate and the native session tree as evidence. GEN-27 observed that a bound Codex root and child could still require manual generation to create their first ledger. AL-80 separately demonstrated native OpenCode capture for a supported version. Those observations informed the requirement to start with a fresh ticket and exercise the supported integrations end to end. [GEN-27 audit](https://github.com/NiltonDuarte/AgenticLens/pull/146) · [AL-80](../../../alspaces/plan/done/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
+
+The user selected the next available PO ticket for this planning work. AL-96 will be implemented in a separate development session.
