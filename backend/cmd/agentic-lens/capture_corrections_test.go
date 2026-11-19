@@ -943,16 +943,22 @@ func startCorrectionWorker(t *testing.T, f captureGenerationFixture, budget ...t
 }
 func waitCorrectionLedger(t *testing.T, path, id string, tokens int64) {
 	t.Helper()
-	deadline := time.Now().Add(3 * time.Second)
+	if !correctionLedgerReadyWithin(path, id, tokens, 3*time.Second) {
+		t.Fatalf("no source-backed ledger for %s input=%d at %s", id, tokens, path)
+	}
+}
+
+func correctionLedgerReadyWithin(path, id string, tokens int64, budget time.Duration) bool {
+	deadline := time.Now().Add(budget)
 	for time.Now().Before(deadline) {
 		body, err := os.ReadFile(path)
 		var l domain.AgenticFactLedger
 		if err == nil && json.Unmarshal(body, &l) == nil && len(l.Sessions) == 1 && l.Sessions[0].ID == id && len(l.Sessions[0].Invocations) == 1 && l.Sessions[0].Invocations[0].Tokens.Input == tokens {
-			return
+			return true
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	t.Fatalf("no source-backed ledger for %s input=%d at %s", id, tokens, path)
+	return false
 }
 func TestCaptureContinuousNativeCallbacksDoNotStarveAllTickets(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
