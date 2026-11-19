@@ -5,7 +5,7 @@
 - [x] Run relevant build, test and failure-path checks on the frozen revision.
 - [x] Report verified findings, review attribution and limits.
 
-## Iteration 02 remediation
+## Audit remediation
 
 - [x] Preserve selected directory identity through generate and capture worker admission. Keep first explicit destination creation and post-admission recovery working.
 - [x] Preserve selected directory identity during backfill and migration. Report a changed target and retain independently valid sibling results.
@@ -15,7 +15,7 @@
 - [x] Exercise SSE recovery of unchanged observations after overflow and check responsive subscribers, unsubscribe, and reconnection.
 - [x] Complete risk-directed review and the integrated build gate. Record verification, remaining limits, and final source-backed telemetry.
 
-## Iteration 03 archived Codex rollouts
+## Archived Codex rollout recovery
 
 - [x] Record implementation approval for archived-rollout recovery.
 - [x] Resolve missing cached paths for already-bound Codex sessions using the existing exact-owner lookup and shared reconciliation budgets.

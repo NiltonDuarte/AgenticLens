@@ -15,9 +15,9 @@ The user requested the next available review ID and authorized adding the explic
 
 Each focus uses the configured `gpt-6.1-sol/high` and `gpt-6-luna/medium` profiles. Discovery runs are independent. The final report records run outcomes and preserves unresolved issues.
 
-## Iteration 02 remediation
+## Audit remediation
 
-The user approved implementation by saying “fix them” in response to the audit handoff. This expands iteration 01’s audit-only scope to the four findings named in that handoff. The baseline is `c20975f6`. The [audit evidence](evidence/iterations/01/REVIEW.md) remains the record for the original findings. The [remediation requirements](specs/review-remediation/spec.md) govern the corrections.
+The user approved implementation by saying “fix them” in response to the audit handoff. This expands the original audit-only scope to the four findings named in that handoff. The baseline is `c20975f6`. The original findings and the requirements for the corrections are recorded in the [audit evidence](evidence/AUDIT.md) and [remediation requirements](specs/review-remediation/spec.md).
 
 ### Ledger writes
 
@@ -39,9 +39,9 @@ The isolated install probe verified both release binaries and found that the sha
 
 The coordinator owns integration, telemetry, and delivery. Application writers own disjoint files for workspace generation and backfill/migration, live service and any affected stream consumers, and the shared pin. The tester owns new tests. Implementation reopens behavior, data, architecture, and test review. Select the live and release checks where those boundaries changed and run the integrated build gate at the final code revision.
 
-## Iteration 03 archived Codex rollouts
+## Archived Codex rollout recovery
 
-The user explicitly approved implementation of this plan with `$agentic-lens-dev approved`. This iteration adds archived-rollout recovery to the delivered remediation scope at `95c130ed`. During that delivery, six explicitly bound REV-8 sessions retained earlier snapshots because reconciliation opened their former paths under `sessions/`. All six files were later found under `archived_sessions/` with their original filenames and session IDs. This supersedes the assumption that a registered rollout must always be readable at its saved path.
+The user explicitly approved implementation of this plan with `$agentic-lens-dev approved`. This adds archived-rollout recovery to the delivered remediation scope at `95c130ed`. During that delivery, six explicitly bound REV-8 sessions retained earlier snapshots because reconciliation opened their former paths under `sessions/`. All six files were later found under `archived_sessions/` with their original filenames and session IDs. This supersedes the assumption that a registered rollout must always be readable at its saved path.
 
 In the shared capture reconciliation path, recover only an already-bound Codex registration with a nonempty cached path that fails specifically because it no longer exists. Resolve it by native session ID across the registered store's active and archived directories using the existing exact-owner finder. Charge discovery, metadata and extraction to the existing pass budgets. Reuse the unique selection for project and source validation, fingerprinting and extraction. Keep the existing uniqueness check for readable cached paths. A readable path with contradictory identity, an inaccessible path, or an ambiguous result cannot authorize a replacement.
 
@@ -49,7 +49,7 @@ The selected source must satisfy physical store containment, parsed native ID an
 
 The shared path serves the worker, `capture reconcile` and `generate --capture-auto`. Hook and binding admission, manual discovery, OpenCode, ledger schemas and the guarded-worker release protocol retain their existing contracts. The coder owns the capture changes. The tester owns isolated source and registry fixtures. Verify archive movement, repeatability, duplicate handling, budgets, portable history and concurrent registry updates. Any retry against the six real records is a separate operational verification after implementation approval.
 
-Independent review covers behavior through both public capture entry points, data integrity and registry commit ordering, placement of lookup and budget ownership, and regression-test effectiveness. Each focus uses the configured Sol/high and Luna/medium profiles against the frozen candidate. Keep test evidence and the consolidated review in `evidence/iterations/03/`.
+Independent review covers behavior through both public capture entry points, data integrity and registry commit ordering, placement of lookup and budget ownership, and regression-test effectiveness. Each focus uses the configured Sol/high and Luna/medium profiles against the frozen candidate. [Archive recovery tests](evidence/ARCHIVED_ROLLOUT_TESTS.md) · [Consolidated findings](evidence/REVIEW_SUMMARY.json).
 
 ## Session coverage guidance
 
