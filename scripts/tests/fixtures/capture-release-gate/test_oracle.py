@@ -3,7 +3,8 @@
 import unittest
 from collections import Counter
 
-from oracle import Owner, artifact_matches_commit, check_complete, check_held, check_rollup
+from gate import first_completion_commit
+from oracle import Owner, artifact_matches_commit, check_complete, check_held, check_rollup, unix_time
 from provider import TICKET, TITLE
 
 
@@ -44,12 +45,18 @@ class TicketDurationOracleTest(unittest.TestCase):
             check_held((ledger, summary), native, "root", committed, reconciliation)
 
     def test_rejects_ledger_from_a_later_commit_with_older_diagnostic(self):
-        committed = {"observed_at": "2026-11-19T19:31:01Z", "owners": [
-            {"session_id": "root", "checkpoint": "2026-11-19T19:30:59Z"},
-        ]}
-        reconciliation = {"observed_at": "2026-11-19T19:31:00Z"}
-        self.assertTrue(artifact_matches_commit({"updated_at": "2026-11-19T19:31:00.5Z"}, committed, reconciliation))
-        self.assertFalse(artifact_matches_commit({"updated_at": "2026-11-19T19:31:01.5Z"}, committed, reconciliation))
+        checkpoint = "2026-11-19T19:30:59Z"
+        owners = [{"session_id": "root", "checkpoint": checkpoint}]
+        first = {"sequence": 27, "outcome": "committed", "observed_at": "2026-11-19T19:31:01Z", "owners": owners}
+        later = {"sequence": 29, "outcome": "committed", "observed_at": "2026-11-19T19:31:03Z", "owners": owners}
+        first_reconciliation = {"observed_at": "2026-11-19T19:31:00Z"}
+        later_reconciliation = {"observed_at": "2026-11-19T19:31:02Z"}
+        selected = first_completion_commit([first, later], "root", unix_time(checkpoint))
+        self.assertEqual(selected["sequence"], 27)
+        self.assertTrue(artifact_matches_commit({"updated_at": "2026-11-19T19:31:00.5Z"}, selected, first_reconciliation))
+        later_ledger = {"updated_at": "2026-11-19T19:31:02.5Z"}
+        self.assertTrue(artifact_matches_commit(later_ledger, later, later_reconciliation))
+        self.assertFalse(artifact_matches_commit(later_ledger, selected, first_reconciliation))
 
     def test_rejects_duplicate_tool_rows_with_matching_name_and_count(self):
         owner = Owner(None, completed=1, model_millis=Counter(fixture=7000), tools=Counter(bash=1))

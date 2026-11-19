@@ -77,7 +77,7 @@ def observe_publication_pair(project, commitment, rows):
     snapshot = published(project)
     if reconciliation is None or snapshot is None or not artifact_matches_commit(snapshot[0], commitment, reconciliation):
         return None
-    current = publication_diagnostics(status(project).get("diagnostics", []))
+    current = publication_diagnostics(project.diagnostic_history())
     if not current or current[-1]["sequence"] != commitment["sequence"]:
         return None
     require(commitment["destination"] == str(project.ledger) and commitment["summary"] == str(project.summary),
@@ -104,24 +104,25 @@ def completion_seen(pass_record, root, instant):
                unix_time(owner["checkpoint"]) >= instant - 0.001 for owner in pass_record.get("owners", []))
 
 
+def first_completion_commit(passes, root, instant):
+    return next((record for record in passes if completion_seen(record, root, instant)), None)
+
+
 def wait_first_snapshot(project, binding, process):
     begin = unix_time(binding)
-    first_seen = None
 
     def observed_first_commit():
-        nonlocal first_seen
-        rows = status(project).get("diagnostics", [])
+        rows = project.diagnostic_history()
         commits = [item for item in publication_diagnostics(rows) if item["outcome"] == "committed"]
         if not commits:
             return None
-        if first_seen is None:
-            first_seen = commits[0]
-            require(first_seen["destination"] == str(project.ledger) and first_seen["summary"] == str(project.summary),
-                    "First committed publication points to a different destination or summary")
+        first = commits[0]
+        require(first["destination"] == str(project.ledger) and first["summary"] == str(project.summary),
+                "First committed publication points to a different destination or summary")
         # The birth commit may have been followed by a normal refresh before
         # binding was observed here. Use its durable timestamp and validate
         # the current pair against its own commit.
-        return first_seen if observe_publication_pair(project, commits[-1], rows) else None
+        return first if observe_publication_pair(project, commits[-1], rows) else None
 
     deadline = time.monotonic() + FIRST_SECONDS - (time.time() - begin)
     commitment = event_until(deadline, observed_first_commit,
@@ -152,7 +153,7 @@ def wait_held_snapshot(project, model, root, process):
                                        "Native source did not show a held root and all three completed descendants", process)
 
     def inspect_held_pair():
-        rows = status(project).get("diagnostics", [])
+        rows = project.diagnostic_history()
         publication = publication_diagnostics(rows)
         if not publication or publication[-1]["outcome"] != "committed":
             return None
@@ -173,20 +174,16 @@ def wait_held_snapshot(project, model, root, process):
 
 def wait_terminal_snapshot(project, root, target, since_sequence, earlier=None):
     deadline = time.monotonic() + SETTLE_SECONDS - (time.time() - target)
-    first_seen = None
 
     def observed_terminal_commit():
-        nonlocal first_seen
-        rows = status(project).get("diagnostics", [])
+        rows = project.diagnostic_history()
         passes = [record for record in publication_diagnostics(rows) if record["sequence"] > since_sequence]
-        commits = [record for record in passes if completion_seen(record, root, target)]
-        if not commits:
+        first = first_completion_commit(passes, root, target)
+        if first is None:
             return None
-        if first_seen is None:
-            first_seen = commits[0]
-        require(passes[-1]["sequence"] == first_seen["sequence"],
+        require(passes[-1]["sequence"] == first["sequence"],
                 "Could not associate the current ledger with the first committed publication that saw native completion")
-        pair = observe_publication_pair(project, first_seen, rows)
+        pair = observe_publication_pair(project, first, rows)
         if pair is None:
             return None
         snapshot, commitment, reconciliation = pair
@@ -218,6 +215,12 @@ def assert_activity(owners, source, root, nested_supported):
             "Native children did not perform the fixture edit and verification")
 
 
+def completed_source(project, root, after):
+    owners = source_owners(project)
+    native = owners.get(root)
+    return owners if native and native.open == 0 and native.latest_completion > after else None
+
+
 def exercise(project, model, evidence):
     processes = []
     try:
@@ -228,6 +231,7 @@ def exercise(project, model, evidence):
         require(unrelated, "Native unrelated session did not create an exact ID")
         evidence["excluded_native_session"] = unrelated
         require(published(project) is None and not project.ledger.exists(), "Unrelated session created a ledger")
+        project.observe_diagnostic_history()
 
         root_process, root_log = launch(project, "ROOT")
         processes.append(root_process)
@@ -244,8 +248,11 @@ def exercise(project, model, evidence):
         before, held_commit = wait_held_snapshot(project, model, root, root_process)
         evidence["before_completion"] = before
         model.release.set()
-        wait_success(root_process, "development session")
-        owners = source_owners(project)
+        owners = event_until(
+            time.monotonic() + 45,
+            lambda: completed_source(project, root, unix_time(held_commit["observed_at"])),
+            "Native development session did not record completion", root_process,
+        )
         require(unrelated in owners and root in owners, "Native source is missing an observed exact root")
         expected = tree(owners, root)
         evidence["native_tree"] = {session_id: owner.parent for session_id, owner in expected.items()}
@@ -257,6 +264,7 @@ def exercise(project, model, evidence):
         terminal, first_terminal_pass, terminal_reconciliation, delay = wait_terminal_snapshot(
             project, root, target, held_commit["sequence"],
         )
+        wait_success(root_process, "development session")
         evidence.update({
             "published_tree": {row["id"]: row.get("parent_id") for row in terminal[0]["sessions"]},
             "native_completion_epoch": target, "first_completion_commit": first_terminal_pass["observed_at"],

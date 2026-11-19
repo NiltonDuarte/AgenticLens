@@ -1035,21 +1035,29 @@ func TestCaptureTerminalTicketSweepsStayClosedAcrossWorkerLifetimes(t *testing.T
 	if err := capture.LaunchWorker(fixtureCaptureEngine(), f.project, registry.CoordinationDirectory()); err != nil {
 		t.Fatal(err)
 	}
-	wait, cancel := context.WithTimeout(ctx, 15*time.Second)
+	// The race suite shares CPU with other native process tests. Give the
+	// observer time to see the fixed 1.5s workers advance without changing
+	// the worker lifetime, cursor assertions, or handoff requirement.
+	const observationBudget = 45 * time.Second
+	wait, cancel := context.WithTimeout(ctx, observationBudget)
 	defer cancel()
 	finished := make(chan error, 1)
 	go func() { finished <- completion(wait) }()
 	ticker := time.NewTicker(35 * time.Millisecond)
 	defer ticker.Stop()
 	workers := make(map[int]bool)
+	var workerPIDs []int
+	lastCursors := cursors
+	var lastProgress capture.WorkerProgress
 	for {
 		select {
 		case err := <-finished:
 			if err != nil {
-				t.Fatalf("terminal missing hints kept successive workers running: %v", err)
+				t.Fatalf("terminal worker chain did not drain within %s: %v; observed worker PIDs=%v; last active cursors=%+v; last worker status=%+v",
+					observationBudget, err, workerPIDs, lastCursors, lastProgress)
 			}
 			if len(workers) < 2 {
-				t.Fatalf("fixture did not exercise a finite worker handoff: observed %d worker(s)", len(workers))
+				t.Fatalf("fixture did not exercise a finite worker handoff: observed worker PIDs=%v; last worker status=%+v", workerPIDs, lastProgress)
 			}
 			for _, ticket := range []string{"TEST-100", "TEST-200", "TEST-100", "TEST-200"} {
 				reconcile(ticket)
@@ -1074,14 +1082,18 @@ func TestCaptureTerminalTicketSweepsStayClosedAcrossWorkerLifetimes(t *testing.T
 		case <-ticker.C:
 			cursors, err := registry.CodexChildDiscoveryCursors(ctx)
 			if _, reopened := cursors[firstKey]; err != nil || reopened {
-				t.Fatalf("later worker pass reopened the first static sweep: %+v %v", cursors, err)
+				t.Fatalf("later worker pass reopened the first static sweep: cursors=%+v err=%v; observed worker PIDs=%v; last worker status=%+v",
+					cursors, err, workerPIDs, lastProgress)
 			}
+			lastCursors = cursors
 			progress, err := capture.WorkerStatus(registry.CoordinationDirectory())
 			if err != nil {
 				t.Fatal(err)
 			}
-			if progress.PID > 0 {
+			lastProgress = progress
+			if progress.PID > 0 && !workers[progress.PID] {
 				workers[progress.PID] = true
+				workerPIDs = append(workerPIDs, progress.PID)
 			}
 		}
 	}

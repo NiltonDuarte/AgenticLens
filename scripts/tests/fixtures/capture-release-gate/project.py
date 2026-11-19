@@ -1,5 +1,6 @@
 """Build and install an isolated adopting project using the release assets."""
 
+from contextlib import closing
 import hashlib
 import json
 import os
@@ -7,6 +8,7 @@ from pathlib import Path
 import platform
 import re
 import shlex
+import sqlite3
 import subprocess
 import time
 import tomllib
@@ -66,6 +68,7 @@ class Project:
         self.opencode_db = self.data / "opencode.db"
         self.manager = self.home / ".local" / "bin" / "agentic-lens"
         self.engine = None
+        self.diagnostic_registry = None
         self.env = {
             "HOME": str(self.home), "PATH": str(self.manager.parent) + os.pathsep + os.environ["PATH"],
             "LANG": "C.UTF-8", "TERM": "xterm-256color", "CODEX_HOME": str(self.codex_home),
@@ -205,6 +208,33 @@ supports_websockets = false
         self.capture("prepare-publication", "--ticket-id", TICKET, "--json-output", self.ledger)
         require(not self.ledger.exists() and not self.summary.exists(), "Preparing destination seeded output")
 
+    def observe_diagnostic_history(self):
+        projects = self.home / ".agenticlens" / "capture" / "projects"
+        candidates = list(projects.glob("*/registry.db"))
+        require(len(candidates) == 1, "Expected one native capture registry in the isolated fixture")
+        registry = candidates[0]
+        require(registry.is_file() and registry.resolve() == registry and registry.is_relative_to(self.root),
+                "Refusing to attach diagnostic observation outside the physical fixture registry")
+        with closing(sqlite3.connect(registry.as_uri() + "?mode=rw", uri=True, timeout=5)) as db:
+            db.executescript("""
+                BEGIN IMMEDIATE;
+                CREATE TABLE release_gate_diagnostics(sequence INTEGER PRIMARY KEY, ticket TEXT NOT NULL, record BLOB NOT NULL);
+                CREATE TRIGGER release_gate_copy_diagnostic AFTER INSERT ON capture_diagnostics
+                WHEN NEW.phase IN ('publication', 'reconciliation')
+                BEGIN
+                    INSERT INTO release_gate_diagnostics(sequence,ticket,record) VALUES(NEW.sequence,NEW.ticket,NEW.record);
+                END;
+                COMMIT;
+            """)
+        self.diagnostic_registry = registry
+
+    def diagnostic_history(self):
+        require(self.diagnostic_registry is not None, "Fixture diagnostic history observation was not installed")
+        uri = self.diagnostic_registry.as_uri() + "?mode=ro"
+        with closing(sqlite3.connect(uri, uri=True, timeout=1)) as db:
+            rows = db.execute("SELECT sequence,record FROM release_gate_diagnostics WHERE ticket=? ORDER BY sequence", (TICKET,))
+            return [dict(json.loads(record), sequence=sequence) for sequence, record in rows]
+
     def trust_codex_hooks(self):
         # The normal first-launch screen saves native trust for the inspected
         # hooks in the isolated home. The fixture never writes trust hashes.
@@ -224,17 +254,17 @@ supports_websockets = false
                  self.runtime, "-s", "workspace-write")
 
         screen = ""
-        folder_approved = False
+        folder_response_at = float("-inf")
         hooks_approved = False
         config_path = self.codex_home / "config.toml"
         deadline = time.monotonic() + 20
         try:
             while time.monotonic() < deadline:
                 screen = self.run(*tmux, "capture-pane", "-p")
-                if not folder_approved and "Folder access" in screen:
-                    require("Trust and continue" in screen, "Codex workspace trust prompt changed")
+                if "Folder access" in screen and time.monotonic() - folder_response_at >= 1:
+                    require("› 1. Trust and continue" in screen, "Codex workspace trust selection changed")
                     self.run(*tmux, "send-keys", "Enter")
-                    folder_approved = True
+                    folder_response_at = time.monotonic()
                 if not hooks_approved and "hooks are new or changed." in screen:
                     require(f"{len(expected)} hooks are new or changed." in screen and "Trust all and continue" in screen,
                             "Codex reported an unexpected hook trust prompt")
