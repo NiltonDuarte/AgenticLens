@@ -19,8 +19,8 @@ Use the [design](design.md) for approval and the [delta spec](specs/automatic-ti
 
 - [x] **Planner** · Define the pending snapshot contract, shared directory setting, delayed binding and agent destination admission. Assign writable-path owners and record implementation approval for the revised scope.
 - [x] **Coder and tester** · Implement and verify pending snapshots, delayed binding, native completion, destination validation and retry-safe publication. Verify custom paths, the explicit setup default, preservation on update and rejection of missing or invalid values at read time. Preserve canonical discovery and Git staging behavior.
-- [ ] **Tester and reviewers** · Extend the packaged native gate for both pending states, completion before binding, agent-supplied destination, promotion and subsequent refresh. Review admission and recovery independently.
-- [ ] **Orchestrator** · Verify the revised candidate and record the results alongside the previous delivery.
+- [x] **Tester and reviewers** · Extend the packaged native gate for both pending states, completion before binding, agent-supplied destination, promotion and subsequent refresh. Review admission and recovery independently.
+- [x] **Orchestrator** · Verify the revised candidate and record the results alongside the previous delivery.
 - [x] **Planning** · Record the optional, advisory Git pre-commit hook and its installation choice in [AL-97](../../../alspaces/plan/to-do/AL-97%20warn%20about%20staged%20pending%20capture%20snapshots.md).
 
 ## Workflow follow-up

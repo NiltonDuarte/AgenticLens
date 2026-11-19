@@ -174,6 +174,186 @@
         }
       ],
       "disposition": "The test exercises real typed lock classification and review traces the bounded retry. The native timing sample with contention predates the retry change."
+    },
+    {
+      "finding_id": "BEHAVIOR-02",
+      "severity": 8,
+      "issue": "Native binding without a conventional type could permanently block first publication.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. Native bindings require an explicit type and an incomplete historical binding can complete for the exact ticket."
+    },
+    {
+      "finding_id": "BEHAVIOR-03",
+      "severity": 6,
+      "issue": "Conflicting native types stopped refresh before resolving a unique canonical ledger.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. The canonical ledger supplies its recorded type and history. A fresh ticket with conflicting types stays pending."
+    },
+    {
+      "finding_id": "BEHAVIOR-04",
+      "severity": 6,
+      "issue": "A vanished tentative destination prevented a later verified correction.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. A durably unattempted receipt may yield to the new eligible destination. Attempted receipts retain exact recovery."
+    },
+    {
+      "finding_id": "ARCH-04",
+      "severity": 7,
+      "issue": "Title-only conflicts blocked first publication before reconciling either pending root.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. Each root retains its accepted metadata and refreshed facts while publication is blocked."
+    },
+    {
+      "finding_id": "ARCH-05",
+      "severity": 6,
+      "issue": "Setup could write a pending path that overlapped effective local private state.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. Setup and local updates validate the effective configuration pair before writing."
+    },
+    {
+      "finding_id": "DATA-03",
+      "severity": 8,
+      "issue": "A tentative native selection could publish despite a later conflicting verified indication.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. The ticket and directory leases protect destination revalidation, and registration writes serialize with marker admission."
+    },
+    {
+      "finding_id": "DATA-04",
+      "severity": 8,
+      "issue": "Promotion could discard the only recorded anomaly evidence for an unavailable owner.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. Coverage checks distinguish omitted and recorded-empty or nonempty summaries. A conflict retains both artifacts."
+    },
+    {
+      "finding_id": "DATA-05",
+      "severity": 5,
+      "issue": "Pending publication could acknowledge a directory entry whose durability was unconfirmed.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. Admission syncs the pending leaf and ancestors, including no-op retries after rename or unlink."
+    },
+    {
+      "finding_id": "DATA-06",
+      "severity": 7,
+      "issue": "A rolled-back marker could reappear after its attempted selection was superseded.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. The original directory is synced under its lease after marker and ledger absence are verified."
+    },
+    {
+      "finding_id": "TEST-07",
+      "severity": 5,
+      "issue": "Focused tests omitted retry after a durable commit with pending cleanup interrupted.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. Tests reconstruct that state, verify nonduplicating cleanup and preserve a replacement snapshot observed after the original digest."
+    },
+    {
+      "finding_id": "TEST-08",
+      "severity": 7,
+      "issue": "The native gate could validate a later corrected ledger instead of the first commit.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. The oracle checks the first committed artifact against native facts at its own cutoff, including intervals crossing the cutoff."
+    },
+    {
+      "finding_id": "TEST-09",
+      "severity": 4,
+      "issue": "Staged path-name comparisons could miss changes to already-staged content.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. The native gate compares full Git index entries and blob IDs through promotion."
     }
   ]
 }

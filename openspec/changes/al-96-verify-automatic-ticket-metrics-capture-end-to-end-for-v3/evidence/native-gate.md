@@ -38,3 +38,16 @@ The [checksummed native result](native-result.json) records the passing Linux am
 The revised scenario begins without a ticket or destination. It checks a held interval in a Git-visible, unstaged snapshot, completion in the same snapshot, delayed binding, then a native destination request. The fixture starts with an unavailable destination to verify that pending facts survive the failed attempt. Once the directory exists, the worker commits the ledger and removes the pending snapshot. The gate checks exact source facts through promotion and a later resume.
 
 In `v3.0.0-rc.0+al96.pending1`, Codex captured the complete unbound tree but exceeded the 30-second completion deadline. Rediscovery put an already-accepted child back into a pending state and the worker backed off for roughly a minute after the completion request. Making repeated child inheritance idempotent and recognizing refreshed unassigned owners restored timely settlement. The corrected development package `v3.0.0-rc.0+al96.pending2` passed both clients with the original deadline.
+
+The revised gate holds the native repair turn until it has inspected the first committed ledger and summary. It checks that commit against the native intervals at the reconciliation cutoff. In OpenCode, the next assistant activity can start after that cutoff. An intermediate interval can also start before the cutoff and complete afterward. The oracle covers both boundaries and rejects counting the latter interval as fully measured in the first commit.
+
+## Integrated pending capture package
+
+The [structured result](native-pending-result.json) records the passing Linux amd64 package `v3.0.0-rc.0+al96.8588f84d` and the manager, engine and archive checksums. Product and runner use revision `8588f84d`.
+
+| Client | Unbound completion to pending update | Destination repair to first ledger | Repair completion to commit | Resume completion to commit |
+| --- | ---: | ---: | ---: | ---: |
+| Codex 0.170.0 | 0.987 s | 2.276 s | 1.524 s | 1.858 s |
+| OpenCode 1.19.5 | 1.078 s | 10.480 s | 1.055 s | 1.289 s |
+
+The first ledger included exactly the root, two direct children and one grandchild, with source-matched tools, usage and duration. The unrelated native session stayed absent. The held first ledgers recorded 16 measured and 1 provisional seconds for Codex and 33 measured and 1 provisional seconds for OpenCode. Native completion settled the remaining provisional seconds. Each client preserved the staged Git entries and removed the pending snapshot only after canonical commit. The later turn preserved the owner tree and cumulative facts.
