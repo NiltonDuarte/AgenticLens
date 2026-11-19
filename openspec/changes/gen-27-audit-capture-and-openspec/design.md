@@ -1,10 +1,10 @@
-# Audit scope and approval
+# GEN-27 design and approval
 
-The user's GEN-27 request authorizes verification on current main, disposable native and fixture probes, and recommendations. The coordinator owns this change and the OpenSpec probe. The Codex, OpenCode and publication investigators own separate temporary fixtures. Product behavior, real harness configuration, roadmap and other tickets are outside the writable scope. The active audit stays in place.
+The original GEN-27 audit authorized verification on current main, disposable native and fixture probes, and recommendations. The coordinator owns this change and the OpenSpec probe. The Codex, OpenCode and publication investigators own separate temporary fixtures. The decisions below record the later approvals for Codex capture changes.
 
 The acceptance boundary is an observed lifecycle with reproducible command shapes, a source-attributed capture trace for each harness, and a move/late-publication check. A provider stub can demonstrate native event transport and persistence. Usage from that stub measures only its supplied fixture. Historical delivery claims and source-level paths carry their own provenance. A missing source is a coverage limit.
 
-## Iteration 02 — One-time setup for Codex binding
+## One-time setup for Codex binding
 
 The user requested one-time setup so a fresh workspace-write agent can bind its ticket without a per-run directory flag. At `a6a115f7`, a grant for the capture directory worked, but it also allowed sandboxed writes to the worker's retained executables. The coordinator rolled back that grant. The user approved a dedicated binding inbox for the installer and worker. The earlier audit evidence applies to its recorded revision.
 
@@ -14,7 +14,7 @@ The native hook supplies exact source and request context. The sandboxed submiss
 
 The installation coder owns setup, permission editing and migration. The runtime coder owns authenticated submission, callback feedback and worker consumption. The tester owns independent cases for fresh-root binding, edited/replayed records, unsafe file types, preservation of other sessions, restart and installation rollback. The coordinator owns the real settings, integration, review and delivery.
 
-## Iteration 03 — Protected engine for trusted Codex capture
+## Protected engine for trusted Codex capture
 
 At `30c38fe5`, the coordinator observed that the trusted hook selected the worktree’s `bin/` engine and the workspace-write sandbox could modify it. In response to the proposed change to trusted Codex callbacks, the user approved “Include protected engine selection in GEN-27”. This supersedes project-controlled executable selection for trusted Codex capture, including in development worktrees. The original audit and the isolated inbox acceptance remain in force.
 
@@ -24,10 +24,9 @@ Apply this selection to both normal and post-submission Codex callbacks and carr
 
 The manager/installer coder owns protected selection and provisioning feedback. The runtime coder owns propagation and handoff. The tester owns native process boundary and compatibility evidence. The coordinator owns native fresh-root acceptance and delivery.
 
-
 ### Publication correction for display titles
 
-At `7cb700ec`, a native Codex binding to GEN-27 was verified but the worker withheld publication because a second registration supplied a different display title for the same ID. The user confirmed that IDs are authoritative and titles are presentation data, then directed GEN-27 to fix the publication block. This corrects the existing binding-to-ledger acceptance in iteration 03. It supersedes using title agreement as an automatic publication condition.
+At `7cb700ec`, a native Codex binding to GEN-27 was verified but the worker withheld publication because a second registration supplied a different display title for the same ID. The user confirmed that IDs are authoritative and titles are presentation data, then directed GEN-27 to fix the publication block. That decision supersedes requiring title agreement for automatic publication.
 
 Resolve an existing ledger by the canonical ticket ID using the existing destination and ownership checks. During automatic generation, use the nonblank display title from the accepted ledger read under the publication lock. For a titleless ledger, use an agreed nonblank binding title when available. When title hints are absent or disagree, use the canonical ID as the display title for that ledger. The ledger writer requires nonblank display text. Preserve explicit title selection in manual generation and existing ticket-type validation and conflict handling.
 
@@ -35,7 +34,7 @@ The correction coder owns automatic metadata handling in the worker and generato
 
 ### Recovery for cached snapshots missing a user
 
-At `f14dac81`, the protected worker reached the writer, which rejected a proposed session without `user` and restored the accepted artifacts. Read-only inspection found three private GEN-27 snapshots without the field. All ten accepted ledger sessions have a user. The user confirmed that `user` is required and asked to fix publication with the available Git author setting.
+At `f14dac81`, the protected worker reached the writer, which rejected a proposed session without `user` and restored the accepted artifacts. Read-only inspection found three private GEN-27 snapshots without the field. The ten accepted sessions at that checkpoint all had a user. The user confirmed that `user` is required and asked to fix publication with the available Git author setting.
 
 Apply that requirement when decoding a private cached snapshot for reuse. Route a snapshot with an absent or blank user through the existing opaque snapshot and source refresh path. Keep its binding and stored bytes available for recovery. The worker previously passed an empty user to reconciliation before a session was bound. A successful read of the exact native source uses the selected worktree’s Git user before and after binding. Valid siblings can publish while unavailable snapshots require refresh, and the ledger retains already accepted history. Preserve the writer's required field validation, canonical ticket identity, and protected execution. Adding attribution to an old snapshot requires a verified source read.
 
