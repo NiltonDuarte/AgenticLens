@@ -92,7 +92,8 @@ func TestFIX19DiscoveryCandidateAllowanceSurvivesSecondRefreshClass(t *testing.T
 	// eligible. Keep its operation budget and attempted set, while changing only
 	// that owner's eligibility between the two real extraction passes.
 	attempted := map[string]bool{IdentityKey(identities[1]): true}
-	_, firstAccepted, err := store.refreshTicketOwners(ctx, "TEST-100", "tester", budget, &result, attempted, fixtureGenerationPolicy())
+	archiveProjection := map[string]domain.CaptureRegistration{}
+	_, firstAccepted, err := store.refreshTicketOwners(ctx, "TEST-100", "tester", budget, &result, attempted, archiveProjection, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +101,7 @@ func TestFIX19DiscoveryCandidateAllowanceSurvivesSecondRefreshClass(t *testing.T
 		t.Fatal("first one-candidate store was not refreshed")
 	}
 	delete(attempted, IdentityKey(identities[1]))
-	rows, secondAccepted, err := store.refreshTicketOwners(ctx, "TEST-100", "tester", budget, &result, attempted, fixtureGenerationPolicy())
+	rows, secondAccepted, err := store.refreshTicketOwners(ctx, "TEST-100", "tester", budget, &result, attempted, archiveProjection, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}

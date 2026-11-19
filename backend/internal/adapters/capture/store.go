@@ -509,13 +509,13 @@ func (s *Store) ListBounded(ctx context.Context, limit int) ([]domain.CaptureReg
 	return rows, more, nil
 }
 func (s *Store) list(ctx context.Context, limit int) ([]domain.CaptureRegistration, error) {
-	var rows *sql.Rows
-	var err error
 	if limit > 0 {
-		rows, err = s.db.QueryContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? ORDER BY identity LIMIT ?`, s.worktreeID, limit)
-	} else {
-		rows, err = s.db.QueryContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? ORDER BY identity`, s.worktreeID)
+		return readRegistrationRows(s.db.QueryContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? ORDER BY identity LIMIT ?`, s.worktreeID, limit))
 	}
+	return readRegistrationRows(s.db.QueryContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? ORDER BY identity`, s.worktreeID))
+}
+
+func readRegistrationRows(rows *sql.Rows, err error) ([]domain.CaptureRegistration, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -543,14 +543,24 @@ func (s *Store) Change(ctx context.Context, id domain.CaptureIdentity, change fu
 	if normalizeErr != nil {
 		return domain.CaptureRegistration{}, normalizeErr
 	}
+	var row domain.CaptureRegistration
+	err := s.withRegistrationWrite(ctx, func(conn *sql.Conn) error {
+		var err error
+		row, err = s.changeRegistration(ctx, conn, id, change)
+		return err
+	})
+	return row, err
+}
+
+func (s *Store) withRegistrationWrite(ctx context.Context, write func(*sql.Conn) error) error {
 	// A dedicated connection with BEGIN IMMEDIATE serializes read/modify/write across processes.
 	conn, err := s.db.Conn(ctx)
 	if err != nil {
-		return domain.CaptureRegistration{}, err
+		return err
 	}
 	defer conn.Close()
 	if _, err = conn.ExecContext(ctx, `BEGIN IMMEDIATE`); err != nil {
-		return domain.CaptureRegistration{}, err
+		return err
 	}
 	committed := false
 	defer func() {
@@ -561,7 +571,17 @@ func (s *Store) Change(ctx context.Context, id domain.CaptureIdentity, change fu
 			}
 		}
 	}()
+	if err = write(conn); err != nil {
+		return err
+	}
+	if _, err = conn.ExecContext(ctx, `COMMIT`); err != nil {
+		return err
+	}
+	committed = true
+	return nil
+}
 
+func (s *Store) changeRegistration(ctx context.Context, conn *sql.Conn, id domain.CaptureIdentity, change func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
 	var b []byte
 	r := domain.CaptureRegistration{Identity: id, State: domain.CaptureUnassigned}
 	// Existing rows may predate path normalization. Resolve them inside the same
@@ -632,10 +652,6 @@ func (s *Store) Change(ctx context.Context, id domain.CaptureIdentity, change fu
 	if err != nil {
 		return r, err
 	}
-	if _, err = conn.ExecContext(ctx, `COMMIT`); err != nil {
-		return r, err
-	}
-	committed = true
 	return r, nil
 }
 

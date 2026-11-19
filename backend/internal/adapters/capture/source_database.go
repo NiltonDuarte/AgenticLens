@@ -52,9 +52,9 @@ func discoverExactCaptureRollout(cfg domain.ProjectConfig, store, id string) (st
 	return codex.DiscoverExactRolloutPathWithBudget(store, id, budget)
 }
 
-// resolveRegisteredCodexSnapshot accepts a unique native source. A missing
-// path may be repaired only for an existing bound owner in the same store.
-func resolveRegisteredCodexSnapshot(r domain.CaptureRegistration, budget *codex.DiscoveryBudget) (path string, relocating bool, err error) {
+// inspectRegisteredCodexPath allows recovery only when a bound owner's cached
+// path is missing. Existing paths retain their metadata-first budget preflight.
+func inspectRegisteredCodexPath(r domain.CaptureRegistration) (string, bool, error) {
 	if r.TranscriptPath == "" {
 		return "", false, errors.New("exact Codex transcript path not registered; wait for an authoritative hook")
 	}
@@ -65,49 +65,52 @@ func resolveRegisteredCodexSnapshot(r domain.CaptureRegistration, budget *codex.
 	if pathErr != nil && (!errors.Is(pathErr, os.ErrNotExist) || r.TicketID == "") {
 		return "", false, pathErr
 	}
-	relocating = pathErr != nil
-	path, err = codex.DiscoverExactRolloutPathWithBudget(r.Identity.Store, r.Identity.SessionID, budget)
+	return registered, pathErr != nil, nil
+}
+
+func resolveRegisteredCodexSnapshot(r domain.CaptureRegistration, registered string, relocating bool, budget *codex.DiscoveryBudget) (string, error) {
+	path, err := codex.DiscoverExactRolloutPathWithBudget(r.Identity.Store, r.Identity.SessionID, budget)
 	if err != nil {
-		return "", relocating, err
+		return "", err
 	}
 	selected, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return "", relocating, err
+		return "", err
 	}
 	if err := codex.ValidateRolloutStore(r.Identity.Store, selected); err != nil {
-		return "", relocating, err
+		return "", err
 	}
 	if !relocating {
 		if registered != selected {
-			return "", false, fmt.Errorf("exact Codex owner %s does not match its registered source path", r.Identity.SessionID)
+			return "", fmt.Errorf("exact Codex owner %s does not match its registered source path", r.Identity.SessionID)
 		}
-		return r.TranscriptPath, false, nil
+		return r.TranscriptPath, nil
 	}
 	store, err := CanonicalStore(r.Identity.Store)
 	if err != nil {
-		return "", true, err
+		return "", err
 	}
 	for _, path := range []string{r.TranscriptPath, selected} {
 		physical, err := CanonicalStore(path)
 		if err != nil {
-			return "", true, err
+			return "", err
 		}
 		relative, err := filepath.Rel(store, physical)
 		if err != nil || !filepath.IsLocal(relative) || relative == "." {
-			return "", true, fmt.Errorf("Codex rollout recovery path escapes its registered store: %s", path)
+			return "", fmt.Errorf("Codex rollout recovery path escapes its registered store: %s", path)
 		}
 	}
-	return selected, true, nil
+	return selected, nil
 }
 
-func (b *workBudget) selectCodexRollout(r domain.CaptureRegistration, cfg domain.ProjectConfig) (string, bool, error) {
+func (b *workBudget) selectCodexRollout(r domain.CaptureRegistration, cfg domain.ProjectConfig, registered string, relocating bool) (string, error) {
 	if b.bytes < 1 {
-		return "", false, opencode.ErrCaptureBudget
+		return "", opencode.ErrCaptureBudget
 	}
 	if b.codexDiscovery == nil {
 		budget, err := captureDiscoveryBudget(cfg)
 		if err != nil {
-			return "", false, err
+			return "", err
 		}
 		b.codexDiscovery = budget
 	}
@@ -116,7 +119,7 @@ func (b *workBudget) selectCodexRollout(r domain.CaptureRegistration, cfg domain
 	// Discovery has one accounting object for the pass. Other source reads
 	// also consume the remaining allowance before the next discovery.
 	discovery.MaxSourceBytes = before + b.bytes
-	path, relocating, err := resolveRegisteredCodexSnapshot(r, discovery)
+	path, err := resolveRegisteredCodexSnapshot(r, registered, relocating, discovery)
 	b.charge(discovery.SourceBytesRead - before)
-	return path, relocating, err
+	return path, err
 }
