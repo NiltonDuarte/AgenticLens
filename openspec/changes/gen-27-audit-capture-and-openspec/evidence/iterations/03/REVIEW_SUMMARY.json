@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "GEN27-I03-01",
+      "severity": 7,
+      "issue": "A machine-level Codex receipt changed capture routing in unrelated OpenCode worktrees.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        },
+        {
+          "persona": "reviewer-security",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Use private admission for physical worktrees and their descendants."
+    },
+    {
+      "finding_id": "GEN27-I03-02",
+      "severity": 4,
+      "issue": "Tests did not fully establish protected worker identity across handoff or prior-protocol rejection.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "identity_basis": "acknowledged",
+          "effort": "medium"
+        }
+      ],
+      "disposition": "Assert distinct PIDs, matching native build, sweep progress, and retained ledger and response on rejection."
+    },
+    {
+      "finding_id": "GEN27-I03-03",
+      "severity": 5,
+      "issue": "Independent OpenCode coverage initially stopped at callback registration.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "identity_basis": "acknowledged",
+          "effort": "medium"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "The native-manager fixture binds an SQLite-backed session and verifies its 47 input tokens in the independent ledger."
+    },
+    {
+      "finding_id": "GEN27-I03-04",
+      "severity": 8,
+      "issue": "The protected generator could re-read a different operational state path after worker validation.",
+      "reporters": [
+        {
+          "persona": "reviewer-security",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "The writer validates and acquires the same canonical state and guards the lock and journal. Protected workers require protocol 2."
+    },
+    {
+      "finding_id": "GEN27-I03-05",
+      "severity": 6,
+      "issue": "First admission could drop a callback in an unrelated worktree during global lease contention.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Lock physical worktree boundaries so sibling callbacks can proceed during first admission."
+    },
+    {
+      "finding_id": "GEN27-I03-06",
+      "severity": 6,
+      "issue": "Explicit reconcile after upgrade skipped queued bindings until a native callback.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Reconcile verifies and admits the configured protected installation before recovering the queued response."
+    },
+    {
+      "finding_id": "GEN27-I03-07",
+      "severity": 7,
+      "issue": "An interrupted uninstall exposed an inactive receipt before the journal committed.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "A pending journal blocks release and protected worktree markers persist through committed cleanup."
+    },
+    {
+      "finding_id": "GEN27-I03-08",
+      "severity": 6,
+      "issue": "Automatic publication stopped on different display titles for the same ticket ID.",
+      "reporters": [
+        {
+          "persona": "coordinator",
+          "model": "gpt-6.2-sol",
+          "effort": "xhigh",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Use the accepted ledger title under the publication lock and treat registration titles as display hints."
+    },
+    {
+      "finding_id": "GEN27-I03-09",
+      "severity": 6,
+      "issue": "A cached snapshot without a user caused the writer to roll back valid sibling publication.",
+      "reporters": [
+        {
+          "persona": "coordinator",
+          "model": "gpt-6.2-sol",
+          "effort": "xhigh",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Preserve the invalid cache as opaque and recover only from a verified source read."
+    },
+    {
+      "finding_id": "GEN27-I03-10",
+      "severity": 5,
+      "issue": "Pre-binding reconciliation created native snapshots with a blank user.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.2-sol",
+          "effort": "xhigh",
+          "identity_basis": "requested",
+          "identity_note": "Native tester inherited the requested coordinator profile."
+        }
+      ],
+      "disposition": "Read the selected Git identity within the worker pass deadline."
+    }
+  ]
+}

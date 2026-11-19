@@ -13,7 +13,7 @@
 - [x] 2.4 Verify binding in a fresh workspace-write root without a per-run flag, preserved private state and existing owners, rejection/retry behavior, and the installer lifecycle.
 - [x] 2.5 Complete integrated checks and review, then retain delivery and final telemetry evidence.
 
-The correction pass covers runtime scheduling and isolation between capture sources, and installer concurrency and TOML preservation. The tester owns regression oracles. The coordinator owns live acceptance, integrated checks, review and delivery. See [the open review](evidence/iterations/02/REVIEW.md) for attribution and scope.
+The correction pass covers runtime scheduling and isolation between capture sources, and installer concurrency and TOML preservation. The tester owns regression oracles. The coordinator owns live acceptance, integrated checks, review and delivery. See [the inbox findings](evidence/iterations/02/REVIEW_SUMMARY.json) for attribution and scope.
 
 For the corrected candidate, review behavior (callback through publication), data (persistence and recovery), architecture (installer and worker ownership), tests (regression reach) and security (private state isolation). Each focus uses gpt-6.2-sol/high and gpt-6-luna/medium with an independent report under `evidence/iterations/02/<focus>-<profile>.md`.
 
