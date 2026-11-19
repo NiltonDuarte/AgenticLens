@@ -114,9 +114,9 @@ Capture commands return JSON by default; `capture protocol` prints native hook c
 
 For `capture install`, `--timeout` bounds setup and each required installation phase separately (default 2s). Optional harness version/features inspection shares a separate 3s allowance; unavailable inspection is recorded without consuming the following native-validation allowance. Caller cancellation still applies throughout. A native timeout or execution failure is reported separately from an observed version/protocol mismatch; required pin, protocol and wrapper checks remain mandatory. Installation can therefore take longer than one `--timeout` interval. Other capture commands retain their existing command/pass timeout semantics.
 
-Agent interaction and binding:
+### Session binding
 
-- Codex lifecycle feedback supplies a binding request with exact source, session, state directory and a per-session challenge. The agent responds with the supplied native-manager `capture bind` command, adding the ticket explicitly supplied by the user. It must not guess the session or ticket. Start/prompt callbacks can deliver context; shutdown callbacks alone cannot request missing information.
+- Codex lifecycle feedback supplies a binding request with exact source, session, state directory and a per-session challenge. The agent responds with the supplied native-manager `capture bind` command and the ticket explicitly assigned for the current task. Start and prompt callbacks can deliver context. Shutdown callbacks alone cannot request missing information.
 - OpenCode's per-session system transform supplies the request. The `agenticlens_bind` tool accepts `ticket` and `request`; its execution context supplies the authoritative session identity. The agent cannot replace the runtime identity through tool arguments.
 - When ticket context is missing, ask the user and retain an unassigned registration. A proven parent may supply inherited binding. Independent roots need their own explicit response. Model, effort, usage and cost still come from authoritative harness records; an agent assertion cannot manufacture them.
 
@@ -127,6 +127,37 @@ agentic-lens capture bind --source codex --store "/absolute/Codex home" --sessio
 ```
 
 Do not publish request tokens or local status dumps. Wrong/missing request tokens and conflicting ticket assignments fail. `capture request` is the native session-specific feedback primitive used by the OpenCode plugin, not a heuristic discovery command. `capture receive` accepts bounded hook JSON on stdin; event handlers hand off durable local work and do not perform a full extraction or publish ticket artifacts.
+
+### Independent session binding and ledger coverage
+
+1. **At launch.** The launching session records each expected same-ticket run in its existing
+   working records and passes the canonical ticket ID and title in the brief. Keep the dispatch ID
+   or other supported launch reference for later correlation. The launcher or ticket owner adds
+   manually started sessions to the same list. Use a separate list and ledger for work assigned to
+   a different ticket.
+2. **In the separate session.** Respond to your own harness binding request as soon as it arrives.
+   The explicit ticket assignment in the launch brief is sufficient context. If the request,
+   source identity or ticket is unavailable, report the specific gap. Return the known native
+   session ID, harness and binding outcome through the task handoff. Keep request tokens, private
+   store paths and raw status dumps out of reports and Git. A source-proven native child can
+   inherit its parent's binding. A dispatch ID alone supplies neither native identity nor ancestry.
+3. **Verify the binding.** The launcher or ticket owner correlates each run to its native identity
+   using the execution handoff and source evidence. Inspect `capture status --repo <WORKTREE>` in
+   the run's actual worktree and environment, or obtain the corresponding verified result from
+   the worker there. Match the registry row by harness, canonical store and exact native session
+   ID. For an independent session require the expected `ticket_id`, `project_proof: verified`,
+   `binding: explicit_agent_response` and a populated `binding_accepted_at`. Treat a queued
+   submission as pending. If `registrations_continuation` is true, increase `--max-sessions`
+   before concluding that a registration is missing. Report missing callbacks, conflicting
+   tickets and unverifiable identities explicitly.
+4. **Verify the ledger.** After contributors finish, reconcile through the normal capture path.
+   Compare each expected run's source and exact native session ID with the selected ticket ledger.
+   Track binding and publication separately. Preserve existing sessions and record runs that
+   never started, remain unbound, cannot refresh or are still missing from the ledger. When
+   authorized, use exact source/session selection for manual recovery on the machine with the
+   source. Manual generation can restore metrics while the automatic binding remains unresolved.
+
+### Reconciliation and setup recovery
 
 Reconciliation is explicit and bounded. Where supported, supply positive `--max-sessions` and `--max-source-bytes` overrides; otherwise the operation requires `telemetry.capture.max_sessions` and `telemetry.capture.max_source_bytes` in the selected local configuration. No session or byte budget is supplied automatically. `--timeout` defaults to 2s and can be increased up to 5m for an operator pass. Pending work/source flush is distinct from failed, unsupported, unassigned and unresolved parent evidence. Preserve previous accepted facts on source failure; repeated cumulative snapshots must not be added twice. Use manual `generate` with an explicit source/session selection for recovery publication; successful `capture reconcile` refreshes local snapshots, prints outcomes and schedules native publication when enabled.
 

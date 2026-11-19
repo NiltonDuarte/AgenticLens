@@ -20,7 +20,11 @@ Iteration 03 telemetry initially used the exact Codex root family. A later autho
 
 The final coverage check matched eight additional delegated reviews to their exact archived Codex sources and added them to the ledger. It contains 36 sessions and preserves all 28 previous session identities. The capture-aware pass refreshed all 21 registered owners with no pending or failed reads. Cost evidence remains unavailable.
 
+The AgenticLens skills now ask the launcher to track expected runs and pass the ticket explicitly. Each separate session answers its own binding request. The launcher verifies the accepted registration and ledger entry independently. The review skill reuses its existing run roster, including retries. [Shared procedure](../../../.agents/skills/agentic-lens-operator/references/cli.md#independent-session-binding-and-ledger-coverage).
+
 ## Pull request
+
+Supersedes #152 after renaming the branch to use the REV-8 ticket ID. The earlier PR retains its review history.
 
 ### What changed
 
@@ -28,6 +32,7 @@ The final coverage check matched eight additional delegated reviews to their exa
 - Close saturated SSE streams and bound socket writes and flushes. Reconnection reads a fresh snapshot even when recovery data is unchanged.
 - Select the exact published engine release in a clean checkout. Direct source builds can exercise the application fixes before the next release.
 - Recover already-bound Codex sessions when their rollout moves to the archive. Verify the native owner, save the path with accepted facts, and exclude superseded source evidence and dependent links from publication.
+- Teach the AgenticLens skills to track independent same-ticket runs, accept each session's own binding, and verify both registry acceptance and ledger coverage.
 
 ### Verification
 - The iteration 03 integrated `make -j 3` passed at `c1b87c6e`, including the Go race suites, 1,050 frontend tests and four platform builds. The native archived-rollout and SQLite supersession regressions pass.
@@ -36,6 +41,7 @@ The final coverage check matched eight additional delegated reviews to their exa
 - Deterministic ledger replacement and real TCP regressions reproduced the old failures. Focused Go race checks verified directory movement, portable ledgers, native capture and interrupted publication recovery.
 - The published Linux manager and engine matched their SHA-256 records. Isolated installation and offline dispatch reported the exact release and listed a fixture ledger.
 - A source-built Linux engine served the embedded dashboard, workspace API and unavailable-live-source diagnostic. Native macOS execution and browser-native EventSource execution were outside the verification scope.
+- Skill validation, cross-reference checks and an isolated setup bundle install passed. A read-only REV-8 check confirmed that the manually recovered reviews appear in the ledger while their explicit bindings remain unverified in this worktree.
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency

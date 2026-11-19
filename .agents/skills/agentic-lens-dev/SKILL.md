@@ -42,6 +42,11 @@ behavior, baseline/candidate revision, design/tasks pointers and relevant
 entry points or findings. State that the checkout is shared. Use the supported
 harness tools; do not copy technical policy into delegation prompts.
 
+Pass the canonical ticket ID and title to each separately launched same-ticket
+contributor and have them answer their own harness binding request. Keep each run
+in the parent's working records and verify the returned binding using the
+[independent session procedure](../agentic-lens-operator/references/cli.md#independent-session-binding-and-ledger-coverage).
+
 Expect changed artifacts/paths, results with tested revision and commands,
 unresolved decisions or limits, and the next required action. The parent inspects
 actual artifacts/diffs and reconciles deviations; a successful child turn alone
@@ -128,8 +133,9 @@ order under [delivery policy](../../../AGENTS.md#1-ticketed-and-ad-hoc-work):
    compact approved review records through the retention protocol.
 5. Generate telemetry at the final extraction point before the final artifact
    commit: literal unique nonce, actual source and conventional ticket type.
-   Verify root/child membership, prior-session preservation and source limitations;
-   a successful exit alone is insufficient. Exact commands belong to delivery policy.
+   Verify root and native child membership, then compare the expected independent
+   runs with their exact IDs in the ledger. Verify preservation of prior sessions
+   and report source or coverage gaps in delivery. Exact commands belong to delivery policy.
 6. Commit final artifacts, push and create/update the correct PR. Check its actual
    state: a merged PR cannot deliver later work. Extract the title and derive a temporary PR body from delivery.md, link the PR through available host tools and hand off behavior,
    verification and limits with the URL first. Approval to publish is not approval

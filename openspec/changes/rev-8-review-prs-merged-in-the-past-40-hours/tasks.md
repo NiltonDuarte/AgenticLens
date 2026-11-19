@@ -23,3 +23,8 @@
 - [x] Verify archive movement through `capture reconcile` and publication through `generate --capture-auto`. Check refreshed facts, stable ownership and unchanged counts on repeat.
 - [x] Verify missing, ambiguous, unsafe, unreadable, incomplete and over-budget sources preserve prior facts. Exercise concurrent registration and unaffected siblings.
 - [x] Complete affected reviews and the integrated build. Record actual fixture verification and report any separately authorized retry of the six REV-8 rollouts.
+
+## Session coverage guidance
+
+- [x] Add independent session binding and ledger checks to the shared operator procedure and AgenticLens role skills. Reuse the review run roster.
+- [x] Validate the skills and bundled operator reference. Compare explicit binding and ledger presence against REV-8.

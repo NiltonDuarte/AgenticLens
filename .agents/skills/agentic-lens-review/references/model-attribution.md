@@ -22,7 +22,7 @@ REVIEW_RUNS.json contains schema_version: 1, policy_path, resolved_policy, base/
 
 - run_id, persona, focus, profile_id and phase (discovery, verification or re_review).
 - requested {provider_instance_id, model, reasoning_effort}; acknowledged settings and dispatch evidence; observed settings/source evidence or null with reason.
-- task/session identifiers and report path where available; no fabricated identifiers.
+- Dispatch reference and report path where available. For separate sessions record the native harness/session ID, binding outcome and ledger coverage, or say which evidence is unavailable. Keep private store paths and request tokens out of review artifacts.
 - candidate commit or readable candidate ID, with instruction references and material differences sufficient to distinguish reviewed code. Full report/log bodies and persistent content-hash bookkeeping are not committed deliverables.
 - execution_status (queued, running, completed, failed, cancelled or unavailable), verdict (APPROVED, CHANGES_REQUESTED, INCOMPLETE or null while pending), and completeness/gaps.
 - candidate_ids, including an empty array for no findings; started/ended times, token/cost information only if source-backed, otherwise null with reason. Keep retries as new runs with retry_of; preserve earlier failures.

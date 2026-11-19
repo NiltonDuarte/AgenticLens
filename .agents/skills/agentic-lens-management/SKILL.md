@@ -101,4 +101,6 @@ Do not say supervision is complete while an eligible PR remains open, blocked, o
 
 Keep the manager's coordination records and native root in its MGT workspace. Each independent ticket thread maintains its own change design, delivery evidence and source ledger; never copy its token totals into the manager ledger or invent parent links. Reading a result adds manager context but does not transfer telemetry ownership. T3 MCP tool-count omissions in the current decoder are a known completeness limit, not zero control activity.
 
+For separate sessions explicitly assigned to the manager's own MGT ticket, track their dispatches and verify their entries in the MGT ledger using the [independent session procedure](../agentic-lens-operator/references/cli.md#independent-session-binding-and-ledger-coverage).
+
 Append scope deltas and verification to the active iteration. Generate manager telemetry only at the final step of each delivered iteration using its own literal nonce, actual source and native root. Preserve existing source sessions and record unavailable facts. Update or replace the manager PR according to its actual merged state; a merged PR cannot deliver later control-ledger changes. Final handoff identifies merged PRs and merge evidence, remaining blockers, and excluded release PRs without claiming future supervision has already happened.
