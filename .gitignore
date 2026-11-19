@@ -57,6 +57,7 @@ coverage.html
 
 # Local lifecycle registration, binding requests and reconciliation snapshots
 .agenticlens-capture/
+/.codex/install.lock
 
 # Kernel-owned ledger publication coordination (not ticket artifacts)
 *.agenticlens-lock
