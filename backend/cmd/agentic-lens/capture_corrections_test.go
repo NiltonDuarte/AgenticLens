@@ -184,6 +184,92 @@ func prepareCaptureOwner(t *testing.T, f captureGenerationFixture, id, ticket st
 	}
 	return path
 }
+func TestCaptureWorkerPublishesAcrossDisplayTitleHints(t *testing.T) {
+	const ticket = "TEST-100"
+	for _, tc := range []struct {
+		name, acceptedTitle, secondHint, wantTitle string
+	}{
+		{"conflicting hints preserve established title", "Accepted title", "Different binding title", "Accepted title"},
+		{"agreed hint preserves established title", "Accepted title", "Explicit TEST-100", "Accepted title"},
+		{"conflicting hints use ticket ID for titleless ledger", "", "Different binding title", ticket},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newCaptureGenerationFixture(t)
+			f.output = seedCaptureTicketHome(t, f, ticket)
+			writeCaptureSuccessfulPublicationPolicy(t, f.project, f.state)
+			baseline := f.ledger(t)
+			if tc.acceptedTitle != "" {
+				baseline.TicketTitle = &tc.acceptedTitle
+			}
+			baseline.Sessions = []domain.SessionFact{{
+				ID: "portable-owner", Source: domain.SourceOpenCode, User: "stored-user",
+				Invocations: []domain.InvocationFact{{Model: "stored-model", Tokens: domain.InvocationTokens{Input: 77}}},
+			}}
+			body, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(baseline))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = os.WriteFile(f.output, body, 0600); err != nil {
+				t.Fatal(err)
+			}
+			retained := f.ledger(t).Sessions[0]
+			prepareCaptureOwner(t, f, "root", ticket, 11)
+			prepareCaptureOwner(t, f, "second", ticket, 29)
+			registry, err := capture.OpenProject(f.state, f.project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer registry.Close()
+			ctx := context.Background()
+			second := domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: "second"}
+			if _, err := registry.Change(ctx, second, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+				row.TicketTitle = tc.secondHint
+				return row, nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if err = registry.RequestPublication(ctx); err != nil {
+				t.Fatal(err)
+			}
+			out, err := runCaptureNative(t, f.project, "", "capture", "worker", "--repo", f.project, "--state-dir", f.state)
+			if err != nil {
+				for _, diagnostic := range captureDiagnostics(t, f.project, f.state) {
+					if diagnostic.Phase == "publication" && diagnostic.Outcome == "failed" {
+						t.Logf("publication failed: %s", diagnostic.Detail)
+						break
+					}
+				}
+				t.Fatalf("automatic publication: %v %s", err, out)
+			}
+			got := f.ledger(t)
+			if got.TicketID == nil || *got.TicketID != ticket || got.TicketTitle == nil || *got.TicketTitle != tc.wantTitle {
+				t.Fatalf("ledger metadata = id %v, title %v; want id %q and title %q", got.TicketID, got.TicketTitle, ticket, tc.wantTitle)
+			}
+			owners := make(map[string]domain.SessionFact, len(got.Sessions))
+			for _, owner := range got.Sessions {
+				owners[owner.ID] = owner
+			}
+			if len(got.Sessions) != 3 || !reflect.DeepEqual(owners[retained.ID], retained) {
+				t.Fatalf("automatic publication lost retained history: %+v", got.Sessions)
+			}
+			for id, input := range map[string]int64{"root": 11, "second": 29} {
+				owner := owners[id]
+				if owner.Source != domain.SourceCodex || len(owner.Invocations) != 1 || owner.Invocations[0].Tokens.Input != input {
+					t.Fatalf("owner %s not published with %d source tokens: %+v", id, input, owner)
+				}
+			}
+			assertCapturePublishedOwners(t, captureDiagnostics(t, f.project, f.state), f.output, filepath.Join(filepath.Dir(f.output), "SUMMARY.md"), got.Sessions)
+			if tc.acceptedTitle == "Accepted title" && tc.secondHint != "Explicit TEST-100" {
+				const manualTitle = "Operator-selected title"
+				manual := f.generate(t, "--session-id", "root", "--ticket-title", manualTitle)
+				if manual.TicketTitle == nil || *manual.TicketTitle != manualTitle {
+					t.Fatalf("manual generation did not replace the display title with %q", manualTitle)
+				}
+			}
+		})
+	}
+}
+
 func TestCaptureCopiedBaselineCannotCrossTicketEvenWithCorrectedHeader(t *testing.T) {
 	for _, corrected := range []bool{false, true} {
 		t.Run(fmt.Sprint(corrected), func(t *testing.T) {
