@@ -19,7 +19,7 @@ Specialists are selected by concrete risk: frontend async/accessibility for inte
 
 ## Model policy and attribution
 
-Before dispatch, load [model-policy.yaml](model-policy.yaml) and follow [model execution and attribution](model-attribution.md). Every selected focus expands into the configured model profiles, currently Sol 6.1/high AND Luna 6/medium. The coordinator owns run/finding records and reports discovery credit by reviewer/model. Role selection does not remove model coverage.
+Before dispatch, load [model-policy.yaml](model-policy.yaml) and follow [model execution and attribution](model-attribution.md). Every selected focus expands into the configured model profiles, currently Sol 6.2/high AND Luna 6/medium. The coordinator owns run/finding records and reports discovery credit by reviewer/model. Role selection does not remove model coverage.
 
 ## Freeze evidence and dispatch independently
 
@@ -102,7 +102,7 @@ For example (illustrative values, not session evidence):
       "severity": 8,
       "issue": "Failed hydration hides persisted ledger rows.",
       "reporters": [
-        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "acknowledged"},
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "effort": "high", "identity_basis": "acknowledged"},
         {"persona": "reviewer-behavior", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "observed"}
       ],
       "disposition": "Fixed: retain persisted rows when enrichment fails."
