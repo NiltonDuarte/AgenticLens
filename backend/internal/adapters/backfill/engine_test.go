@@ -2609,7 +2609,8 @@ func TestFormerGenerationMetadataRecoveryWorkflows(t *testing.T) {
 						runErr = report.Results[0].Error
 					}
 				} else {
-					result, _ := NewMigrationRunner(nil).migrateWorkspace(context.Background(), path, MigrationOptions{}, domain.CurrentSchemaVersion, cfg)
+					location := selectFixturePublication(t, root, path)
+					result, _ := NewMigrationRunner(nil).migrateWorkspace(context.Background(), location, MigrationOptions{}, domain.CurrentSchemaVersion, cfg)
 					runErr = result.Error
 				}
 				written, err := os.ReadFile(path)

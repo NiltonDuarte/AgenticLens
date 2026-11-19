@@ -27,6 +27,9 @@ type WorkspaceLocation struct {
 	// directoryInfo binds a resolved read to its observed physical home only
 	// for this operation; it is never persisted or used as ticket identity.
 	directoryInfo os.FileInfo
+	// A publication selection pins the observed inode until admission. Read
+	// listings do not retain descriptors across the call boundary.
+	reference io.Closer
 }
 
 type WorkspaceResolutionError struct {
@@ -73,13 +76,20 @@ func workspacePhysicalDepth(root, path string) int {
 // DiscoverWorkspaceLocations applies each configured scope, reporting partial roots independently.
 // Validating full ledger evidence belongs to the common ledger decoder, not folder enumeration.
 func DiscoverWorkspaceLocations(cfg domain.ProjectConfig) ([]WorkspaceLocation, []domain.WorkspaceDiagnostic) {
-	locations, diagnostics, _ := discoverWorkspaceLocations(cfg)
+	locations, diagnostics, _ := discoverWorkspaceLocations(cfg, false)
+	return locations, diagnostics
+}
+
+// DiscoverWorkspacePublicationLocations retains each discovered ledger home
+// without taking ownership locks. The caller closes every returned selection.
+func DiscoverWorkspacePublicationLocations(cfg domain.ProjectConfig) ([]WorkspaceLocation, []domain.WorkspaceDiagnostic) {
+	locations, diagnostics, _ := discoverWorkspaceLocations(cfg, true)
 	return locations, diagnostics
 }
 
 // Completeness describes enumeration, independently of rejected individual ledgers.
 // Only a complete enumeration can establish uniqueness or absence without selection.
-func discoverWorkspaceLocations(cfg domain.ProjectConfig) ([]WorkspaceLocation, []domain.WorkspaceDiagnostic, bool) {
+func discoverWorkspaceLocations(cfg domain.ProjectConfig, retainDirectory bool) ([]WorkspaceLocation, []domain.WorkspaceDiagnostic, bool) {
 	found := map[string]WorkspaceLocation{}
 	rejected := map[string]bool{}
 	diagnostics := []domain.WorkspaceDiagnostic{}
@@ -151,9 +161,21 @@ func discoverWorkspaceLocations(cfg domain.ProjectConfig) ([]WorkspaceLocation, 
 						artifacts = cfg.Workspaces.Artifacts
 					}
 					candidate := WorkspaceLocation{Path: actual, LedgerPath: ledger, Artifacts: artifacts}
-					if prior, ok := found[ledger]; ok && !reflect.DeepEqual(prior.Artifacts, artifacts) {
-						reject(ledger, fmt.Errorf("overlapping roots have conflicting artifact policy"))
-						rejected[ledger] = true
+					if prior, ok := found[ledger]; ok {
+						if !reflect.DeepEqual(prior.Artifacts, artifacts) {
+							reject(ledger, fmt.Errorf("overlapping roots have conflicting artifact policy"))
+							rejected[ledger] = true
+						}
+					} else if retainDirectory {
+						root, err := candidate.retainPublicationDirectory()
+						if err == nil {
+							_, err = selectedLedgerExists(root, candidate.LedgerPath, false)
+						}
+						if err != nil {
+							add(ledger, errors.Join(err, candidate.Close()))
+						} else {
+							found[ledger] = candidate
+						}
 					} else {
 						found[ledger] = candidate
 					}
@@ -229,6 +251,8 @@ func discoverWorkspaceLocations(cfg domain.ProjectConfig) ([]WorkspaceLocation, 
 	for path, location := range found {
 		if !rejected[path] {
 			locations = append(locations, location)
+		} else if err := location.Close(); err != nil {
+			add(path, err)
 		}
 	}
 	sort.Slice(locations, func(i, j int) bool { return locations[i].Path < locations[j].Path })
@@ -344,6 +368,16 @@ func ResolveMaintenanceLocation(cfg domain.ProjectConfig, ticket, selection stri
 	return location, err
 }
 
+// ResolveMaintenancePublication selects a legacy or current ledger by recorded
+// identity while retaining the directory used for that advisory read.
+func ResolveMaintenancePublication(cfg domain.ProjectConfig, ticket, selection string) (WorkspaceLocation, error) {
+	location, reference, err := resolveTicketLocation(cfg, ticket, selection, true, true)
+	if err == nil {
+		location.reference = reference
+	}
+	return location, err
+}
+
 func RecordedLedgerTicket(data []byte) (string, error) {
 	if !json.Valid(data) {
 		return "", fmt.Errorf("invalid ledger JSON")
@@ -391,7 +425,7 @@ func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, m
 	if strings.TrimSpace(ticket) == "" && !(maintenance && selection != "") {
 		return WorkspaceLocation{}, nil, fmt.Errorf("ticket ID must be nonblank")
 	}
-	locations, diagnostics, incomplete := discoverWorkspaceLocations(cfg)
+	locations, diagnostics, incomplete := discoverWorkspaceLocations(cfg, false)
 	matches := []WorkspaceLocation{}
 	selected := ""
 	if selection != "" {
@@ -416,7 +450,11 @@ func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, m
 			// This is advisory selection before ownership, so it must not wait on
 			// the writer whose completed baseline the operation will validate.
 			var body []byte
-			body, err = capture.ReadPublicationFile(location.LedgerPath)
+			if retainDirectory {
+				body, location.directoryInfo, candidateReference, err = readMaintenanceSelection(location)
+			} else {
+				body, err = capture.ReadPublicationFile(location.LedgerPath)
+			}
 			if err == nil {
 				identity, err = RecordedLedgerTicket(body)
 				if err != nil {
@@ -431,6 +469,9 @@ func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, m
 			}
 		}
 		if err != nil {
+			if candidateReference != nil {
+				err = errors.Join(err, candidateReference.Close())
+			}
 			diagnostic := domain.WorkspaceDiagnostic{Path: location.LedgerPath, Message: err.Error()}
 			if selected == location.Path {
 				return WorkspaceLocation{}, nil, &WorkspaceResolutionError{Outcome: func() string {
@@ -576,7 +617,7 @@ func ValidateInitialLedgerDestination(cfg domain.ProjectConfig, ticket, path str
 	if err != nil {
 		return err
 	}
-	locations, diagnostics, incomplete := discoverWorkspaceLocations(cfg)
+	locations, diagnostics, incomplete := discoverWorkspaceLocations(cfg, false)
 	if incomplete {
 		return &WorkspaceResolutionError{Outcome: "unavailable", TicketID: ticket, Candidates: []string{dir}, Diagnostics: diagnostics}
 	}

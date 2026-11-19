@@ -59,7 +59,7 @@ type LiveService struct {
 	cfg             domain.ProjectConfig
 	codexHome       string
 	subscribers     map[chan LiveEvent]struct{}
-	subMu           sync.RWMutex
+	subMu           sync.Mutex
 	stopCh          chan struct{}
 	closeOnce       sync.Once
 	lastTreeJSON    []byte
@@ -147,8 +147,10 @@ func (s *LiveService) Subscribe() (<-chan LiveEvent, func()) {
 
 	cleanup := func() {
 		s.subMu.Lock()
-		delete(s.subscribers, ch)
-		close(ch)
+		if _, registered := s.subscribers[ch]; registered {
+			delete(s.subscribers, ch)
+			close(ch)
+		}
 		s.subMu.Unlock()
 	}
 
@@ -156,14 +158,17 @@ func (s *LiveService) Subscribe() (<-chan LiveEvent, func()) {
 }
 
 func (s *LiveService) broadcast(event LiveEvent) {
-	s.subMu.RLock()
-	defer s.subMu.RUnlock()
+	s.subMu.Lock()
+	defer s.subMu.Unlock()
 
 	for ch := range s.subscribers {
 		select {
 		case ch <- event:
 		default:
-			// Subscriber buffer full; skip to keep broadcaster non-blocking
+			// A gap cannot recover through change-only broadcasts. End this
+			// stream so its subscriber reconnects and reads a fresh snapshot.
+			delete(s.subscribers, ch)
+			close(ch)
 		}
 	}
 }

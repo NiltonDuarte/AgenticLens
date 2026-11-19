@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -50,22 +49,23 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 	if err != nil {
 		return nil, err
 	}
+	report := r.runSelected(targetFiles, discoveryDiagnostics, opts, targetVer, cfg)
+	closeWorkspaceSelections(targetFiles, &report.Errors)
+	return report, nil
+}
 
+func (r *MigrationRunner) runSelected(targets []adapters.WorkspaceLocation, discoveryDiagnostics []string, opts MigrationOptions, targetVer int, cfg domain.ProjectConfig) *SchemaMigrationReport {
 	report := &SchemaMigrationReport{
-		Scanned: len(targetFiles),
+		Scanned: len(targets),
 		Errors:  append([]string{}, discoveryDiagnostics...),
 		Results: []TicketSchemaMigrationResult{},
 	}
 
-	if len(targetFiles) == 0 {
-		return report, nil
-	}
-
-	for _, metricPath := range targetFiles {
+	for _, target := range targets {
 		// Release each target before the next acquisition; no batch lock order
 		// can conflict with format's sorted canonical ownership.
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		res, issues := r.migrateWorkspace(ctx, metricPath, opts, targetVer, cfg)
+		res, issues := r.migrateWorkspace(ctx, target, opts, targetVer, cfg)
 		cancel()
 		report.Errors = append(report.Errors, issues...)
 		report.Results = append(report.Results, res)
@@ -77,19 +77,17 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 		}
 	}
 
-	return report, nil
+	return report
 }
 
 // migrateWorkspace owns the canonical output before observing its baseline.
 // Generation, format and backfill take this same lock through publication.
-func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath string, opts MigrationOptions, targetVer int, cfg domain.ProjectConfig) (res TicketSchemaMigrationResult, issues []string) {
-
-	wsDir := filepath.Dir(metricPath)
-	wsName, _ := recordedTicket(metricPath)
+func (r *MigrationRunner) migrateWorkspace(ctx context.Context, location adapters.WorkspaceLocation, opts MigrationOptions, targetVer int, cfg domain.ProjectConfig) (res TicketSchemaMigrationResult, issues []string) {
+	metricPath := location.LedgerPath
 
 	res = TicketSchemaMigrationResult{
-		TicketID:      wsName,
-		WorkspacePath: wsDir,
+		TicketID:      location.TicketID,
+		WorkspacePath: location.Path,
 		LedgerPath:    metricPath,
 		TargetVersion: targetVer,
 	}
@@ -100,15 +98,20 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 		res.Error = fmt.Errorf("resolving ledger publication: %w", err)
 		return res, []string{res.Error.Error()}
 	}
+	if canonicalPath != location.LedgerPath {
+		res.Status = "error"
+		res.Error = fmt.Errorf("workspace ledger moved after selection; resolve and retry")
+		return res, []string{res.Error.Error()}
+	}
 	var owner io.Closer
 	if opts.DryRun {
-		directory, e := capture.ReadPublicationDirectory(canonicalPath)
+		directory, e := location.AcquirePublicationRead()
 		err = e
 		if e == nil {
 			owner = directory
 		}
 	} else {
-		publisher, e := capture.AcquirePublication(ctx, canonicalPath, publicationProject(cfg, canonicalPath))
+		publisher, e := location.AcquirePublication(ctx, publicationProject(cfg, canonicalPath))
 		err = e
 		if e == nil {
 			owner = publisher

@@ -12,8 +12,7 @@ generation:
     filename: delivery.md
 # Exact shared release authority. Install explicitly; dispatch never downloads.
 agenticlens:
-  binary_dir: bin
-  version: v3.0.0-rc.131+03f5b05-2-g57a3503e
+  version: v3.0.0-rc.156+9308ac7
 # Human-readable name of the project.
 project_name: AgenticLens
 # Skill versions applied as project defaults to ticket tags during generation.
