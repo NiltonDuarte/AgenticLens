@@ -29,6 +29,8 @@ Keep selection and admission coherent across the capture worker’s `generate` s
 
 Give an overflowing SSE stream a bounded path to fresh state. The existing subscribed stream can reconnect or resynchronize, including when recovery returns the same payload. Preserve healthy subscribers and ensure disconnect and unsubscribe remain race-safe. Verify the responsive and saturated cases through the actual stream and client recovery path as applicable.
 
+The first correction closed the overflowing subscriber but could leave the HTTP writer blocked on a real TCP connection. Bound each frame's write and flush using the existing server response budget. Allow idle waits between writes and let the client reconnect through its existing stream lifecycle.
+
 Pin the shared engine to `v3.0.0-rc.156+9308ac7`, the [published release](https://github.com/NiltonDuarte/AgenticLens/releases/tag/v3.0.0-rc.156%2B9308ac7) targeting the audited main revision. Keep exact-version resolution, explicit installation, and checksum enforcement. Verify release assets and exact dispatch in an isolated project and install cache. This published build supplies the compatible pin. Freshly built candidate binaries supply verification for the code fixes.
 
 The isolated install probe verified both release binaries and found that the shared `binary_dir` setting overrides the pin and makes a clean checkout require a source build. Remove that development selector from this repository's shared policy so a clean checkout uses the approved release. Developers can still run built binaries directly. Preserve the product's explicit development-mode behavior for projects that configure it.

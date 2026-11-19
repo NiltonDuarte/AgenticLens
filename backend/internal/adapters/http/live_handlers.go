@@ -88,11 +88,27 @@ func LiveTraceHandler(service LiveServiceInterface) http.HandlerFunc {
 	}
 }
 
+func writeLiveFrame(rc *http.ResponseController, write func() error) error {
+	if err := rc.SetWriteDeadline(time.Now().Add(responseWriteTimeout)); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		return err
+	}
+	if err := write(); err != nil {
+		return err
+	}
+	if err := rc.Flush(); err != nil {
+		return err
+	}
+	// A stream may wait indefinitely between frames. Only writes are bounded.
+	if err := rc.SetWriteDeadline(time.Time{}); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		return err
+	}
+	return nil
+}
+
 // LiveStreamHandler establishes a Server-Sent Events (SSE) connection streaming real-time live events.
 func LiveStreamHandler(service LiveServiceInterface) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		flusher, ok := w.(http.Flusher)
-		if !ok {
+		if _, ok := w.(http.Flusher); !ok {
 			http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
 			return
 		}
@@ -114,12 +130,20 @@ func LiveStreamHandler(service LiveServiceInterface) http.HandlerFunc {
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("X-Accel-Buffering", "no")
-		w.WriteHeader(http.StatusOK)
 
 		rc := http.NewResponseController(w)
-		_ = rc.SetWriteDeadline(time.Time{})
-
-		flusher.Flush()
+		if err := writeLiveFrame(rc, func() error {
+			w.WriteHeader(http.StatusOK)
+			return nil
+		}); err != nil {
+			return
+		}
+		writeEvent := func(event live.LiveEvent) error {
+			return writeLiveFrame(rc, func() error {
+				_, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Type, event.Data)
+				return err
+			})
+		}
 
 		tree, err := service.GetSessionTree(r.Context())
 		var initial live.LiveEvent
@@ -130,10 +154,9 @@ func LiveStreamHandler(service LiveServiceInterface) http.HandlerFunc {
 		if err != nil {
 			initial = live.SourceDiagnosticEvent(err, "")
 		}
-		if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", initial.Type, initial.Data); err != nil {
+		if err := writeEvent(initial); err != nil {
 			return
 		}
-		flusher.Flush()
 
 		for {
 			select {
@@ -143,10 +166,9 @@ func LiveStreamHandler(service LiveServiceInterface) http.HandlerFunc {
 				if !ok {
 					return
 				}
-				if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Type, event.Data); err != nil {
+				if err := writeEvent(event); err != nil {
 					return
 				}
-				flusher.Flush()
 			}
 		}
 	}

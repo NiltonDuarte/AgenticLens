@@ -46,13 +46,14 @@ func (w *pausedDiagnosticWriter) Write(data []byte) (int, error) {
 	return w.ResponseWriter.Write(data)
 }
 
-func TestLiveStreamReconnectsAfterSubscriberOverflow(t *testing.T) {
+func liveStreamSQLiteFixture(t *testing.T) (*sql.DB, *live.LiveService) {
+	t.Helper()
 	dbPath := filepath.Join(t.TempDir(), "live.db")
 	writer, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer writer.Close()
+	t.Cleanup(func() { writer.Close() })
 	writer.SetMaxOpenConns(1)
 	if _, err := writer.Exec(`PRAGMA journal_mode=WAL;
 PRAGMA busy_timeout=1000;
@@ -68,7 +69,12 @@ CREATE TABLE part(id TEXT PRIMARY KEY,session_id TEXT,message_id TEXT,time_creat
 	cfg := httpFixturePolicy()
 	cfg.Live.PollIntervalMs = 10
 	service := live.NewLiveService(hook, cfg)
-	defer service.Close()
+	t.Cleanup(func() { service.Close() })
+	return writer, service
+}
+
+func TestLiveStreamReconnectsAfterSubscriberOverflow(t *testing.T) {
+	writer, service := liveStreamSQLiteFixture(t)
 	fast, cleanup := service.Subscribe()
 	defer cleanup()
 	paused, resume := make(chan struct{}), make(chan struct{})

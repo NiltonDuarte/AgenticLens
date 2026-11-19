@@ -13,6 +13,8 @@ import (
 	"agenticlens/internal/domain"
 )
 
+const responseWriteTimeout = 15 * time.Second
+
 // Server wraps the HTTP multiplexer, server configuration, and filesystem access.
 type Server struct {
 	httpServer    *http.Server
@@ -73,7 +75,7 @@ func NewServerWithConfig(workspacesDir string, staticFS fs.FS, cfg domain.Projec
 	s.httpServer = &http.Server{
 		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		WriteTimeout: responseWriteTimeout,
 		IdleTimeout:  60 * time.Second,
 	}
 
