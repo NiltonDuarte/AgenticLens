@@ -12,7 +12,7 @@ Use the [design](design.md) for approval and the [delta spec](specs/automatic-ti
 
 ## Integration and delivery
 
-- [ ] **Independent reviewers** · Check selection authority, concurrent publication and recovery, exact source coverage, timing evidence and whether the gate can pass while bypassing installed lifecycle callbacks.
+- [x] **Independent reviewers** · Check selection authority, concurrent publication and recovery, exact source coverage, timing evidence and whether the gate can pass while bypassing installed lifecycle callbacks.
 - [ ] **Orchestrator** · Run integrated `make` and affected checks. Record package identity, actual native results and support limits in delivery evidence. Verify AL-96 session telemetry through automatic publication and record any missing facts. Derive and hand off the PR from delivery with the gate result.
 
 ## Workflow follow-up

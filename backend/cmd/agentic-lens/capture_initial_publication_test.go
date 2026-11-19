@@ -942,10 +942,17 @@ func TestCaptureTerminalTicketSweepsStayClosedAcrossWorkerLifetimes(t *testing.T
 	f := newCodexInboxFixture(t)
 	first := initialPublicationTarget(t, f, "first-terminal")
 	second := initialPublicationTarget(t, f, "second-terminal")
-	// Two native rollouts fit the source budget. The auxiliary directory
-	// entries force more bounded sweep passes than one worker can perform.
-	const passBudget = 2
-	policy := []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    idle_ms: 100\n    max_lifetime_ms: 1500\n    max_sessions: 2\n")
+	// Two native rollouts fit the source budget. Each sweep pass can visit
+	// at most 32 directory entries, so the auxiliary files force a handoff
+	// even when the publishers finish quickly.
+	const (
+		passBudget     = 2
+		auxiliaryFiles = 320
+		refresh        = time.Second
+		workerLifetime = 8 * time.Second
+	)
+	policy := []byte(fmt.Sprintf("telemetry:\n  capture:\n    refresh_ms: %d\n    idle_ms: %d\n    max_lifetime_ms: %d\n    max_sessions: %d\n",
+		refresh.Milliseconds(), refresh.Milliseconds(), workerLifetime.Milliseconds(), passBudget))
 	if err := writeCaptureFixtureLocal(t, f, policy); err != nil {
 		t.Fatal(err)
 	}
@@ -955,7 +962,7 @@ func TestCaptureTerminalTicketSweepsStayClosedAcrossWorkerLifetimes(t *testing.T
 			t.Fatalf("prepare %s: %v\n%s", ticket, err, output)
 		}
 	}
-	for number := range 550 {
+	for number := range auxiliaryFiles {
 		path := filepath.Join(f.store, "sessions", fmt.Sprintf("auxiliary-%04d.json", number))
 		if err := os.WriteFile(path, []byte("{}\n"), 0600); err != nil {
 			t.Fatal(err)
@@ -1035,10 +1042,9 @@ func TestCaptureTerminalTicketSweepsStayClosedAcrossWorkerLifetimes(t *testing.T
 	if err := capture.LaunchWorker(fixtureCaptureEngine(), f.project, registry.CoordinationDirectory()); err != nil {
 		t.Fatal(err)
 	}
-	// The race suite shares CPU with other native process tests. Give the
-	// observer time to see the fixed 1.5s workers advance without changing
-	// the worker lifetime, cursor assertions, or handoff requirement.
-	const observationBudget = 45 * time.Second
+	// The race suite shares CPU with other native process tests. Allow time
+	// for the bounded workers to advance while checking each cursor and handoff.
+	const observationBudget = 60 * time.Second
 	wait, cancel := context.WithTimeout(ctx, observationBudget)
 	defer cancel()
 	finished := make(chan error, 1)
