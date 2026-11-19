@@ -53,7 +53,11 @@ func liveStreamSQLiteFixture(t *testing.T) (*sql.DB, *live.LiveService) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { writer.Close() })
+	t.Cleanup(func() {
+		if err := writer.Close(); err != nil {
+			t.Errorf("close live fixture writer: %v", err)
+		}
+	})
 	writer.SetMaxOpenConns(1)
 	if _, err := writer.Exec(`PRAGMA journal_mode=WAL;
 PRAGMA busy_timeout=1000;
@@ -69,7 +73,25 @@ CREATE TABLE part(id TEXT PRIMARY KEY,session_id TEXT,message_id TEXT,time_creat
 	cfg := httpFixturePolicy()
 	cfg.Live.PollIntervalMs = 10
 	service := live.NewLiveService(hook, cfg)
-	t.Cleanup(func() { service.Close() })
+	t.Cleanup(func() {
+		if err := service.Close(); err != nil {
+			t.Errorf("close live fixture service: %v", err)
+		}
+		// Closing the pool prevents further reads. A poll already using a
+		// connection can still touch WAL files until the driver releases it.
+		ticks := time.NewTicker(time.Millisecond)
+		defer ticks.Stop()
+		deadline := time.NewTimer(3 * time.Second)
+		defer deadline.Stop()
+		for open := hook.DB().Stats().OpenConnections; open > 0; open = hook.DB().Stats().OpenConnections {
+			select {
+			case <-ticks.C:
+			case <-deadline.C:
+				t.Errorf("live fixture still has %d reader connections after close", open)
+				return
+			}
+		}
+	})
 	return writer, service
 }
 
