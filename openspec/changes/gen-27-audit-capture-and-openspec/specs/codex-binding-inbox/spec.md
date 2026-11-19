@@ -27,6 +27,13 @@ The trusted Codex callback SHALL provide a sandbox-compatible way for the agent 
 - **WHEN** a fresh workspace-write Codex root receives its own request and submits its explicitly supplied ticket through the installed inbox
 - **THEN** it can submit without a per-run directory flag and the worker can bind its verified source identity and publish to the existing selected ledger and summary.
 
+#### Scenario: Display titles differ for the same ticket ID
+
+- **WHEN** verified registrations for the same canonical ticket ID carry different display titles and that ID resolves to an existing ledger
+- **THEN** automatic generation SHALL publish eligible facts from those registrations and preserve the ledger’s existing nonblank display title.
+- **WHEN** that existing ledger has no display title
+- **THEN** automatic generation SHALL use an agreed nonblank title from the registrations when available and use the canonical ticket ID as the display title when hints are absent or disagree.
+
 #### Scenario: Invalid or replayed submission
 
 - **WHEN** a submission carries altered ticket fields, an invalid authenticator, a superseded request or a different worktree or session

@@ -295,7 +295,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				if metadataErr != nil {
 					success = false
 					lastFailure = metadataErr.Error()
-					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Destination: dest, Detail: "Publication metadata unavailable or conflicting. Supply an explicit ticket title/type through capture bind and retry reconciliation."}); e != nil {
+					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Destination: dest, Detail: "Conflicting ticket types prevent publication. Supply one explicit ticket type through capture bind and retry reconciliation."}); e != nil {
 						return e
 					}
 					fmt.Fprintln(os.Stderr, "automatic publication pending:", metadataErr)

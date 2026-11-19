@@ -26,3 +26,10 @@ For the corrected candidate, review behavior (callback through publication), dat
 - [ ] 3.5 Exercise the supported live installation and native fresh-root binding with private executables and state outside sandbox grants. Run integrated checks, re-review changed boundaries and record delivery evidence.
 
 Iteration 03 review covers callback installation and worker behavior, integrity of operator installation records, manager/engine separation, test effectiveness, and the writable-path boundary. Each focus reviews the same frozen product revision under gpt-6.2-sol/high and gpt-6-luna/medium; the coordinator retains findings, dissent and coverage in iteration 03 evidence. The live check uses a fresh native workspace-write session, the ordinary installed hook, the exact root registration, prior ledger owners and the published summary.
+
+
+### Display-title publication correction
+
+- [ ] 3.6 Preserve the existing ledger title during automatic generation and allow publication when registered display titles disagree. Retain canonical ticket ownership, explicit manual title selection and ticket-type validation.
+- [ ] 3.7 Verify the correction through the automatic worker path with matching canonical IDs, conflicting display titles and preserved accepted history. Check canonical-ID fallback for titleless ledgers with conflicting hints, manual title selection and unchanged type conflict handling. Review behavior, portable data and regression coverage.
+- [ ] 3.8 Reconcile the verified pending binding in the original worktree and verify ledger and summary publication. Record actual outcomes and any remaining source or destination failure.

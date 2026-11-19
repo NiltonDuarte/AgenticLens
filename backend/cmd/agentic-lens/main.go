@@ -369,19 +369,26 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			os.Exit(1)
 		}
 	}
-	var activeTicketTitle *string
-	if strings.TrimSpace(*ticketTitleFlag) != "" {
-		clean := strings.TrimSpace(*ticketTitleFlag)
-		activeTicketTitle = &clean
-	} else if cachedFacts != nil && cachedFacts.TicketTitle != nil {
-		clean := strings.TrimSpace(*cachedFacts.TicketTitle)
-		if clean != "" {
-			activeTicketTitle = &clean
+	ticketTitle := strings.TrimSpace(*ticketTitleFlag)
+	if cachedFacts != nil && cachedFacts.TicketTitle != nil {
+		recordedTitle := *cachedFacts.TicketTitle
+		switch {
+		case *autoFlag && strings.TrimSpace(recordedTitle) != "":
+			ticketTitle = recordedTitle
+		case ticketTitle == "":
+			ticketTitle = strings.TrimSpace(recordedTitle)
 		}
 	}
-	if !*autoFlag && (activeTicketTitle == nil || strings.TrimSpace(*activeTicketTitle) == "") {
+	if *autoFlag && cachedFacts != nil && ticketTitle == "" {
+		ticketTitle = activeTicketID
+	}
+	if !*autoFlag && ticketTitle == "" {
 		fmt.Fprintf(os.Stderr, "Error: missing ticket title for ticket '%s'. Specify --ticket-title explicitly.\n", activeTicketID)
 		os.Exit(1)
+	}
+	var activeTicketTitle *string
+	if ticketTitle != "" {
+		activeTicketTitle = &ticketTitle
 	}
 
 	var activeTicketType *domain.ConventionalTicketType
