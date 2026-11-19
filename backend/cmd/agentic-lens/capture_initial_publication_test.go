@@ -415,6 +415,16 @@ func TestCaptureInterruptedInitialPublicationRecoversExactTransaction(t *testing
 			if err := os.WriteFile(summary, original, 0600); err != nil {
 				t.Fatal(err)
 			}
+			var pendingSnapshotPath string
+			var pendingSnapshotBody []byte
+			if !committed {
+				prepareCaptureOwner(t, f, "root", initialPublicationTicket, 23)
+				if output, err := runInitialPublicationWorker(t, f); err != nil {
+					t.Fatalf("worker failed to capture bound pending facts: %v\n%s", err, output)
+				}
+				pendingSnapshotPath, _ = readOnlyCaptureSnapshot(t, filepath.Join(f.project, captureFixturePendingDir))
+				pendingSnapshotBody = readCaptureFile(t, pendingSnapshotPath)
+			}
 			prepareInitialPublication(t, f, f.output)
 			paths := []string{f.output, summary}
 			durableLedger := []byte(sampleFactJSON(initialPublicationTicket, "Initial durable publication", 8, 0))
@@ -507,7 +517,9 @@ func TestCaptureInterruptedInitialPublicationRecoversExactTransaction(t *testing
 				if err := adapters.CheckPublication(f.output); err == nil {
 					t.Fatal("an interrupted set was readable as complete")
 				}
-				prepareCaptureOwner(t, f, "root", initialPublicationTicket, 23)
+				if !bytes.Equal(readCaptureFile(t, pendingSnapshotPath), pendingSnapshotBody) {
+					t.Fatal("partial publication changed pending facts before recovery")
+				}
 				if output, err := runInitialPublicationWorker(t, f); err != nil {
 					t.Fatalf("worker failed to recover and retry the exact initial selection: %v\n%s", err, output)
 				}
@@ -515,7 +527,7 @@ func TestCaptureInterruptedInitialPublicationRecoversExactTransaction(t *testing
 				if body := readCaptureFile(t, summary); !bytes.HasPrefix(body, original) || bytes.Equal(body, original) {
 					t.Fatalf("retry did not publish metrics over the recovered original summary: %s", body)
 				}
-				assertInitialPublicationAbsent(t, marker)
+				assertInitialPublicationAbsent(t, marker, pendingSnapshotPath)
 			}
 			if err := adapters.CheckPublication(f.output); err != nil {
 				t.Fatal(err)
@@ -1109,8 +1121,8 @@ func TestCaptureFirstPublicationRefusesMissingUnsafeAndAmbiguousSelection(t *tes
 	for _, scenario := range []struct {
 		name, failure string
 	}{
-		{"missing", "prepare-publication"},
-		{"outside roots", "prepare-publication"},
+		{"missing", ""},
+		{"outside roots", ""},
 		{"ambiguous ledgers", "ambiguous"},
 		{"replaced directory", "no longer matches"},
 		{"consumed then deleted", "selection was consumed"},
@@ -1200,17 +1212,27 @@ func TestCaptureFirstPublicationRefusesMissingUnsafeAndAmbiguousSelection(t *tes
 				t.Fatal(err)
 			}
 			output, err := runInitialPublicationWorker(t, f)
-			if err == nil || !bytes.Contains(output, []byte(scenario.failure)) {
-				t.Fatalf("worker did not diagnose %q: %v\n%s", scenario.failure, err, output)
-			}
-			failed := false
-			for _, diagnostic := range captureDiagnostics(t, f.project, f.state) {
-				if diagnostic.TicketID == initialPublicationTicket && diagnostic.Phase == "publication" && diagnostic.Outcome == "failed" {
-					failed = true
+			if scenario.failure == "" {
+				if err != nil {
+					t.Fatalf("worker did not retain pending publication: %v\n%s", err, output)
 				}
-			}
-			if !failed {
-				t.Fatalf("worker did not record the failed ticket publication: %v\n%s", err, output)
+				_, snapshot := readOnlyCaptureSnapshot(t, filepath.Join(f.project, captureFixturePendingDir))
+				if snapshot.State != "awaiting_destination" || snapshot.TicketID != initialPublicationTicket {
+					t.Fatalf("unexpected pending snapshot: %+v", snapshot)
+				}
+			} else {
+				if err == nil || !bytes.Contains(output, []byte(scenario.failure)) {
+					t.Fatalf("worker did not diagnose %q: %v\n%s", scenario.failure, err, output)
+				}
+				failed := false
+				for _, diagnostic := range captureDiagnostics(t, f.project, f.state) {
+					if diagnostic.TicketID == initialPublicationTicket && diagnostic.Phase == "publication" && diagnostic.Outcome == "failed" {
+						failed = true
+					}
+				}
+				if !failed {
+					t.Fatalf("worker did not record the failed ticket publication: %v\n%s", err, output)
+				}
 			}
 			assertInitialPublicationAbsent(t, f.output, decoy)
 			if scenario.name != "unrelated pending transaction" {

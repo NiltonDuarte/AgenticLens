@@ -19,7 +19,8 @@ import (
 func TestNativeUserHookDisabledSessionUsesContextAndAvoidsCaptureIO(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	shared := filepath.Join(f.project, ".agenticlens-config.yaml")
-	if err := os.WriteFile(shared, append([]byte("agenticlens:\n  version: v9.8.7\n  install_root: "+filepath.Join(f.project, "absent-cache")+"\n"), readCaptureFile(t, shared)...), 0600); err != nil {
+	policy := strings.Replace(string(readCaptureFile(t, shared)), "agenticlens:\n", "agenticlens:\n  install_root: "+filepath.Join(f.project, "absent-cache")+"\n", 1)
+	if err := os.WriteFile(shared, []byte(policy), 0600); err != nil {
 		t.Fatal(err)
 	}
 	source := filepath.Join(f.project, "unavailable-source")

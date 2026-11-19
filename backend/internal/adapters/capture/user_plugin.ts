@@ -49,10 +49,22 @@ function bindingFeedback(body: string): string[] {
     lines.push("AgenticLens is waiting for exact source project evidence. Inspect capture diagnostics if this persists.");
   }
   if ("request" in response && typeof response.request === "string" &&
-    "ticket_id" in response && (response.ticket_id === "" ||
-    (!("binding" in response && response.binding === "source_parent") &&
-    (!("ticket_title" in response) || response.ticket_title === "")))) {
-    lines.push(`AgenticLens needs explicit ticket binding for this session. Call agenticlens_bind with the active ticket, human-readable title, optional conventional type and request ${response.request}. Use the ticket already supplied by the user. When the ticket is missing or ambiguous, ask the user and leave this session unassigned.`);
+    "ticket_id" in response && typeof response.ticket_id === "string") {
+    const inherited = "binding" in response && response.binding === "source_parent";
+    const outdated = "installation_id" in response && typeof response.installation_id === "string" &&
+      response.installation_id !== "" &&
+      (!("binding_installation_id" in response) || response.binding_installation_id !== response.installation_id);
+    const incomplete = !("ticket_title" in response && response.ticket_title) ||
+      !("ticket_type" in response && response.ticket_type);
+    if (response.ticket_id === "" || (!inherited && (incomplete || outdated))) {
+      const ticket = response.ticket_id === "" ? "the user-supplied active ticket" : `the recorded ticket ${response.ticket_id}`;
+      const directory = outdated && response.ticket_id !== "" ? "" : ", optional existing destination directory";
+      lines.push(`AgenticLens is collecting pending metrics for this OpenCode session. Call agenticlens_bind with ${ticket}, human-readable title, explicit conventional type${directory} and request ${response.request}. While required ticket information is unknown, capture remains pending.`);
+    }
+  }
+  if ("destination_request" in response && typeof response.destination_request === "string" && response.destination_request &&
+    "ticket_id" in response && typeof response.ticket_id === "string" && response.ticket_id) {
+    lines.push(`AgenticLens has verified this session's ticket binding. If first publication still needs a destination and the directory is known, call agenticlens_destination with the bound ticket ${response.ticket_id}, exact existing directory and request ${response.destination_request}. The native worker validates the indicated directory before publication.`);
   }
   return lines;
 }
@@ -96,16 +108,29 @@ export const AgenticLensCapture: Plugin = async ({ client, directory }) => ({
   },
   tool: {
     agenticlens_bind: tool({
-      description: "Bind this exact OpenCode session to the user's active ticket.",
+      description: "Bind this exact OpenCode session to the user's active ticket and optionally indicate an existing publication directory.",
       args: {
         ticket: tool.schema.string(),
         title: tool.schema.string(),
-        type: tool.schema.string().optional(),
+        type: tool.schema.string(),
+        destination: tool.schema.string().optional(),
         request: tool.schema.string(),
       },
-      execute: async ({ ticket, title, type, request }, context) => notify("bind",
+      execute: async ({ ticket, title, type, destination, request }, context) => notify("bind",
         { cwd: context.directory, session_id: context.sessionID, hook_event_name: "agent_binding" },
-        ["--ticket-id", ticket, "--ticket-title", title, "--request", request, ...(type ? ["--ticket-type", type] : [])]),
+        ["--ticket-id", ticket, "--ticket-title", title, "--ticket-type", type, "--request", request,
+          ...(destination === undefined ? [] : ["--destination-directory", destination])]),
+    }),
+    agenticlens_destination: tool({
+      description: "Indicate the exact existing publication directory for this OpenCode session's bound ticket.",
+      args: {
+        ticket: tool.schema.string(),
+        destination: tool.schema.string(),
+        request: tool.schema.string(),
+      },
+      execute: async ({ ticket, destination, request }, context) => notify("bind",
+        { cwd: context.directory, session_id: context.sessionID, hook_event_name: "agent_binding" },
+        ["--destination-only", "--ticket-id", ticket, "--destination-directory", destination, "--request", request]),
     }),
   },
 });

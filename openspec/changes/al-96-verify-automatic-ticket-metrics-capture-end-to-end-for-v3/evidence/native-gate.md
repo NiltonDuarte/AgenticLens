@@ -32,3 +32,9 @@ The [checksummed native result](native-result.json) records the passing Linux am
 | --- | ---: | ---: | ---: | ---: |
 | Codex 0.170.0 | 0.983 s | 1.125 s | 1.226 s | 4 / 0 s |
 | OpenCode 1.19.5 | 2.472 s | 1.272 s | 1.052 s | 16 / 0 s |
+
+## Capture before ticket binding
+
+The revised scenario begins without a ticket or destination. It checks a held interval in a Git-visible, unstaged snapshot, completion in the same snapshot, delayed binding, then a native destination request. The fixture starts with an unavailable destination to verify that pending facts survive the failed attempt. Once the directory exists, the worker commits the ledger and removes the pending snapshot. The gate checks exact source facts through promotion and a later resume.
+
+In `v3.0.0-rc.0+al96.pending1`, Codex captured the complete unbound tree but exceeded the 30-second completion deadline. Rediscovery put an already-accepted child back into a pending state and the worker backed off for roughly a minute after the completion request. Making repeated child inheritance idempotent and recognizing refreshed unassigned owners restored timely settlement. The corrected development package `v3.0.0-rc.0+al96.pending2` passed both clients with the original deadline.

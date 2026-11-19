@@ -81,8 +81,9 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 	cache := t.TempDir()
 	writePin := func(version string) {
 		t.Helper()
-		header := fmt.Sprintf("agenticlens:\n  version: %s\n  install_root: %q\n", version, cache)
-		if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), append([]byte(header), originalConfig...), 0600); err != nil {
+		pin := fmt.Sprintf("  version: %s\n  install_root: %q\n", version, cache)
+		policy := bytes.Replace(originalConfig, []byte("  version: v9.8.7\n"), []byte(pin), 1)
+		if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), policy, 0600); err != nil {
 			t.Fatal(err)
 		}
 	}

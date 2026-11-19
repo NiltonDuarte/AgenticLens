@@ -1,12 +1,18 @@
-# fix(AL-96): publish fresh ticket ledgers automatically
+# fix(AL-96): capture session metrics before ticket binding
 
 ## Outcome
+
+The installed worker captures native session facts before a ticket or its destination exists. It writes a Git-visible snapshot in the configured `agenticlens.pending_dir` and keeps the same capture identity after ticket binding. Each completed native interval settles in the pending snapshot while it waits for a destination.
+
+Once the bound agent indicates an eligible directory, the worker publishes `agentic_metrics.json` and any configured summary. It removes the pending snapshot after the ledger is durable. An existing canonical ledger takes precedence. The worker retains facts when publication is blocked and follows a canonical ledger moved within configured roots.
+
+The [design](design.md#capture-before-ticket-binding) records the revised scope. A separate roadmap ticket [AL-97](../../../alspaces/plan/to-do/AL-97%20warn%20about%20staged%20pending%20capture%20snapshots.md) covers the advisory Git hook.
+
+## Earlier operator-preparation delivery
 
 `capture prepare-publication` lets the operator select an empty destination for the first publication. The installed lifecycle binds the native session and the worker creates the ledger and any configured summary. The destination selection closes after publication or after an existing ledger is observed. Refresh follows the current ledger across configured roots. A pending local transaction recovers under publication ownership before a fresh write can proceed.
 
 Codex capture checks native parent metadata to recover nested sessions without their own callbacks. Workers respond to eligible lifecycle requests during the periodic wait, retain normal retries for persistent failures, and finish a progressing child scan across bounded worker lifetimes.
-
-## Verification and review
 
 The product candidate is `02ff2608` over `origin/main` at `a5c8a25e`. The runner at `32fd1347` passed the [ordered native gate](evidence/native-gate.md) on the checksummed `v3.0.0-rc.0+al96.02ff2608` package. Both clients published four exact owners and reported zero provisional seconds in their first completion-aware commit.
 
@@ -22,13 +28,9 @@ Capture status for the actual Codex development session reported zero registrati
 
 ## Pull request
 
-Create the first ticket ledger through normal installed lifecycle callbacks after explicit destination selection and verified binding. Protect first-write authorization through retries and prevent stale selections from recreating removed outputs.
+Capture native session metrics before ticket binding with one portable Git-visible snapshot per root. After verified binding, the agent supplies the first ledger directory through the installed integration. The worker validates destination ownership, commits the ledger and cleans up the pending snapshot once publication is durable. Existing ledgers retain their canonical location and history.
 
-Recover source-proven nested Codex sessions and shorten the interval between native completion and automatic publication. Add a repeatable native gate that checks the installed binaries, exact session ownership, tool activity, available usage, provisional and measured duration, and a later turn. The gate starts with an empty destination and uses automatic publication throughout.
-
-The verified Linux amd64 package passed the native gate with Codex 0.170.0 and OpenCode 1.19.5. Both clients captured the root, two direct children and a grandchild and left an unrelated session out. The first commits with native completion evidence reported zero provisional seconds after 1.125 seconds and 1.272 seconds respectively.
-
-The full integrated `make -j2` and OpenSpec strict validation passed.
+The packaged native gate begins before binding and checks provisional time while work is open. It verifies completion in the pending snapshot, delayed binding, an unavailable destination and its retry, then automatic publication and a later turn. The worker captures source-proven descendants and preserves their facts across these stages.
 
 ## Pull request record
 

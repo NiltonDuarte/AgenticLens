@@ -281,6 +281,13 @@ func BeginPublication(ledger string, paths []string) error {
 // BeginInitialPublication associates a fresh artifact transaction with its
 // private authorization when selection is present.
 func BeginInitialPublication(ledger string, paths []string, selection *capture.InitialPublication) error {
+	return BeginInitialPublicationWithAdmission(ledger, paths, selection, nil)
+}
+
+// BeginInitialPublicationWithAdmission prepares private backups before the
+// admission callback. Artifact replacement starts only after the callback has
+// authorized and durably published the public transaction indicator.
+func BeginInitialPublicationWithAdmission(ledger string, paths []string, selection *capture.InitialPublication, admit func(publishIndicator func() error) error) error {
 	if err := CheckPublication(ledger); err != nil {
 		return err
 	}
@@ -350,7 +357,27 @@ func BeginInitialPublication(ledger string, paths []string, selection *capture.I
 	if err != nil {
 		return err
 	}
-	return durableReplace(journalPath(ledger), indicator)
+	publishIndicator := func() error { return durableReplace(journalPath(ledger), indicator) }
+	if admit == nil {
+		return publishIndicator()
+	}
+	started := false
+	err = admit(func() error {
+		started = true
+		return publishIndicator()
+	})
+	if started {
+		return err
+	}
+	if err == nil {
+		err = errors.New("publication admission did not record the transaction indicator")
+	}
+	// No indicator was attempted, so no artifact replacement could begin.
+	// The unused private backup belongs exclusively to this failed admission.
+	if cleanupErr := capture.RemovePublicationFile(private); cleanupErr != nil {
+		return errors.Join(err, cleanupErr)
+	}
+	return errors.Join(err, syncDirectory(filepath.Dir(private)))
 }
 func loadRecovery(ledger string, paths []string) (publicationJournal, pendingPublication, bool, error) {
 	pending, present, err := loadPending(ledger)

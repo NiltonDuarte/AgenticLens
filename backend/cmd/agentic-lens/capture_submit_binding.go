@@ -19,10 +19,12 @@ func captureSubmitBinding(args []string, output io.Writer) error {
 	home := flags.String("store", "", "Exact Codex home from the native hook")
 	id := flags.String("session-id", "", "Exact session ID from the native hook")
 	request := flags.String("request", "", "Exact inbox request delivered by the native hook")
+	destinationOnly := flags.Bool("destination-only", false, "Indicate a destination for the already bound ticket using its separate request")
 	var ticket capture.BindingTicket
 	flags.StringVar(&ticket.ID, "ticket-id", "", "Explicit canonical ticket ID")
 	flags.StringVar(&ticket.Title, "ticket-title", "", "Human-readable ticket title")
-	flags.StringVar(&ticket.Type, "ticket-type", "", "Optional conventional ticket type")
+	flags.StringVar(&ticket.Type, "ticket-type", "", "Required conventional ticket type when binding or completing ticket metadata")
+	flags.StringVar(&ticket.Destination, "destination-directory", "", "Exact existing directory to indicate for first publication")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
@@ -46,7 +48,11 @@ func captureSubmitBinding(args []string, output io.Writer) error {
 	if !same {
 		return errors.New("requested binding store differs from configured Codex home")
 	}
-	if err := capture.SubmitCodexBinding(*project, *home, *id, *request, ticket, cfg.Ticket); err != nil {
+	submit := capture.SubmitCodexBinding
+	if *destinationOnly {
+		submit = capture.SubmitCodexDestination
+	}
+	if err := submit(*project, *home, *id, *request, ticket, cfg.Ticket); err != nil {
 		return err
 	}
 	return json.NewEncoder(output).Encode(struct {

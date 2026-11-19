@@ -4,6 +4,7 @@ from collections import Counter
 from contextlib import closing
 from dataclasses import dataclass, field
 from datetime import datetime
+from hashlib import sha256
 import json
 import math
 from pathlib import Path
@@ -196,14 +197,52 @@ def artifact_matches_commit(ledger, commitment, reconciliation):
             and all(checkpoint <= updated for checkpoint in source_completions))
 
 
-def check_held(snapshot, expected, root, commitment, reconciliation):
+def capture_id(source, root):
+    return sha256(f"{source}\0{root}".encode()).hexdigest()
+
+
+def check_pending_identity(snapshot, source, root, state):
+    require((snapshot["version"], snapshot["capture_id"], snapshot["source"],
+             snapshot["root_session_id"], snapshot["state"]) == (1, capture_id(source, root), source, root, state),
+            "Pending snapshot has wrong version, capture identity or state")
+    metadata = tuple(snapshot.get(field) for field in ("ticket_id", "ticket_title", "ticket_type"))
+    expected = (None, None, None) if state == "awaiting_ticket" else (TICKET, TITLE, "fix")
+    require(metadata == expected, f"Pending snapshot metadata differs from the verified {state} state")
+
+
+def snapshot_matches_pending_record(snapshot, diagnostic):
+    return (snapshot.get("source_cutoff") == diagnostic["reconciliation"]["started_at"]
+            and snapshot.get("state") == diagnostic["outcome"]
+            and snapshot.get("ticket_id") == (diagnostic.get("ticket_id") or None))
+
+
+def check_held(snapshot, expected, root, commitment, reconciliation, require_provisional=True):
     ledger, _ = snapshot
     rollup = check_rollup(snapshot)
+    cutoff = reconciliation["reconciliation"]["started_at"]
+    checkpoints = {item["session_id"]: item.get("checkpoint") for item in commitment.get("owners", [])}
+    return {
+        **rollup, "native_intervals": held_intervals(rollup, expected, root, cutoff, checkpoints, require_provisional),
+        "ledger_updated_at": ledger["updated_at"], "source_duration_cutoff": cutoff,
+        "source_reconciliation_completed_at": reconciliation["observed_at"],
+        "publication_observed_at": commitment["observed_at"],
+    }
+
+
+def check_held_pending(snapshot, source, expected, root, unrelated, diagnostic):
+    check_tree(snapshot, source, expected, root, unrelated)
+    rollup = duration_rollup(snapshot)
+    cutoff = snapshot["source_cutoff"]
+    return {
+        **rollup, "native_intervals": held_intervals(rollup, expected, root, cutoff),
+        "source_duration_cutoff": cutoff, "pending_snapshot_observed_at": diagnostic["observed_at"],
+    }
+
+
+def held_intervals(rollup, expected, root, cutoff, checkpoints=None, require_provisional=True):
     recorded = rollup["per_session"]
     require(set(recorded) == set(expected), "Held ledger and native tree have different owners")
-    cutoff = reconciliation["reconciliation"]["started_at"]
     cutoff_ms = math.floor(unix_time(cutoff) * 1000)
-    actual_checkpoints = {item["session_id"]: item.get("checkpoint") for item in commitment.get("owners", [])}
     native = {}
     for session_id, owner in expected.items():
         require((owner.open == 1 and len(owner.open_intervals) == 1) if session_id == root else
@@ -220,28 +259,25 @@ def check_held(snapshot, expected, root, commitment, reconciliation):
         fact = recorded[session_id]
         require(fact == {"active_seconds": active, "measured_seconds": measured, "provisional_seconds": active - measured},
                 f"{session_id}: held duration differs from the native intervals at cutoff {cutoff}")
-        checkpoint = actual_checkpoints[session_id]
-        if session_id != root:
+        checkpoint = checkpoints[session_id] if checkpoints is not None else None
+        if checkpoints is not None and session_id != root:
             require(checkpoint and abs(unix_time(checkpoint) - owner.latest_completion) < 0.001,
                     f"{session_id}: published held snapshot lacks its native child completion checkpoint")
         native[session_id] = {
             **fact, "native_completed_intervals": owner.completed, "native_latest_completion_epoch": owner.latest_completion or None,
-            "published_completion_checkpoint": checkpoint,
             "open_intervals": [
                 {"id": identifier, "model": model, "started_epoch_ms": start, "activity_epoch_ms": activity}
                 for identifier, (model, start, activity) in owner.open_intervals.items()
             ],
         }
-    require(recorded[root]["provisional_seconds"] > 0, "Held root did not publish positive provisional duration")
-    return {
-        **rollup, "native_intervals": native, "ledger_updated_at": ledger["updated_at"],
-        "source_duration_cutoff": cutoff, "source_reconciliation_completed_at": reconciliation["observed_at"],
-        "publication_observed_at": commitment["observed_at"],
-    }
+        if checkpoints is not None:
+            native[session_id]["published_completion_checkpoint"] = checkpoint
+    if require_provisional:
+        require(recorded[root]["provisional_seconds"] > 0, "Held root did not publish positive provisional duration")
+    return native
 
 
-def check_rollup(snapshot, native_measured_seconds=None):
-    ledger, summary = snapshot
+def duration_rollup(ledger, native_measured_seconds=None):
     per_owner = {}
     for session in ledger["sessions"]:
         active = sum(invocation["active_duration_seconds"] for invocation in session["invocations"])
@@ -260,6 +296,20 @@ def check_rollup(snapshot, native_measured_seconds=None):
         require(measured_seconds == native_measured_seconds,
                 f"Ticket measured duration {measured_seconds}s disagrees with native total {native_measured_seconds}s")
 
+    evidence = {
+        "per_session": per_owner, "ticket_active_seconds": active_seconds, "ticket_measured_seconds": measured_seconds,
+        "ticket_provisional_seconds": provisional_seconds,
+    }
+    if native_measured_seconds is not None:
+        evidence["native_measured_seconds"] = native_measured_seconds
+    return evidence
+
+
+def check_rollup(snapshot, native_measured_seconds=None):
+    ledger, summary = snapshot
+    rollup = duration_rollup(ledger, native_measured_seconds)
+    active_seconds = rollup["ticket_active_seconds"]
+    provisional_seconds = rollup["ticket_provisional_seconds"]
     rows = re.findall(
         r"^- \*\*Active Agent Duration:\*\* ([^\n]+?) \(recorded duration(?: including ([1-9]\d*)s provisional)?\)$",
         summary, re.MULTILINE,
@@ -274,32 +324,38 @@ def check_rollup(snapshot, native_measured_seconds=None):
     require(int(rendered_provisional or "0") == provisional_seconds,
             f"Ticket rendered provisional duration disagrees with ledger total {provisional_seconds}s")
 
-    evidence = {
-        "per_session": per_owner, "ticket_active_seconds": active_seconds, "ticket_measured_seconds": measured_seconds,
-        "ticket_provisional_seconds": provisional_seconds, "rendered_active_duration": rendered_duration,
-    }
-    if native_measured_seconds is not None:
-        evidence["native_measured_seconds"] = native_measured_seconds
-    return evidence
+    return {**rollup, "rendered_active_duration": rendered_duration}
 
 
-def check_complete(snapshot, source, expected, root, unrelated):
-    ledger, _ = snapshot
-    require((ledger["ticket_id"], ledger["ticket_title"], ledger["ticket_type"]) == (TICKET, TITLE, "fix"),
-            "Published binding metadata differs from the native agent's response")
+def check_tree(ledger, source, expected, root, unrelated):
     observed = {row["id"]: row for row in ledger["sessions"]}
     require(len(observed) == len(ledger["sessions"]), "Published ledger contains duplicate session IDs")
     require(unrelated not in observed, f"Unrelated session {unrelated} was captured on {TICKET}")
     require(set(observed) == set(expected), f"Expected native IDs {sorted(expected)}, published {sorted(observed)}")
     require(observed[root].get("parent_id") is None, "Published root has a parent")
     for session_id, owner in expected.items():
+        require(observed[session_id]["source"] == source and observed[session_id].get("parent_id") == owner.parent,
+                f"Wrong source or parent for {session_id}")
+    return observed
+
+
+def check_completed_facts(ledger, source, expected, root, unrelated):
+    observed = check_tree(ledger, source, expected, root, unrelated)
+    evidence = check_usage_and_tools(observed, expected)
+    for session_id, owner in expected.items():
         row = observed[session_id]
-        require(row["source"] == source and row.get("parent_id") == owner.parent, f"Wrong source or parent for {session_id}")
         require(owner.completed > 0 and owner.open == 0, f"Native completion unconfirmed for {session_id}")
         invocations = row["invocations"]
         active_seconds = sum(i["active_duration_seconds"] for i in invocations)
         require(active_seconds == owner.seconds, f"{session_id}: expected {owner.seconds} active seconds, observed {active_seconds}")
         require(not sum(i.get("provisional_seconds", 0) for i in invocations), f"{session_id}: completed owner retains provisional time")
+    return evidence
+
+
+def check_usage_and_tools(observed, expected):
+    for session_id, owner in expected.items():
+        row = observed[session_id]
+        invocations = row["invocations"]
         tools = {tool["name"]: tool["calls"] for tool in row["tools"]}
         require(len(tools) == len(row["tools"]), f"{session_id}: published duplicate tool rows")
         require(tools == dict(owner.tools), f"{session_id}: native tools {dict(owner.tools)}, published {tools}")
@@ -311,7 +367,42 @@ def check_complete(snapshot, source, expected, root, unrelated):
         require(owner.usage["input"] > 0 and owner.usage["output"] > 0 and totals == dict(owner.usage),
                 f"{session_id}: native tokens {dict(owner.usage)}, published {totals}")
     return {
-        **check_rollup(snapshot, native_measured_seconds=sum(owner.seconds for owner in expected.values())),
         "native_cache_write_by_session": {session_id: owner.cache_write for session_id, owner in expected.items()},
         "ledger_cache_write": "unpersisted",
+    }
+
+
+def check_ticket_metadata(ledger):
+    require((ledger["ticket_id"], ledger["ticket_title"], ledger["ticket_type"]) == (TICKET, TITLE, "fix"),
+            "Published binding metadata differs from the native agent's response")
+
+
+def check_birth(snapshot, source, expected, root, unrelated, commitment, reconciliation, pending):
+    ledger, _ = snapshot
+    check_ticket_metadata(ledger)
+    observed = check_tree(ledger, source, expected, root, unrelated)
+    require({session_id: row for session_id, row in observed.items() if session_id != root} ==
+            {row["id"]: row for row in pending["sessions"] if row["id"] != root},
+            "First canonical publication did not preserve children captured before binding")
+    evidence = check_held(snapshot, expected, root, commitment, reconciliation, require_provisional=False)
+    pending_root = duration_rollup(pending)["per_session"][root]
+    require(pending_root["provisional_seconds"] == 0 and
+            evidence["per_session"][root]["measured_seconds"] >= pending_root["measured_seconds"] > 0,
+            "First canonical publication lost the root's measured duration from before binding")
+    return {**evidence, **check_usage_and_tools(observed, expected)}
+
+
+def check_complete(snapshot, source, expected, root, unrelated):
+    ledger, _ = snapshot
+    check_ticket_metadata(ledger)
+    return {
+        **check_completed_facts(ledger, source, expected, root, unrelated),
+        **check_rollup(snapshot, native_measured_seconds=sum(owner.seconds for owner in expected.values())),
+    }
+
+
+def check_complete_pending(snapshot, source, expected, root, unrelated):
+    return {
+        **check_completed_facts(snapshot, source, expected, root, unrelated),
+        **duration_rollup(snapshot, native_measured_seconds=sum(owner.seconds for owner in expected.values())),
     }

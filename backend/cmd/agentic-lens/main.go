@@ -173,6 +173,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		os.Exit(1)
 	}
 	var policy domain.CaptureConfig
+	var pendingDirectory string
 	if *autoFlag {
 		admissionCtx, admissionCancel := context.WithTimeout(context.Background(), 2*time.Second)
 		admission, admissionErr := adaptersconfig.AcquireCaptureAdmission(admissionCtx, project)
@@ -210,6 +211,11 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		}
 		if !policy.Enabled {
 			fmt.Fprintln(os.Stderr, "Automatic publication disabled by selected local policy")
+			os.Exit(1)
+		}
+		pendingDirectory, err = adaptersconfig.ResolvePendingDirectory(projCfg, project)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Pending capture configuration:", err)
 			os.Exit(1)
 		}
 		if provided["max-sessions"] {
@@ -276,15 +282,55 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			}
 		}()
 	}
-	location, initialSelection, resolveErr := adapters.SelectGenerationWorkspacePublication(projCfg, *ticketIDFlag, *jsonOutputFlag, initialLease, *autoFlag)
-	if resolveErr != nil {
-		fmt.Fprintln(os.Stderr, "Ledger destination required:", resolveErr)
-		if *autoFlag {
-			if e := recordGenerationPublication(project, *captureDirFlag, *ticketIDFlag, "failed", "", "", nil, resolveErr.Error()); e != nil {
-				fmt.Fprintln(os.Stderr, "Cannot persist destination failure:", e)
+	var location adapters.WorkspaceLocation
+	var initialSelection *capture.InitialPublication
+	var metadataConflict error
+	var resolveErr error
+	if *autoFlag {
+		location, initialSelection, metadataConflict, resolveErr = selectNativeGenerationWorkspace(project, *captureDirFlag, *ticketIDFlag, *jsonOutputFlag, projCfg, policy, initialLease, protection)
+		if resolveErr != nil {
+			entries, reconciledAt, pendingErr := reconcilePendingDestination(project, *captureDirFlag, pendingDirectory, *ticketIDFlag, snapshotCutoff, policy, projCfg.Generation.Metrics, protection, nil)
+			if pendingErr != nil {
+				fmt.Fprintln(os.Stderr, "Pending destination capture:", errors.Join(resolveErr, pendingErr))
+				if capture.IsRegistryContention(pendingErr) {
+					os.Exit(capturePublicationBusyExit)
+				}
+				os.Exit(1)
+			}
+			if errors.Is(resolveErr, adapters.ErrAwaitingPublicationDestination) {
+				// The first source read may have established the proof needed
+				// to admit an indication received before extraction.
+				location, initialSelection, metadataConflict, resolveErr = selectNativeGenerationWorkspace(project, *captureDirFlag, *ticketIDFlag, *jsonOutputFlag, projCfg, policy, initialLease, protection)
+			}
+			if resolveErr != nil {
+				outcome, code := "failed", capturePublicationBlockedExit
+				if errors.Is(resolveErr, adapters.ErrAwaitingPublicationDestination) {
+					outcome, code = "awaiting_destination", 0
+				}
+				if err := recordGenerationPendingSnapshots(project, *captureDirFlag, pendingDirectory, "", resolveErr.Error(), reconciledAt, entries); err != nil {
+					fmt.Fprintln(os.Stderr, "Cannot persist pending snapshot diagnostics:", err)
+					os.Exit(1)
+				}
+				if err := recordGenerationPublication(project, *captureDirFlag, *ticketIDFlag, outcome, "", "", nil, resolveErr.Error()); err != nil {
+					fmt.Fprintln(os.Stderr, "Cannot persist destination diagnostic:", err)
+					os.Exit(1)
+				}
+				fmt.Fprintln(os.Stderr, "Automatic publication pending:", resolveErr)
+				if code == 0 {
+					return
+				}
+				if capture.IsRegistryContention(resolveErr) {
+					os.Exit(capturePublicationBusyExit)
+				}
+				os.Exit(code)
 			}
 		}
-		os.Exit(1)
+	} else {
+		location, initialSelection, resolveErr = adapters.SelectGenerationWorkspacePublication(projCfg, *ticketIDFlag, *jsonOutputFlag, initialLease, false)
+		if resolveErr != nil {
+			fmt.Fprintln(os.Stderr, "Ledger destination required:", resolveErr)
+			os.Exit(1)
+		}
 	}
 	if *jsonOutputFlag != "" {
 		for _, issue := range location.Diagnostics {
@@ -309,6 +355,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 	}
 	// All writers take ownership before loading the canonical baseline or reading sources.
 	// This prevents an earlier source view from publishing after a later generation.
+	var workspaceOwner *capture.PublicationLock
 	if *jsonOutputFlag != "" {
 		lockCtx, lockCancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		publicationLock, lockErr := location.AcquirePublicationWithProtection(lockCtx, project, protection)
@@ -317,6 +364,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			fmt.Fprintln(os.Stderr, "Error acquiring ledger publication ownership:", lockErr)
 			os.Exit(1)
 		}
+		workspaceOwner = publicationLock
 		defer func() {
 			if closeErr := publicationLock.Close(); closeErr != nil {
 				fmt.Fprintln(os.Stderr, "Publication unlock:", closeErr)
@@ -369,6 +417,14 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		os.Exit(1)
 	}
 
+	if *autoFlag && cachedFacts == nil && metadataConflict != nil {
+		entries, reconciledAt, pendingErr := reconcilePendingDestination(project, *captureDirFlag, pendingDirectory, activeTicketID, snapshotCutoff, policy, projCfg.Generation.Metrics, protection, workspaceOwner)
+		if pendingErr == nil {
+			pendingErr = recordGenerationPendingSnapshots(project, *captureDirFlag, pendingDirectory, "", metadataConflict.Error(), reconciledAt, entries)
+		}
+		reportGenerationPublicationBlock(project, *captureDirFlag, activeTicketID, *jsonOutputFlag, *appendFlag, errors.Join(metadataConflict, pendingErr))
+	}
+
 	if cachedFacts != nil {
 		initialSelection = nil
 	} else if provided["json-output"] && initialLease != nil {
@@ -394,7 +450,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		}
 	}
 	if cachedFacts != nil && *autoFlag && !provided["json-output"] && initialLease != nil {
-		if err := initialLease.ObserveExisting(capture.PublicationOwner(*jsonOutputFlag)); err != nil {
+		if err := initialLease.ObserveExisting(capture.PublicationOwner(*jsonOutputFlag), false); err != nil {
 			fmt.Fprintln(os.Stderr, "Recording the existing ledger against its initial selection:", err)
 			os.Exit(1)
 		}
@@ -429,7 +485,11 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 	}
 
 	var activeTicketType *domain.ConventionalTicketType
-	if strings.TrimSpace(*ticketTypeFlag) != "" {
+	if metadataConflict != nil {
+		// The owned canonical ledger decides the recorded type on refresh.
+		// A title/type disagreement supplies no new classification.
+		activeTicketType = cachedFacts.TicketType
+	} else if strings.TrimSpace(*ticketTypeFlag) != "" {
 		normalized, ok := domain.NormalizeTicketType(*ticketTypeFlag)
 		if !ok {
 			var names []string
@@ -444,7 +504,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		activeTicketType = cachedFacts.TicketType
 	}
 
-	if activeTicketType == nil && activeTicketID != "" {
+	if activeTicketType == nil && activeTicketID != "" && metadataConflict == nil {
 		value, found, typeErr := projCfg.Ticket.ResolveTicketTypeMapping(activeTicketID)
 		if typeErr != nil {
 			fmt.Fprintln(os.Stderr, typeErr)
@@ -510,6 +570,8 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 	var sourceEvents domain.SourceEvents
 	generationPolicy := projCfg.Generation.Metrics
 	var captureResult *capture.ReconcileResult
+	var pendingSnapshots []adapters.PendingSnapshotEntry
+	var pendingSessions []domain.SessionFact
 	if *autoFlag {
 		var captureErr error
 		captureResult, captureErr = reconcileCaptureGenerationAtWithPolicy(project, *captureDirFlag, activeTicketID, snapshotCutoff, policy, generationPolicy)
@@ -521,6 +583,30 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			os.Exit(1)
 		}
 		if captureResult != nil {
+			if cachedFacts != nil {
+				if _, _, conflict := domain.CaptureTicketMetadata(captureResult.Registrations, activeTicketID); conflict != nil {
+					activeTicketType = cachedFacts.TicketType
+				}
+			}
+			if cachedFacts != nil && !provided["json-output"] && initialLease != nil &&
+				adapters.HasNativePublicationDestination(captureResult.Registrations, project, activeTicketID) {
+				if err := initialLease.ObserveExisting(capture.PublicationOwner(*jsonOutputFlag), true); err != nil {
+					fmt.Fprintln(os.Stderr, "Retiring the native indication superseded by the canonical ledger:", err)
+					os.Exit(1)
+				}
+			}
+			pendingSnapshots, captureErr = syncGenerationPendingSnapshots(project, pendingDirectory, *captureResult, initialSelection != nil, policy, protection, workspaceOwner)
+			if captureErr != nil {
+				fmt.Fprintln(os.Stderr, "Cannot reconcile pending snapshots:", captureErr)
+				os.Exit(1)
+			}
+			if err := recordGenerationPendingSnapshots(project, *captureDirFlag, pendingDirectory, "", "Native facts retained pending canonical publication.", captureResult.Cutoff, pendingSnapshots); err != nil {
+				fmt.Fprintln(os.Stderr, "Cannot persist pending snapshot diagnostics:", err)
+				os.Exit(1)
+			}
+			for _, entry := range pendingSnapshots {
+				pendingSessions = append(pendingSessions, entry.Sessions()...)
+			}
 			for _, registration := range captureResult.Registrations {
 				if registration.State == domain.CaptureFailed || registration.State == domain.CapturePending {
 					fmt.Fprintf(os.Stderr, "Incomplete capture extraction for owner %s; accepted history retained: %s\n", registration.Identity.SessionID, registration.Detail)
@@ -697,15 +783,16 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 
 	if captureResult != nil {
 		if err := capture.ValidateSessionMerge(sessions, captureResult.Sessions); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "Capture identity collision:", err)
 			os.Exit(1)
 		}
-		if err := capture.ValidateSessionMerge(sessions, captureResult.Sessions); err != nil {
-			fmt.Fprintln(os.Stderr, "Capture identity collision:", err)
+		if err := capture.ValidateSessionMerge(sessions, pendingSessions); err != nil {
+			fmt.Fprintln(os.Stderr, "Pending snapshot identity collision:", err)
 			os.Exit(1)
 		}
 		sourceEvents = domain.MergeSourceEvents(captureResult.SourceEvents, sourceEvents)
 		// Retained snapshots fill missing owners only; canonical and explicit facts remain authoritative.
+		sessions = fillMissingCaptureSessions(sessions, pendingSessions)
 		sessions = fillMissingCaptureSessions(sessions, captureResult.Sessions)
 		// Explicit extraction runs after capture and has precedence for a duplicate refreshed owner.
 		freshSessions = mergeSessions(captureResult.RefreshedSessions, freshSessions)
@@ -833,6 +920,9 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		fmt.Fprintln(os.Stderr, "Cannot calculate source summaries:", summaryErr)
 		os.Exit(1)
 	}
+	if err := verifyPendingPromotionCoverage(factLedger.Sessions, freshSessions, pendingSessions); err != nil {
+		reportGenerationPublicationBlock(project, *captureDirFlag, activeTicketID, *jsonOutputFlag, *appendFlag, err)
+	}
 	metricsLedger := domain.DeriveMetricsLedger(domain.ProjectGenerationFacts(factLedger, generationPolicy), projCfg)
 	tableMD := adapters.FormatMarkdownMetricsTableWithPolicy(metricsLedger, generationPolicy, projCfg.RoleOrder)
 	if captureResult != nil {
@@ -863,8 +953,18 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 				os.Exit(1)
 			}
 		}
-		if e := adapters.BeginInitialPublication(*jsonOutputFlag, publicationPaths, initialSelection); e != nil {
-			fmt.Fprintln(os.Stderr, "Cannot stage recoverable publication:", e)
+		var beginErr error
+		if *autoFlag && cachedFacts == nil {
+			admissionFailed, err := beginAutomaticFirstPublication(project, *captureDirFlag, activeTicketID, *jsonOutputFlag, publicationPaths, policy, initialSelection)
+			if admissionFailed {
+				reportGenerationPublicationBlock(project, *captureDirFlag, activeTicketID, *jsonOutputFlag, *appendFlag, err)
+			}
+			beginErr = err
+		} else {
+			beginErr = adapters.BeginInitialPublication(*jsonOutputFlag, publicationPaths, initialSelection)
+		}
+		if beginErr != nil {
+			fmt.Fprintln(os.Stderr, "Cannot stage recoverable publication:", beginErr)
 			os.Exit(1)
 		}
 	}
@@ -911,6 +1011,12 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Ledger and requested summary replacement committed.", freshSessions); e != nil {
 				fmt.Fprintln(os.Stderr, "Artifacts committed but diagnostic acknowledgement failed; publication verification remains incomplete:", e)
 				os.Exit(1)
+			}
+			if len(pendingSnapshots) != 0 {
+				if e := promoteGenerationPendingSnapshots(project, *captureDirFlag, pendingDirectory, captureResult.Cutoff, pendingSnapshots, policy, protection, workspaceOwner); e != nil {
+					fmt.Fprintln(os.Stderr, "Canonical publication committed; pending snapshot cleanup remains incomplete:", e)
+					os.Exit(1)
+				}
 			}
 		}
 	}
@@ -1666,6 +1772,10 @@ func initCommand(args []string) error {
 		if err := adaptersconfig.ValidateBootstrapScaffold(scaffold, cfg.AgenticLens.Version); err != nil {
 			return err
 		}
+	}
+	cfg.AgenticLens.PendingDir, err = adaptersconfig.PendingDirectoryForSetup(outputPath, cfg)
+	if err != nil {
+		return err
 	}
 	yamlData, err := adaptersconfig.GenerateConfigYAML(cfg)
 	if err != nil {

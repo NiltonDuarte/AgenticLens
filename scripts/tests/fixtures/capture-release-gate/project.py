@@ -52,15 +52,17 @@ def require_package(release, version):
 
 
 class Project:
-    def __init__(self, parent, source, version, binary, repository):
+    def __init__(self, parent, source, version, binary, repository, prepared=False):
         self.source = source
         self.version = version
         self.runtime = binary
         self.repository = repository
+        self.prepared = prepared
         self.root = parent
         self.checkout = parent / "project"
         self.home = parent / "home"
         self.workspace = self.checkout / "selected" / "ordinary-directory"
+        self.pending = self.checkout / "review" / "pending-capture"
         self.ledger = self.workspace / "agentic_metrics.json"
         self.summary = self.workspace / "delivery.md"
         self.data = parent / "data"
@@ -79,7 +81,8 @@ class Project:
             "OPENCODE_DISABLE_TERMINAL_TITLE": "true",
             "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
         }
-        for path in (self.workspace, self.codex_home, self.data, parent / "config"):
+        initial_workspace = self.workspace if prepared else self.workspace.parent
+        for path in (initial_workspace, self.codex_home, self.data, parent / "config"):
             path.mkdir(parents=True)
         (self.checkout / ".gitignore").write_text(".agenticlens-config.local.yaml\n")
         (self.checkout / "fixture.py").write_text("def answer():\n    return 41\n")
@@ -89,8 +92,14 @@ class Project:
         self.run("git", "add", ".gitignore", "fixture.py")
         self.run("git", "commit", "-qm", "Initial test project")
         self.run("git", "update-ref", "refs/remotes/origin/main", "HEAD")
+        if not prepared:
+            (self.checkout / "staged-fixture.txt").write_text("Unrelated staged work.\n")
+            self.run("git", "add", "--", "staged-fixture.txt")
+        entrypoint = {"version": version}
+        if not prepared:
+            entrypoint["pending_dir"] = str(self.pending.relative_to(self.checkout))
         write_json(self.checkout / ".agenticlens-config.yaml", {
-            "agenticlens": {"version": version},
+            "agenticlens": entrypoint,
             "project_name": f"AL-96 {source} release gate",
             "ticket": {
                 "case_insensitive": False,
@@ -142,6 +151,10 @@ class Project:
     def run(self, *args, timeout=60):
         return subprocess.run(args, cwd=self.checkout, env=self.env, text=True, stdin=subprocess.DEVNULL,
                               capture_output=True, check=True, timeout=timeout).stdout.strip()
+
+    def index_entries(self):
+        return subprocess.run(("git", "ls-files", "--stage", "-z"), cwd=self.checkout, env=self.env,
+                              stdin=subprocess.DEVNULL, capture_output=True, check=True, timeout=10).stdout
 
     def configure_client(self, port):
         if self.source == "codex":
@@ -220,7 +233,7 @@ supports_websockets = false
                 BEGIN IMMEDIATE;
                 CREATE TABLE release_gate_diagnostics(sequence INTEGER PRIMARY KEY, ticket TEXT NOT NULL, record BLOB NOT NULL);
                 CREATE TRIGGER release_gate_copy_diagnostic AFTER INSERT ON capture_diagnostics
-                WHEN NEW.phase IN ('publication', 'reconciliation')
+                WHEN NEW.phase IN ('publication', 'reconciliation', 'pending_snapshot')
                 BEGIN
                     INSERT INTO release_gate_diagnostics(sequence,ticket,record) VALUES(NEW.sequence,NEW.ticket,NEW.record);
                 END;
@@ -228,11 +241,14 @@ supports_websockets = false
             """)
         self.diagnostic_registry = registry
 
-    def diagnostic_history(self):
+    def diagnostic_history(self, ticket=TICKET):
         require(self.diagnostic_registry is not None, "Fixture diagnostic history observation was not installed")
         uri = self.diagnostic_registry.as_uri() + "?mode=ro"
         with closing(sqlite3.connect(uri, uri=True, timeout=1)) as db:
-            rows = db.execute("SELECT sequence,record FROM release_gate_diagnostics WHERE ticket=? ORDER BY sequence", (TICKET,))
+            rows = db.execute(
+                "SELECT sequence,record FROM release_gate_diagnostics WHERE ? IS NULL OR ticket=? ORDER BY sequence",
+                (ticket, ticket),
+            )
             return [dict(json.loads(record), sequence=sequence) for sequence, record in rows]
 
     def trust_codex_hooks(self):
@@ -296,6 +312,10 @@ supports_websockets = false
             args.extend(("--session", session) if session else ("--title", f"AL96:{stage}"))
         args.append({
             "ROOT": f"AL96:ROOT Bind ticket {TICKET} with title 'Native capture release gate' and type fix. Delegate the fixture edit and verification, then wait.",
+            "UNBOUND": "AL96:UNBOUND Delegate the fixture edit and verification, then wait. I don't have a ticket or a destination yet.",
+            "BIND": f"AL96:BIND Assign this existing session to {TICKET} with title 'Native capture release gate' and type fix. The destination has not been created yet.",
+            "DESTINATION": f"AL96:DESTINATION Indicate {self.workspace} for the bound ticket. Leave creation of the directory to the next turn.",
+            "RETRY": f"AL96:RETRY Create {self.workspace} and verify the edited fixture.py. Keep the previously indicated destination.",
             "UNRELATED": "AL96:UNRELATED Read fixture.py. This session has no ticket.",
             "RESUME": "AL96:RESUME Verify the edited fixture.py on this normal continuation.",
         }[stage])

@@ -143,7 +143,12 @@ func (s *Store) ReadDiagnostics(ctx context.Context, options DiagnosticReadOptio
 				page.More = true
 				break
 			}
-			if err = lookup(owner.TicketID, "reconciliation", IdentityKey(owner.Identity)); err != nil {
+			if owner.TicketID != "" {
+				if err = lookup(owner.TicketID, "reconciliation", IdentityKey(owner.Identity)); err != nil {
+					return page, err
+				}
+			}
+			if err = lookup(owner.TicketID, "pending_snapshot", pendingDiagnosticOwner(owner.Identity.Source, owner.Identity.SessionID)); err != nil {
 				return page, err
 			}
 		}

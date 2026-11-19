@@ -71,6 +71,11 @@ func validateSharedNodes(nodes map[string]*yaml.Node) error {
 	if nodes["agenticlens.state_dir"] != nil {
 		return fmt.Errorf("agenticlens.state_dir belongs only in local YAML")
 	}
+	if n := pendingDirectoryNode(nodes); n != nil {
+		if _, err := pendingDirectoryValue(n); err != nil {
+			return err
+		}
+	}
 	if err := validateWorkspaceNodes(nodes["workspaces"]); err != nil {
 		return err
 	}

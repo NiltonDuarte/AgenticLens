@@ -15,7 +15,7 @@ TITLE = "Native capture release gate"
 MODEL = "gpt-5.4"
 EDIT = "printf 'def answer():\\n    return 42\\n' > fixture.py"
 VERIFY = "python3 -B -c 'from fixture import answer; assert answer() == 42'"
-STAGES = r"AL96:(ROOT|IMPLEMENT|VERIFY|NESTED|RESUME|UNRELATED)"
+STAGES = r"AL96:(ROOT|UNBOUND|BIND|DESTINATION|RETRY|IMPLEMENT|VERIFY|NESTED|RESUME|UNRELATED)"
 
 
 def strings(value):
@@ -47,13 +47,16 @@ def request_stage(inputs):
 
 
 class FixtureModel:
-    def __init__(self, manager, project):
+    def __init__(self, manager, project, destination):
         self.manager = str(manager)
         self.project = str(project)
+        self.destination = str(destination)
         self.binding_engine = ""
         self.nested_supported = None
         self.release = Event()
         self.holding = Event()
+        self.repair_release = Event()
+        self.repair_holding = Event()
         self.serial = itertools.count(1)
         self.errors = []
 
@@ -119,18 +122,43 @@ class FixtureModel:
             return Action("done")
         if stage in ("VERIFY", "NESTED", "RESUME"):
             return shell("verify", VERIFY) if "verify" not in prior else Action("done")
+        if stage == "RETRY":
+            command = f"mkdir -- {shlex.quote(self.destination)} && {VERIFY}"
+            return shell("create", command) if "create" not in prior else Action("hold_repair")
 
-        if "bind" not in prior:
+        def codex_submission(body, suffix):
+            found = re.search(r"execute:\s*(.+? capture submit-binding [^\n]*?)\s+" + suffix, body)
+            if not found:
+                raise ValueError(f"Codex did not deliver the native challenge for {stage}")
+            command = shlex.split(found[1])
+            if (not command or command[0] not in (self.manager, self.binding_engine)
+                    or command[1:5] != ["capture", "submit-binding", "--repo", self.project]):
+                raise ValueError("Unexpected executable or project in Codex capture challenge")
+            return command
+
+        if stage == "DESTINATION":
+            if "destination" in prior:
+                return Action("done")
             body = "\n".join(strings(request))
             if codex:
-                pattern = r"execute:\s*(.+? capture submit-binding [^\n]*?)\s+--ticket-id <EXPLICIT_TICKET_ID>"
-                found = re.search(pattern, body)
-                if not found:
-                    raise ValueError("Codex did not deliver its native binding challenge")
-                command = shlex.split(found[1])
-                if (not command or command[0] not in (self.manager, self.binding_engine)
-                        or command[1:5] != ["capture", "submit-binding", "--repo", self.project]):
-                    raise ValueError("Unexpected executable or project in Codex binding challenge")
+                command = codex_submission(body, r"--destination-only\s+--ticket-id\b")
+                return shell("destination", shlex.join(command + [
+                    "--destination-only", "--ticket-id", TICKET, "--destination-directory", self.destination,
+                ]))
+            found = re.search(
+                rf"call agenticlens_destination with the bound ticket {TICKET}, exact existing directory and request ([^\s.]+)",
+                body, re.IGNORECASE,
+            )
+            if not found:
+                raise ValueError("OpenCode did not deliver its native destination challenge")
+            return Action("destination", "agenticlens_destination", {
+                "ticket": TICKET, "destination": self.destination, "request": found[1],
+            })
+
+        if stage in ("ROOT", "BIND") and "bind" not in prior:
+            body = "\n".join(strings(request))
+            if codex:
+                command = codex_submission(body, r"--ticket-id <EXPLICIT_TICKET_ID>")
                 return shell("bind", shlex.join(command + [
                     "--ticket-id", TICKET, "--ticket-title", TITLE, "--ticket-type", "fix",
                 ]))
@@ -140,6 +168,8 @@ class FixtureModel:
             return Action("bind", "agenticlens_bind", {
                 "ticket": TICKET, "title": TITLE, "type": "fix", "request": found[1],
             })
+        if stage == "BIND":
+            return Action("done")
 
         if "implementation" not in prior:
             return spawn("implementation", "IMPLEMENT")
@@ -223,9 +253,11 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
 
-    def hold(self):
-        self.server.model.holding.set()
-        if not self.server.model.release.wait(100):
+    def hold(self, step):
+        model = self.server.model
+        entered, release = (model.repair_holding, model.repair_release) if step == "hold_repair" else (model.holding, model.release)
+        entered.set()
+        if not release.wait(100):
             self.server.model.errors.append("Harness was held open but publication barrier was never released")
 
     def stream_responses(self, model, action, namespace, call_id):
@@ -248,8 +280,8 @@ class Handler(BaseHTTPRequestHandler):
                        "item": dict(item, content=[], status="in_progress")})
             self.emit({"type": "response.output_text.delta", "output_index": 0, "content_index": 0,
                        "item_id": item_id, "delta": "Fixture complete."})
-            if action.step == "hold":
-                self.hold()
+            if action.step in ("hold", "hold_repair"):
+                self.hold(action.step)
         self.emit({"type": "response.output_item.done", "output_index": 0, "item": item})
         self.emit({"type": "response.completed", "response": dict(
             response, status="completed", output=[item],
@@ -270,8 +302,8 @@ class Handler(BaseHTTPRequestHandler):
             ]})
         else:
             chunk({"role": "assistant", "content": "Fixture complete."})
-            if action.step == "hold":
-                self.hold()
+            if action.step in ("hold", "hold_repair"):
+                self.hold(action.step)
         chunk({}, "tool_calls" if action.tool else "stop",
               usage={"prompt_tokens": 23, "completion_tokens": 11, "total_tokens": 34})
         self.wfile.write(b"data: [DONE]\n\n")

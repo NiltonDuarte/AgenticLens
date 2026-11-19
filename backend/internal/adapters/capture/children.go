@@ -185,6 +185,12 @@ func (s *Store) inheritChild(ctx context.Context, parent domain.CaptureRegistrat
 		if e != nil {
 			return r, e
 		}
+		if r.TicketID == bound && r.ParentID == parent.Identity.SessionID && r.ProjectDirectory == s.project &&
+			r.ProjectProof == domain.CaptureProjectVerified && (path == "" || path == r.TranscriptPath) {
+			// Repeated discovery of an accepted native edge is idempotent.
+			// In particular it cannot undo a source refresh from this pass.
+			return r, nil
+		}
 		if path != "" {
 			if r.TranscriptPath != "" && r.TranscriptPath != path {
 				if r.Identity.Source == domain.SourceCodex && r.TicketID != "" {
@@ -211,8 +217,8 @@ func (s *Store) inheritChild(ctx context.Context, parent domain.CaptureRegistrat
 	return err == nil, err
 }
 
-// recoverChildren acts only for proven ticket parents. Unassigned roots are not
-// extraction candidates and do not spend this ticket's source budget.
+// recoverChildren uses the candidate parents for this reconciliation scope.
+// Unassigned parents only spend the separate pre-binding source budget.
 func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *workBudget, class workClass) (int, error) {
 	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS pending_children(worktree_id INTEGER NOT NULL,store TEXT,path TEXT,parent TEXT,PRIMARY KEY(worktree_id,store,path)); CREATE TABLE IF NOT EXISTS pending_starts(worktree_id INTEGER NOT NULL,store TEXT,parent TEXT,agent TEXT,PRIMARY KEY(worktree_id,store,parent,agent)); CREATE TABLE IF NOT EXISTS discovery_cursor(worktree_id INTEGER NOT NULL,parent TEXT,path TEXT NOT NULL,PRIMARY KEY(worktree_id,parent)); CREATE TABLE IF NOT EXISTS child_cursor(worktree_id INTEGER NOT NULL,kind TEXT,parent TEXT,key TEXT,more INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(worktree_id,kind,parent))`)
 	if err != nil {
@@ -470,7 +476,7 @@ func (s *Store) clearExactCodexStart(ctx context.Context, parent domain.CaptureR
 	return err
 }
 
-// CodexChildDiscoveryCursors reports unstarted and incomplete sweeps of bound
+// CodexChildDiscoveryCursors reports unstarted and incomplete sweeps of
 // parents. An unresolved hint after a complete sweep remains diagnostic
 // evidence without keeping a terminal worker alive.
 func (s *Store) CodexChildDiscoveryCursors(ctx context.Context) (map[string]string, error) {
@@ -478,7 +484,7 @@ func (s *Store) CodexChildDiscoveryCursors(ctx context.Context) (map[string]stri
 SELECT r.identity,coalesce(c.path,'')
 FROM registrations r
 LEFT JOIN discovery_cursor c ON c.worktree_id=r.worktree_id AND c.parent=r.identity
-WHERE r.worktree_id=? AND r.source='codex' AND r.ticket<>'' AND (c.path IS NULL OR c.path<>'')
+WHERE r.worktree_id=? AND r.source='codex' AND (c.path IS NULL OR c.path<>'')
   AND EXISTS (SELECT 1 FROM pending_starts p WHERE p.worktree_id=r.worktree_id AND p.store=r.store AND p.parent=r.session_id)
 `, s.worktreeID)
 	if err != nil {

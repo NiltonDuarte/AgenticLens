@@ -124,8 +124,9 @@ func verifyLateCodexSubmission(t *testing.T, ownerCount int) {
 	if response.Context == nil || !strings.Contains(response.Context.Context, fixtureCaptureEngine()) {
 		t.Fatal("trusted callback did not return the protected engine for submission")
 	}
-	// Wait for the initial callback to finish its first publication pass.
-	// A user can answer the request after the configured 300 ms idle interval.
+	// End the initial unbound turn so the active worker can go idle. The
+	// delayed answer must still wake publication after that worker exits.
+	receive("Stop")
 	ackDeadline := time.Now().Add(5 * time.Second)
 	for {
 		progress, err := store.PublicationRequest(context.Background())
@@ -439,7 +440,7 @@ func TestCodexInboxVerifiesExactOwnerAndRetriesAfterSourceFlush(t *testing.T) {
 	if err := os.WriteFile(localPath, overlap, 0600); err != nil {
 		t.Fatal(err)
 	}
-	out, submitErr := captureCLI(t, f.project, "", "submit-binding", "--repo", f.project, "--store", f.store, "--session-id", "root", "--request", rootKey, "--ticket-id", "TEST-100", "--ticket-title", "Root")
+	out, submitErr := captureCLI(t, f.project, "", "submit-binding", "--repo", f.project, "--store", f.store, "--session-id", "root", "--request", rootKey, "--ticket-id", "TEST-100", "--ticket-title", "Root", "--ticket-type", "fix")
 	if submitErr == nil || !strings.Contains(strings.ToLower(string(out)), "overlap") {
 		t.Fatalf("stale settings allowed submission or failed for the wrong reason: %s %v", out, submitErr)
 	}
@@ -656,7 +657,7 @@ func TestCodexInboxPassSharesBytesAcrossOwnerProofs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		out, err := captureCLI(t, f.project, "", "submit-binding", "--repo", f.project, "--store", f.store, "--session-id", id, "--request", inboxCredentialFromHook(t, reply), "--ticket-id", "TEST-100", "--ticket-title", id)
+		out, err := captureCLI(t, f.project, "", "submit-binding", "--repo", f.project, "--store", f.store, "--session-id", id, "--request", inboxCredentialFromHook(t, reply), "--ticket-id", "TEST-100", "--ticket-title", id, "--ticket-type", "fix")
 		if err != nil {
 			t.Fatalf("submission for %s: %s %v", id, out, err)
 		}

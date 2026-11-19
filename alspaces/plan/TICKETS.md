@@ -11,7 +11,7 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **File**: [AL-83](to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md)
 
 - **AL-96**: Verify automatic ticket metrics capture end to end for v3
-  - **Status**: In Progress; **Blocked by**: None; **Blocks**: v3 stable release
+  - **Status**: In Progress; **Blocked by**: None; **Blocks**: v3 stable release, AL-97
   - **File**: [AL-96](to-do/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md)
 
 ## Ready
@@ -74,6 +74,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **File**: [REV-7](to-do/REV-7%20review%20source%20read%20guarantees.md)
 
 ## Blocked
+
+- **AL-97**: Warn about staged pending capture snapshots
+  - **Status**: Blocked; **Blocked by**: AL-96; **Blocks**: None
+  - **File**: [AL-97](to-do/AL-97%20warn%20about%20staged%20pending%20capture%20snapshots.md)
 
 - **AL-95**: Preview source-backed defaults and decide on rollout
   - **Status**: Blocked; **Blocked by**: AL-94; **Blocks**: None

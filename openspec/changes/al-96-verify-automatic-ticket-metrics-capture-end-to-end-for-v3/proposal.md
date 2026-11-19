@@ -10,7 +10,8 @@ The automatic worker can collect bound sessions but resolves its output by looki
 
 ## What changes
 
-- Let an operator explicitly select the first destination for a ticket. After native binding, the worker publishes to the selected directory using the existing publication transaction.
+- Start native capture when the session opens. Keep source-backed metrics in a Git-reviewable snapshot in an explicitly configured pending directory while ticket metadata or a destination is missing.
+- Accept ticket metadata and the exact destination from the agent during the session. Publish through the existing transaction when the destination is eligible. Keep operator preparation available as an explicit alternate entry point.
 - Verify the packaged candidate through the supported setup path with real Codex and OpenCode sessions. Check first publication, exact session coverage, later refresh and the time it takes for provisional duration to settle after native completion.
 - Fix supported-path defects exposed by the gate and rerun it on the corrected package before stable v3 delivery. Record manual-only combinations separately.
 
@@ -20,4 +21,4 @@ Add `automatic-ticket-publication` for first publication, lifecycle refresh and 
 
 ## Impact
 
-An adopting project can start with a selected directory and no ledger. Existing ledgers retain their recorded identity, title and history. Subsequent refreshes follow the ledger across configured roots. The initial selection carries operational write authority only. Portable ledger readers continue to work without the producer's private state.
+An adopting project can start a session before choosing a ticket or creating its directory. The Git warning hook and its optional installation belong in a separate backlog ticket. Existing ledgers retain their recorded identity, title and history. Subsequent refreshes follow the ledger across configured roots. The initial selection carries operational write authority only. Portable ledger readers continue to work without the producer's private state.

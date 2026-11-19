@@ -158,6 +158,10 @@ func PrepareWorkspacePublication(ctx context.Context, cfg domain.ProjectConfig, 
 	}
 	defer func() { returnErr = errors.Join(returnErr, lease.Close()) }()
 
+	return prepareWorkspacePublicationWithLease(ctx, cfg, project, ticket, path, protection, lease, false, nil)
+}
+
+func prepareWorkspacePublicationWithLease(ctx context.Context, cfg domain.ProjectConfig, project, ticket, path string, protection *capture.ProtectedPublication, lease *capture.InitialPublicationLease, native bool, replacing *capture.InitialPublication) (returnErr error) {
 	location, err := initialWorkspaceLocation(cfg, path)
 	if err != nil {
 		return err
@@ -171,6 +175,9 @@ func PrepareWorkspacePublication(ctx context.Context, cfg domain.ProjectConfig, 
 
 	if err := validateEmptyFirstPublication(cfg, ticket, location.LedgerPath); err != nil {
 		return err
+	}
+	if native {
+		return lease.PrepareNative(owner, replacing)
 	}
 	return lease.Prepare(owner)
 }
@@ -253,6 +260,141 @@ func SelectGenerationWorkspacePublication(cfg domain.ProjectConfig, ticket, path
 	}
 	location, err = initialWorkspaceLocation(cfg, selection.Path)
 	return location, selection, err
+}
+
+// ErrAwaitingPublicationDestination describes the ordinary waiting state for a
+// bound ticket that has no current canonical ledger or destination indication.
+var ErrAwaitingPublicationDestination = errors.New("awaiting an exact ledger destination from the bound native session")
+
+// SelectNativeWorkspacePublication prefers canonical identity and existing
+// private recovery. Only a source-verified, explicitly bound native owner can
+// supply a new destination indication, and normal first-publication admission
+// gives the resulting selection its authority.
+func SelectNativeWorkspacePublication(ctx context.Context, cfg domain.ProjectConfig, project, ticket, path string, lease *capture.InitialPublicationLease, protection *capture.ProtectedPublication, registrations func() ([]domain.CaptureRegistration, error)) (WorkspaceLocation, *capture.InitialPublication, error) {
+	location, selection, err := SelectGenerationWorkspacePublication(cfg, ticket, path, lease, true)
+	if path != "" || lease == nil || (err != nil && !workspaceNotFound(err)) {
+		return location, selection, err
+	}
+	if err == nil && (selection == nil || !selection.Native || selection.Closed() || CheckPublication(selection.Path) != nil) {
+		// A canonical ledger, operator selection or marked recovery keeps
+		// its existing precedence over native indications.
+		return location, selection, err
+	}
+	rows, err := registrations()
+	if err != nil {
+		return WorkspaceLocation{}, nil, errors.Join(err, location.Close())
+	}
+	destination, err := nativeDestinationDirectory(rows, project, ticket)
+	if err != nil {
+		return WorkspaceLocation{}, nil, errors.Join(err, location.Close())
+	}
+	ledger := filepath.Join(destination, "agentic_metrics.json")
+	if selection != nil {
+		if selection.Path == ledger {
+			return location, selection, nil
+		}
+		err := retireTentativeNativeLocation(ctx, project, location, protection, selection)
+		if err = errors.Join(err, location.Close()); err != nil {
+			return WorkspaceLocation{}, nil, err
+		}
+	}
+	if err := prepareWorkspacePublicationWithLease(ctx, cfg, project, ticket, ledger, protection, lease, true, selection); err != nil {
+		// A canonical ledger may have appeared through another writer after
+		// the original discovery. Never fall back to an open native receipt.
+		location, observed, resolveErr := SelectGenerationWorkspacePublication(cfg, ticket, "", lease, true)
+		if resolveErr == nil && (observed == nil || errors.Is(CheckPublication(observed.Path), ErrPublicationPending)) {
+			return location, observed, nil
+		}
+		return WorkspaceLocation{}, nil, errors.Join(fmt.Errorf("native destination rejected: %w", err), location.Close())
+	}
+	return SelectGenerationWorkspacePublication(cfg, ticket, "", lease, true)
+}
+
+func retireTentativeNativeLocation(ctx context.Context, project string, location WorkspaceLocation, protection *capture.ProtectedPublication, selection *capture.InitialPublication) (returnErr error) {
+	owner, err := location.AcquirePublicationWithProtection(ctx, project, protection)
+	if err != nil {
+		return err
+	}
+	defer func() { returnErr = errors.Join(returnErr, owner.Close()) }()
+	if owner.DirectoryIdentity() != selection.Directory {
+		return errors.New("old native selection no longer matches its directory")
+	}
+	if err := owner.ValidateLocation(); err != nil {
+		return err
+	}
+	// The public marker is durable before normal replacement can begin.
+	// A private staging file without it has no authority over the artifacts.
+	if err := CheckPublication(selection.Path); err != nil {
+		return err
+	}
+	if _, err := capture.LstatPublicationFile(selection.Path); err == nil {
+		return errors.New("old native selection is occupied by a ledger")
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
+// ValidateCurrentNativePublication confirms the selected directory still has
+// every current verified native indication before starting a new transaction.
+func ValidateCurrentNativePublication(project, ticket string, selection *capture.InitialPublication, rows []domain.CaptureRegistration) error {
+	if selection == nil || !selection.Native {
+		return nil
+	}
+	destination, err := nativeDestinationDirectory(rows, project, ticket)
+	if err != nil {
+		return err
+	}
+	if filepath.Join(destination, "agentic_metrics.json") != selection.Path {
+		return errors.New("native destination changed before publication; retry current indications")
+	}
+	return nil
+}
+
+func nativeDestinationDirectory(rows []domain.CaptureRegistration, project, ticket string) (string, error) {
+	var destination string
+	for _, row := range rows {
+		if !hasNativePublicationDestination(row, project, ticket) {
+			continue
+		}
+		hint := row.PublicationDestination
+		if !filepath.IsAbs(hint) {
+			hint = project + string(filepath.Separator) + hint
+		}
+		dir, err := filesystem.PhysicalPath(hint)
+		if err != nil {
+			return "", fmt.Errorf("invalid native destination: %w", err)
+		}
+		info, err := os.Stat(dir)
+		if err != nil {
+			return "", fmt.Errorf("native destination must be an existing directory: %w", err)
+		}
+		if !info.IsDir() {
+			return "", errors.New("native destination is not a directory")
+		}
+		if destination != "" && destination != dir {
+			return "", errors.New("bound sessions indicated conflicting ledger destinations")
+		}
+		destination = dir
+	}
+	if destination == "" {
+		return "", ErrAwaitingPublicationDestination
+	}
+	return destination, nil
+}
+
+func HasNativePublicationDestination(rows []domain.CaptureRegistration, project, ticket string) bool {
+	for _, row := range rows {
+		if hasNativePublicationDestination(row, project, ticket) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasNativePublicationDestination(row domain.CaptureRegistration, project, ticket string) bool {
+	return row.TicketID == ticket && row.ProjectDirectory == project && row.ProjectProof == domain.CaptureProjectVerified &&
+		row.Binding == "explicit_agent_response" && row.BindingAcceptedAt != "" && row.PublicationDestination != ""
 }
 
 // AdmitExplicitInitialPublication runs after owned baseline recovery. An

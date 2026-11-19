@@ -35,6 +35,7 @@ func (s *Store) QueueChild(ctx context.Context, store, path, parent string) erro
 
 type ReconcileResult struct {
 	archiveReadGroups     []archiveReadGroup
+	ProjectRegistrations  []domain.CaptureRegistration `json:"-"`
 	SourceEvents          domain.SourceEvents          `json:"-"`
 	DiagnosticIndex       *DiagnosticIndexProgress     `json:"diagnostic_index,omitempty"`
 	StartedAt             string                       `json:"started_at"`
@@ -256,6 +257,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	}
 
 	knownParents := map[string]bool{}
+	result.ProjectRegistrations = registrations
 	for _, r := range registrations {
 		knownParents[string(r.Identity.Source)+"\x00"+r.Identity.Store+"\x00"+r.Identity.SessionID] = true
 	}
@@ -684,16 +686,14 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		}
 		known[key] = updated
 		if refreshed[key] {
-			if updated.TicketID != "" {
-				if updated.Identity.Source == domain.SourceCodex && fingerprintErr == nil && r.SourceFingerprint != fingerprint {
-					if err := s.reopenCodexChildSweep(ctx, updated.Identity); err != nil {
-						return nil, nil, err
-					}
+			if updated.Identity.Source == domain.SourceCodex && fingerprintErr == nil && r.SourceFingerprint != fingerprint {
+				if err := s.reopenCodexChildSweep(ctx, updated.Identity); err != nil {
+					return nil, nil, err
 				}
-				for _, transcript := range read.transcripts {
-					if err := s.queueCodexSourceStarts(ctx, updated, transcript.ChildDiscoveryHints(), known); err != nil {
-						return nil, nil, err
-					}
+			}
+			for _, transcript := range read.transcripts {
+				if err := s.queueCodexSourceStarts(ctx, updated, transcript.ChildDiscoveryHints(), known); err != nil {
+					return nil, nil, err
 				}
 			}
 			acceptedRelocation = acceptedRelocation || relocating

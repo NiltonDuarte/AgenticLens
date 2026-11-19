@@ -113,9 +113,7 @@ func inspectCapture(ctx context.Context, command, directory, project string, pol
 		seenTickets := map[string]bool{}
 		owners := []capture.DiagnosticOwner{}
 		for _, row := range view.Registrations {
-			if row.TicketID != "" {
-				owners = append(owners, capture.DiagnosticOwner{TicketID: row.TicketID, Identity: row.Identity})
-			}
+			owners = append(owners, capture.DiagnosticOwner{TicketID: row.TicketID, Identity: row.Identity})
 			if row.TicketID != "" && !seenTickets[row.TicketID] {
 				tickets = append(tickets, row.TicketID)
 				seenTickets[row.TicketID] = true

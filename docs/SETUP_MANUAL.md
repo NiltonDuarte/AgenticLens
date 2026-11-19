@@ -94,6 +94,7 @@ These examples illustrate syntax, not presets. Review and approve each value for
 project_name: PaymentGateway
 agenticlens:
   version: v1.2.3 # replace with the approved exact published release
+  pending_dir: .agenticlens/pending/
 ticket:
   prefixes:
     - prefix: PAY-
@@ -383,14 +384,20 @@ Context saturation severely impacts model reasoning quality, instruction adheren
 
 ### Automatic publication policy
 
-Installed lifecycle callbacks hand off to a bounded native worker. For a fresh ticket, run the preparation command before launching the harness.
+Installed lifecycle callbacks hand off to a bounded native worker as soon as a session begins. The worker can capture before the ticket or its directory exists. Pending snapshots contain portable source-backed facts and use the same capture identity when ticket metadata is added later.
+
+Set `agenticlens.pending_dir` in the shared project YAML. Full configuration setup writes `.agenticlens/pending/` when no other path was chosen. Relative paths resolve from the project root. Pending capture requires a valid explicit setting and uses a matching installed manager and engine. The worker never stages these files. Keep them available to Git if the team wants to review or version pending snapshots. Native sources, capture state and publication journals stay in their separate private locations.
+
+Respond to the native binding request with the exact ticket ID, display title and conventional type. For a fresh ticket, the agent can then indicate the exact existing destination within the configured workspace roots through the native integration. The worker checks the destination and publishes through the normal transaction. It removes the pending snapshot once canonical publication is durable. If the ticket or its destination is missing, or a selection is ambiguous, `capture diagnostics --repo <PROJECT>` shows the current reason.
+
+Operators can also select the destination explicitly before launching the harness.
 
 ```sh
 agentic-lens --al-offline --al-project <PROJECT> capture prepare-publication \
   --repo <PROJECT> --ticket-id <TICKET> --json-output <EXISTING_DIRECTORY>/agentic_metrics.json
 ```
 
-The directory must already exist within the configured workspace roots and have no ledger. The command records a one-time selection in the project's private `agenticlens.state_dir`. It creates no ledger, starts no worker, and binds no session. Contributing agents answer the native binding request with the exact ticket ID, the display title and conventional type. The worker publishes the first source-backed ledger and configured summary through the normal transaction. Use `capture diagnostics --repo <PROJECT>` to inspect failures or pending work. An unavailable or ambiguous workspace requires operator resolution.
+The directory must already exist within the configured workspace roots and have no ledger. The command records a one-time selection in the project's private `agenticlens.state_dir`. The worker uses it after verified native binding.
 
 Later automatic publication resolves the current ledger by recorded ticket ID, including after a move within configured roots, and preserves its existing title. An untitled historical ledger uses a single agreed title hint or the ticket ID as its display label. First publication consumes the selection. If the worker observes an existing canonical ledger before using it, it retires the selection. Neither case can recreate a removed ledger. Agents can use `generate` for explicit manual recovery or title selection. Automatic and manual writers acquire the same output lock before reading ledger or source facts.
 
@@ -417,7 +424,7 @@ The shared database is `state_dir/projects/<configured-project-name>/registry.db
 
 Aliases for the configured state base are supported. An alias inside its project namespace must stay within that physical base and preserve the `projects/<configured-project-name>` suffix; escaping or differently shaped targets are rejected. Configure the intended base explicitly when using another layout.
 
-Home state survives worktree deletion, but missing sources or publication destinations still require explicit recovery. No deleted checkout is recreated or rebound by name. Existing explicit project-local/external paths remain unchanged on narrow configuration update; relocation is explicit, preserves pending/failed work and retained original data, and refuses unsupported layouts or active owned workers. Copying a live database or changing a YAML path alone is not a migration. No automatic cleanup removes registrations or pending observations.
+Home state survives worktree deletion, but missing sources or publication destinations still require explicit recovery. No deleted checkout is recreated or rebound by name. Existing explicit project-local/external paths remain unchanged on narrow configuration update; relocation is explicit, preserves pending/failed work and retained original data, and refuses unsupported layouts or active owned workers. Copying a live database or changing a YAML path alone is not a migration. The capture registry retains registrations and unresolved observations.
 
 The relocation command supports only the inspected legacy registry protocol1 family into schema2 named state. Moving or renaming populated schema2 state is currently unsupported and fails without retiring the source or modifying configuration; preserve it and report the limitation rather than inventing a copy/rename repair.
 

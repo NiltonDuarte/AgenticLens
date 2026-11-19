@@ -83,7 +83,11 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	return captureAction(args, input, output, home)
 }
 
-func captureAction(args []string, input io.Reader, output io.Writer, protectedHome string) (returnErr error) {
+func captureAction(args []string, input io.Reader, output io.Writer, protectedHome string) error {
+	return captureNativeAction(args, input, output, protectedHome, false)
+}
+
+func captureNativeAction(args []string, input io.Reader, output io.Writer, protectedHome string, nativeOpenCode bool) (returnErr error) {
 	if len(args) == 0 {
 		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|submit-binding|prepare-publication|reconcile|relocate-state|disable|uninstall|protocol")
 	}
@@ -141,6 +145,8 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 	ticketType := flags.String("ticket-type", "", "Explicit conventional ticket type")
 	ticket := flags.String("ticket-id", "", "Explicit ticket binding or reconciliation target")
 	request := flags.String("request", "", "Exact binding request token delivered by hook feedback")
+	destination := flags.String("destination-directory", "", "Existing publication directory indicated through the native binding tool")
+	destinationOnly := flags.Bool("destination-only", false, "Indicate the publication directory for an already bound session")
 	userLevel := flags.Bool("user-level", false, "Native user-level handoff; binding has no project wrapper dependency")
 	legacyRepository := flags.String("migrate-legacy-repo", "", "Explicit checkout whose unchanged owned project callbacks should migrate to user capture")
 	dryRun := flags.Bool("dry-run", false, "Show owned installation changes without writing")
@@ -156,6 +162,14 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 	}
 	provided := map[string]bool{}
 	flags.Visit(func(f *flag.Flag) { provided[f.Name] = true })
+	if provided["destination-directory"] || provided["destination-only"] {
+		if command != "bind" || !nativeOpenCode || !*userLevel || *source != "opencode" {
+			return errors.New("destination indication requires the native OpenCode tool or Codex submit-binding")
+		}
+		if strings.TrimSpace(*destination) == "" {
+			return errors.New("destination requires a nonblank directory path")
+		}
+	}
 	if provided["user-source"] {
 		if userSource != "opencode" && userSource != "codex" {
 			return errors.New("--user-source must select codex or opencode")
@@ -638,15 +652,39 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 		if e != nil {
 			return fmt.Errorf("durable request accepted but failure feedback unavailable; inspect capture diagnostics: %w", e)
 		}
-		return json.NewEncoder(output).Encode(captureAgentResponse{CaptureRegistration: r, CaptureFeedback: feedback})
+		response := captureAgentResponse{CaptureRegistration: r, CaptureFeedback: feedback}
+		if nativeOpenCode {
+			return json.NewEncoder(output).Encode(struct {
+				captureAgentResponse
+				DestinationRequest string `json:"destination_request,omitempty"`
+			}{response, capture.NativePublicationDestinationRequest(r)})
+		}
+		return json.NewEncoder(output).Encode(response)
 	case "bind":
 		if openCodePending != nil {
 			return fmt.Errorf("OpenCode source metadata pending; binding unresolved: %w", openCodePending)
 		}
+		if nativeOpenCode && *destinationOnly {
+			r, e := s.IndicateNativeOpenCodeDestination(ctx, identity, capture.BindingTicket{ID: *ticket, Title: *ticketTitle, Type: *ticketType, Destination: *destination}, *request)
+			if e != nil {
+				return e
+			}
+			return json.NewEncoder(output).Encode(r)
+		}
+		var normalizedType domain.ConventionalTicketType
 		if *ticketType != "" {
-			if _, ok := domain.NormalizeTicketType(*ticketType); !ok {
+			var ok bool
+			normalizedType, ok = domain.NormalizeTicketType(*ticketType)
+			if !ok {
 				return errors.New("invalid ticket type")
 			}
+		}
+		if nativeOpenCode {
+			r, e := s.BindNativeOpenCode(ctx, identity, capture.BindingTicket{ID: *ticket, Title: strings.TrimSpace(*ticketTitle), Type: string(normalizedType), Destination: *destination}, *request)
+			if e != nil {
+				return e
+			}
+			return json.NewEncoder(output).Encode(r)
 		}
 		r, e := s.Bind(ctx, identity, *ticket, *request)
 		if e != nil {
@@ -658,8 +696,7 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 					current.TicketTitle = strings.TrimSpace(*ticketTitle)
 				}
 				if *ticketType != "" {
-					normalized, _ := domain.NormalizeTicketType(*ticketType)
-					current.TicketType = string(normalized)
+					current.TicketType = string(normalizedType)
 				}
 				return current, nil
 			})

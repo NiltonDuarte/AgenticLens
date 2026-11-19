@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -14,7 +15,20 @@ import (
 	"syscall"
 
 	"agenticlens/internal/adapters/config"
+	"agenticlens/internal/domain"
 )
+
+// WithInitialPublicationRegistrations serializes the final admission decision
+// with binding writes until the public transaction indicator is durable.
+func (s *Store) WithInitialPublicationRegistrations(ctx context.Context, ticket string, admit func([]domain.CaptureRegistration) error) error {
+	return s.withRegistrationWrite(ctx, func(conn *sql.Conn) error {
+		rows, err := readRegistrationRows(conn.QueryContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? AND ticket=? ORDER BY identity`, s.worktreeID, ticket))
+		if err != nil {
+			return err
+		}
+		return admit(rows)
+	})
+}
 
 const initialPublicationLimit = 16 << 10
 
@@ -29,6 +43,7 @@ type InitialPublication struct {
 	CommittedTransaction   string `json:"committed_transaction"`
 	CommittedArtifacts     string `json:"committed_artifacts"`
 	ExistingLedgerObserved bool   `json:"existing_ledger_observed,omitempty"`
+	Native                 bool   `json:"native,omitempty"`
 }
 
 // InitialPublicationLink binds a transaction journal to the exact private
@@ -102,6 +117,17 @@ func (lease *InitialPublicationLease) Read() (*InitialPublication, error) {
 }
 
 func (lease *InitialPublicationLease) Prepare(owner *PublicationLock) error {
+	return lease.prepare(owner, false, nil)
+}
+
+// PrepareNative stores a tentative native selection or replaces the exact
+// earlier open native selection after its workspace has been checked by the
+// caller under the old directory lease. The ticket lease spans both leases.
+func (lease *InitialPublicationLease) PrepareNative(owner *PublicationLock, replacing *InitialPublication) error {
+	return lease.prepare(owner, true, replacing)
+}
+
+func (lease *InitialPublicationLease) prepare(owner *PublicationLock, native bool, replacing *InitialPublication) error {
 	if lease.state != owner.state || lease.project != owner.project {
 		return errors.New("first-publication state changed during selection; retry")
 	}
@@ -117,28 +143,56 @@ func (lease *InitialPublicationLease) Prepare(owner *PublicationLock) error {
 		if prior.Closed() {
 			return errors.New("the initial selection for this ticket is no longer available")
 		}
-		if prior.Path != path || prior.Directory != owner.identity {
+		if prior.Path == path && prior.Directory == owner.identity {
+			if !native && prior.Native {
+				prior.Native = false
+				return saveInitialPublication(owner, *prior)
+			}
+			return nil
+		}
+		if !native || !prior.Native || replacing == nil || *replacing != *prior {
 			return errors.New("a different first-publication destination is already selected for this ticket")
 		}
-		return nil
 	}
-	token := make([]byte, 16)
-	if _, err := rand.Read(token); err != nil {
+	record, err := lease.newSelection(owner)
+	if err != nil {
 		return err
 	}
-	record := InitialPublication{Version: 1, Ticket: lease.ticket, ID: hex.EncodeToString(token), Path: path, Directory: owner.identity}
+	record.Native = native
 	return saveInitialPublication(owner, record)
 }
 
-// ObserveExisting permanently closes a staged selection when the lifecycle
-// worker has admitted a committed ledger for the same ticket.
-func (lease *InitialPublicationLease) ObserveExisting(owner *PublicationLock) error {
+func (lease *InitialPublicationLease) newSelection(owner *PublicationLock) (InitialPublication, error) {
+	token := make([]byte, 16)
+	if _, err := rand.Read(token); err != nil {
+		return InitialPublication{}, err
+	}
+	return InitialPublication{Version: 1, Ticket: lease.ticket, ID: hex.EncodeToString(token), Path: filepath.Join(owner.original, "agentic_metrics.json"), Directory: owner.identity}, nil
+}
+
+// ObserveExisting closes a staged selection when the lifecycle worker admits
+// a committed ledger. A superseded native indication also closes admission
+// even if that indication never received a first-write selection.
+func (lease *InitialPublicationLease) ObserveExisting(owner *PublicationLock, indicated bool) error {
 	if lease.state != owner.state || lease.project != owner.project {
 		return errors.New("first-publication state changed during existing ledger admission; retry")
 	}
 	record, err := lease.Read()
-	if err != nil || record == nil || record.CommittedTransaction != "" {
+	if err != nil {
 		return err
+	}
+	if record == nil {
+		if !indicated {
+			return nil
+		}
+		fresh, err := lease.newSelection(owner)
+		if err != nil {
+			return err
+		}
+		record = &fresh
+	}
+	if record.CommittedTransaction != "" {
+		return nil
 	}
 	if record.ExistingLedgerObserved {
 		return syncInitialPublicationState(owner, record.Ticket)

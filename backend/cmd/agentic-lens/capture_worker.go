@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
@@ -18,6 +19,7 @@ import (
 
 // Internal publisher status for a bounded retry of SQLite registry contention.
 const capturePublicationBusyExit = 75
+const capturePublicationBlockedExit = 76
 
 func captureWorker(s *capture.Store, project, state string, policy domain.CaptureConfig, protectedHome string) (returnErr error) {
 	if err := policy.ValidateWorker(); err != nil {
@@ -60,6 +62,9 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	if err != nil {
 		return err
 	}
+	if _, err := adaptersconfig.ResolvePendingDirectory(cfg, project); err != nil {
+		return fmt.Errorf("pending capture configuration: %w", err)
+	}
 	binary, err := os.Executable()
 	if err != nil {
 		return err
@@ -69,6 +74,10 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		return err
 	}
 	binary = fence.binary
+	var protection *capture.ProtectedPublication
+	if protectedHome != "" {
+		protection = &fence.publication
+	}
 	previous, err := capture.WorkerStatus(state)
 	if err != nil {
 		if !errors.Is(err, capture.ErrInvalidWorkerStatus) {
@@ -140,6 +149,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	deadline := started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond)
 	var lastPass time.Time
 	var nextAttempt time.Time
+	var wakeAfterBlockedGeneration int64 = -1
 	var lastFailure string
 	successfulPass := false
 	shortRegistryRetryUsed := false
@@ -255,7 +265,9 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		now = time.Now()
 		periodicDue := now.Sub(lastPass) >= refresh
 		retryDue := !nextAttempt.IsZero() && !now.Before(nextAttempt)
-		if !now.Before(nextAttempt) && (retryDue || periodicDue || captureRequestReady(req, debounce, now)) {
+		requestDue := captureRequestReady(req, debounce, now)
+		newWorkAfterBlock := wakeAfterBlockedGeneration >= 0 && req.Generation > wakeAfterBlockedGeneration && requestDue
+		if (!now.Before(nextAttempt) || newWorkAfterBlock) && (retryDue || periodicDue || requestDue) {
 			current, e := fence.current(project, state)
 			if e != nil {
 				return e
@@ -268,8 +280,39 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				break
 			}
 			unassignedCtx, unassignedCancel := context.WithTimeout(context.Background(), min(remaining, time.Duration(policy.PassTimeoutMS)*time.Millisecond))
-			unassigned, unassignedErr := s.Reconcile(unassignedCtx, "", git.GetGitUserInDirContext(unassignedCtx, project), policy.MaxSessions, policy.MaxSourceBytes)
+			passConfig, err := adaptersconfig.Load(project)
+			if err != nil {
+				unassignedCancel()
+				return err
+			}
+			pendingDirectory, err := adaptersconfig.ResolvePendingDirectory(passConfig, project)
+			if err != nil {
+				unassignedCancel()
+				return fmt.Errorf("pending capture configuration: %w", err)
+			}
+			unassigned, unassignedErr := s.Reconcile(unassignedCtx, "", git.GetGitUserInDirContext(unassignedCtx, project), policy.MaxSessions, policy.MaxSourceBytes, passConfig.Generation.Metrics)
+			if unassignedErr == nil {
+				writePending := func() error {
+					enabled, err := automaticCaptureEnabled(project, state)
+					if err != nil || !enabled {
+						return err
+					}
+					entries, err := adapters.SyncPendingSnapshots(unassignedCtx, pendingDirectory, project, unassigned, true, protection, nil)
+					if err != nil {
+						return err
+					}
+					return recordPendingSnapshots(unassignedCtx, s, pendingDirectory, "", "Native metrics captured before ticket binding.", unassigned.Cutoff, entries)
+				}
+				if protection == nil {
+					unassignedErr = adaptersconfig.WithOrdinaryCapture(project, writePending)
+				} else {
+					unassignedErr = writePending()
+				}
+			}
 			unassignedCancel()
+			if errors.Is(unassignedErr, adaptersconfig.ErrProtectedCodexProject) {
+				return retire()
+			}
 			if unassignedErr != nil {
 				lastFailure = unassignedErr.Error()
 			}
@@ -294,36 +337,22 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			}
 			success := unassignedErr == nil
 			busyOnly := unassignedErr == nil || capture.IsRegistryContention(unassignedErr)
+			refreshedUnassigned := map[string]bool{}
+			for _, owner := range unassigned.RefreshedSessions {
+				refreshedUnassigned[owner.ID] = true
+			}
 			for _, registration := range unassigned.Registrations {
-				if registration.State == domain.CaptureFailed || registration.State == domain.CapturePending {
+				if registration.State == domain.CaptureFailed || (registration.State == domain.CapturePending && !refreshedUnassigned[registration.Identity.SessionID]) {
 					success = false
 					busyOnly = false
+					lastFailure = registration.Detail
 				}
 			}
+			publicationBlocked := false
 			for _, ticket := range ordered {
 				enabled, e := automaticCaptureEnabled(project, state)
 				if e != nil || !enabled {
 					return e
-				}
-				// The writer resolves and retains its own directory selection
-				// rather than receiving a path previously selected by this process.
-				args := []string{"generate", "--ticket-id", ticket, "--capture-dir", state, "--capture-auto", "--max-sessions", strconv.Itoa(policy.MaxSessions), "--max-source-bytes", strconv.FormatInt(policy.MaxSourceBytes, 10)}
-				title, kind, metadataErr := domain.CaptureTicketMetadata(rows, ticket)
-				if metadataErr != nil {
-					success = false
-					busyOnly = false
-					lastFailure = metadataErr.Error()
-					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Detail: "Conflicting ticket types prevent publication. Supply one explicit ticket type through the binding request and retry reconciliation."}); e != nil {
-						return e
-					}
-					fmt.Fprintln(os.Stderr, "automatic publication pending:", metadataErr)
-					continue
-				}
-				if title != "" {
-					args = append(args, "--ticket-title", title)
-				}
-				if kind != "" {
-					args = append(args, "--ticket-type", kind)
 				}
 				remaining := time.Duration(policy.MaxLifetimeMS)*time.Millisecond - time.Since(started)
 				if remaining <= 0 {
@@ -335,6 +364,17 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 					return err
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), min(remaining, time.Duration(policy.PassTimeoutMS)*time.Millisecond))
+				// The writer resolves any disagreement against its owned ledger.
+				title, kind, _ := domain.CaptureTicketMetadata(rows, ticket)
+				// The writer resolves and retains its own directory selection
+				// rather than receiving a path previously selected by this process.
+				args := []string{"generate", "--ticket-id", ticket, "--capture-dir", state, "--capture-auto", "--max-sessions", strconv.Itoa(policy.MaxSessions), "--max-source-bytes", strconv.FormatInt(policy.MaxSourceBytes, 10)}
+				if title != "" {
+					args = append(args, "--ticket-title", title)
+				}
+				if kind != "" {
+					args = append(args, "--ticket-type", kind)
+				}
 				publisher := binary
 				home, err := captureWorkerHome(project, protectedHome)
 				if err != nil {
@@ -382,10 +422,15 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				if err != nil {
 					success = false
 					var exit *exec.ExitError
-					busyOnly = busyOnly && errors.As(err, &exit) && exit.ExitCode() == capturePublicationBusyExit
+					exited := errors.As(err, &exit)
+					busyOnly = busyOnly && exited && exit.ExitCode() == capturePublicationBusyExit
 					lastFailure = err.Error()
-					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Detail: "Native publication failed or timed out. Inspect capture diagnostics and worker output. For a fresh ticket, select its first destination with capture prepare-publication."}); e != nil {
-						return e
+					if exited && exit.ExitCode() == capturePublicationBlockedExit {
+						publicationBlocked = true
+					} else {
+						if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Detail: "Native publication failed or timed out. Inspect pending snapshots and publication diagnostics."}); e != nil {
+							return e
+						}
 					}
 					fmt.Fprintln(os.Stderr, "automatic publication pending:", err)
 				}
@@ -399,6 +444,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				backoff = refresh
 				shortRegistryRetryUsed = false
 				nextAttempt = time.Time{}
+				wakeAfterBlockedGeneration = -1
 				if err = s.AcknowledgePublication(context.Background(), req.Generation); err != nil {
 					return err
 				}
@@ -418,6 +464,10 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			}
 			lastPass = time.Now()
 			if !success {
+				wakeAfterBlockedGeneration = -1
+				if publicationBlocked {
+					wakeAfterBlockedGeneration = req.Generation
+				}
 				delay := backoff
 				if busyOnly && !shortRegistryRetryUsed {
 					// The next pass retains the normal rotated ticket order,
@@ -434,7 +484,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				}
 			}
 		}
-		if err := waitForCaptureRequest(s, refresh, debounce, nextAttempt, deadline); err != nil {
+		if err := waitForCaptureRequest(s, refresh, debounce, nextAttempt, deadline, wakeAfterBlockedGeneration); err != nil {
 			return err
 		}
 	}
@@ -505,8 +555,9 @@ func captureRequestReady(request capture.PublicationRequest, debounce time.Durat
 
 // waitForCaptureRequest checks only the durable worktree request between
 // periodic passes. Source proof, activity and extraction stay in the worker
-// pass, and a failed pass keeps its retry backoff.
-func waitForCaptureRequest(store *capture.Store, refresh, debounce time.Duration, nextAttempt, deadline time.Time) error {
+// pass. An unchanged destination block retains backoff while a subsequent
+// native callback can wake the worker after the workspace has changed.
+func waitForCaptureRequest(store *capture.Store, refresh, debounce time.Duration, nextAttempt, deadline time.Time, wakeAfterBlockedGeneration int64) error {
 	now := time.Now()
 	wake := now.Add(refresh)
 	if deadline.Before(wake) {
@@ -516,8 +567,10 @@ func waitForCaptureRequest(store *capture.Store, refresh, debounce time.Duration
 		if nextAttempt.Before(wake) {
 			wake = nextAttempt
 		}
-		time.Sleep(time.Until(wake))
-		return nil
+		if wakeAfterBlockedGeneration < 0 {
+			time.Sleep(time.Until(wake))
+			return nil
+		}
 	}
 
 	ctx, cancel := context.WithDeadline(context.Background(), wake)
@@ -533,7 +586,9 @@ func waitForCaptureRequest(store *capture.Store, refresh, debounce time.Duration
 			}
 			return err
 		}
-		if captureRequestReady(request, debounce, time.Now()) {
+		now := time.Now()
+		if captureRequestReady(request, debounce, now) &&
+			(!now.Before(nextAttempt) || (wakeAfterBlockedGeneration >= 0 && request.Generation > wakeAfterBlockedGeneration)) {
 			return nil
 		}
 		select {

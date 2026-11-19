@@ -34,6 +34,7 @@ type EntrypointConfig struct {
 	BinaryDir   string `json:"binary_dir,omitempty" yaml:"binary_dir,omitempty"`
 	Version     string `json:"version" yaml:"version"`
 	InstallRoot string `json:"install_root,omitempty" yaml:"install_root,omitempty"`
+	PendingDir  string `json:"pending_dir,omitempty" yaml:"pending_dir,omitempty"`
 	StateDir    string `json:"-" yaml:"state_dir,omitempty"`
 }
 
