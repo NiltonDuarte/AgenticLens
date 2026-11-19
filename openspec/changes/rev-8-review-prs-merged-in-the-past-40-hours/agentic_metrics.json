@@ -9,17 +9,17 @@
   "ticket_title": "Review PRs merged in the past 40 hours",
   "ticket_type": "fix",
   "started_at": "2026-11-18T23:46:56.682Z",
-  "completed_at": "2026-11-19T00:38:21.173293+00:00",
-  "updated_at": "2026-11-19T00:38:21.173293+00:00",
+  "completed_at": "2026-11-19T01:43:56.460056+00:00",
+  "updated_at": "2026-11-19T01:43:56.460056+00:00",
   "code": {
-    "lines_added": 976,
-    "lines_deleted": 145,
-    "test_lines_added": 639,
-    "test_lines_deleted": 5,
-    "prod_lines_added": 337,
-    "prod_lines_deleted": 140,
-    "files_changed": 17,
-    "sdlc_iterations": 28
+    "lines_added": 2149,
+    "lines_deleted": 295,
+    "test_lines_added": 1240,
+    "test_lines_deleted": 7,
+    "prod_lines_added": 909,
+    "prod_lines_deleted": 288,
+    "files_changed": 27,
+    "sdlc_iterations": 42
   },
   "sessions": [
     {
@@ -33,6 +33,11 @@
           "name": "agentic-lens-review",
           "caller_role": "user",
           "invoked_at": "2026-11-18T23:46:58.906Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-19T01:11:46.644Z"
         }
       ],
       "delegations": [
@@ -119,6 +124,48 @@
           "description": "fix_sol_tests",
           "invoked_at": "2026-11-19T00:24:49.502Z",
           "child_session_id": "01a1f131-1a82-79c1-b9fe-fdd199e971ed"
+        },
+        {
+          "agent_type": "planner",
+          "description": "archived_rollout_plan",
+          "invoked_at": "2026-11-19T00:55:02.094Z",
+          "child_session_id": "01a1f14c-c32a-79d2-93f1-3a98337b6b62"
+        },
+        {
+          "agent_type": "coder",
+          "description": "rollout_code",
+          "invoked_at": "2026-11-19T01:12:05.572Z",
+          "child_session_id": "01a1f15c-617e-72d0-b46e-904ae5d24316"
+        },
+        {
+          "agent_type": "tester",
+          "description": "rollout_tests",
+          "invoked_at": "2026-11-19T01:12:11.906Z",
+          "child_session_id": "01a1f15c-7a09-7c21-b621-dd0a04aadb94"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "archive_sol_data",
+          "invoked_at": "2026-11-19T01:20:10.248Z",
+          "child_session_id": "01a1f163-c635-7e12-90be-c283ca4ed98d"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "archive_sol_behavior",
+          "invoked_at": "2026-11-19T01:20:17.430Z",
+          "child_session_id": "01a1f163-e233-7340-ac1b-1268570ca53f"
+        },
+        {
+          "agent_type": "reviewer-architecture",
+          "description": "archive_sol_arch",
+          "invoked_at": "2026-11-19T01:20:29.163Z",
+          "child_session_id": "01a1f164-106a-7d63-8d15-285d2dcf9b99"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "archive_sol_tests",
+          "invoked_at": "2026-11-19T01:29:33.276Z",
+          "child_session_id": "01a1f16c-5d7b-7953-9753-6de332b08647"
         }
       ],
       "id": "01a1f10e-6c1a-73c3-903b-f4d7fab3c9dd",
@@ -126,36 +173,40 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 1673,
+          "provisional_seconds": 1917,
           "role": "",
           "model": "gpt-6.2-sol",
           "started_at": "2026-11-18T23:46:57.722Z",
           "completed_at": null,
-          "active_duration_seconds": 2812,
-          "turns": 2,
-          "tokens": {"input": 620231, "output": 83823, "cache_read": 59136128, "reasoning": 35504, "peak_context": 315282},
+          "active_duration_seconds": 4986,
+          "turns": 11,
+          "tokens": {"input": 772806, "output": 119573, "cache_read": 127031424, "reasoning": 51161, "peak_context": 427904},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
-          "user_iterations": 16
+          "user_iterations": 30
         }
       ],
       "tools": [
-        {"name": "command", "calls": 188, "errors": 16},
-        {"name": "delegate_task", "calls": 10, "errors": 0},
-        {"name": "followup_task", "calls": 6, "errors": 0},
+        {"name": "command", "calls": 267, "errors": 17},
+        {"name": "delegate_task", "calls": 14, "errors": 0},
+        {"name": "followup_task", "calls": 16, "errors": 0},
         {"name": "list_agents", "calls": 4, "errors": 0},
         {"name": "request_user_input_async", "calls": 3, "errors": 0},
-        {"name": "send_message", "calls": 14, "errors": 0},
-        {"name": "spawn_agent", "calls": 14, "errors": 0},
-        {"name": "wait", "calls": 1, "errors": 0},
-        {"name": "wait_agent", "calls": 13, "errors": 0}
+        {"name": "send_message", "calls": 25, "errors": 0},
+        {"name": "spawn_agent", "calls": 21, "errors": 0},
+        {"name": "wait", "calls": 3, "errors": 0},
+        {"name": "wait_agent", "calls": 41, "errors": 0}
       ],
       "anomalies": [
         {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 17, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 11, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 6, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 8, "threshold": "5"}},
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 2, "context_tokens": 251107, "threshold": "250000"}},
         {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 3, "threshold": "3"}},
-        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-architecture", "secondary_role": "reviewer-tests", "count": 4, "threshold": "3"}}
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-architecture", "secondary_role": "reviewer-tests", "count": 4, "threshold": "3"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-data", "secondary_role": "reviewer-behavior", "count": 3, "threshold": "3"}}
       ]
     },
     {
@@ -553,6 +604,209 @@
       "tools": [
         {"name": "command", "calls": 37, "errors": 1},
         {"name": "send_message", "calls": 4, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1f14c-c32a-79d2-93f1-3a98337b6b62",
+      "parent_id": "01a1f10e-6c1a-73c3-903b-f4d7fab3c9dd",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "planner",
+          "model": "gpt-6.2-sol",
+          "started_at": "2026-11-19T00:55:02.468Z",
+          "completed_at": "2026-11-19T00:55:54.290Z",
+          "active_duration_seconds": 52,
+          "turns": 1,
+          "tokens": {"input": 143120, "output": 1479, "cache_read": 1910784, "reasoning": 320, "peak_context": 346645},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 3, "errors": 0},
+        {"name": "send_message", "calls": 2, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 333186, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1f15c-617e-72d0-b46e-904ae5d24316",
+      "parent_id": "01a1f10e-6c1a-73c3-903b-f4d7fab3c9dd",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "gpt-6.2-sol",
+          "started_at": "2026-11-19T01:12:06.050Z",
+          "completed_at": "2026-11-19T01:36:55.676Z",
+          "active_duration_seconds": 1224,
+          "turns": 3,
+          "tokens": {"input": 135640, "output": 44552, "cache_read": 28957952, "reasoning": 26703, "peak_context": 445856},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 28, "errors": 2},
+        {"name": "send_message", "calls": 15, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 345342, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1f15c-7a09-7c21-b621-dd0a04aadb94",
+      "parent_id": "01a1f10e-6c1a-73c3-903b-f4d7fab3c9dd",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "tester",
+          "model": "gpt-6.2-sol",
+          "started_at": "2026-11-19T01:12:12.314Z",
+          "completed_at": "2026-11-19T01:36:35.601Z",
+          "active_duration_seconds": 987,
+          "turns": 3,
+          "tokens": {"input": 126543, "output": 30506, "cache_read": 37112320, "reasoning": 11113, "peak_context": 446250},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 57, "errors": 6},
+        {"name": "send_message", "calls": 17, "errors": 0},
+        {"name": "wait_agent", "calls": 2, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 345508, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1f163-c635-7e12-90be-c283ca4ed98d",
+      "parent_id": "01a1f10e-6c1a-73c3-903b-f4d7fab3c9dd",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-19T01:20:10.343Z",
+          "completed_at": "2026-11-19T01:38:06.285Z",
+          "active_duration_seconds": 391,
+          "turns": 3,
+          "tokens": {"input": 108975, "output": 13474, "cache_read": 3282816, "reasoning": 5694, "peak_context": 128617},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 42, "errors": 7},
+        {"name": "send_message", "calls": 5, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1f163-e233-7340-ac1b-1268570ca53f",
+      "parent_id": "01a1f10e-6c1a-73c3-903b-f4d7fab3c9dd",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-19T01:20:17.514Z",
+          "completed_at": "2026-11-19T01:40:28.850Z",
+          "active_duration_seconds": 246,
+          "turns": 2,
+          "tokens": {"input": 175265, "output": 6732, "cache_read": 2227456, "reasoning": 2225, "peak_context": 111015},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 26, "errors": 4},
+        {"name": "send_message", "calls": 3, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1f164-106a-7d63-8d15-285d2dcf9b99",
+      "parent_id": "01a1f10e-6c1a-73c3-903b-f4d7fab3c9dd",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-19T01:20:29.373Z",
+          "completed_at": "2026-11-19T01:37:46.145Z",
+          "active_duration_seconds": 245,
+          "turns": 3,
+          "tokens": {"input": 108239, "output": 7532, "cache_read": 2463616, "reasoning": 2620, "peak_context": 123086},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 26, "errors": 4},
+        {"name": "send_message", "calls": 2, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1f16c-5d7b-7953-9753-6de332b08647",
+      "parent_id": "01a1f10e-6c1a-73c3-903b-f4d7fab3c9dd",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-19T01:29:33.338Z",
+          "completed_at": "2026-11-19T01:40:07.435Z",
+          "active_duration_seconds": 136,
+          "turns": 2,
+          "tokens": {"input": 92233, "output": 4192, "cache_read": 1075456, "reasoning": 553, "peak_context": 87811},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 22, "errors": 1},
+        {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "ARCHIVE-01",
+      "severity": 5,
+      "issue": "Archive recovery could turn an accepted root into a child.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "requested"}
+      ],
+      "disposition": "Fixed by comparing accepted source ancestry, including an observed root. The root and child controls pass."
+    },
+    {
+      "finding_id": "ARCHIVE-02",
+      "severity": 5,
+      "issue": "Superseded archive reads could supply event coverage or dependent family links to publication.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "requested"},
+        {"persona": "reviewer-behavior", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "requested"},
+        {"persona": "reviewer-architecture", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "requested"}
+      ],
+      "disposition": "Fixed by accepting annotation inputs under one registry view and discarding or regrouping superseded inputs during final projection. Deterministic tests cover both interleavings."
+    },
+    {
+      "finding_id": "ARCHIVE-03",
+      "severity": 3,
+      "issue": "A healthy-path budget retry spent source bytes before checking its metadata reservation.",
+      "reporters": [
+        {"persona": "coordinator", "model": "gpt-6.2-sol", "effort": "xhigh", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed by retaining healthy-path preflight order. The existing native one-byte regression passes."
+    },
+    {
+      "finding_id": "ARCHIVE-04",
+      "severity": 6,
+      "issue": "The archive lookup was reported to introduce a separate uncharged session allowance.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Refuted. Baseline exact lookup and archive repair use the same configured discovery-path ceiling, separate from scheduled owner attempts, with shared byte accounting. Production CLI limits populate both ceilings."
+    }
+  ]
+}
