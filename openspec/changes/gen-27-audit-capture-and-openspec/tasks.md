@@ -32,4 +32,8 @@ Iteration 03 review covers callback installation and worker behavior, integrity 
 
 - [x] 3.6 Preserve the existing ledger title during automatic generation and allow publication when registered display titles disagree. Retain canonical ticket ownership, explicit manual title selection and ticket-type validation.
 - [x] 3.7 Verify the correction through the automatic worker path with matching canonical IDs, conflicting display titles and preserved accepted history. Check canonical-ID fallback for titleless ledgers with conflicting hints, manual title selection and unchanged type conflict handling. Review behavior, portable data and regression coverage.
-- [ ] 3.8 Reconcile the verified pending binding in the original worktree and verify ledger and summary publication. Record actual outcomes and any remaining source or destination failure.
+### Recovery for cached snapshots missing a user
+
+- [ ] 3.8 Apply required-user validation during private snapshot decoding and retain invalid snapshots for exact source recovery.
+- [ ] 3.9 Verify retained cached bytes, source recovery with the selected Git user, valid sibling publication and preserved accepted history. Review the affected behavior, data and tests.
+- [ ] 3.10 Reconcile the verified pending binding in the original worktree and verify ledger and summary publication. Record actual outcomes and any remaining source or destination failure.

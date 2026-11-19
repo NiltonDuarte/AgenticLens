@@ -465,6 +465,11 @@ func decodeCurrentSnapshot(data []byte) ([]domain.SessionFact, error) {
 	if err := decoder.Decode(&snapshot); err != nil {
 		return nil, err
 	}
+	for i, owner := range snapshot {
+		if strings.TrimSpace(owner.User) == "" {
+			return nil, fmt.Errorf("snapshot owner %d user is required", i)
+		}
+	}
 	var fields []struct {
 		Skills      []map[string]json.RawMessage `json:"skills"`
 		Delegations []map[string]json.RawMessage `json:"delegations"`

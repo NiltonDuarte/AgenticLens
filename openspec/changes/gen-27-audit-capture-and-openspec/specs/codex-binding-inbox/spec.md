@@ -51,6 +51,13 @@ The trusted Codex callback SHALL provide a sandbox-compatible way for the agent 
 - **WHEN** authoritative project or source identity cannot yet be verified for an otherwise valid response
 - **THEN** the worker preserves accepted history, keeps the pending work visible and retries through the capture lifecycle.
 
+#### Scenario: A cached session is missing its user
+
+- **WHEN** a cached session for the selected ticket has an absent or blank user and its original source is unavailable
+- **THEN** the worker SHALL preserve its registration and cached data for source recovery, retain already accepted ledger history, and publish eligible facts from valid sibling sessions.
+- **WHEN** an exact native source can be read successfully for the affected session
+- **THEN** the refreshed session SHALL use the Git user selected during extraction and satisfy the existing ledger validation.
+
 ### Requirement: Select an operator-installed engine for trusted Codex capture
 
 Trusted Codex callbacks and workers acting on their behalf SHALL execute only an operator-installed engine from a verified location outside the workspace and the sandbox’s writable grants. The trusted selection SHALL precede executable probes and survive worker restarts and handoffs.
