@@ -58,21 +58,62 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 	return err
 }
 func captureCommandAction(args []string, input io.Reader, output io.Writer) (returnErr error) {
+	// Only the native hook and worker dispatches carry this private selection
+	// context. Codex supplies its actual runtime home. Mixed-source hooks and
+	// workers may instead carry the home recorded for their admitted project.
+	home := ""
+	if len(args) >= 3 && args[len(args)-2] == "--protected-codex-home" {
+		switch args[0] {
+		case "user-hook", "opencode-hook", "worker", "reconcile", "admit-protected-worktree":
+		default:
+			return errors.New("protected Codex selection applies only to native hooks and their worker")
+		}
+		home = args[len(args)-1]
+		if !filepath.IsAbs(home) {
+			return errors.New("protected Codex home must be absolute")
+		}
+		if args[0] == "user-hook" || args[0] == "admit-protected-worktree" {
+			same, err := capture.SameStore(adaptersconfig.RuntimeCodexHome(), home)
+			if err != nil || !same {
+				return errors.New("protected Codex home must match the native runtime home")
+			}
+		}
+		args = args[:len(args)-2]
+	}
+	return captureAction(args, input, output, home)
+}
+
+func captureAction(args []string, input io.Reader, output io.Writer, protectedHome string) (returnErr error) {
 	if len(args) == 0 {
-		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|reconcile|relocate-state|disable|uninstall|protocol")
+		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|submit-binding|reconcile|relocate-state|disable|uninstall|protocol")
 	}
 	command := args[0]
+	if command == "publish-protected" {
+		if len(args) < 5 {
+			return errors.New("protected generation requires project, Codex home, admitted state and generation arguments")
+		}
+		protection := capture.ProtectedPublication{Project: args[1], Home: args[2], State: args[3]}
+		runGeneration(args[4:], &protection)
+		return nil
+	}
+	if command == "submit-binding" {
+		return captureSubmitBinding(args[1:], output)
+	}
 	if command == "opencode-hook" {
-		return nativeOpenCodeHook(args[1:], input, output)
+		return nativeOpenCodeHook(args[1:], input, output, protectedHome)
 	}
 	if command == "user-hook" {
-		return nativeCodexUserHook(input, output, os.Stderr)
+		return nativeCodexUserHook(input, output, protectedHome)
 	}
 	if command == "relocate-state" {
 		return relocateCaptureCommand(args[1:], output)
 	}
 	if command == "inspect-state" {
 		return inspectCaptureStateCommand(args[1:], output)
+	}
+	if command == "protected-worker-protocol" {
+		_, err := fmt.Fprintln(output, adaptersconfig.ProtectedWorkerProtocol)
+		return err
 	}
 	if command == "protocol" {
 		_, err := fmt.Fprintln(output, capture.HandlerProtocolVersion)
@@ -210,6 +251,12 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	if err != nil {
 		return err
 	}
+	if command == "admit-protected-worktree" {
+		if !policy.Enabled || protectedHome == "" || len(provided) != 1 || !provided["repo"] {
+			return errors.New("protected worktree admission requires enabled capture, its repository and actual Codex home")
+		}
+		return admitProtectedCapture(project, protectedHome, policy.StateDir)
+	}
 	if !policy.Enabled && *userLevel && *source == "opencode" {
 		_, err := io.WriteString(output, "{}\n")
 		return err
@@ -277,6 +324,36 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		}
 		openCodeParent, openCodePending, err = capture.OpenCodeHandoffParent(ctx, cfg, project, *sourceStore, *sessionID)
 		if err != nil {
+			return err
+		}
+	}
+	admittedHome := protectedHome
+	if admittedHome != "" && (command == "worker" || command == "reconcile" || *source == "opencode") {
+		recorded, err := adaptersconfig.ProtectedCodexProjectHome(project)
+		if err != nil {
+			return err
+		}
+		if recorded == "" {
+			return errors.New("protected capture requires an admitted project")
+		}
+		same, err := capture.SameStore(recorded, admittedHome)
+		if err != nil || !same {
+			return errors.New("protected Codex home differs from project admission")
+		}
+	}
+	if command == "worker" || *userLevel || (command == "reconcile" && protectedHome != "") {
+		protectedHome, err = captureWorkerHome(project, protectedHome)
+		if err != nil {
+			return err
+		}
+		if protectedHome != "" {
+			if err := checkProtectedCaptureState(project, protectedHome, policy.StateDir); err != nil {
+				return err
+			}
+		}
+	}
+	if command == "reconcile" && protectedHome != "" {
+		if err := verifyProtectedWriter(project, protectedHome, policy.StateDir); err != nil {
 			return err
 		}
 	}
@@ -355,6 +432,21 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	if command == "receive" || command == "worker" {
+		cfg, err := adaptersconfig.Load(project)
+		if err != nil {
+			return err
+		}
+		if err := capture.CheckInstalledInboxIsolation(project, cfg.Telemetry.Sources.CodexHome); err != nil {
+			return err
+		}
+	}
+	if command == "worker" && admittedHome == "" && protectedHome != "" {
+		if err := releaseAdmission(); err != nil {
+			return err
+		}
+		return launchCaptureWorker("", project, absState, protectedHome)
+	}
 	s, err := capture.OpenProjectContext(ctx, absState, project)
 	if err != nil {
 		return err
@@ -373,7 +465,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		}
 	}
 	if command == "worker" {
-		return captureWorker(s, project, s.CoordinationDirectory(), policy)
+		return captureWorker(s, project, s.CoordinationDirectory(), policy, protectedHome)
 	}
 	absState = s.CoordinationDirectory()
 	handoffAccepted := false
@@ -397,7 +489,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 					returnErr = errors.Join(returnErr, fmt.Errorf("selected native executable unavailable; durable work retained: %w", nativeErr))
 					return
 				}
-				if e := capture.LaunchWorker(native, project, absState); e != nil {
+				if e := launchCaptureWorker(native, project, absState, protectedHome); e != nil {
 					diagnosticErr := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "worker", Outcome: "failed", Detail: "Native worker launch failed. Verify the selected executable and capture state permissions; retry capture reconcile."})
 					returnErr = errors.Join(returnErr, fmt.Errorf("worker launch failed; durable registration retained; inspect capture diagnostics: %w", e), diagnosticErr)
 				}
@@ -437,6 +529,11 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 			return e
 		}
 		if *source == "codex" {
+			if *userLevel && value.Event == "PostToolUse" {
+				// A successful handoff requests publication and wakes the bounded
+				// worker. Only the worker verifies and applies the queued response.
+				return json.NewEncoder(output).Encode(capture.HookOutput{})
+			}
 			native, e := os.Executable()
 			if e != nil {
 				return e

@@ -184,6 +184,182 @@ func prepareCaptureOwner(t *testing.T, f captureGenerationFixture, id, ticket st
 	}
 	return path
 }
+func TestCaptureWorkerPublishesAcrossDisplayTitleHints(t *testing.T) {
+	const ticket = "TEST-100"
+	for _, tc := range []struct {
+		name, acceptedTitle, secondHint, wantTitle string
+	}{
+		{"conflicting hints preserve established title", "Accepted title", "Different binding title", "Accepted title"},
+		{"agreed hint preserves established title", "Accepted title", "Explicit TEST-100", "Accepted title"},
+		{"conflicting hints use ticket ID for titleless ledger", "", "Different binding title", ticket},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newCaptureGenerationFixture(t)
+			f.output = seedCaptureTicketHome(t, f, ticket)
+			writeCaptureSuccessfulPublicationPolicy(t, f.project, f.state)
+			baseline := f.ledger(t)
+			if tc.acceptedTitle != "" {
+				baseline.TicketTitle = &tc.acceptedTitle
+			}
+			baseline.Sessions = []domain.SessionFact{{
+				ID: "portable-owner", Source: domain.SourceOpenCode, User: "stored-user",
+				Invocations: []domain.InvocationFact{{Model: "stored-model", Tokens: domain.InvocationTokens{Input: 77}}},
+			}}
+			body, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(baseline))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = os.WriteFile(f.output, body, 0600); err != nil {
+				t.Fatal(err)
+			}
+			retained := f.ledger(t).Sessions[0]
+			prepareCaptureOwner(t, f, "root", ticket, 11)
+			prepareCaptureOwner(t, f, "second", ticket, 29)
+			registry, err := capture.OpenProject(f.state, f.project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer registry.Close()
+			ctx := context.Background()
+			second := domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: "second"}
+			if _, err := registry.Change(ctx, second, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+				row.TicketTitle = tc.secondHint
+				return row, nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if err = registry.RequestPublication(ctx); err != nil {
+				t.Fatal(err)
+			}
+			out, err := runCaptureNative(t, f.project, "", "capture", "worker", "--repo", f.project, "--state-dir", f.state)
+			if err != nil {
+				for _, diagnostic := range captureDiagnostics(t, f.project, f.state) {
+					if diagnostic.Phase == "publication" && diagnostic.Outcome == "failed" {
+						t.Logf("publication failed: %s", diagnostic.Detail)
+						break
+					}
+				}
+				t.Fatalf("automatic publication: %v %s", err, out)
+			}
+			got := f.ledger(t)
+			if got.TicketID == nil || *got.TicketID != ticket || got.TicketTitle == nil || *got.TicketTitle != tc.wantTitle {
+				t.Fatalf("ledger metadata = id %v, title %v; want id %q and title %q", got.TicketID, got.TicketTitle, ticket, tc.wantTitle)
+			}
+			owners := make(map[string]domain.SessionFact, len(got.Sessions))
+			for _, owner := range got.Sessions {
+				owners[owner.ID] = owner
+			}
+			if len(got.Sessions) != 3 || !reflect.DeepEqual(owners[retained.ID], retained) {
+				t.Fatalf("automatic publication lost retained history: %+v", got.Sessions)
+			}
+			for id, input := range map[string]int64{"root": 11, "second": 29} {
+				owner := owners[id]
+				if owner.Source != domain.SourceCodex || len(owner.Invocations) != 1 || owner.Invocations[0].Tokens.Input != input {
+					t.Fatalf("owner %s not published with %d source tokens: %+v", id, input, owner)
+				}
+			}
+			assertCapturePublishedOwners(t, captureDiagnostics(t, f.project, f.state), f.output, filepath.Join(filepath.Dir(f.output), "SUMMARY.md"), got.Sessions)
+			if tc.acceptedTitle == "Accepted title" && tc.secondHint != "Explicit TEST-100" {
+				const manualTitle = "Operator-selected title"
+				manual := f.generate(t, "--session-id", "root", "--ticket-title", manualTitle)
+				if manual.TicketTitle == nil || *manual.TicketTitle != manualTitle {
+					t.Fatalf("manual generation did not replace the display title with %q", manualTitle)
+				}
+			}
+		})
+	}
+}
+
+func TestCaptureWorkerPublishesWithMissingCachedUser(t *testing.T) {
+	const ticket = "TEST-100"
+	const gitUser = "Capture fixture Git user"
+	f := newCaptureGenerationFixture(t)
+	historyGit(t, f.project, "config", "user.name", gitUser)
+	f.output = seedCaptureTicketHome(t, f, ticket)
+	writeCaptureSuccessfulPublicationPolicy(t, f.project, f.state)
+	baseline := f.ledger(t)
+	baseline.Sessions = []domain.SessionFact{{
+		ID: "portable-owner", Source: domain.SourceOpenCode, User: "recorded-user",
+		Invocations: []domain.InvocationFact{{Model: "stored-model", Tokens: domain.InvocationTokens{Input: 77}}},
+	}}
+	body, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(baseline))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(f.output, body, 0600); err != nil {
+		t.Fatal(err)
+	}
+	retained := f.ledger(t).Sessions[0]
+	prepareCaptureOwner(t, f, "verified", ticket, 29)
+	stalePath := prepareCaptureOwner(t, f, "unavailable", ticket, 19)
+
+	registry, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := registry.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	ctx := context.Background()
+	stale := domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: "unavailable"}
+	prior, err := registry.Change(ctx, stale, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+		row.State = domain.CaptureCurrent
+		row.Snapshot = []domain.SessionFact{{
+			ID: stale.SessionID, Source: stale.Source,
+			Invocations: []domain.InvocationFact{{Model: "source-model", Tokens: domain.InvocationTokens{Input: 19}}},
+		}}
+		return row, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Remove(stalePath); err != nil {
+		t.Fatal(err)
+	}
+	unassigned := domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: "root"}
+	if _, err = registry.Register(ctx, unassigned, f.write(t, 41), "SessionEnd"); err != nil {
+		t.Fatal(err)
+	}
+	if err = registry.RequestPublication(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := runCaptureNative(t, f.project, "", "capture", "worker", "--repo", f.project, "--state-dir", f.state); err != nil {
+		t.Fatalf("valid owner could not publish alongside unavailable cached owner: %v %s", err, out)
+	}
+	got := f.ledger(t)
+	owners := make(map[string]domain.SessionFact, len(got.Sessions))
+	for _, owner := range got.Sessions {
+		owners[owner.ID] = owner
+	}
+	if len(got.Sessions) != 2 || !reflect.DeepEqual(owners[retained.ID], retained) {
+		t.Fatalf("publication changed accepted history or included ineligible owners: %+v", got.Sessions)
+	}
+	verified := owners["verified"]
+	if verified.Source != domain.SourceCodex || verified.User != gitUser || len(verified.Invocations) != 1 || verified.Invocations[0].Tokens.Input != 29 {
+		t.Fatalf("verified source usage and Git user were not published: %+v", verified)
+	}
+	assertCapturePublishedOwners(t, captureDiagnostics(t, f.project, f.state), f.output, filepath.Join(filepath.Dir(f.output), "SUMMARY.md"), got.Sessions)
+
+	rows, err := registry.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byID := make(map[string]domain.CaptureRegistration, len(rows))
+	for _, row := range rows {
+		byID[row.Identity.SessionID] = row
+	}
+	recovery := byID[stale.SessionID]
+	if !recovery.SnapshotNeedsRefresh || len(recovery.Snapshot) != 0 || recovery.TicketID != ticket || recovery.Request != prior.Request || recovery.State == domain.CaptureCurrent {
+		t.Fatalf("unavailable owner lost its binding or made cached facts publishable: %+v", recovery)
+	}
+	prebind := byID[unassigned.SessionID]
+	if prebind.TicketID != "" || prebind.SnapshotNeedsRefresh || len(prebind.Snapshot) != 1 || prebind.Snapshot[0].User != gitUser {
+		t.Fatalf("pre-binding extraction failed to save the selected Git user: %+v", prebind)
+	}
+}
+
 func TestCaptureCopiedBaselineCannotCrossTicketEvenWithCorrectedHeader(t *testing.T) {
 	for _, corrected := range []bool{false, true} {
 		t.Run(fmt.Sprint(corrected), func(t *testing.T) {

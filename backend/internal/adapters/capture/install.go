@@ -75,6 +75,8 @@ type fileChange struct {
 	remove  bool
 	before  []byte
 	existed bool
+	mkdir   bool
+	mode    os.FileMode
 }
 
 func absolute(path string) (string, error) {
@@ -520,9 +522,14 @@ func codexHookGroup(event, command string) (json.RawMessage, error) {
 	if event == "SessionStart" || event == "UserPromptSubmit" || event == "SubagentStart" {
 		handler.Limit = 1000
 	}
+	var matcher string
+	if event == "PostToolUse" {
+		matcher = "^Bash$"
+	}
 	return json.Marshal(struct {
-		Hooks []typeofHandler `json:"hooks"`
-	}{[]typeofHandler{handler}})
+		Matcher string          `json:"matcher,omitempty"`
+		Hooks   []typeofHandler `json:"hooks"`
+	}{matcher, []typeofHandler{handler}})
 }
 
 type typeofHandler = struct {
@@ -534,6 +541,9 @@ type typeofHandler = struct {
 }
 
 func apply(c fileChange) error {
+	if c.mkdir {
+		return os.Mkdir(c.path, 0700)
+	}
 	if c.remove {
 		err := os.Remove(c.path)
 		if errors.Is(err, os.ErrNotExist) {
@@ -556,6 +566,11 @@ func apply(c fileChange) error {
 	}()
 	if _, err = file.Write(c.content); err != nil {
 		return errors.Join(err, file.Close())
+	}
+	if c.mode != 0 {
+		if err := file.Chmod(c.mode.Perm()); err != nil {
+			return errors.Join(err, file.Close())
+		}
 	}
 	if err = file.Sync(); err != nil {
 		return errors.Join(err, file.Close())

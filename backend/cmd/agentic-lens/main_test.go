@@ -42,7 +42,7 @@ func TestMain(m *testing.M) {
 	}
 	cliBinaryPath = binPath
 	managerBinaryPath = filepath.Join(tempDir, "agentic-lens-manager")
-	managerBuild := exec.Command("go", "build", "-o", managerBinaryPath, "../agentic-lens-manager")
+	managerBuild := exec.Command("go", "build", "-ldflags", "-X agenticlens/internal/domain.Version=v9.8.7", "-o", managerBinaryPath, "../agentic-lens-manager")
 	if out, err := managerBuild.CombinedOutput(); err != nil {
 		os.RemoveAll(tempDir)
 		panic(string(out))

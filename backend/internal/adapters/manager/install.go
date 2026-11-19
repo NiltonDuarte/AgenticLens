@@ -160,6 +160,18 @@ func installEngine(project string, args []string, output io.Writer) (returnErr e
 			return err
 		}
 	}
+	// Record the digest of the explicitly verified artifact beside the engine.
+	// A partial installation is ineligible for protected dispatch until repaired.
+	sum := []byte(digest(after) + "\n")
+	prior, hasSum, err := readRegular(path+".sha256", 1024)
+	if err != nil {
+		return err
+	}
+	if !hasSum || string(prior) != string(sum) {
+		if err := atomicWrite(path+".sha256", sum, 0600); err != nil {
+			return err
+		}
+	}
 	_, err = fmt.Fprintf(output, "Installed engine %s at %s\n", version, path)
 	if err == nil && (osName != runtime.GOOS || arch != runtime.GOARCH) {
 		_, err = fmt.Fprintln(output, "Foreign release checksum and platform verified; engine interface and runtime identity validation are deferred until execution on the target platform.")

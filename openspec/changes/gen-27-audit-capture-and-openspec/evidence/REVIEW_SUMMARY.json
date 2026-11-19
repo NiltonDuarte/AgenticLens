@@ -1,0 +1,404 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "GEN27-I02-01",
+      "severity": 7,
+      "issue": "A response submitted after worker exit could wait indefinitely for another callback.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "The native post-tool hook now wakes an idle worker."
+    },
+    {
+      "finding_id": "GEN27-I02-02",
+      "severity": 7,
+      "issue": "An unavailable Codex inbox prevented independent OpenCode registration.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "The worker handles an unavailable source independently."
+    },
+    {
+      "finding_id": "GEN27-I02-03",
+      "severity": 6,
+      "issue": "Installer rollback could delete an inbox created by a competing process.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Rollback checks ownership of the displaced directory."
+    },
+    {
+      "finding_id": "GEN27-I02-04",
+      "severity": 7,
+      "issue": "Installer replacement could overwrite concurrent TOML edits.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Installer transactions verify file identity and retain intervening changes during recovery."
+    },
+    {
+      "finding_id": "GEN27-I02-05",
+      "severity": 0,
+      "issue": "An empty sandbox settings table might crash the TOML editor.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "identity_basis": "acknowledged",
+          "effort": "medium"
+        }
+      ],
+      "disposition": "Refuted in independent empty, inline and adjacent-table fixtures."
+    },
+    {
+      "finding_id": "GEN27-I02-06",
+      "severity": 7,
+      "issue": "Repeated bounded workers could starve eligible registrations beyond the first scan window.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Persist the sweep cursor and remaining count across worker lifetimes."
+    },
+    {
+      "finding_id": "GEN27-I02-07",
+      "severity": 7,
+      "issue": "Source verification could consume a per-owner allowance repeatedly within one sweep.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Charge session and byte use to the same bounded pass."
+    },
+    {
+      "finding_id": "GEN27-I02-08",
+      "severity": 7,
+      "issue": "Inbox separation omitted selected manager and engine paths.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Check executable paths alongside registry and publication locations."
+    },
+    {
+      "finding_id": "GEN27-I02-09",
+      "severity": 6,
+      "issue": "Submission acknowledged responses when changed configuration made the inbox unusable.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "identity_basis": "acknowledged",
+          "effort": "medium"
+        }
+      ],
+      "disposition": "Revalidate current private-path separation before writing."
+    },
+    {
+      "finding_id": "GEN27-I02-10",
+      "severity": 6,
+      "issue": "Removing a consumed slot by its pathname could delete a newer entry.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "identity_basis": "acknowledged",
+          "effort": "medium"
+        },
+        {
+          "persona": "coordinator",
+          "model": null,
+          "identity_basis": "requested",
+          "identity_note": "Coordinator observation; executed model and effort unavailable.",
+          "effort": null
+        }
+      ],
+      "disposition": "Keep completed slots. Verified registrations make later scans idempotent."
+    },
+    {
+      "finding_id": "GEN27-I02-11",
+      "severity": 4,
+      "issue": "Regression tests did not establish restart progress beyond the first bounded worker lifetime.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "identity_basis": "acknowledged",
+          "effort": "medium"
+        }
+      ],
+      "disposition": "The native fixture observes distinct worker PIDs, build identity, scan progress and binding."
+    },
+    {
+      "finding_id": "GEN27-I02-12",
+      "severity": 8,
+      "issue": "A trusted hook could select a worktree-writable engine.",
+      "reporters": [
+        {
+          "persona": "coordinator",
+          "model": null,
+          "identity_basis": "requested",
+          "identity_note": "Coordinator observation; executed model and effort unavailable.",
+          "effort": null
+        }
+      ],
+      "disposition": "The operator approved protected manager and engine selection for trusted Codex capture."
+    },
+    {
+      "finding_id": "GEN27-I02-13",
+      "severity": 6,
+      "issue": "A delayed source flush could leave a valid queued response without another proof attempt.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "identity_basis": "acknowledged",
+          "effort": "medium"
+        }
+      ],
+      "disposition": "An authenticated pending response gets bounded retry time, then remains recoverable."
+    },
+    {
+      "finding_id": "GEN27-I02-14",
+      "severity": 5,
+      "issue": "Malformed worker progress could block processing of otherwise durable registrations.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Restart the bounded scan from durable registrations and record recovery."
+    },
+    {
+      "finding_id": "GEN27-I03-01",
+      "severity": 7,
+      "issue": "A machine-level Codex receipt changed capture routing in unrelated OpenCode worktrees.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        },
+        {
+          "persona": "reviewer-security",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Use private admission for physical worktrees and their descendants."
+    },
+    {
+      "finding_id": "GEN27-I03-02",
+      "severity": 4,
+      "issue": "Tests did not fully establish protected worker identity across handoff or prior-protocol rejection.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "identity_basis": "acknowledged",
+          "effort": "medium"
+        }
+      ],
+      "disposition": "Assert distinct PIDs, matching native build, sweep progress, and retained ledger and response on rejection."
+    },
+    {
+      "finding_id": "GEN27-I03-03",
+      "severity": 5,
+      "issue": "Independent OpenCode coverage initially stopped at callback registration.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "identity_basis": "acknowledged",
+          "effort": "medium"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "The native-manager fixture binds an SQLite-backed session and verifies its 47 input tokens in the independent ledger."
+    },
+    {
+      "finding_id": "GEN27-I03-04",
+      "severity": 8,
+      "issue": "The protected generator could re-read a different operational state path after worker validation.",
+      "reporters": [
+        {
+          "persona": "reviewer-security",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "The writer validates and acquires the same canonical state and guards the lock and journal. Protected workers require protocol 2."
+    },
+    {
+      "finding_id": "GEN27-I03-05",
+      "severity": 6,
+      "issue": "First admission could drop a callback in an unrelated worktree during global lease contention.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Lock physical worktree boundaries so sibling callbacks can proceed during first admission."
+    },
+    {
+      "finding_id": "GEN27-I03-06",
+      "severity": 6,
+      "issue": "Explicit reconcile after upgrade skipped queued bindings until a native callback.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "Reconcile verifies and admits the configured protected installation before recovering the queued response."
+    },
+    {
+      "finding_id": "GEN27-I03-07",
+      "severity": 7,
+      "issue": "An interrupted uninstall exposed an inactive receipt before the journal committed.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "identity_basis": "acknowledged",
+          "effort": "high"
+        }
+      ],
+      "disposition": "A pending journal blocks release and protected worktree markers persist through committed cleanup."
+    },
+    {
+      "finding_id": "GEN27-I03-08",
+      "severity": 6,
+      "issue": "Automatic publication stopped on different display titles for the same ticket ID.",
+      "reporters": [
+        {
+          "persona": "coordinator",
+          "model": "gpt-6.2-sol",
+          "effort": "xhigh",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Use the accepted ledger title under the publication lock and treat registration titles as display hints."
+    },
+    {
+      "finding_id": "GEN27-I03-09",
+      "severity": 6,
+      "issue": "A cached snapshot without a user caused the writer to roll back valid sibling publication.",
+      "reporters": [
+        {
+          "persona": "coordinator",
+          "model": "gpt-6.2-sol",
+          "effort": "xhigh",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Preserve the invalid cache as opaque and recover only from a verified source read."
+    },
+    {
+      "finding_id": "GEN27-I03-10",
+      "severity": 5,
+      "issue": "Pre-binding reconciliation created native snapshots with a blank user.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.2-sol",
+          "effort": "xhigh",
+          "identity_basis": "requested",
+          "identity_note": "Native tester inherited the requested coordinator profile."
+        }
+      ],
+      "disposition": "Read the selected Git identity within the worker pass deadline."
+    }
+  ]
+}

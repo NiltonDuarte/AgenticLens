@@ -17,13 +17,14 @@ import (
 // PublicationLock owns operational state and the actual output directory.
 // The directory descriptor survives rename; no disappeared workspace is recreated.
 type PublicationLock struct {
-	root      *os.Root
-	file      *os.File
-	directory *os.File
-	original  string
-	state     string
-	project   string
-	identity  string
+	protection *ProtectedPublication
+	root       *os.Root
+	file       *os.File
+	directory  *os.File
+	original   string
+	state      string
+	project    string
+	identity   string
 }
 
 var heldPublications = struct {
@@ -48,6 +49,10 @@ func waitPublicationLock(ctx context.Context, file *os.File) error {
 	}
 }
 func AcquirePublication(ctx context.Context, path, project string) (*PublicationLock, error) {
+	return acquirePublication(ctx, path, project, nil)
+}
+
+func acquirePublication(ctx context.Context, path, project string, protection *ProtectedPublication) (*PublicationLock, error) {
 	if strings.TrimSpace(project) == "" {
 		return nil, fmt.Errorf("publication requires an explicit owning project")
 	}
@@ -59,9 +64,20 @@ func AcquirePublication(ctx context.Context, path, project string) (*Publication
 	if err != nil {
 		return nil, err
 	}
-	state, err := config.ResolvePublicationState(selected)
-	if err != nil {
-		return nil, err
+	var state string
+	if protection != nil {
+		if err := protection.Validate(selected); err != nil {
+			return nil, err
+		}
+		state = protection.State
+		if err := protection.checkPrivatePath(filepath.Join(state, "publication")); err != nil {
+			return nil, err
+		}
+	} else {
+		state, err = config.ResolvePublicationState(selected)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if err = MkdirPublicationStateDirectories(filepath.Join(state, "publication"), 0700); err != nil {
 		return nil, fmt.Errorf("operational state home unavailable: %w", err)
@@ -78,7 +94,11 @@ func AcquirePublication(ctx context.Context, path, project string) (*Publication
 		return nil, errors.Join(err, directory.Close())
 	}
 	digest := sha256.Sum256([]byte(selected + "\x00" + identity))
-	file, err := os.OpenFile(filepath.Join(state, "publication", hex.EncodeToString(digest[:])+".lock"), os.O_CREATE|os.O_RDWR, 0600)
+	lockPath := filepath.Join(state, "publication", hex.EncodeToString(digest[:])+".lock")
+	if err := protection.checkPrivatePath(lockPath); err != nil {
+		return nil, errors.Join(err, directory.Close())
+	}
+	file, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
 		return nil, errors.Join(err, directory.Close())
 	}
@@ -94,7 +114,7 @@ func AcquirePublication(ctx context.Context, path, project string) (*Publication
 	if rootErr != nil || dirErr != nil || !os.SameFile(rootInfo, dirInfo) {
 		return nil, errors.Join(fmt.Errorf("workspace replaced during directory-root admission; retry"), rootErr, dirErr, root.Close(), file.Close(), directory.Close())
 	}
-	owner := &PublicationLock{root: root, file: file, directory: directory, original: parent, state: state, project: selected, identity: identity}
+	owner := &PublicationLock{protection: protection, root: root, file: file, directory: directory, original: parent, state: state, project: selected, identity: identity}
 	// A directory replaced between resolve and admission is never accepted.
 	before, err := directory.Stat()
 	after, e := os.Stat(parent)

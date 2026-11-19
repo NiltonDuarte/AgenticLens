@@ -1,9 +1,9 @@
 version: 1
 # Coordinator input, not AgenticLens runtime configuration.
 profiles:
-  sol_6_1_high:
+  sol_6_2_high:
     provider_instance_id: codex
-    model: gpt-6.1-sol
+    model: gpt-6.2-sol
     reasoning_effort: high
   luna_6_medium:
     provider_instance_id: codex
@@ -11,7 +11,7 @@ profiles:
     reasoning_effort: medium
 # Every selected reviewer, including specialists and narrow reviews, runs all profiles.
 default_profiles:
-  - sol_6_1_high
+  - sol_6_2_high
   - luna_6_medium
 # Optional explicit persona-name -> profile-ID list; replaces defaults for that persona.
 # Empty lists are invalid. Policy changes must preserve the user's current requirements.

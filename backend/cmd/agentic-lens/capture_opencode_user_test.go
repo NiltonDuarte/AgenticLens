@@ -2,14 +2,21 @@ package main_test
 
 import (
 	"bytes"
+	"context"
+	"crypto/sha256"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters/capture"
+	"agenticlens/internal/adapters/config"
+	"agenticlens/internal/domain"
 )
 
 func TestOpenCodeUserInstallPreservesCustomHomeAndDrift(t *testing.T) {
@@ -235,4 +242,189 @@ func TestOpenCodeUserMigrationVerifiesLegacyPluginAcrossLinkedWorktree(t *testin
 			t.Fatalf("duplicate legacy plugin created: %v", err)
 		}
 	})
+}
+
+// A global Codex installation can serve two linked worktrees while only one
+// has admitted a native Codex callback. Each process reads its own worktree.
+func TestOpenCodeWorktreeKeepsCustomEngineAcrossCodexAdmission(t *testing.T) {
+	mixed := newCodexInboxFixture(t)
+	configureInboxExecutablePath(t, mixed, "binary_dir", mixed.project)
+	dev := filepath.Join(mixed.project, "selected-build", filepath.Base(fixtureCaptureEngine()))
+	if err := os.MkdirAll(filepath.Dir(dev), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dev, readCaptureFile(t, cliBinaryPath), 0700); err != nil {
+		t.Fatal(err)
+	}
+	shared := ".agenticlens-config.yaml"
+	historyGit(t, mixed.project, "add", shared)
+	historyGit(t, mixed.project, "commit", "-m", "fixture shared policy")
+	other := mixed
+	other.project = filepath.Join(t.TempDir(), "opencode-worktree")
+	historyGit(t, mixed.project, "worktree", "add", "-b", "opencode", other.project)
+	nested := filepath.Join(mixed.project, ".worktrees", "nested")
+	historyGit(t, mixed.project, "worktree", "add", "-b", "nested", nested)
+	var err error
+	other.state, err = capture.ProjectState(other.stateBase, other.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cache := filepath.Join(os.Getenv("HOME"), "other-project-cache")
+	alternate := "v9.8.8"
+	otherShared := filepath.Join(other.project, shared)
+	body := strings.Replace(string(readCaptureFile(t, otherShared)), "  binary_dir: "+strconv.Quote(filepath.Dir(dev)), "  install_root: "+strconv.Quote(cache), 1)
+	body = strings.Replace(body, "version: v9.8.7", "version: "+alternate, 1)
+	if err := os.WriteFile(otherShared, []byte(body), 0600); err != nil {
+		t.Fatal(err)
+	}
+	altEngine := filepath.Join(t.TempDir(), "engine")
+	if out, err := exec.Command("go", "build", "-ldflags", "-X agenticlens/internal/domain.Version="+alternate, "-o", altEngine, ".").CombinedOutput(); err != nil {
+		t.Fatalf("build alternate engine: %s %v", out, err)
+	}
+	install := exec.Command(fixtureCaptureManager(), "--al-project", other.project, "install", alternate, "--install-root", cache, "--local-bin", altEngine, "--sha256", fmt.Sprintf("%x", sha256.Sum256(readCaptureFile(t, altEngine))))
+	if out, err := install.CombinedOutput(); err != nil {
+		t.Fatalf("install independent OpenCode engine: %s %v", out, err)
+	}
+	t.Setenv("OPENCODE_CONFIG_DIR", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	database := setupIsolatedEmptyDB(t)
+	t.Setenv("OPENCODE_DB", database)
+	db, err := sql.Open("sqlite", database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	setOpenCodeFixtureProject(t, database, mixed.project)
+	for id, project := range map[string]string{"mixed-session": mixed.project, "independent-session": other.project} {
+		if _, err := db.Exec("INSERT INTO session (id,agent,model,time_created,time_updated,directory) VALUES (?, 'root','fixture',1,2,?)", id, project); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := db.Exec(`INSERT INTO message (id,session_id,time_created,time_updated,data) VALUES ('independent-message','independent-session',1,2,'{"role":"assistant","modelID":"fixture","time":{"created":1,"completed":2},"tokens":{"input":47,"output":3}}')`); err != nil {
+		t.Fatal(err)
+	}
+	ledger := seedCaptureTicketHome(t, other, "TEST-200")
+	configure := func(f captureGenerationFixture, withCodex bool) {
+		t.Helper()
+		sources := fmt.Sprintf("    opencode:\n      database_path: %q\n", database)
+		if withCodex {
+			sources += fmt.Sprintf("    codex:\n      home: %q\n", f.store)
+		}
+		policy := "telemetry:\n  default_source: opencode\n  capture:\n  sources:\n" + sources
+		if err := writeCaptureFixtureLocal(t, f, []byte(policy)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	configure(mixed, true)
+	configure(other, false)
+	codexInboxOperation(t, mixed.project, "install-user")
+	if out, err := captureCLI(t, other.project, "", "install-user", "--source", "opencode", "--repo", other.project, "--entrypoint", fixtureCaptureManager()); err != nil {
+		t.Fatalf("install native OpenCode hook: %s %v", out, err)
+	}
+	for _, f := range []captureGenerationFixture{mixed, other} {
+		s, err := capture.OpenProject(f.state, f.project)
+		if err != nil {
+			t.Fatal(err)
+		}
+		completion := captureWorkerCompletion(t, s.CoordinationDirectory())
+		if err := s.Close(); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: false\n")); err != nil {
+				t.Error(err)
+			}
+			captureCleanupWorkers(t, completion)
+		})
+	}
+	hook := func(project string, event capture.HookInput, args ...string) ([]byte, error) {
+		t.Helper()
+		event.WorkingDirectory = project
+		payload, err := json.Marshal(event)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cmd := exec.Command(fixtureCaptureManager(), args...)
+		cmd.Dir = project
+		cmd.Stdin = bytes.NewReader(payload)
+		return cmd.CombinedOutput()
+	}
+	openCode := func(project, id string) ([]byte, error) {
+		return hook(project, capture.HookInput{Event: "session.idle", SessionID: id}, "opencode-hook", "receive")
+	}
+	verifyOpenCode := func(project, id string) string {
+		t.Helper()
+		out, err := openCode(project, id)
+		var row domain.CaptureRegistration
+		if err != nil || json.Unmarshal(out, &row) != nil || row.Request == "" || row.Identity.SessionID != id {
+			t.Fatalf("native OpenCode callback for %s: %s %v", id, out, err)
+		}
+		return row.Request
+	}
+	verifyOpenCode(other.project, "independent-session")
+	rollout := mixed.write(t, 27)
+	codexStart := capture.HookInput{Event: "SessionStart", SessionID: "root", TranscriptPath: rollout}
+	registry, err := capture.OpenProject(mixed.state, mixed.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+	lease, err := capture.AcquireWorker(registry.CoordinationDirectory())
+	if err != nil || lease == nil {
+		t.Fatalf("acquire active ordinary worker lease: %v", err)
+	}
+	ctx := context.Background()
+	if err := registry.RequestPublication(ctx); err != nil {
+		t.Fatal(err)
+	}
+	before, err := registry.PublicationRequest(ctx)
+	if err != nil || before.Generation <= before.Acknowledged {
+		t.Fatalf("ordinary worker has no pending generation: %+v %v", before, err)
+	}
+	blocked, busyErr := hook(mixed.project, codexStart, "codex-hook")
+	after, readErr := registry.PublicationRequest(ctx)
+	if err := lease.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if busyErr == nil || !bytes.Contains(blocked, []byte("ordinary capture worker")) || readErr != nil || after != before {
+		t.Fatalf("first admission changed pending generation or failed for the wrong reason: %s %v %+v %v", blocked, busyErr, after, readErr)
+	}
+	// Keep the independent project in an ordinary routing operation throughout
+	// the mixed project's first admission.
+	var out []byte
+	err = config.WithOrdinaryCapture(other.project, func() error {
+		var err error
+		out, err = hook(mixed.project, codexStart, "codex-hook")
+		return err
+	})
+	var reply capture.HookOutput
+	if err != nil || json.Unmarshal(out, &reply) != nil || reply.Context == nil || !strings.Contains(reply.Context.Context, fixtureCaptureEngine()) {
+		t.Fatalf("Codex callback failed to admit mixed worktree: %s %v", out, err)
+	}
+	verifyOpenCode(other.project, "independent-session")
+	verifyOpenCode(mixed.project, "mixed-session")
+	configure(mixed, false)
+	verifyOpenCode(mixed.project, "mixed-session")
+	path := fixtureCaptureEngine()
+	if err := os.Rename(path, path+".maintenance"); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.Rename(path+".maintenance", path); err != nil {
+			t.Error(err)
+		}
+	}()
+	for _, project := range []string{mixed.project, nested} {
+		out, err = openCode(project, "mixed-session")
+		if err == nil || !bytes.Contains(out, []byte("protected engine")) {
+			t.Fatalf("removing the Codex source downgraded admitted worktree at %s: %s %v", project, out, err)
+		}
+	}
+	const id = "independent-session"
+	request := verifyOpenCode(other.project, id)
+	event := capture.HookInput{Event: "session.idle", SessionID: id}
+	if out, err := hook(other.project, event, "opencode-hook", "bind", "--ticket-id", "TEST-200", "--ticket-title", "Independent OpenCode publication", "--ticket-type", "fix", "--request", request); err != nil {
+		t.Fatalf("bind independent session during protected engine maintenance: %s %v", out, err)
+	}
+	waitCorrectionLedger(t, ledger, id, 47)
 }

@@ -4,6 +4,7 @@ package manager
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/filesystem"
@@ -26,8 +28,16 @@ func Run(args []string, input io.Reader, output, diagnostic io.Writer) error {
 	if len(args) == 2 && args[0] == "engine" && args[1] == "protocol" {
 		return errors.New("this executable is the AgenticLens manager, not an engine")
 	}
-	if len(args) == 2 && args[0] == "manager" && args[1] == "opencode-hook-protocol" {
+	if len(args) == 2 && args[0] == "manager" && (args[1] == "opencode-hook-protocol" || args[1] == "codex-binding-wake-protocol" || args[1] == "protected-codex-hook-protocol") {
 		_, err := fmt.Fprintln(output, "1")
+		return err
+	}
+	if len(args) == 3 && args[0] == "manager" && args[1] == "protected-codex-version" {
+		version, err := config.ProtectedCodexVersion(args[2], domain.GetBuildInfo().Version)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(output, version)
 		return err
 	}
 	if len(args) == 2 && args[0] == "manager" && args[1] == "protocol" {
@@ -73,6 +83,8 @@ parsed:
 			return installEngine(project, args[1:], output)
 		case "versions":
 			return listVersions(project, args[1:], output)
+		case "codex-binding-wake":
+			return codexBindingWake(input, output, diagnostic)
 		case "codex-hook":
 			return nativeHook("Codex", []string{"capture", "user-hook"}, input, output, diagnostic)
 		case "opencode-hook":
@@ -86,7 +98,7 @@ parsed:
 	if err != nil {
 		return err
 	}
-	args, err = prepareCaptureArgs(args, entry.Project)
+	args, codexHomes, err := prepareCaptureArgs(args, entry.Project)
 	if err != nil {
 		return err
 	}
@@ -98,7 +110,21 @@ parsed:
 		_, err = fmt.Fprintf(output, "%s\n%s\n%s\n%s\n", entry.Version, entry.Project, entry.InstallRoot, path)
 		return err
 	}
-	native, identity, err := selectEngine(entry)
+	if len(codexHomes) > 1 && !resolve {
+		manager, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		native, err := config.ResolveProtectedCodexEngine(entry.Project, codexHomes[1], manager)
+		if err != nil {
+			return err
+		}
+		return execute(native, args, input, output, diagnostic, "")
+	}
+	if !resolve && len(args) >= 2 && args[0] == "capture" && args[1] == "reconcile" {
+		return captureReconcile(entry, args, input, output, diagnostic)
+	}
+	native, identity, err := selectEngine(entry, codexHomes...)
 	if err != nil {
 		return err
 	}
@@ -111,11 +137,11 @@ parsed:
 
 // Capture flags use Go flag arity. Consume values before interpreting later
 // tokens so a literal "--repo" title cannot change project selection.
-func prepareCaptureArgs(args []string, selected string) ([]string, error) {
+func prepareCaptureArgs(args []string, selected string) ([]string, []string, error) {
 	if len(args) < 2 || args[0] != "capture" {
-		return args, nil
+		return args, nil, nil
 	}
-	repository, source := "", ""
+	repository, source, store, userSource := "", "", "", ""
 	stateDirectory, projectName := "", ""
 	for index := 2; index < len(args); index++ {
 		argument := args[index]
@@ -123,15 +149,19 @@ func prepareCaptureArgs(args []string, selected string) ([]string, error) {
 			break
 		}
 		name, value, inline := strings.Cut(strings.TrimLeft(argument, "-"), "=")
-		if name == "repo" || name == "state-dir" || name == "project-name" || name == "source" {
+		if name == "user-source" || name == "store" || name == "repo" || name == "state-dir" || name == "project-name" || name == "source" {
 			if !inline {
 				index++
 				if index >= len(args) {
-					return nil, fmt.Errorf("capture --%s requires a value", name)
+					return nil, nil, fmt.Errorf("capture --%s requires a value", name)
 				}
 				value = args[index]
 			}
 			switch name {
+			case "user-source":
+				userSource = value
+			case "store":
+				store = value
 			case "source":
 				source = value
 			case "repo":
@@ -157,30 +187,44 @@ func prepareCaptureArgs(args []string, selected string) ([]string, error) {
 	if source == "opencode" && (args[1] == "install-user" || args[1] == "uninstall-user") {
 		args = slices.Insert(slices.Clone(args), 2, "--user-source", source)
 	}
+	var homes []string
+	if args[1] == "install-user" {
+		homes = []string{config.RuntimeCodexHome()}
+		if source != "opencode" && userSource != "opencode" {
+			if store == "" {
+				cfg, err := config.Load(selected)
+				if err != nil {
+					return nil, nil, err
+				}
+				store = cfg.Telemetry.Sources.CodexHome
+			}
+			homes = append(homes, store)
+		}
+	}
 	if repository == "" {
-		return args, nil
+		return args, homes, nil
 	}
 	// Retained-state inspection validates the explicit registry and stored
 	// project identity in the engine, even when its checkout no longer exists.
 	if args[1] == "inspect-state" && stateDirectory != "" && projectName != "" {
-		return args, nil
+		return args, homes, nil
 	}
 	root, err := config.ProjectRoot(repository)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	wanted, err := os.Stat(root)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	actual, err := os.Stat(selected)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if !os.SameFile(wanted, actual) {
-		return nil, errors.New("capture --repo differs from selected project; supply matching --al-project DIR before capture")
+		return nil, nil, errors.New("capture --repo differs from selected project; supply matching --al-project DIR before capture")
 	}
-	return args, nil
+	return args, homes, nil
 }
 
 func defaultRoot() (string, error) {
@@ -225,8 +269,8 @@ func standalone(args []string) bool {
 	}
 }
 
-func selectEngine(entry config.Entrypoint) (string, domain.BuildInfo, error) {
-	native, err := entry.NativePath()
+func selectEngine(entry config.Entrypoint, sourceHome ...string) (string, domain.BuildInfo, error) {
+	native, err := entry.NativePath(sourceHome...)
 	if err != nil {
 		return "", domain.BuildInfo{}, err
 	}
@@ -234,7 +278,7 @@ func selectEngine(entry config.Entrypoint) (string, domain.BuildInfo, error) {
 	if err != nil {
 		return "", identity, fmt.Errorf("engine %s unavailable or incompatible; explicitly install %s: %w", native, entry.Version, err)
 	}
-	development := entry.BinaryDir != "" && filepath.Dir(native) == entry.BinaryDir
+	development := entry.BinaryDir != ""
 	if !development && identity.Version != entry.Version {
 		return "", identity, fmt.Errorf("cached engine identity %s differs from exact pin %s", identity.Version, entry.Version)
 	}
@@ -247,6 +291,10 @@ func execute(path string, args []string, input io.Reader, output, diagnostic io.
 			return err
 		}
 	}
+	return executeChild(path, args, input, output, diagnostic, directory)
+}
+
+func executeChild(path string, args []string, input io.Reader, output, diagnostic io.Writer, directory string) error {
 	command := exec.Command(path, args...)
 	command.Stdin, command.Stdout, command.Stderr, command.Dir = input, output, diagnostic, directory
 	return command.Run()
@@ -260,21 +308,21 @@ func nativeHook(harness string, engineArgs []string, input io.Reader, output, di
 	if len(body) > 65536 {
 		return fmt.Errorf("%s hook input exceeds 64 KiB", harness)
 	}
-	var context struct {
+	var event struct {
 		WorkingDirectory string `json:"cwd"`
 		SessionID        string `json:"session_id"`
 		Event            string `json:"hook_event_name"`
 	}
-	if err := json.Unmarshal(body, &context); err != nil {
+	if err := json.Unmarshal(body, &event); err != nil {
 		return fmt.Errorf("%s hook context: %w", harness, err)
 	}
-	if !filepath.IsAbs(context.WorkingDirectory) {
+	if !filepath.IsAbs(event.WorkingDirectory) {
 		return fmt.Errorf("native %s callback requires absolute session cwd", harness)
 	}
-	if context.SessionID == "" || context.Event == "" {
+	if event.SessionID == "" || event.Event == "" {
 		return errors.New("hook requires session_id and hook_event_name")
 	}
-	shared, err := config.FindConfigFile(context.WorkingDirectory)
+	shared, err := config.FindConfigFile(event.WorkingDirectory)
 	if err != nil {
 		return err
 	}
@@ -297,19 +345,111 @@ func nativeHook(harness string, engineArgs []string, input io.Reader, output, di
 	if harness == "Codex" && strings.TrimSpace(configuration.Telemetry.Sources.CodexHome) == "" {
 		return errors.New("selected local configuration requires telemetry.sources.codex.home")
 	}
-	entry, err := config.ResolveEntrypoint(project)
-	if err != nil {
-		return err
-	}
 	if !policy.Enabled {
 		_, err := io.WriteString(output, "{}\n")
 		return err
 	}
-	native, _, err := selectEngine(entry)
+	home := config.RuntimeCodexHome()
+	if harness == "Codex" {
+		actual, err := filesystem.PhysicalPath(home)
+		if err != nil {
+			return err
+		}
+		configured, err := filesystem.PhysicalPath(configuration.Telemetry.Sources.CodexHome)
+		if err != nil {
+			return err
+		}
+		if actual != configured {
+			return fmt.Errorf("configured Codex source %s differs from established runtime source %s", configured, actual)
+		}
+	}
+	if harness != "Codex" {
+		err := config.WithOrdinaryCapture(project, func() error {
+			entry, err := config.ResolveEntrypoint(project)
+			if err != nil {
+				return err
+			}
+			native, _, err := selectEngine(entry, home, configuration.Telemetry.Sources.CodexHome)
+			if err != nil {
+				return err
+			}
+			return execute(native, engineArgs, bytes.NewReader(body), output, diagnostic, project)
+		})
+		if !errors.Is(err, config.ErrProtectedCodexProject) {
+			return err
+		}
+		home, err = config.ProtectedCodexProjectHome(project)
+		if err != nil {
+			return err
+		}
+		if home == "" {
+			return errors.New("protected admission changed during callback; retry after checking operator setup")
+		}
+	}
+	native, err := protectedCaptureEngine(project, home, harness == "Codex", diagnostic)
 	if err != nil {
 		return err
 	}
-	return execute(native, engineArgs, bytes.NewReader(body), output, diagnostic, project)
+	return execute(native, append(engineArgs, "--protected-codex-home", home), bytes.NewReader(body), output, diagnostic, project)
+}
+
+func captureReconcile(entry config.Entrypoint, args []string, input io.Reader, output, diagnostic io.Writer) error {
+	home, err := config.ProtectedReconcileHome(entry.Project)
+	if err != nil {
+		return err
+	}
+	if home == "" {
+		err := config.WithOrdinaryCapture(entry.Project, func() error {
+			native, _, err := selectEngine(entry)
+			if err != nil {
+				return err
+			}
+			// Keep the manager's shared routing lease until the command exits.
+			return executeChild(native, args, input, output, diagnostic, "")
+		})
+		if !errors.Is(err, config.ErrProtectedCodexProject) {
+			return err
+		}
+		home, err = config.ProtectedCodexProjectHome(entry.Project)
+		if err != nil || home == "" {
+			return errors.Join(errors.New("protected admission changed during reconcile; retry"), err)
+		}
+	}
+	native, err := protectedCaptureEngine(entry.Project, home, true, diagnostic)
+	if err != nil {
+		return err
+	}
+	return execute(native, append(args, "--protected-codex-home", home), input, output, diagnostic, "")
+}
+
+func protectedCaptureEngine(project, home string, admit bool, diagnostic io.Writer) (string, error) {
+	actual, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	if _, err := config.ProtectedCodexManager(project, home, actual); err != nil {
+		return "", err
+	}
+	native, err := config.ResolveProtectedCodexEngine(project, home)
+	if err != nil {
+		return "", err
+	}
+	if admit {
+		err := config.PrepareProtectedCodexProject(project, home, func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			cmd := exec.CommandContext(ctx, native, "capture", "admit-protected-worktree", "--repo", project, "--protected-codex-home", home)
+			cmd.Dir, cmd.Stderr = project, diagnostic
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("protected capture admission failed; check the current worker or install a compatible protected engine: %w", err)
+			}
+			return nil
+		})
+		if err != nil {
+			return "", err
+		}
+	}
+	return native, nil
 }
 
 func listVersions(project string, args []string, output io.Writer) error {

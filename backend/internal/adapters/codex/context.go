@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 )
 
 // ErrSessionContextMismatch distinguishes positively contradictory metadata from
@@ -27,7 +26,7 @@ const maxSessionMetadataBytes int64 = 64 * 1024
 // ReadSessionContext retains the intrinsic structural record bound for callers
 // which do not consume a configured capture byte budget.
 func ReadSessionContext(path string) (SessionMetadataContext, error) {
-	return readSessionContext(path, maxSessionMetadataBytes)
+	return readSessionContext(path, maxSessionMetadataBytes, nil)
 }
 
 // ReadSessionContextWithinBudget applies the explicit capture allowance before
@@ -39,20 +38,30 @@ func ReadSessionContextWithinBudget(path string, maxSourceBytes int64) (SessionM
 	if maxSourceBytes > maxSessionMetadataBytes {
 		maxSourceBytes = maxSessionMetadataBytes
 	}
-	return readSessionContext(path, maxSourceBytes)
+	return readSessionContext(path, maxSourceBytes, nil)
 }
 
-func readSessionContext(path string, limit int64) (result SessionMetadataContext, err error) {
-	file, err := os.Open(path)
+// ReadSessionContextWithBudget charges shared source reads including buffered
+// bytes and failed inspections.
+func ReadSessionContextWithBudget(path string, budget *DiscoveryBudget) (SessionMetadataContext, error) {
+	if err := budget.claim(path); err != nil {
+		return SessionMetadataContext{}, err
+	}
+	return readSessionContext(path, maxSessionMetadataBytes, budget)
+}
+
+func readSessionContext(path string, limit int64, budget *DiscoveryBudget) (result SessionMetadataContext, err error) {
+	file, info, err := openRolloutSource(path)
 	if err != nil {
 		return result, err
 	}
 	defer func() { err = errors.Join(err, file.Close()) }()
-	info, err := file.Stat()
-	if err != nil {
-		return result, err
+
+	var source io.Reader = file
+	if budget != nil {
+		source = &discoveryBudgetReader{reader: file, budget: budget, remainingSize: info.Size()}
 	}
-	reader := bufio.NewReader(io.LimitReader(file, limit))
+	reader := bufio.NewReader(io.LimitReader(source, limit))
 	line, err := reader.ReadBytes('\n')
 	if err != nil && !errors.Is(err, io.EOF) {
 		return result, err

@@ -482,7 +482,7 @@ func TestPublishedOwnerAssociationUsesSelectedFactsAndSourceInstallation(t *test
 			ctx := context.Background()
 			id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: t.TempDir(), SessionID: "root"}
 			stamp := "2026-01-01T00:00:02Z"
-			selected := domain.SessionFact{ID: "root", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{CompletedAt: &stamp, Tokens: domain.InvocationTokens{Input: 10}}}}
+			selected := domain.SessionFact{ID: "root", Source: domain.SourceCodex, User: "selected-source-user", Invocations: []domain.InvocationFact{{CompletedAt: &stamp, Tokens: domain.InvocationTokens{Input: 10}}}}
 			snapshot := selected
 			if scenario == "different equal checkpoint" {
 				snapshot.Invocations = append([]domain.InvocationFact{}, selected.Invocations...)

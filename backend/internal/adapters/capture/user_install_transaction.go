@@ -2,15 +2,19 @@ package capture
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"agenticlens/internal/adapters/config"
 )
 
 const userInstallJournalVersion = 2
-const userInstallPendingFile = "agenticlens-user-install.pending.json"
+const userInstallPendingFile = config.CodexUserInstallPending
 
 var errNoPendingUserJournal = fmt.Errorf("no matching pending user journal: %w", os.ErrNotExist)
 
@@ -28,6 +32,8 @@ type userInstallChange struct {
 	Remove     bool
 	Existed    bool
 	Executable bool
+	Mkdir      bool        `json:",omitempty"`
+	Mode       os.FileMode `json:",omitempty"`
 }
 
 type userInstallJournal struct {
@@ -37,6 +43,7 @@ type userInstallJournal struct {
 	Coordinator      string                `json:"coordinator"`
 	LegacyRepository string                `json:"legacy_repository,omitempty"`
 	Source           string                `json:"source,omitempty"`
+	ConfigStage      string                `json:"config_stage,omitempty"`
 	Homes            []string              `json:"homes,omitempty"`
 	Changes          []userInstallChange   `json:"changes"`
 }
@@ -66,6 +73,7 @@ const (
 	userInstallResourcesDiscovered
 	userInstallReferenced
 	userInstallCommitted
+	userInstallConfigDisplaced
 )
 
 func readPendingUserRecord(directory string) (userPendingRecord, bool, error) {
@@ -260,6 +268,8 @@ func validateUserJournalScope(journal userInstallJournal, coordinator string) er
 	resources := map[string]bool{journal.OwnerHome: true}
 	switch journal.source() {
 	case "codex":
+		allowed[filepath.Join(journal.OwnerHome, "config.toml")] = true
+		allowed[filepath.Join(journal.OwnerHome, codexInboxName)] = true
 		allowed[filepath.Join(journal.OwnerHome, "hooks.json")] = true
 		allowed[filepath.Join(journal.OwnerHome, "agenticlens-user-installation.json")] = true
 	case "opencode":
@@ -310,6 +320,11 @@ func validateUserJournalScope(journal userInstallJournal, coordinator string) er
 			return fmt.Errorf("pending user resource %s is outside verified ownership; preserved", home)
 		}
 	}
+	if name := journal.ConfigStage; name != "" {
+		if journal.source() != "codex" || len(name) != 26 || strings.Trim(name, "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567") != "" {
+			return errors.New("invalid user configuration staging identifier")
+		}
+	}
 	seen := map[string]bool{}
 	for _, change := range journal.Changes {
 		if !filepath.IsAbs(change.Path) {
@@ -320,6 +335,10 @@ func validateUserJournalScope(journal userInstallJournal, coordinator string) er
 			return err
 		}
 		target := filepath.Join(parent, filepath.Base(change.Path))
+		inbox := journal.source() == "codex" && target == filepath.Join(journal.OwnerHome, codexInboxName)
+		if change.Mkdir != inbox || (inbox && (change.Remove || change.Existed || len(change.Content) > 0 || len(change.Before) > 0)) || change.Mode&^0777 != 0 {
+			return errors.New("invalid user installation target operation; preserved")
+		}
 		if !allowed[target] || seen[target] {
 			return fmt.Errorf("pending user change target %s is outside unique verified ownership; preserved", change.Path)
 		}
@@ -359,10 +378,25 @@ func recoverUserInstallation(directory string) error {
 		}
 		reference = userReference(journal.OwnerHome, journal.Coordinator, owner.Checksum)
 	}
-	if err := rollbackUserJournal(journal); err != nil {
-		return fmt.Errorf("user installation recovery incomplete; prior bytes retained: %w", err)
+	committed := false
+	if journal.ConfigStage != "" {
+		marker, err := os.Lstat(filepath.Join(journal.configStageDir(), "committed"))
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		if marker != nil {
+			if !marker.Mode().IsRegular() || marker.Size() != 0 {
+				return errors.New("invalid Codex configuration commit marker; preserved")
+			}
+			committed = true
+		}
 	}
-	if err := os.Remove(filepath.Join(journal.OwnerHome, userInstallPendingFile)); err != nil {
+	if !committed {
+		if err := rollbackUserJournal(journal); err != nil {
+			return fmt.Errorf("user installation recovery incomplete; prior bytes retained: %w", err)
+		}
+	}
+	if err := finishUserJournal(journal, committed); err != nil {
 		return err
 	}
 	if reference.OwnerHome != "" {
@@ -374,6 +408,20 @@ func recoverUserInstallation(directory string) error {
 func rollbackUserJournal(journal userInstallJournal) error {
 	for i := len(journal.Changes) - 1; i >= 0; i-- {
 		change := journal.Changes[i]
+		if change.Mkdir {
+			// A journaled mkdir is only an intention. The directory may have been
+			// created or populated by its owner. Removing the grant is sufficient.
+			continue
+		}
+		if filepath.Base(change.Path) == "config.toml" {
+			if journal.ConfigStage == "" {
+				return errors.New("pending Codex config edit lacks staging evidence; preserved")
+			}
+			if err := rollbackCodexConfig(journal.configStageDir(), change); err != nil {
+				return err
+			}
+			continue
+		}
 		current, err := os.ReadFile(change.Path)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
@@ -388,7 +436,7 @@ func rollbackUserJournal(journal userInstallJournal) error {
 		} else if err != nil || !bytes.Equal(current, change.Content) {
 			return fmt.Errorf("transaction target edited; preserved: %s", change.Path)
 		}
-		if err := apply(fileChange{path: change.Path, content: change.Before, remove: !change.Existed}); err != nil {
+		if err := apply(fileChange{path: change.Path, content: change.Before, remove: !change.Existed, mode: change.Mode}); err != nil {
 			return err
 		}
 		if change.Existed && change.Executable {
@@ -420,7 +468,10 @@ func applyUserInstallationWithCheckpoint(source, home, coordinator, legacyReposi
 		journal.Homes = append(journal.Homes, resources...)
 	}
 	for _, change := range changes {
-		journal.Changes = append(journal.Changes, userInstallChange{Path: change.path, Content: change.content, Before: change.before, Remove: change.remove, Existed: change.existed})
+		if filepath.Base(change.path) == "config.toml" {
+			journal.ConfigStage = rand.Text()
+		}
+		journal.Changes = append(journal.Changes, userInstallChange{Path: change.path, Content: change.content, Before: change.before, Remove: change.remove, Existed: change.existed, Mode: change.mode, Mkdir: change.mkdir})
 	}
 	if err := validateUserJournalScope(journal, coordinator); err != nil {
 		return err
@@ -468,8 +519,19 @@ func applyUserInstallationWithCheckpoint(source, home, coordinator, legacyReposi
 		}
 	}
 	for index, change := range changes {
-		if applyErr := apply(change); applyErr != nil {
-			return errors.Join(applyErr, recoverUserInstallation(home))
+		var err error
+		if filepath.Base(change.path) == "config.toml" {
+			err = applyCodexConfig(journal.configStageDir(), change, func() error {
+				if checkpoint != nil {
+					return checkpoint(userInstallConfigDisplaced, index)
+				}
+				return nil
+			})
+		} else {
+			err = apply(change)
+		}
+		if err != nil {
+			return errors.Join(err, recoverUserInstallation(home))
 		}
 		if checkpoint != nil {
 			if err := checkpoint(userInstallApplied, index); err != nil {
@@ -482,9 +544,27 @@ func applyUserInstallationWithCheckpoint(source, home, coordinator, legacyReposi
 			return err
 		}
 	}
-	// Removing the private journal commits. The shared reference is cleanup-only
-	// metadata and contains no private hook configuration or undo images.
-	if err := os.Remove(path); err != nil {
+	if journal.ConfigStage != "" {
+		for _, change := range changes {
+			if filepath.Base(change.path) == "config.toml" {
+				if err := verifyCodexConfig(journal.configStageDir(), change); err != nil {
+					return errors.Join(err, recoverUserInstallation(home))
+				}
+			}
+		}
+	}
+	// A commit marker keeps private before-images recoverable for cleanup
+	// after an interruption without permitting rollback of a committed install.
+	if journal.ConfigStage != "" {
+		marker, err := os.OpenFile(filepath.Join(journal.configStageDir(), "committed"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		if err != nil {
+			return err
+		}
+		if err := marker.Close(); err != nil {
+			return err
+		}
+	}
+	if err := finishUserJournal(journal, journal.ConfigStage != ""); err != nil {
 		return err
 	}
 	if checkpoint != nil {
@@ -496,6 +576,30 @@ func applyUserInstallationWithCheckpoint(source, home, coordinator, legacyReposi
 		return removeUserReference(reference)
 	}
 	return nil
+}
+
+func finishUserJournal(journal userInstallJournal, committedConfig bool) error {
+	if committedConfig {
+		if err := cleanupConfigImages(journal.configStageDir()); err != nil {
+			return err
+		}
+	}
+	if err := os.Remove(filepath.Join(journal.OwnerHome, userInstallPendingFile)); err != nil {
+		return err
+	}
+	if committedConfig {
+		// Only an empty marker and directory remain after removing the journal.
+		if err := os.Remove(filepath.Join(journal.configStageDir(), "committed")); err != nil {
+			return err
+		}
+		return os.Remove(journal.configStageDir())
+	}
+	return nil
+}
+
+// The verified journal supplies a random private staging directory beside config.toml.
+func (journal userInstallJournal) configStageDir() string {
+	return filepath.Join(journal.OwnerHome, ".agenticlens-config-"+journal.ConfigStage)
 }
 
 // Existing version-two journals predate OpenCode user installation.

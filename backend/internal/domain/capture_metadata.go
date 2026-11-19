@@ -1,9 +1,12 @@
 package domain
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
-// CaptureTicketMetadata rejects conflicting explicit context independently of row
-// order. Rebinding the conflicting registrations explicitly resolves a conflict.
+// CaptureTicketMetadata returns the agreed display hint, if any, and rejects
+// conflicting ticket types independently of row order.
 func CaptureTicketMetadata(rows []CaptureRegistration, ticket string) (string, string, error) {
 	titles := map[string]bool{}
 	kinds := map[string]bool{}
@@ -12,20 +15,20 @@ func CaptureTicketMetadata(rows []CaptureRegistration, ticket string) (string, s
 		if r.TicketID != ticket {
 			continue
 		}
-		if r.TicketTitle != "" {
-			titles[r.TicketTitle] = true
-			title = r.TicketTitle
+		if hint := strings.TrimSpace(r.TicketTitle); hint != "" {
+			titles[hint] = true
+			title = hint
 		}
 		if r.TicketType != "" {
 			kinds[r.TicketType] = true
 			kind = r.TicketType
 		}
 	}
-	if len(titles) > 1 {
-		return "", "", fmt.Errorf("ticket %s has conflicting explicit titles; rebind conflicting registrations with one explicit title", ticket)
-	}
 	if len(kinds) > 1 {
 		return "", "", fmt.Errorf("ticket %s has conflicting explicit types; rebind conflicting registrations with one explicit type", ticket)
+	}
+	if len(titles) > 1 {
+		title = ""
 	}
 	return title, kind, nil
 }

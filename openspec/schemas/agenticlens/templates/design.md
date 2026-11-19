@@ -9,8 +9,8 @@
 ## Implementation approval
 <Quote/link the actual user approval and the scope it covers. Pending until explicit approval.>
 
-## Iteration 01
+## Implementation approach
 <Implementation approach, verification boundaries and review coverage; detailed steps live in tasks.md.>
 
 ## Steering
-<For each material change: source, acceptance delta, superseded decision, preserved guarantees and verification impact.>
+<Record material decisions in this design with their source, changed acceptance, superseded decision, preserved guarantees and verification impact. Reconcile the active artifacts and retain applicable approvals.>
