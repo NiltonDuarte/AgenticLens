@@ -44,7 +44,13 @@ type InitialPublication struct {
 	CommittedArtifacts     string `json:"committed_artifacts"`
 	ExistingLedgerObserved bool   `json:"existing_ledger_observed,omitempty"`
 	Native                 bool   `json:"native,omitempty"`
+	MarkerPhase            string `json:"marker_phase,omitempty"`
 }
+
+const (
+	nativeMarkerUnattempted = "unattempted"
+	nativeMarkerAttempted   = "attempted"
+)
 
 // InitialPublicationLink binds a transaction journal to the exact private
 // authorization from which it began.
@@ -55,6 +61,13 @@ type InitialPublicationLink struct {
 
 func (selection *InitialPublication) Closed() bool {
 	return selection.CommittedTransaction != "" || selection.ExistingLedgerObserved
+}
+
+// NativeMarkerUnattempted is positive evidence that this receipt could not
+// have started a public transaction. Older receipts without a phase need
+// their original directory to establish whether recovery is required.
+func (selection *InitialPublication) NativeMarkerUnattempted() bool {
+	return selection.Native && !selection.Closed() && selection.MarkerPhase == nativeMarkerUnattempted
 }
 
 func (selection *InitialPublication) Link() InitialPublicationLink {
@@ -121,8 +134,9 @@ func (lease *InitialPublicationLease) Prepare(owner *PublicationLock) error {
 }
 
 // PrepareNative stores a tentative native selection or replaces the exact
-// earlier open native selection after its workspace has been checked by the
-// caller under the old directory lease. The ticket lease spans both leases.
+// earlier open native selection. If the old receipt may have started a
+// transaction, the caller first checks its workspace under its original
+// directory lease. The ticket lease spans both admissions.
 func (lease *InitialPublicationLease) PrepareNative(owner *PublicationLock, replacing *InitialPublication) error {
 	return lease.prepare(owner, true, replacing)
 }
@@ -146,6 +160,7 @@ func (lease *InitialPublicationLease) prepare(owner *PublicationLock, native boo
 		if prior.Path == path && prior.Directory == owner.identity {
 			if !native && prior.Native {
 				prior.Native = false
+				prior.MarkerPhase = ""
 				return saveInitialPublication(owner, *prior)
 			}
 			return nil
@@ -159,6 +174,9 @@ func (lease *InitialPublicationLease) prepare(owner *PublicationLock, native boo
 		return err
 	}
 	record.Native = native
+	if native {
+		record.MarkerPhase = nativeMarkerUnattempted
+	}
 	return saveInitialPublication(owner, record)
 }
 
@@ -237,10 +255,37 @@ func readInitialPublication(state, project, ticket string, protection *Protected
 		return nil, fmt.Errorf("invalid first-publication selection: %w", err)
 	}
 	if record.Version != 1 || record.Ticket != ticket || !validInitialPublicationToken(record.ID) || record.Directory == "" || !filepath.IsAbs(record.Path) || filepath.Base(record.Path) != "agentic_metrics.json" ||
-		!validInitialPublicationCommit(record) {
+		!validInitialPublicationCommit(record) || !validNativeMarkerPhase(record) {
 		return nil, errors.New("first-publication selection does not match its authorized scope")
 	}
 	return &record, nil
+}
+
+func validNativeMarkerPhase(record InitialPublication) bool {
+	switch record.MarkerPhase {
+	case "":
+		return true
+	case nativeMarkerUnattempted:
+		return record.Native && record.CommittedTransaction == ""
+	case nativeMarkerAttempted:
+		return record.Native
+	default:
+		return false
+	}
+}
+
+// MarkInitialPublicationMarkerAttempt records that a native transaction may
+// have an indicator at its exact directory before the indicator is written.
+func (owner *PublicationLock) MarkInitialPublicationMarkerAttempt(link InitialPublicationLink) error {
+	record, err := owner.InitialPublicationForTransaction(link, "")
+	if err != nil || !record.Native {
+		return err
+	}
+	if record.MarkerPhase == nativeMarkerAttempted {
+		return syncInitialPublicationState(owner, record.Ticket)
+	}
+	record.MarkerPhase = nativeMarkerAttempted
+	return saveInitialPublication(owner, *record)
 }
 
 func validInitialPublicationToken(value string) bool {

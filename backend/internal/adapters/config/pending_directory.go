@@ -114,33 +114,77 @@ func resolvePendingDirectory(cfg domain.ProjectConfig, root string) (string, err
 func PendingDirectoryForSetup(outputPath string, cfg domain.ProjectConfig) (string, error) {
 	value := cfg.AgenticLens.PendingDir
 	if value == "" && !cfg.Settings[pendingDirectoryKey] {
-		value = defaultPendingDirectory
-		body, err := readBootstrap(outputPath)
-		if err == nil {
-			nodes, err := configurationNodes(body)
-			if err != nil {
-				return "", fmt.Errorf("reading current %s: %w", pendingDirectoryKey, err)
-			}
-			if node := pendingDirectoryNode(nodes); node != nil {
-				value, err = pendingDirectoryValue(node)
-				if err != nil {
-					return "", err
-				}
-			}
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return "", fmt.Errorf("reading current %s: %w", pendingDirectoryKey, err)
+		var err error
+		value, err = readPendingDirectoryValue(outputPath)
+		if err != nil {
+			return "", err
+		}
+		if value == "" {
+			value = defaultPendingDirectory
 		}
 	}
-	if err := validatePendingDirectoryValue(value); err != nil {
-		return "", err
-	}
-	root, err := filesystem.PhysicalPath(filepath.Dir(outputPath))
-	if err != nil {
-		return "", fmt.Errorf("%s project root: %w", pendingDirectoryKey, err)
-	}
 	cfg.AgenticLens.PendingDir = value
-	if _, err := resolvePendingDirectory(cfg, root); err != nil {
+	if err := validatePendingDirectoryAtOutput(outputPath, cfg); err != nil {
 		return "", err
 	}
 	return value, nil
+}
+
+func readPendingDirectoryValue(sharedPath string) (string, error) {
+	body, err := readBootstrap(sharedPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("reading current %s: %w", pendingDirectoryKey, err)
+	}
+	nodes, err := configurationNodes(body)
+	if err != nil {
+		return "", fmt.Errorf("reading current %s: %w", pendingDirectoryKey, err)
+	}
+	if node := pendingDirectoryNode(nodes); node != nil {
+		return pendingDirectoryValue(node)
+	}
+	return "", nil
+}
+
+// ValidatePendingDirectoryForSetup checks the selected pending directory against
+// the effective local YAML that setup will write, using its final path as origin.
+func ValidatePendingDirectoryForSetup(sharedPath, localPath, pendingDir string, localYAML []byte) error {
+	entry, err := parseEntrypoint(localYAML, true)
+	if err != nil {
+		return fmt.Errorf("local configuration %s: %w", localPath, err)
+	}
+	captureState, _, err := captureStateValue(localYAML)
+	if err != nil {
+		return fmt.Errorf("local configuration %s: %w", localPath, err)
+	}
+	entry.PendingDir = pendingDir
+	return validatePendingDirectoryAtOutput(sharedPath, domain.ProjectConfig{
+		AgenticLens:     entry,
+		LocalConfigPath: localPath,
+		Telemetry:       domain.TelemetryConfig{Capture: domain.CaptureConfig{StateDir: captureState}},
+	})
+}
+
+// ValidateExistingPendingDirectoryForSetup checks an explicitly configured shared
+// pending directory before a local-only edit. Legacy shared YAML can omit it.
+func ValidateExistingPendingDirectoryForSetup(sharedPath, localPath string, localYAML []byte) error {
+	value, err := readPendingDirectoryValue(sharedPath)
+	if err != nil || value == "" {
+		return err
+	}
+	return ValidatePendingDirectoryForSetup(sharedPath, localPath, value, localYAML)
+}
+
+func validatePendingDirectoryAtOutput(outputPath string, cfg domain.ProjectConfig) error {
+	if err := validatePendingDirectoryValue(cfg.AgenticLens.PendingDir); err != nil {
+		return err
+	}
+	root, err := filesystem.PhysicalPath(filepath.Dir(outputPath))
+	if err != nil {
+		return fmt.Errorf("%s project root: %w", pendingDirectoryKey, err)
+	}
+	_, err = resolvePendingDirectory(cfg, root)
+	return err
 }

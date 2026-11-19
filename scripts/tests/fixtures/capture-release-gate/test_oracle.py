@@ -73,6 +73,39 @@ class TicketDurationOracleTest(unittest.TestCase):
 
 
 class PendingSnapshotOracleTest(unittest.TestCase):
+    def test_first_ledger_ignores_open_activity_after_its_native_cutoff(self):
+        cutoff = "1970-01-01T00:00:11.713790Z"
+        reconciliation = {"observed_at": "1970-01-01T00:00:12.150Z", "reconciliation": {"started_at": cutoff}}
+        first = {"observed_at": "1970-01-01T00:00:12.280Z", "owners": [{"session_id": "root"}]}
+        owner = Owner(None, completed=1, latest_completion=9.521, model_millis=Counter(fixture=2000),
+                      open=1, open_intervals={"stream": ("fixture", 10000, 12080)},
+                      usage=Counter(input=23, output=11), tools=Counter(bash=1))
+        root = {
+            "id": "root", "source": "opencode",
+            "invocations": [{"active_duration_seconds": 2, "tokens": dict(owner.usage)}],
+            "tools": [{"name": "bash", "calls": 1, "errors": 0}],
+        }
+        settled = {"sessions": [root]}
+        ledger = {**settled, "ticket_id": TICKET, "ticket_title": TITLE, "ticket_type": "fix",
+                  "updated_at": "1970-01-01T00:00:12.200Z"}
+        snapshot = ledger, "- **Active Agent Duration:** 0m 2s (recorded duration)"
+        native = {"root": owner}
+        evidence = check_birth(snapshot, "opencode", native, "root", "unrelated", first, reconciliation, settled)
+        self.assertEqual(evidence["ticket_measured_seconds"], 2)
+        self.assertEqual(evidence["ticket_provisional_seconds"], 0)
+        with self.assertRaisesRegex(RuntimeError, "no native evidence at the held cutoff"):
+            check_held(snapshot, native, "root", first, reconciliation)
+
+        premature = {**root, "invocations": [{
+            **root["invocations"][0], "active_duration_seconds": 4, "provisional_seconds": 2,
+        }]}
+        inflated = {**ledger, "sessions": [premature]}, "- **Active Agent Duration:** 0m 4s (recorded duration including 2s provisional)"
+        with self.assertRaisesRegex(RuntimeError, "held duration differs"):
+            check_birth(inflated, "opencode", native, "root", "unrelated", first, reconciliation, settled)
+        owner.latest_completion = 12.081
+        with self.assertRaisesRegex(RuntimeError, "native completion is later than the held cutoff"):
+            check_birth(snapshot, "opencode", native, "root", "unrelated", first, reconciliation, settled)
+
     def test_rejects_empty_first_canonical_ledger_even_with_matching_commit_timestamps(self):
         started = "2026-11-19T19:31:00Z"
         ledger = {"ticket_id": TICKET, "ticket_title": TITLE, "ticket_type": "fix",

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"time"
 
 	"agenticlens/internal/adapters"
@@ -22,12 +23,17 @@ func selectNativeGenerationWorkspace(project, registry, ticket, path string, cfg
 	if err != nil {
 		return adapters.WorkspaceLocation{}, nil, nil, err
 	}
-	if _, _, conflict := domain.CaptureTicketMetadata(rows, ticket); conflict != nil {
+	if conflict := firstGenerationMetadataConflict(rows, ticket); conflict != nil {
 		// Canonical history and exact interrupted recovery can proceed.
 		// Conflicting types cannot authorize an unmarked first write.
 		location, selection, err := adapters.SelectGenerationWorkspacePublication(cfg, ticket, path, lease, true)
 		if err != nil || (selection != nil && !errors.Is(adapters.CheckPublication(selection.Path), adapters.ErrPublicationPending)) {
 			return adapters.WorkspaceLocation{}, nil, conflict, errors.Join(conflict, err, location.Close())
+		}
+		if selection == nil && path == "" {
+			// The canonical ledger already has its own title. A title
+			// disagreement does not prevent applying an agreed type.
+			_, _, conflict = domain.CaptureTicketMetadata(rows, ticket)
 		}
 		return location, selection, conflict, nil
 	}
@@ -35,6 +41,19 @@ func selectNativeGenerationWorkspace(project, registry, ticket, path string, cfg
 		return rows, nil
 	})
 	return location, selection, nil, err
+}
+
+func firstGenerationMetadataConflict(rows []domain.CaptureRegistration, ticket string) error {
+	title, _, err := domain.CaptureTicketMetadata(rows, ticket)
+	if err != nil || title != "" {
+		return err
+	}
+	for _, row := range rows {
+		if row.TicketID == ticket && strings.TrimSpace(row.TicketTitle) != "" {
+			return fmt.Errorf("ticket %s has conflicting explicit titles; supply an agreed title before first publication", ticket)
+		}
+	}
+	return nil
 }
 
 func nativeGenerationRegistrations(ctx context.Context, project, registry string) ([]domain.CaptureRegistration, error) {
@@ -58,7 +77,7 @@ func beginAutomaticFirstPublication(project, registry, ticket, ledger string, pa
 		}
 		started := false
 		admitErr := store.WithInitialPublicationRegistrations(ctx, ticket, func(rows []domain.CaptureRegistration) error {
-			if _, _, err := domain.CaptureTicketMetadata(rows, ticket); err != nil {
+			if err := firstGenerationMetadataConflict(rows, ticket); err != nil {
 				return err
 			}
 			if err := adapters.ValidateCurrentNativePublication(project, ticket, selection, rows); err != nil {
@@ -83,6 +102,14 @@ func reportGenerationPublicationBlock(project, registry, ticket, ledger, summary
 		os.Exit(1)
 	}
 	os.Exit(capturePublicationBlockedExit)
+}
+
+func retainBlockedFirstPublication(project, registry, pending, ticket, ledger, summary string, cutoff time.Time, policy domain.CaptureConfig, generationPolicy domain.GenerationPolicy, protection *capture.ProtectedPublication, owner *capture.PublicationLock, cause error) {
+	entries, reconciledAt, pendingErr := reconcilePendingDestination(project, registry, pending, ticket, cutoff, policy, generationPolicy, protection, owner)
+	if pendingErr == nil {
+		pendingErr = recordGenerationPendingSnapshots(project, registry, pending, "", cause.Error(), reconciledAt, entries)
+	}
+	reportGenerationPublicationBlock(project, registry, ticket, ledger, summary, errors.Join(cause, pendingErr))
 }
 
 func recordPendingSnapshots(ctx context.Context, store *capture.Store, directory, outcome, detail, reconciledAt string, entries []adapters.PendingSnapshotEntry) error {
@@ -180,9 +207,6 @@ func verifyPendingPromotionCoverage(published, refreshed, pending []domain.Sessi
 		// Canonical attribution can differ, but unavailable owner evidence
 		// (including portable anomaly summaries) must be covered.
 		proposed.User, observed.User = "", ""
-		if len(proposed.Anomalies) == 0 && len(observed.Anomalies) == 0 {
-			proposed.Anomalies, observed.Anomalies = nil, nil
-		}
 		if !reflect.DeepEqual(proposed, observed) {
 			return fmt.Errorf("canonical and pending facts disagree for unavailable owner %s; preserving both until source verification is possible", owner.ID)
 		}

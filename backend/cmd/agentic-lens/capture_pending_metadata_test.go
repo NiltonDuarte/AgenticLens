@@ -15,12 +15,39 @@ import (
 )
 
 func TestCapturePendingRootsRetainTheirMetadataWhenTicketTypesConflict(t *testing.T) {
+	verifyPendingMetadataConflict(t, "fix", "conflicting explicit types")
+}
+
+func TestCapturePendingRootsRefreshWhenOnlyTicketTitlesConflict(t *testing.T) {
+	verifyPendingMetadataConflict(t, "feat", "conflicting explicit titles")
+}
+
+func verifyPendingMetadataConflict(t *testing.T, secondKind, failure string) {
+	t.Helper()
 	fixture := newCaptureGenerationFixture(t)
 	writeCaptureSuccessfulPublicationPolicy(t, fixture.project, fixture.stateBase)
 	fixture.output = initialPublicationTarget(t, fixture, "selected")
-	prepareInitialPublication(t, fixture, fixture.output)
 	prepareCaptureOwner(t, fixture, "first", initialPublicationTicket, 17)
 	prepareCaptureOwner(t, fixture, "second", initialPublicationTicket, 29)
+
+	pendingPattern := filepath.Join(fixture.project, captureFixturePendingDir, "*.json")
+	var priorPaths []string
+	secondInput := int64(29)
+	if secondKind == "feat" {
+		// The roots already have pending facts when the prepared destination
+		// and differing title arrive. Reconciliation must still refresh them.
+		if output, err := runInitialPublicationWorker(t, fixture); err != nil {
+			t.Fatalf("cannot capture the prior pending facts: %v\n%s", err, output)
+		}
+		var err error
+		priorPaths, err = filepath.Glob(pendingPattern)
+		if err != nil || len(priorPaths) != 2 {
+			t.Fatalf("expected two prior pending snapshots: %v %v", priorPaths, err)
+		}
+		secondInput = 31
+		prepareCaptureOwner(t, fixture, "second", initialPublicationTicket, int(secondInput))
+	}
+	prepareInitialPublication(t, fixture, fixture.output)
 
 	store, err := capture.OpenProject(fixture.state, fixture.project)
 	if err != nil {
@@ -30,7 +57,7 @@ func TestCapturePendingRootsRetainTheirMetadataWhenTicketTypesConflict(t *testin
 	identity := domain.CaptureIdentity{Source: domain.SourceCodex, Store: fixture.store, SessionID: "second"}
 	if _, err := store.Change(context.Background(), identity, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 		row.TicketTitle = "Second accepted native title"
-		row.TicketType = "fix"
+		row.TicketType = secondKind
 		return row, nil
 	}); err != nil {
 		t.Fatal(err)
@@ -42,14 +69,17 @@ func TestCapturePendingRootsRetainTheirMetadataWhenTicketTypesConflict(t *testin
 		t.Fatal(err)
 	}
 	output, err := runInitialPublicationWorker(t, fixture)
-	if err == nil || !strings.Contains(string(output), "conflicting explicit types") {
+	if err == nil || !strings.Contains(string(output), failure) {
 		t.Fatalf("the worker did not report blocked publication: %v\n%s", err, output)
 	}
-	assertInitialPublicationAbsent(t, fixture.output, filepath.Join(filepath.Dir(fixture.output), "SUMMARY.md"))
+	assertInitialPublicationAbsent(t, fixture.output, fixture.output+".publication-pending", filepath.Join(filepath.Dir(fixture.output), "SUMMARY.md"))
 
-	paths, err := filepath.Glob(filepath.Join(fixture.project, captureFixturePendingDir, "*.json"))
+	paths, err := filepath.Glob(pendingPattern)
 	if err != nil || len(paths) != 2 {
 		t.Fatalf("expected two pending roots, got paths %v, error %v", paths, err)
+	}
+	if priorPaths != nil && !reflect.DeepEqual(paths, priorPaths) {
+		t.Fatalf("refresh changed pending identity: before=%v after=%v", priorPaths, paths)
 	}
 	expected := map[string]struct {
 		title string
@@ -57,7 +87,7 @@ func TestCapturePendingRootsRetainTheirMetadataWhenTicketTypesConflict(t *testin
 		input int64
 	}{
 		"first":  {title: "Explicit " + initialPublicationTicket, kind: "feat", input: 17},
-		"second": {title: "Second accepted native title", kind: "fix", input: 29},
+		"second": {title: "Second accepted native title", kind: secondKind, input: secondInput},
 	}
 	for _, path := range paths {
 		var snapshot adapters.PendingSnapshot

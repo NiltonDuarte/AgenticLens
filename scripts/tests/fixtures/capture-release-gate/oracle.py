@@ -216,13 +216,15 @@ def snapshot_matches_pending_record(snapshot, diagnostic):
             and snapshot.get("ticket_id") == (diagnostic.get("ticket_id") or None))
 
 
-def check_held(snapshot, expected, root, commitment, reconciliation, require_provisional=True):
+def check_held(snapshot, expected, root, commitment, reconciliation, *, first_publication=False):
     ledger, _ = snapshot
     rollup = check_rollup(snapshot)
     cutoff = reconciliation["reconciliation"]["started_at"]
     checkpoints = {item["session_id"]: item.get("checkpoint") for item in commitment.get("owners", [])}
     return {
-        **rollup, "native_intervals": held_intervals(rollup, expected, root, cutoff, checkpoints, require_provisional),
+        **rollup, "native_intervals": held_intervals(
+            rollup, expected, root, cutoff, checkpoints, first_publication=first_publication,
+        ),
         "ledger_updated_at": ledger["updated_at"], "source_duration_cutoff": cutoff,
         "source_reconciliation_completed_at": reconciliation["observed_at"],
         "publication_observed_at": commitment["observed_at"],
@@ -239,7 +241,7 @@ def check_held_pending(snapshot, source, expected, root, unrelated, diagnostic):
     }
 
 
-def held_intervals(rollup, expected, root, cutoff, checkpoints=None, require_provisional=True):
+def held_intervals(rollup, expected, root, cutoff, checkpoints=None, *, first_publication=False):
     recorded = rollup["per_session"]
     require(set(recorded) == set(expected), "Held ledger and native tree have different owners")
     cutoff_ms = math.floor(unix_time(cutoff) * 1000)
@@ -252,8 +254,11 @@ def held_intervals(rollup, expected, root, cutoff, checkpoints=None, require_pro
                 f"{session_id}: native completion is later than the held cutoff")
         durations = owner.model_millis.copy()
         for model, start, activity in owner.open_intervals.values():
-            require(start <= activity <= cutoff_ms, f"{session_id}: no native evidence at the held cutoff")
-            durations[model] += cutoff_ms - start
+            require(start <= activity, f"{session_id}: native activity precedes the interval start")
+            if activity <= cutoff_ms:
+                durations[model] += cutoff_ms - start
+            else:
+                require(first_publication, f"{session_id}: no native evidence at the held cutoff")
         active = sum(duration_seconds(milliseconds) for milliseconds in durations.values())
         measured = owner.seconds
         fact = recorded[session_id]
@@ -272,7 +277,7 @@ def held_intervals(rollup, expected, root, cutoff, checkpoints=None, require_pro
         }
         if checkpoints is not None:
             native[session_id]["published_completion_checkpoint"] = checkpoint
-    if require_provisional:
+    if not first_publication:
         require(recorded[root]["provisional_seconds"] > 0, "Held root did not publish positive provisional duration")
     return native
 
@@ -384,7 +389,7 @@ def check_birth(snapshot, source, expected, root, unrelated, commitment, reconci
     require({session_id: row for session_id, row in observed.items() if session_id != root} ==
             {row["id"]: row for row in pending["sessions"] if row["id"] != root},
             "First canonical publication did not preserve children captured before binding")
-    evidence = check_held(snapshot, expected, root, commitment, reconciliation, require_provisional=False)
+    evidence = check_held(snapshot, expected, root, commitment, reconciliation, first_publication=True)
     pending_root = duration_rollup(pending)["per_session"][root]
     require(pending_root["provisional_seconds"] == 0 and
             evidence["per_session"][root]["measured_seconds"] >= pending_root["measured_seconds"] > 0,

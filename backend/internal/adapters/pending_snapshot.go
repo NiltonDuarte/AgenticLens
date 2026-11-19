@@ -236,10 +236,10 @@ func pendingDirectoryLease(ctx context.Context, directory, project string, creat
 	return admitDurablePendingDirectory(ctx, root, rel, directory, &pendingDirectoryAdmission{owner: owner})
 }
 
-// Repeat the parent-chain barrier even when the leaf already exists: an
-// earlier attempt may have stopped between creation and syncing an ancestor.
+// Repeat the complete directory barrier on retries. A prior attempt may have
+// renamed or removed a file before syncing the leaf or its new ancestors.
 func admitDurablePendingDirectory(ctx context.Context, root *os.Root, relative, directory string, admission *pendingDirectoryAdmission) (*pendingDirectoryAdmission, error) {
-	for parent := filepath.Dir(relative); ; parent = filepath.Dir(parent) {
+	for parent := relative; ; parent = filepath.Dir(parent) {
 		if err := ctx.Err(); err != nil {
 			return nil, errors.Join(err, admission.Close())
 		}
@@ -251,7 +251,7 @@ func admitDurablePendingDirectory(ctx context.Context, root *os.Root, relative, 
 			err = errors.Join(f.Sync(), f.Close())
 		}
 		if err != nil {
-			return nil, errors.Join(fmt.Errorf("syncing pending directory ancestor %s: %w", parent, err), admission.Close())
+			return nil, errors.Join(fmt.Errorf("syncing pending directory path %s: %w", parent, err), admission.Close())
 		}
 		if parent == "." {
 			return admission, nil

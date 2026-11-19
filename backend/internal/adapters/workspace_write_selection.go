@@ -272,10 +272,17 @@ var ErrAwaitingPublicationDestination = errors.New("awaiting an exact ledger des
 // gives the resulting selection its authority.
 func SelectNativeWorkspacePublication(ctx context.Context, cfg domain.ProjectConfig, project, ticket, path string, lease *capture.InitialPublicationLease, protection *capture.ProtectedPublication, registrations func() ([]domain.CaptureRegistration, error)) (WorkspaceLocation, *capture.InitialPublication, error) {
 	location, selection, err := SelectGenerationWorkspacePublication(cfg, ticket, path, lease, true)
-	if path != "" || lease == nil || (err != nil && !workspaceNotFound(err)) {
+	if path != "" || lease == nil {
 		return location, selection, err
 	}
-	if err == nil && (selection == nil || !selection.Native || selection.Closed() || CheckPublication(selection.Path) != nil) {
+	if selection != nil && selection.Native && !selection.Closed() {
+		if indicatorErr := CheckPublication(selection.Path); indicatorErr != nil {
+			return location, selection, err
+		}
+		if err != nil && !selection.NativeMarkerUnattempted() {
+			return location, selection, fmt.Errorf("old native selection is unavailable for recovery: %w", err)
+		}
+	} else if err == nil || !workspaceNotFound(err) {
 		// A canonical ledger, operator selection or marked recovery keeps
 		// its existing precedence over native indications.
 		return location, selection, err
@@ -290,10 +297,13 @@ func SelectNativeWorkspacePublication(ctx context.Context, cfg domain.ProjectCon
 	}
 	ledger := filepath.Join(destination, "agentic_metrics.json")
 	if selection != nil {
-		if selection.Path == ledger {
+		if selection.Path == ledger && !selection.NativeMarkerUnattempted() {
 			return location, selection, nil
 		}
-		err := retireTentativeNativeLocation(ctx, project, location, protection, selection)
+		var err error
+		if !selection.NativeMarkerUnattempted() {
+			err = retireTentativeNativeLocation(ctx, project, location, protection, selection)
+		}
 		if err = errors.Join(err, location.Close()); err != nil {
 			return WorkspaceLocation{}, nil, err
 		}

@@ -357,7 +357,14 @@ func BeginInitialPublicationWithAdmission(ledger string, paths []string, selecti
 	if err != nil {
 		return err
 	}
-	publishIndicator := func() error { return durableReplace(journalPath(ledger), indicator) }
+	publishIndicator := func() error {
+		if j.Initial != nil {
+			if err := owner.MarkInitialPublicationMarkerAttempt(*j.Initial); err != nil {
+				return err
+			}
+		}
+		return durableReplace(journalPath(ledger), indicator)
+	}
 	if admit == nil {
 		return publishIndicator()
 	}

@@ -1,10 +1,13 @@
 package main_test
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -16,6 +19,22 @@ import (
 )
 
 func TestCaptureNativeSelectionRechecksConflictsBeforeFirstCommit(t *testing.T) {
+	for _, scenario := range []struct {
+		name                          string
+		removeOriginal, attemptMarker bool
+	}{
+		{"original tentative directory remains", false, false},
+		{"original tentative directory removed", true, false},
+		{"original directory removed after marker attempt", true, true},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			verifyNativeSelectionRetry(t, scenario.removeOriginal, scenario.attemptMarker)
+		})
+	}
+}
+
+func verifyNativeSelectionRetry(t *testing.T, removeOriginal, attemptMarker bool) {
+	t.Helper()
 	f := newCaptureGenerationFixture(t)
 	first := initialPublicationTarget(t, f, "indicated-first")
 	second := initialPublicationTarget(t, f, "indicated-second")
@@ -96,9 +115,11 @@ func TestCaptureNativeSelectionRechecksConflictsBeforeFirstCommit(t *testing.T) 
 		t.Fatalf("conflict did not retain both snapshots: %v %v", snapshots, err)
 	}
 	expected := map[string]int64{"first": 17, "second": 29}
+	retained := make(map[string][]byte, len(snapshots))
 	for _, path := range snapshots {
 		var snapshot adapters.PendingSnapshot
-		if err := json.Unmarshal(readCaptureFile(t, path), &snapshot); err != nil {
+		retained[path] = readCaptureFile(t, path)
+		if err := json.Unmarshal(retained[path], &snapshot); err != nil {
 			t.Fatal(err)
 		}
 		amount, known := expected[snapshot.RootSessionID]
@@ -109,9 +130,59 @@ func TestCaptureNativeSelectionRechecksConflictsBeforeFirstCommit(t *testing.T) 
 		}
 		delete(expected, snapshot.RootSessionID)
 	}
+	if attemptMarker {
+		err := func() (returnErr error) {
+			ticketLease, err := capture.AcquireInitialPublication(ctx, f.project, key, nil)
+			if err != nil {
+				return err
+			}
+			defer func() { returnErr = errors.Join(returnErr, ticketLease.Close()) }()
+			owner, err := capture.AcquirePublication(ctx, first, f.project)
+			if err != nil {
+				return err
+			}
+			defer func() { returnErr = errors.Join(returnErr, owner.Close()) }()
+			return owner.MarkInitialPublicationMarkerAttempt(admitted.Link())
+		}()
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Interruption occurred after the private phase became durable and
+		// before the public indicator could be written.
+		assertInitialPublicationAbsent(t, first+".publication-pending")
+	}
+	if removeOriginal {
+		if err := os.Remove(filepath.Dir(first)); err != nil {
+			t.Fatal(err)
+		}
+	}
 	agreement := capture.BindingTicket{ID: initialPublicationTicket, Destination: filepath.Dir(second)}
 	if _, err := store.IndicateNativeOpenCodeDestination(ctx, firstBound.Identity, agreement, capture.NativePublicationDestinationRequest(firstBound)); err != nil {
 		t.Fatal(err)
+	}
+	if attemptMarker {
+		output, err := runInitialPublicationWorker(t, f)
+		if err == nil || !strings.Contains(string(output), "old native selection") {
+			t.Fatalf("a lost marker-attempt destination did not require exact recovery: %v\n%s", err, output)
+		}
+		assertInitialPublicationAbsent(t, filepath.Dir(first), first, second, second+".publication-pending")
+		for path, before := range retained {
+			if !bytes.Equal(readCaptureFile(t, path), before) {
+				t.Fatalf("blocked retry changed pending facts at %s", path)
+			}
+		}
+		ticketLease, err := capture.AcquireInitialPublication(ctx, f.project, key, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		current, err := ticketLease.Read()
+		if err := errors.Join(err, ticketLease.Close()); err != nil {
+			t.Fatal(err)
+		}
+		if current == nil || current.Path != first || current.Link() != admitted.Link() || current.MarkerPhase != "attempted" {
+			t.Fatalf("blocked retry replaced the exact receipt: %+v", current)
+		}
+		return
 	}
 	if err := writeCaptureFixtureLocal(t, f, []byte(strings.Replace(policy, "1500", "5000", 1))); err != nil {
 		t.Fatal(err)
@@ -120,6 +191,9 @@ func TestCaptureNativeSelectionRechecksConflictsBeforeFirstCommit(t *testing.T) 
 		t.Fatalf("agreed second indication did not replace the open receipt: %v\n%s", err, output)
 	}
 	assertInitialPublicationAbsent(t, first, second+".publication-pending")
+	if removeOriginal {
+		assertInitialPublicationAbsent(t, filepath.Dir(first))
+	}
 	assertInitialPublicationAbsent(t, snapshots...)
 	f.output = second
 	ledger := f.ledger(t)

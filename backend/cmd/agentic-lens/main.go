@@ -418,11 +418,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 	}
 
 	if *autoFlag && cachedFacts == nil && metadataConflict != nil {
-		entries, reconciledAt, pendingErr := reconcilePendingDestination(project, *captureDirFlag, pendingDirectory, activeTicketID, snapshotCutoff, policy, projCfg.Generation.Metrics, protection, workspaceOwner)
-		if pendingErr == nil {
-			pendingErr = recordGenerationPendingSnapshots(project, *captureDirFlag, pendingDirectory, "", metadataConflict.Error(), reconciledAt, entries)
-		}
-		reportGenerationPublicationBlock(project, *captureDirFlag, activeTicketID, *jsonOutputFlag, *appendFlag, errors.Join(metadataConflict, pendingErr))
+		retainBlockedFirstPublication(project, *captureDirFlag, pendingDirectory, activeTicketID, *jsonOutputFlag, *appendFlag, snapshotCutoff, policy, projCfg.Generation.Metrics, protection, workspaceOwner, metadataConflict)
 	}
 
 	if cachedFacts != nil {
@@ -436,8 +432,8 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		}
 	}
 	if initialSelection != nil && *autoFlag && (strings.TrimSpace(*ticketTitleFlag) == "" || strings.TrimSpace(*ticketTypeFlag) == "") {
-		fmt.Fprintln(os.Stderr, "First automatic publication requires an explicit ticket title and conventional type in the binding")
-		os.Exit(1)
+		cause := errors.New("first automatic publication requires an explicit ticket title and conventional type in the binding")
+		retainBlockedFirstPublication(project, *captureDirFlag, pendingDirectory, activeTicketID, *jsonOutputFlag, *appendFlag, snapshotCutoff, policy, projCfg.Generation.Metrics, protection, workspaceOwner, cause)
 	}
 	if cachedFacts != nil && (cachedFacts.TicketID == nil || strings.TrimSpace(*cachedFacts.TicketID) != activeTicketID) {
 		fmt.Fprintln(os.Stderr, "Existing ledger ticket conflicts with requested ticket; refusing relabel")
@@ -1711,6 +1707,9 @@ func initCommand(args []string) error {
 		return localErr
 	}
 	if *localOnly {
+		if err := adaptersconfig.ValidateExistingPendingDirectoryForSetup(outputPath, localPath, localYAML); err != nil {
+			return err
+		}
 		if *dry {
 			fmt.Print(string(localYAML))
 			return nil
@@ -1775,6 +1774,9 @@ func initCommand(args []string) error {
 	}
 	cfg.AgenticLens.PendingDir, err = adaptersconfig.PendingDirectoryForSetup(outputPath, cfg)
 	if err != nil {
+		return err
+	}
+	if err := adaptersconfig.ValidatePendingDirectoryForSetup(outputPath, localPath, cfg.AgenticLens.PendingDir, localYAML); err != nil {
 		return err
 	}
 	yamlData, err := adaptersconfig.GenerateConfigYAML(cfg)

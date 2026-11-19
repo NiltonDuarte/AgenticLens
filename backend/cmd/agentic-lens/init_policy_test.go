@@ -92,6 +92,82 @@ func TestInitApprovedSettingsPair(t *testing.T) {
 	}
 }
 
+func TestInitPendingDirectoryRejectsOverlappingStateBeforeEitherWrite(t *testing.T) {
+	for _, scenario := range []struct {
+		name, pending, publication, capture, key string
+	}{
+		{"default-publication", "", ".agenticlens/pending/journals", "capture-state", "agenticlens.state_dir"},
+		{"custom-capture", "custom/pending", "publication-state", "custom", "telemetry.capture.state_dir"},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			project := t.TempDir()
+			sharedCandidate := cliFixtureSettings(t)
+			if scenario.pending != "" {
+				body := readCaptureFile(t, sharedCandidate)
+				body = bytes.Replace(body, []byte("agenticlens:\n"), []byte("agenticlens:\n  pending_dir: "+scenario.pending+"\n"), 1)
+				sharedCandidate = filepath.Join(t.TempDir(), "approved-shared.yaml")
+				if err := os.WriteFile(sharedCandidate, body, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			localCandidate := filepath.Join(t.TempDir(), "approved-local.yaml")
+			body := fmt.Sprintf("agenticlens:\n  state_dir: %s\ntelemetry:\n  default_source: opencode\n  sources:\n    opencode:\n      database_path: source.db\n  capture:\n    enabled: false\n    state_dir: %s\n", scenario.publication, scenario.capture)
+			if err := os.WriteFile(localCandidate, []byte(body), 0600); err != nil {
+				t.Fatal(err)
+			}
+			cmd := exec.Command(cliBinaryPath, "init", "--settings", sharedCandidate, "--local-settings", localCandidate)
+			cmd.Dir = project
+			if out, err := cmd.CombinedOutput(); err == nil || !strings.Contains(string(out), "agenticlens.pending_dir must not overlap "+scenario.key) {
+				t.Fatalf("overlapping selection was not rejected: %v %s", err, out)
+			}
+			if entries, err := os.ReadDir(project); err != nil || len(entries) != 0 {
+				t.Fatalf("rejected init wrote configuration or state: %v %v", entries, err)
+			}
+		})
+	}
+}
+
+func TestInitLocalMaintenanceChecksExplicitPendingDirectory(t *testing.T) {
+	project := t.TempDir()
+	shared := filepath.Join(project, ".agenticlens-config.yaml")
+	local := filepath.Join(project, ".agenticlens-config.local.yaml")
+	writeCLISharedPolicy(t, project)
+	legacy := readCaptureFile(t, shared)
+	run := func(args ...string) ([]byte, error) {
+		cmd := exec.Command(cliBinaryPath, append([]string{"init"}, args...)...)
+		cmd.Dir = project
+		return cmd.CombinedOutput()
+	}
+	localOnly := []string{"--local-only", "--local-settings", cliLocalSettings(t)}
+	configured := bytes.Replace(legacy, []byte("agenticlens:\n"), []byte("agenticlens:\n  pending_dir: local-state/pending\n"), 1)
+	if err := os.WriteFile(shared, configured, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := run(localOnly...); err == nil || !strings.Contains(string(out), "agenticlens.pending_dir must not overlap telemetry.capture.state_dir") {
+		t.Fatalf("local-only init accepted overlapping configuration: %v %s", err, out)
+	}
+	if _, err := os.Stat(local); !os.IsNotExist(err) {
+		t.Fatalf("rejected local-only init wrote configuration: %v", err)
+	}
+	if err := os.WriteFile(shared, legacy, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := run(localOnly...); err != nil {
+		t.Fatalf("legacy local-only init required pending configuration: %v %s", err, out)
+	}
+	beforeLocal := readCaptureFile(t, local)
+	configured = bytes.Replace(legacy, []byte("agenticlens:\n"), []byte("agenticlens:\n  pending_dir: snapshots/pending\n"), 1)
+	if err := os.WriteFile(shared, configured, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := run("--update-capture-config", "--capture-state-dir", "snapshots"); err == nil || !strings.Contains(string(out), "agenticlens.pending_dir must not overlap telemetry.capture.state_dir") {
+		t.Fatalf("capture state update accepted overlapping configuration: %v %s", err, out)
+	}
+	if !bytes.Equal(beforeLocal, readCaptureFile(t, local)) || !bytes.Equal(configured, readCaptureFile(t, shared)) {
+		t.Fatal("rejected capture state update changed local or shared configuration")
+	}
+}
+
 func TestInitRejectsInvalidCandidatesBeforeEitherWrite(t *testing.T) {
 	for _, scenario := range []string{"missing-workspaces", "blank-workspaces", "missing-settings", "missing-local-choice", "invalid-shared", "invalid-local", "unpaired-output", "yaml-yml-ambiguity"} {
 		t.Run(scenario, func(t *testing.T) {
