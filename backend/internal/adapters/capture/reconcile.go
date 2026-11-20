@@ -454,14 +454,14 @@ func captureParentID(owner domain.SessionFact) string {
 	return *owner.ParentID
 }
 
-func keepsAcceptedCaptureParent(observed domain.CaptureRegistration, source domain.SessionFact) bool {
+func keepsAcceptedCaptureParent(observed domain.CaptureRegistration, parentID string) bool {
 	for _, accepted := range observed.Snapshot {
 		if accepted.ID == observed.Identity.SessionID && accepted.Source == observed.Identity.Source {
-			return captureParentID(accepted) == captureParentID(source)
+			return captureParentID(accepted) == parentID
 		}
 	}
 	// A source-proven child can have ancestry before its first snapshot.
-	return observed.ParentID == "" || observed.ParentID == captureParentID(source)
+	return observed.ParentID == "" || observed.ParentID == parentID
 }
 
 func withoutCaptureEvidence(source domain.SourceEvents, stale map[string]bool) domain.SourceEvents {
@@ -696,7 +696,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 				return nil, nil, parseErr
 			}
 			fresh, revision, updatedAt, extractErr = extractExactAt(ctx, sourceOwner, budget.bytes, user, cutoff, &read, metadata)
-			if extractErr == nil && relocating && len(fresh) > 0 && !keepsAcceptedCaptureParent(r, fresh[0]) {
+			if extractErr == nil && relocating && len(fresh) > 0 && !keepsAcceptedCaptureParent(r, captureParentID(fresh[0])) {
 				extractErr = errors.New("recovered Codex source conflicts with the accepted parent identity")
 			}
 		}

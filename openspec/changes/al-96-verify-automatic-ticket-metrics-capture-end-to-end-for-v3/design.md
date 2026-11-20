@@ -83,7 +83,7 @@ Verify interrupted and repeated operations, stale writers, delayed descendants, 
 
 ### Codex archives a session before binding
 
-Four verified AL-96 review sessions stayed pending after Codex archived their rollouts. The user requested the fix with “conserte o bug”. The shared binding path must recover a missing registered path through bounded exact-owner discovery, prove source and project before accepting the binding, and persist the recovered path with that binding. Preserve exact request checks, authority for already-bound history and retained facts on failure. The coder owns the binding implementation and the tester owns the archive regression fixtures. Focused review covers binding authority, recovery, and the regression assertions. Publication and destination selection retain their earlier verification.
+Four verified AL-96 review sessions stayed pending after Codex archived their rollouts. The user requested the fix with “conserte o bug”. The shared binding path recovers a missing registered path through bounded exact-owner discovery. It verifies the physical store boundary, source identity, project and accepted ancestry before saving the path and binding together. Preserve exact request checks, authority for already-bound history and retained facts on failure. The coder owns the binding implementation and the tester owns the archive regression fixtures. Focused review covers binding authority, recovery and the regression assertions. Publication and destination selection retain their earlier verification.
 
 ### Original first-publication scope and verification
 

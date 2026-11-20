@@ -24,6 +24,8 @@ func TestBindArchivedUnboundCodex(t *testing.T) {
 		{name: "exact project"},
 		{name: "foreign project", want: "conflicts with configured project"},
 		{name: "ambiguous owner", want: "ambiguous rollout paths"},
+		{name: "changed parent", want: "conflicts with the accepted parent identity"},
+		{name: "archive outside store", want: "escapes its registered store"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -44,16 +46,16 @@ func TestBindArchivedUnboundCodex(t *testing.T) {
 			home, active, archive := archivedRolloutFixture(t)
 			path := filepath.Join(active, "root.jsonl")
 			archived := filepath.Join(archive, filepath.Base(path))
-			writeSource := func(path, cwd string) {
+			writeSource := func(path, cwd, parent string) {
 				t.Helper()
-				body := fmt.Sprintf(`{"type":"session_meta","payload":{"id":"root","cwd":%q,"timestamp":"2026-01-01T00:00:00Z"}}`+"\n"+
+				body := fmt.Sprintf(`{"type":"session_meta","payload":{"id":"root","cwd":%q,"parent_thread_id":%q,"timestamp":"2026-01-01T00:00:00Z"}}`+"\n"+
 					`{"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"fixture","turn_id":"turn"}}`+"\n"+
-					`{"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"thread_id":"root","turn_id":"turn","usage":{"input_tokens":17}}}`+"\n", cwd)
+					`{"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"thread_id":"root","turn_id":"turn","usage":{"input_tokens":17}}}`+"\n", cwd, parent)
 				if err := os.WriteFile(path, []byte(body), 0600); err != nil {
 					t.Fatal(err)
 				}
 			}
-			writeSource(path, project)
+			writeSource(path, project, "")
 			if _, err := capture.ReceiveCodex(ctx, s, capture.HookInput{SessionID: "root", Event: "SessionStart", TranscriptPath: path}, home, "/native", s.CoordinationDirectory()); err != nil {
 				t.Fatal(err)
 			}
@@ -70,9 +72,26 @@ func TestBindArchivedUnboundCodex(t *testing.T) {
 			}
 			switch tc.name {
 			case "foreign project":
-				writeSource(archived, t.TempDir())
+				writeSource(archived, t.TempDir(), "")
 			case "ambiguous owner":
-				writeSource(filepath.Join(archive, "copy.jsonl"), project)
+				writeSource(filepath.Join(archive, "copy.jsonl"), project, "")
+			case "changed parent":
+				writeSource(archived, project, "replacement-parent")
+			case "archive outside store":
+				external := t.TempDir()
+				externalPath := filepath.Join(external, filepath.Base(archived))
+				if err := os.Rename(archived, externalPath); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Remove(archive); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(external, archive); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(externalPath, filepath.Join(active, "alias.jsonl")); err != nil {
+					t.Fatal(err)
+				}
 			}
 			bound, bindErr := s.Bind(ctx, before.Identity, "TEST-100", before.Request)
 			rows, err := s.List(ctx)

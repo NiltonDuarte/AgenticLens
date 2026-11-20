@@ -75,12 +75,28 @@ func (s *Store) verifyBindingSource(ctx context.Context, r domain.CaptureRegistr
 		}
 		budget.Context = ctx
 	}
-	path, err := codex.DiscoverExactRolloutPathWithBudget(r.Identity.Store, r.Identity.SessionID, budget)
+	var path string
+	var err error
+	relocating := r.TranscriptPath != ""
+	if relocating {
+		path, err = resolveRegisteredCodexSnapshot(r, "", true, budget)
+	} else {
+		path, err = codex.DiscoverExactRolloutPathWithBudget(r.Identity.Store, r.Identity.SessionID, budget)
+	}
 	if err != nil {
 		return "", err
 	}
-	r.TranscriptPath = path
-	return path, validateOwnerSource(ctx, s.project, r, s.configuration, false, budget)
+	metadata, err := readCodexOwnerMetadata(r.Identity.Store, path, s.configuration, false, budget)
+	if err != nil {
+		return "", err
+	}
+	if err := validateCodexOwnerMetadata(s.project, r, metadata); err != nil {
+		return "", err
+	}
+	if relocating && !keepsAcceptedCaptureParent(r, metadata.ParentID) {
+		return "", errors.New("recovered Codex source conflicts with the accepted parent identity")
+	}
+	return path, nil
 }
 
 // inspectRegisteredCodexPath allows recovery only when a bound owner's cached
