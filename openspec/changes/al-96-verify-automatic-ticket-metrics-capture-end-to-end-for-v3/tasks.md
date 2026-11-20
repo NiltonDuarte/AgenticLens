@@ -32,8 +32,8 @@ Use the [design](design.md) for approval and the [delta spec](specs/automatic-ti
 
 ## Bind an archived Codex session
 
-- [ ] **Coder and tester** · Recover an exact archived rollout when its registered path is missing. Verify operator and inbox binding, durable path recovery, and refusal when source proof fails.
-- [ ] **Reviewers and orchestrator** · Verify binding authority and the archive regression, then run integrated checks and record the tested revision.
+- [x] **Coder and tester** · Recover an exact archived rollout when its registered path is missing. Verify operator and inbox binding, durable path recovery, and refusal when source proof fails.
+- [x] **Reviewers and orchestrator** · Verify binding authority and the archive regression, then run integrated checks and record the tested revision.
 
 ## Workflow follow-up
 

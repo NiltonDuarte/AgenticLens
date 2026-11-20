@@ -574,6 +574,34 @@
         }
       ],
       "disposition": "Capture exact bytes under the publication directory lock before starting native discard and compare both artifacts through acknowledgement and suppressed work."
+    },
+    {
+      "finding_id": "DATA-10",
+      "severity": 8,
+      "issue": "Late binding can accept a relocated Codex source with different parentage and bypass the existing relocation guard.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Compare recovered native parentage with accepted facts before storing the archived path and binding."
+    },
+    {
+      "finding_id": "ARCH-10",
+      "severity": 7,
+      "issue": "Late binding can accept a relocated rollout physically outside the registered Codex store via a symlinked archive.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Reuse physical store containment for both the registered and recovered paths before binding."
     }
   ]
 }
