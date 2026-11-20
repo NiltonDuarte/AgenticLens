@@ -1,6 +1,10 @@
 package codex
 
-import "agenticlens/internal/domain"
+import (
+	"regexp"
+
+	"agenticlens/internal/domain"
+)
 
 // Parser-local identity exists only until envelope deduplication and native child
 // binding finish. These types are never accepted by ledger or capture writers.
@@ -20,6 +24,27 @@ type sourceDelegationOccurrence struct {
 	Description    string
 	ChildSession   string
 	Timestamp      string
+}
+
+// Current native spawn replies use the child session UUID in agent_id. Other
+// opaque agent IDs lack a native lookup target and do not create pending work.
+var codexSessionUUID = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+// ChildDiscoveryHints schedules source discovery for native spawns whose
+// lifecycle hooks were absent. Even an explicit result ID is not child
+// ownership evidence until its own native metadata confirms the parent.
+func (t Transcript) ChildDiscoveryHints() []string {
+	var hints []string
+	for _, delegation := range t.Delegations {
+		hint := delegation.ChildSession
+		if hint == "" && codexSessionUUID.MatchString(delegation.ChildAgentID) {
+			hint = delegation.ChildAgentID
+		}
+		if hint != "" {
+			hints = append(hints, hint)
+		}
+	}
+	return hints
 }
 
 func (t Transcript) leanSkills() []domain.SkillFact {

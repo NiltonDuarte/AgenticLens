@@ -74,7 +74,7 @@ func TestArchiveRefreshRejectsStaleRegistryObservation(t *testing.T) {
 				t.Fatal(err)
 			}
 			staleApplyCalled := false
-			_, err = reader.commitCaptureRead(ctx, observed, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+			_, err = reader.saveCaptureRead(ctx, observed, 0, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 				staleApplyCalled = true
 				row.TranscriptPath = filepath.Join(row.Identity.Store, "archived_sessions", "owner.jsonl")
 				row.Revision = 41

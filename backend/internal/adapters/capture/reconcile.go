@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"agenticlens/internal/adapters/codex"
@@ -35,35 +36,56 @@ func (s *Store) QueueChild(ctx context.Context, store, path, parent string) erro
 
 type ReconcileResult struct {
 	archiveReadGroups     []archiveReadGroup
-	SourceEvents          domain.SourceEvents          `json:"-"`
-	DiagnosticIndex       *DiagnosticIndexProgress     `json:"diagnostic_index,omitempty"`
-	StartedAt             string                       `json:"started_at"`
-	CutoffSemantics       string                       `json:"cutoff_semantics"`
-	SourceBytes           int64                        `json:"source_bytes_reserved"`
-	SourceAttempts        int                          `json:"source_attempts"`
-	RefreshedSessions     []domain.SessionFact         `json:"-"`
-	DiscoveryPending      bool                         `json:"child_discovery_pending"`
-	PendingChildren       int                          `json:"pending_children"`
-	UnresolvedParentLinks int                          `json:"unresolved_parent_links"`
-	Protocol              int                          `json:"protocol"`
-	Cutoff                string                       `json:"cutoff"`
-	TicketID              string                       `json:"ticket_id"`
-	Registrations         []domain.CaptureRegistration `json:"registrations"`
-	Sessions              []domain.SessionFact         `json:"-"`
-	Limits                []string                     `json:"limits"`
+	LifecycleRevision     int64                               `json:"-"`
+	RestoresReady         []CaptureControl                    `json:"-"`
+	ProjectRegistrations  []domain.CaptureRegistration        `json:"-"`
+	SourceEvents          domain.SourceEvents                 `json:"-"`
+	DiagnosticIndex       *DiagnosticIndexProgress            `json:"diagnostic_index,omitempty"`
+	StartedAt             string                              `json:"started_at"`
+	CutoffSemantics       string                              `json:"cutoff_semantics"`
+	SourceBytes           int64                               `json:"source_bytes_reserved"`
+	SourceAttempts        int                                 `json:"source_attempts"`
+	RefreshedSessions     []domain.SessionFact                `json:"-"`
+	RestoredSessions      []domain.SessionFact                `json:"-"`
+	RestoredOwners        map[string][]domain.CaptureIdentity `json:"-"`
+	DiscoveryPending      bool                                `json:"child_discovery_pending"`
+	PendingChildren       int                                 `json:"pending_children"`
+	UnresolvedParentLinks int                                 `json:"unresolved_parent_links"`
+	Protocol              int                                 `json:"protocol"`
+	Cutoff                string                              `json:"cutoff"`
+	TicketID              string                              `json:"ticket_id"`
+	Registrations         []domain.CaptureRegistration        `json:"registrations"`
+	Sessions              []domain.SessionFact                `json:"-"`
+	Limits                []string                            `json:"limits"`
 }
 
 func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64, policies ...domain.GenerationPolicy) (ReconcileResult, error) {
+	// Explicit reconciliation can retry a completed unresolved Codex
+	// sweep. Automatic generation uses ReconcileAt and needs new evidence.
+	if ticket != "" && sessionBudget > 0 && byteBudget > 0 {
+		if err := s.reopenTicketCodexChildSweeps(ctx, ticket); err != nil {
+			return ReconcileResult{}, err
+		}
+	}
 	return s.ReconcileAt(ctx, ticket, user, sessionBudget, byteBudget, time.Now().UTC(), policies...)
 }
 
 // ReconcileAt applies one duration cutoff and transient generation policy across source reads.
 func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64, cutoff time.Time, policies ...domain.GenerationPolicy) (result ReconcileResult, returnErr error) {
-	result = ReconcileResult{Protocol: RegistryProtocolVersion, StartedAt: cutoff.UTC().Format(time.RFC3339Nano), CutoffSemantics: "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion", TicketID: ticket, Limits: []string{"Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.", "Hook installation is not proof of harness trust, agent response or complete source availability."}}
+	result = ReconcileResult{Protocol: RegistryProtocolVersion, StartedAt: cutoff.UTC().Format(time.RFC3339Nano), CutoffSemantics: "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion", TicketID: ticket, Limits: []string{"Only registered, explicitly bound or source-proven inherited sessions are selected. Native descendant discovery can recover a session whose lifecycle hook was absent.", "Hook installation is not proof of harness trust, agent response or complete source availability."}}
 	if sessionBudget < 1 || byteBudget < 1 {
 		return result, errors.New("capture budgets must be positive")
 	}
-	budget := &workBudget{bytes: byteBudget, sessions: sessionBudget}
+	var err error
+	result.LifecycleRevision, err = s.CaptureLifecycleRevision(ctx)
+	if err != nil {
+		return result, err
+	}
+	controlRevision, err := s.captureControlRevision(ctx)
+	if err != nil {
+		return result, err
+	}
+	budget := &workBudget{bytes: byteBudget, sessions: sessionBudget, controlRevision: controlRevision, openCodeAttempts: map[string]bool{}}
 	refreshed := map[string]bool{}
 	defer func() {
 		result.archiveReadGroups = nil
@@ -103,9 +125,9 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 			returnErr = errors.Join(returnErr, fmt.Errorf("persisting reconciliation diagnostics: %w", err))
 		}
 	}()
-	// All work classes rotate priority durably. The first eligible class can
-	// use the full session AND byte budget; leftovers are shared in that order.
-	// Thus no persistent failure can monopolize either resource across passes.
+	// Alternate ordinary and restore-prioritized rounds. The first eligible
+	// class can use the full session and byte budget. Each round keeps its own
+	// owner rotation so a blocked restore cannot starve ordinary capture.
 	if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS recovery_phase(worktree_id INTEGER NOT NULL,ticket TEXT,phase INTEGER NOT NULL,PRIMARY KEY(worktree_id,ticket))`); err != nil {
 		return result, err
 	}
@@ -114,9 +136,15 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	if phaseErr != nil && !errors.Is(phaseErr, sql.ErrNoRows) {
 		return result, phaseErr
 	}
-	phase = phase % int(workClassCount)
-	if _, err := s.db.ExecContext(ctx, `INSERT INTO recovery_phase VALUES(?,?,?)ON CONFLICT(worktree_id,ticket) DO UPDATE SET phase=excluded.phase`, s.worktreeID, ticket, (phase+1)%int(workClassCount)); err != nil {
+	phase = phase % RestoreSchedulerRotationPasses
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO recovery_phase VALUES(?,?,?)ON CONFLICT(worktree_id,ticket) DO UPDATE SET phase=excluded.phase`, s.worktreeID, ticket, (phase+1)%RestoreSchedulerRotationPasses); err != nil {
 		return result, err
+	}
+	if phase >= int(workClassCount) {
+		budget.restorePriority, err = s.restoreWorkPriorities(ctx, ticket)
+		if err != nil {
+			return result, err
+		}
 	}
 	attempted := map[string]bool{}
 	refreshProjection := map[string]domain.CaptureRegistration{}
@@ -183,7 +211,13 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 				registrations[i] = pendingChangedObservation(owner)
 			}
 		} else if projected, ok := refreshProjection[key]; ok {
-			registrations[i] = projected
+			if sameCaptureReadObservation(owner, projected) {
+				registrations[i] = projected
+			} else if refreshed[key] {
+				delete(refreshed, key)
+				staleEvidence[owner.Identity.SessionID] = true
+				registrations[i] = pendingChangedObservation(owner)
+			}
 		}
 	}
 	for key, missing := range archiveProjection {
@@ -194,13 +228,6 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 		return result, err
 	}
 	result.SourceEvents = withoutCaptureEvidence(result.SourceEvents, staleEvidence)
-	pending, discoveryPending, err := s.pendingChildWork(ctx, ticket, registrations)
-	if err != nil {
-		return result, err
-	}
-	result.PendingChildren = pending
-	result.DiscoveryPending = budget.discoveryPending || discoveryPending
-
 	// Fixed-point propagation uses only a parent read from an accepted source snapshot.
 	// Each successful pass binds at least one owner; cycles make no progress and remain unassigned.
 	for pass := 0; pass < len(registrations); pass++ {
@@ -249,9 +276,24 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	}
 
 	knownParents := map[string]bool{}
+	result.ProjectRegistrations = registrations
 	for _, r := range registrations {
 		knownParents[string(r.Identity.Source)+"\x00"+r.Identity.Store+"\x00"+r.Identity.SessionID] = true
 	}
+	controls, err := s.captureControls(ctx, nil, "", CaptureControlDiscarded, false)
+	if err != nil {
+		return result, err
+	}
+	registrations, suppressed := activeCaptureRows(s.project, registrations, controls)
+	if len(suppressed) > 0 {
+		result.SourceEvents = withoutCaptureEvidence(result.SourceEvents, suppressed)
+	}
+	pending, discoveryPending, err := s.pendingChildWork(ctx, ticket, registrations)
+	if err != nil {
+		return result, err
+	}
+	result.PendingChildren = pending
+	result.DiscoveryPending = budget.discoveryPending || discoveryPending
 	owners := map[string]string{}
 	for _, r := range registrations {
 		if r.TicketID == ticket {
@@ -273,6 +315,17 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 				result.RefreshedSessions = append(result.RefreshedSessions, r.Snapshot...)
 			}
 		}
+	}
+	err = s.captureRestoresReady(ctx, &result, cutoff, registrations, attempted, refreshed, budget.openCodeAttempts)
+	if err != nil {
+		return result, err
+	}
+	currentRevision, err := s.CaptureLifecycleRevision(ctx)
+	if err != nil {
+		return result, err
+	}
+	if currentRevision != result.LifecycleRevision {
+		return result, ErrCaptureLifecycleChanged
 	}
 	return result, nil
 }
@@ -368,20 +421,24 @@ func sameCaptureReadObservation(current, observed domain.CaptureRegistration) bo
 		current.SnapshotNeedsRefresh == observed.SnapshotNeedsRefresh
 }
 
-func (s *Store) commitCaptureRead(ctx context.Context, observed domain.CaptureRegistration, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
-	return s.Change(ctx, observed.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-		if !sameCaptureReadObservation(current, observed) {
-			return current, errCaptureReadObservationChanged
-		}
-		return apply(current)
-	})
-}
-
-func (s *Store) saveCaptureRead(ctx context.Context, observed domain.CaptureRegistration, relocated bool, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
-	if relocated {
-		return s.commitCaptureRead(ctx, observed, apply)
+func (s *Store) saveCaptureRead(ctx context.Context, observed domain.CaptureRegistration, controlRevision int64, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (updated domain.CaptureRegistration, returnErr error) {
+	if err := observed.Identity.Validate(); err != nil {
+		return domain.CaptureRegistration{}, err
 	}
-	return s.Change(ctx, observed.Identity, apply)
+	id, err := canonicalIdentity(observed.Identity)
+	if err != nil {
+		return domain.CaptureRegistration{}, err
+	}
+	returnErr = s.withCaptureControlRegistrationWrite(ctx, controlRevision, func(conn *sql.Conn) error {
+		updated, err = s.changeRegistration(ctx, conn, id, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+			if !sameCaptureReadObservation(current, observed) {
+				return current, errCaptureReadObservationChanged
+			}
+			return apply(current)
+		})
+		return err
+	})
+	return updated, returnErr
 }
 
 func pendingChangedObservation(current domain.CaptureRegistration) domain.CaptureRegistration {
@@ -397,14 +454,14 @@ func captureParentID(owner domain.SessionFact) string {
 	return *owner.ParentID
 }
 
-func keepsAcceptedCaptureParent(observed domain.CaptureRegistration, source domain.SessionFact) bool {
+func keepsAcceptedCaptureParent(observed domain.CaptureRegistration, parentID string) bool {
 	for _, accepted := range observed.Snapshot {
 		if accepted.ID == observed.Identity.SessionID && accepted.Source == observed.Identity.Source {
-			return captureParentID(accepted) == captureParentID(source)
+			return captureParentID(accepted) == parentID
 		}
 	}
 	// A source-proven child can have ancestry before its first snapshot.
-	return observed.ParentID == "" || observed.ParentID == captureParentID(source)
+	return observed.ParentID == "" || observed.ParentID == parentID
 }
 
 func withoutCaptureEvidence(source domain.SourceEvents, stale map[string]bool) domain.SourceEvents {
@@ -528,15 +585,17 @@ func CoverageSummary(result ReconcileResult) string {
 	return summary
 }
 
-// refreshTicketOwners is one scheduler work class; source acceptance and the
-// existing owner continuation are unchanged.
+// refreshTicketOwners is one scheduler work class. Restore-prioritized turns
+// cover owners that still need exact-revision source evidence.
 func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, budget *workBudget, result *ReconcileResult, attempted map[string]bool, archiveProjection map[string]domain.CaptureRegistration, policies ...domain.GenerationPolicy) ([]domain.CaptureRegistration, map[string]bool, error) {
-	registrations, err := s.List(ctx)
+	registrations, err := s.ListActive(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 	previousSnapshots := []domain.SessionFact{}
+	known := make(map[string]domain.CaptureRegistration, len(registrations))
 	for _, registration := range registrations {
+		known[IdentityKey(registration.Identity)] = registration
 		if registration.TicketID == ticket {
 			previousSnapshots = append(previousSnapshots, registration.Snapshot...)
 		}
@@ -544,16 +603,38 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 	if _, err = s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS reconcile_cursor(worktree_id INTEGER NOT NULL,ticket TEXT,identity TEXT NOT NULL,PRIMARY KEY(worktree_id,ticket))`); err != nil {
 		return nil, nil, err
 	}
-	cursor := ""
-	cursorErr := s.db.QueryRowContext(ctx, `SELECT identity FROM reconcile_cursor WHERE worktree_id=? AND ticket=?`, s.worktreeID, ticket).Scan(&cursor)
-	if cursorErr != nil && !errors.Is(cursorErr, sql.ErrNoRows) {
-		return nil, nil, cursorErr
+	const restoreCursorKind = "restore-owner-reads"
+	var cursor string
+	if budget.restorePriority == nil {
+		err = s.db.QueryRowContext(ctx, `SELECT identity FROM reconcile_cursor WHERE worktree_id=? AND ticket=?`, s.worktreeID, ticket).Scan(&cursor)
+	} else {
+		cursor, err = s.childCursor(ctx, restoreCursorKind, ticket)
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, nil, err
 	}
 	indexes := []int{}
 	for i, r := range registrations {
-		if r.TicketID == ticket && !attempted[IdentityKey(r.Identity)] {
-			indexes = append(indexes, i)
+		identity := IdentityKey(r.Identity)
+		if r.TicketID != ticket || attempted[identity] {
+			continue
 		}
+		if budget.restorePriority != nil {
+			switch budget.restorePriority.reads[identity] {
+			case 0:
+				continue
+			case restoreReadCovered:
+				if budget.sessions < 1 || budget.bytes < 1 {
+					continue
+				}
+				readAt, err := time.Parse(time.RFC3339Nano, r.RefreshedAt)
+				if err == nil && s.restoreReadSourceUnchanged(ctx, r, readAt) {
+					continue
+				}
+				budget.restorePriority.reads[identity] = restoreAttemptPriority(true)
+			}
+		}
+		indexes = append(indexes, i)
 	}
 	// Persisted rotation prevents an early growing owner from starving later roots.
 	split := 0
@@ -561,6 +642,12 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		split++
 	}
 	indexes = append(append([]int{}, indexes[split:]...), indexes[:split]...)
+	if budget.restorePriority != nil {
+		sort.SliceStable(indexes, func(i, j int) bool {
+			left, right := registrations[indexes[i]].Identity, registrations[indexes[j]].Identity
+			return budget.restorePriority.reads[IdentityKey(left)] > budget.restorePriority.reads[IdentityKey(right)]
+		})
+	}
 
 	if len(policies) == 0 {
 		if err := adaptersconfig.ValidateGenerationPolicy(s.configuration); err != nil {
@@ -609,13 +696,13 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 				return nil, nil, parseErr
 			}
 			fresh, revision, updatedAt, extractErr = extractExactAt(ctx, sourceOwner, budget.bytes, user, cutoff, &read, metadata)
-			if extractErr == nil && relocating && len(fresh) > 0 && !keepsAcceptedCaptureParent(r, fresh[0]) {
+			if extractErr == nil && relocating && len(fresh) > 0 && !keepsAcceptedCaptureParent(r, captureParentID(fresh[0])) {
 				extractErr = errors.New("recovered Codex source conflicts with the accepted parent identity")
 			}
 		}
 		budget.charge(revision)
 		key := IdentityKey(r.Identity)
-		updated, updateErr := s.saveCaptureRead(ctx, r, relocating, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+		updated, updateErr := s.saveCaptureRead(ctx, r, budget.controlRevision, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 			if extractErr != nil {
 				current.State = domain.CaptureFailed
 				current.Detail = "Source snapshot unavailable or invalid; previous facts preserved: " + extractErr.Error()
@@ -648,9 +735,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			current.SnapshotNeedsRefresh = false
 			current.ProjectDirectory = s.project
 			current.ProjectProof = domain.CaptureProjectVerified
-			if fingerprintErr == nil {
-				current.SourceFingerprint = fingerprint
-			}
+			current.SourceFingerprint = fingerprint
 			current.Revision = revision
 			current.UpdatedAt = updatedAt
 			current.State = domain.CaptureCurrent
@@ -673,7 +758,18 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		if relocating {
 			archiveAttempts[key] = true
 		}
+		known[key] = updated
 		if refreshed[key] {
+			if updated.Identity.Source == domain.SourceCodex && fingerprintErr == nil && r.SourceFingerprint != fingerprint {
+				if err := s.reopenCodexChildSweep(ctx, updated.Identity); err != nil {
+					return nil, nil, err
+				}
+			}
+			for _, transcript := range read.transcripts {
+				if err := s.queueCodexSourceStarts(ctx, updated, transcript.ChildDiscoveryHints(), known); err != nil {
+					return nil, nil, err
+				}
+			}
 			acceptedRelocation = acceptedRelocation || relocating
 			source.transcripts = append(source.transcripts, read.transcripts...)
 			source.events = domain.MergeSourceEvents(source.events, read.events)
@@ -687,19 +783,21 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			budget.refreshCursorHeld = true
 		}
 		if !budget.refreshCursorHeld {
-			if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,ticket) DO UPDATE SET identity=excluded.identity`, s.worktreeID, ticket, IdentityKey(r.Identity)); err != nil {
+			if budget.restorePriority == nil {
+				_, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,ticket) DO UPDATE SET identity=excluded.identity`, s.worktreeID, ticket, key)
+			} else {
+				err = s.saveChildCursor(ctx, restoreCursorKind, ticket, key, false)
+			}
+			if err != nil {
 				return nil, nil, err
 			}
 		}
 	}
-	finish := func(write captureAnnotationWriter) error {
-		return s.finishCaptureAnnotations(ctx, ticket, registrations, refreshed, &source, write, policies)
-	}
-	if acceptedRelocation {
-		// A recovered owner can be superseded after its primary snapshot commits.
+	if len(refreshed) > 0 {
+		// A source read may be superseded after its primary snapshot commits.
 		// Establish one registry view for accepting all inputs and saving their
 		// per-owner and family-derived annotations.
-		err = s.withRegistrationWrite(ctx, func(conn *sql.Conn) error {
+		err = s.withCaptureControlRegistrationWrite(ctx, budget.controlRevision, func(conn *sql.Conn) error {
 			current, readErr := readRegistrationRows(conn.QueryContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? ORDER BY identity`, s.worktreeID))
 			if readErr != nil {
 				return readErr
@@ -709,7 +807,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			if discarded {
 				budget.refreshCursorHeld = true
 			}
-			return finish(func(ctx context.Context, identity domain.CaptureIdentity, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
+			return s.finishCaptureAnnotations(ctx, ticket, registrations, refreshed, &source, func(ctx context.Context, identity domain.CaptureIdentity, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
 				if err := identity.Validate(); err != nil {
 					return domain.CaptureRegistration{}, err
 				}
@@ -718,13 +816,11 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 					return domain.CaptureRegistration{}, err
 				}
 				return s.changeRegistration(ctx, conn, id, apply)
-			})
+			}, policies)
 		})
-	} else {
-		err = finish(s.Change)
-	}
-	if err != nil {
-		return nil, nil, err
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	for _, row := range registrations {
 		key := IdentityKey(row.Identity)

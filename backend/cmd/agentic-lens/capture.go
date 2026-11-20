@@ -64,7 +64,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	home := ""
 	if len(args) >= 3 && args[len(args)-2] == "--protected-codex-home" {
 		switch args[0] {
-		case "user-hook", "opencode-hook", "worker", "reconcile", "admit-protected-worktree":
+		case "user-hook", "opencode-hook", "worker", "reconcile", "discard", "restore", "admit-protected-worktree":
 		default:
 			return errors.New("protected Codex selection applies only to native hooks and their worker")
 		}
@@ -83,11 +83,18 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	return captureAction(args, input, output, home)
 }
 
-func captureAction(args []string, input io.Reader, output io.Writer, protectedHome string) (returnErr error) {
+func captureAction(args []string, input io.Reader, output io.Writer, protectedHome string) error {
+	return captureNativeAction(args, input, output, protectedHome, false)
+}
+
+func captureNativeAction(args []string, input io.Reader, output io.Writer, protectedHome string, nativeOpenCode bool) (returnErr error) {
 	if len(args) == 0 {
-		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|submit-binding|reconcile|relocate-state|disable|uninstall|protocol")
+		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|submit-binding|discard|restore|prepare-publication|reconcile|relocate-state|disable|uninstall|protocol")
 	}
 	command := args[0]
+	if captureControlAction(command) {
+		return runCaptureControl(command, args[1:], output, protectedHome, "", "")
+	}
 	if command == "publish-protected" {
 		if len(args) < 5 {
 			return errors.New("protected generation requires project, Codex home, admitted state and generation arguments")
@@ -98,6 +105,9 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 	}
 	if command == "submit-binding" {
 		return captureSubmitBinding(args[1:], output)
+	}
+	if command == "prepare-publication" {
+		return capturePreparePublication(args[1:], output)
 	}
 	if command == "opencode-hook" {
 		return nativeOpenCodeHook(args[1:], input, output, protectedHome)
@@ -138,11 +148,17 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 	ticketType := flags.String("ticket-type", "", "Explicit conventional ticket type")
 	ticket := flags.String("ticket-id", "", "Explicit ticket binding or reconciliation target")
 	request := flags.String("request", "", "Exact binding request token delivered by hook feedback")
+	destination := flags.String("destination-directory", "", "Existing publication directory indicated through the native binding tool")
+	destinationOnly := flags.Bool("destination-only", false, "Indicate the publication directory for an already bound session")
 	userLevel := flags.Bool("user-level", false, "Native user-level handoff; binding has no project wrapper dependency")
 	legacyRepository := flags.String("migrate-legacy-repo", "", "Explicit checkout whose unchanged owned project callbacks should migrate to user capture")
 	dryRun := flags.Bool("dry-run", false, "Show owned installation changes without writing")
 	byteBudget := flags.Int64("max-source-bytes", 0, "Source or diagnostic payload bytes per bounded pass")
 	sessionBudget := flags.Int("max-sessions", 0, "Session work budget per reconciliation or inspection pass")
+	var captureID string
+	if command == "status" {
+		flags.StringVar(&captureID, "capture-id", "", "Read exact local discard or restore status for this capture ID")
+	}
 	beforeDiagnostic := flags.Int64("before-diagnostic", 0, "Read retained diagnostic history before this sequence (status/diagnostics only)")
 	timeout := flags.Duration("timeout", 2*time.Second, "Bound handler/registry work or each required installation phase; optional harness inspection has a separate budget")
 	if err := flags.Parse(args[1:]); err != nil {
@@ -153,6 +169,14 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 	}
 	provided := map[string]bool{}
 	flags.Visit(func(f *flag.Flag) { provided[f.Name] = true })
+	if provided["destination-directory"] || provided["destination-only"] {
+		if command != "bind" || !nativeOpenCode || !*userLevel || *source != "opencode" {
+			return errors.New("destination indication requires the native OpenCode tool or Codex submit-binding")
+		}
+		if strings.TrimSpace(*destination) == "" {
+			return errors.New("destination requires a nonblank directory path")
+		}
+	}
 	if provided["user-source"] {
 		if userSource != "opencode" && userSource != "codex" {
 			return errors.New("--user-source must select codex or opencode")
@@ -219,6 +243,14 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 	project, err := adaptersconfig.ProjectRoot(*repo)
 	if err != nil {
 		return err
+	}
+	if provided["capture-id"] {
+		for option := range provided {
+			if option != "repo" && option != "capture-id" && option != "timeout" {
+				return fmt.Errorf("--%s cannot be combined with exact capture ID status", option)
+			}
+		}
+		return inspectCaptureControl(ctx, project, captureID, output)
 	}
 	inspection := command == "status" || command == "diagnostics" || command == "verify" || command == "check"
 	gitOnly := command == "install-check" || command == "uninstall-check"
@@ -594,8 +626,11 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 				if openCodePending != nil {
 					r.ProjectProof = domain.CaptureProjectUnverified
 				} else {
-					r.ProjectProof = domain.CaptureProjectVerified
-					r.ProjectDirectory = project
+					var err error
+					r, err = capture.RecordOpenCodeHandoff(r, project, openCodeParent)
+					if err != nil {
+						return r, err
+					}
 				}
 			}
 			if value.Event == "session.created" {
@@ -635,15 +670,44 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 		if e != nil {
 			return fmt.Errorf("durable request accepted but failure feedback unavailable; inspect capture diagnostics: %w", e)
 		}
-		return json.NewEncoder(output).Encode(captureAgentResponse{CaptureRegistration: r, CaptureFeedback: feedback})
+		response := captureAgentResponse{CaptureRegistration: r, CaptureFeedback: feedback}
+		if nativeOpenCode {
+			control, e := s.CaptureControlInvitation(ctx, r)
+			if e != nil {
+				return e
+			}
+			return json.NewEncoder(output).Encode(struct {
+				captureAgentResponse
+				DestinationRequest string                        `json:"destination_request,omitempty"`
+				CaptureControl     *capture.NativeCaptureControl `json:"capture_control,omitempty"`
+			}{response, capture.NativePublicationDestinationRequest(r), control})
+		}
+		return json.NewEncoder(output).Encode(response)
 	case "bind":
 		if openCodePending != nil {
 			return fmt.Errorf("OpenCode source metadata pending; binding unresolved: %w", openCodePending)
 		}
+		if nativeOpenCode && *destinationOnly {
+			r, e := s.IndicateNativeOpenCodeDestination(ctx, identity, capture.BindingTicket{ID: *ticket, Title: *ticketTitle, Type: *ticketType, Destination: *destination}, *request)
+			if e != nil {
+				return e
+			}
+			return json.NewEncoder(output).Encode(r)
+		}
+		var normalizedType domain.ConventionalTicketType
 		if *ticketType != "" {
-			if _, ok := domain.NormalizeTicketType(*ticketType); !ok {
+			var ok bool
+			normalizedType, ok = domain.NormalizeTicketType(*ticketType)
+			if !ok {
 				return errors.New("invalid ticket type")
 			}
+		}
+		if nativeOpenCode {
+			r, e := s.BindNativeOpenCode(ctx, identity, capture.BindingTicket{ID: *ticket, Title: strings.TrimSpace(*ticketTitle), Type: string(normalizedType), Destination: *destination}, *request)
+			if e != nil {
+				return e
+			}
+			return json.NewEncoder(output).Encode(r)
 		}
 		r, e := s.Bind(ctx, identity, *ticket, *request)
 		if e != nil {
@@ -655,8 +719,7 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 					current.TicketTitle = strings.TrimSpace(*ticketTitle)
 				}
 				if *ticketType != "" {
-					normalized, _ := domain.NormalizeTicketType(*ticketType)
-					current.TicketType = string(normalized)
+					current.TicketType = string(normalizedType)
 				}
 				return current, nil
 			})
@@ -701,22 +764,22 @@ func reconcileCaptureGenerationAtWithPolicy(project, dir, ticket string, cutoff 
 	} else if err != nil {
 		return nil, err
 	}
-	s, err := capture.OpenProject(dir, project)
-	if err != nil {
-		return nil, err
-	}
-	defer s.Close()
 	if err := errors.Join(policy.ValidatePass(), policy.ValidateBudgets()); err != nil {
-		return nil, err
-	}
-	if err := s.SetSourceBudgets(policy.MaxSessions, policy.MaxSourceBytes); err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(policy.PassTimeoutMS)*time.Millisecond)
 	defer cancel()
+	s, err := capture.OpenProjectContext(ctx, dir, project)
+	if err != nil {
+		return nil, fmt.Errorf("opening the capture registry for reconciliation: %w", err)
+	}
+	defer s.Close()
+	if err := s.SetSourceBudgets(policy.MaxSessions, policy.MaxSourceBytes); err != nil {
+		return nil, err
+	}
 	result, err := s.ReconcileAt(ctx, ticket, git.GetGitUser(), policy.MaxSessions, policy.MaxSourceBytes, cutoff, generationPolicies...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reconciling registered owners: %w", err)
 	}
 	return &result, nil
 }

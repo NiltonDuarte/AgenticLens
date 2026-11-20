@@ -66,6 +66,8 @@ func init() {
 
 type captureGenerationFixture struct{ project, store, state, stateBase, output, publication string }
 
+const captureFixturePendingDir = ".agenticlens/pending/"
+
 func newCaptureGenerationFixture(t *testing.T) captureGenerationFixture {
 	t.Helper()
 	f := captureGenerationFixture{project: t.TempDir(), store: t.TempDir(), state: t.TempDir()}
@@ -78,7 +80,7 @@ func newCaptureGenerationFixture(t *testing.T) captureGenerationFixture {
 		t.Fatal(err)
 	}
 	sharedPath := filepath.Join(f.project, ".agenticlens-config.yaml")
-	policy := bytes.Replace(readCaptureFile(t, sharedPath), []byte("agenticlens:\n  version: v9.8.7\n"), nil, 1)
+	policy := bytes.Replace(readCaptureFile(t, sharedPath), []byte("agenticlens:\n"), []byte("agenticlens:\n  pending_dir: "+captureFixturePendingDir+"\n"), 1)
 	// Direct ledgers and the explicit records container are separate fixture scopes.
 	policy = bytes.Replace(policy, []byte("  roots:\n"), []byte("  roots:\n    - path: .\n      discovery:\n        max_depth: 0\n        max_directories: 300\n"), 1)
 	if err := os.WriteFile(sharedPath, policy, 0600); err != nil {
@@ -475,7 +477,7 @@ func TestCaptureCLIRequestExposesUnassignedTicketToPlugin(t *testing.T) {
 func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics(t *testing.T) {
 	project := t.TempDir()
 	initCLIGitFixture(t, project)
-	configuration := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: CaptureFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: custom records\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	configuration := "agenticlens:\n  version: v9.8.7\n  pending_dir: " + captureFixturePendingDir + "\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: CaptureFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: custom records\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(configuration), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -1282,8 +1284,8 @@ func writeCaptureFixtureLocal(t *testing.T, f captureGenerationFixture, body []b
 }
 
 // These fixtures test source guards or explicit publication, while autonomous
-// worker behavior has its own process tests. Hold the actual worker lease and
-// drain every launched child's inherited log handle before releasing its files.
+// worker behavior has its own process tests. Hold the current worker election
+// and drain every launched child's log without excluding compatible publishers.
 func serializeCaptureFixtureWorkers(t *testing.T, f captureGenerationFixture) {
 	t.Helper()
 	state, err := capture.ProjectState(f.state, f.project)
@@ -1294,7 +1296,7 @@ func serializeCaptureFixtureWorkers(t *testing.T, f captureGenerationFixture) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lease, err := capture.AcquireWorker(store.CoordinationDirectory())
+	lease, err := capture.AcquireLifecycleWorker(store.CoordinationDirectory())
 	if err != nil || lease == nil {
 		store.Close()
 		t.Fatalf("fixture worker serialization: %v", err)

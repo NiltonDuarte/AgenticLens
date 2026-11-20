@@ -88,7 +88,7 @@ func replaceQuotes(s string) string {
 func BindingPrompt(r domain.CaptureRegistration, binary, directory string) string {
 	quote := QuoteArgument
 	command := quote(binary)
-	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user has explicitly identified the active ticket, respond now by executing: %s capture bind --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> [--ticket-type <EXPLICIT_TYPE>]. If no ticket was explicitly supplied, ask the user for it; leave capture unassigned. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, command, quote(directory), r.Identity.Source, quote(r.Identity.Store), quote(r.Identity.SessionID), quote(r.Request))
+	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user has explicitly identified the active ticket, respond now by executing: %s capture bind --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> --ticket-type <EXPLICIT_TYPE>. If no ticket was explicitly supplied, continue with capture pending until the user provides it. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, command, quote(directory), r.Identity.Source, quote(r.Identity.Store), quote(r.Identity.SessionID), quote(r.Request))
 }
 
 func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, binary, directory string, wrappers ...string) (HookOutput, error) {
@@ -165,33 +165,96 @@ func receiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 			return HookOutput{}, err
 		}
 	}
-	if needsExplicitBinding(r) && (input.Event == "SessionStart" || input.Event == "UserPromptSubmit") {
+	if input.Event != "SessionStart" && input.Event != "UserPromptSubmit" {
+		return HookOutput{}, nil
+	}
+	if userLevel {
+		prompt, err := codexInboxPrompt(s.project, binary, r)
+		if err != nil {
+			return HookOutput{}, err
+		}
+		control, err := s.codexCaptureControlPrompt(ctx, binary, r)
+		if err != nil {
+			return HookOutput{}, err
+		}
+		if control != "" {
+			if prompt != "" {
+				prompt += "\n"
+			}
+			prompt += control
+		}
+		if prompt != "" {
+			return HookOutput{Context: &HookContext{Event: input.Event, Context: prompt}}, nil
+		}
+		// A pre-inbox installation keeps its explicit binding command until upgraded.
+	}
+	if needsExplicitBinding(r) {
 		prompt := BindingPrompt(r, binary, directory)
-		if userLevel {
-			installed, err := CodexInboxInstalled(sourceStore)
-			if err != nil {
-				return HookOutput{}, err
-			}
-			if installed {
-				command := fmt.Sprintf("%s capture submit-binding --repo %s --store %s --session-id %s --request %s", QuoteArgument(binary), QuoteArgument(s.project), QuoteArgument(sourceStore), QuoteArgument(r.Identity.SessionID), QuoteArgument(inboxCredential(s.project, r)))
-				prompt = "AgenticLens requests explicit ticket binding for this Codex session. If the user has identified its active ticket, execute: " + command + " --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> [--ticket-type <EXPLICIT_TYPE>]. A queued response awaits source verification by the trusted worker. If the ticket is unknown, ask the user. Do not infer ownership."
-				return HookOutput{Context: &HookContext{Event: input.Event, Context: prompt}}, nil
-			}
-			// A pre-inbox installation keeps its explicit binding command until upgraded.
-		} else if len(wrappers) > 0 && wrappers[0] != "" {
+		if !userLevel && len(wrappers) > 0 && wrappers[0] != "" {
 			prompt = WrapperBindingPrompt(r, wrappers[0], s.project, directory)
-		} else if wrapper, e := installedWrapper(directory, "codex"); e == nil {
-			if wrapper == "" {
-				prompt = "AgenticLens recorded this session but the installed integration predates the common version-pinned wrapper. Refresh capture setup before binding; inspect capture diagnostics. No ticket has been inferred."
-			} else {
-				prompt = WrapperBindingPrompt(r, wrapper, s.project, directory)
+		} else if !userLevel {
+			wrapper, e := installedWrapper(directory, "codex")
+			if e == nil {
+				if wrapper == "" {
+					prompt = "AgenticLens recorded this session but the installed integration predates the common version-pinned wrapper. Refresh capture setup before binding; inspect capture diagnostics. No ticket has been inferred."
+				} else {
+					prompt = WrapperBindingPrompt(r, wrapper, s.project, directory)
+				}
+			} else if !errors.Is(e, os.ErrNotExist) {
+				return HookOutput{}, e
 			}
-		} else if !errors.Is(e, os.ErrNotExist) {
-			return HookOutput{}, e
 		}
 		return HookOutput{Context: &HookContext{Event: input.Event, Context: prompt + projectBindingArgument(s)}}, nil
 	}
 	return HookOutput{}, nil
+}
+
+func (s *Store) codexCaptureControlPrompt(ctx context.Context, binary string, row domain.CaptureRegistration) (string, error) {
+	if !controlInboxEligible(row) {
+		return "", nil
+	}
+	installed, err := CodexInboxInstalled(row.Identity.Store)
+	if err != nil || !installed {
+		return "", err
+	}
+	offer, err := s.CaptureControlInvitation(ctx, row)
+	if err != nil || offer == nil {
+		return "", err
+	}
+	quote := QuoteArgument
+	return fmt.Sprintf("To %s this capture when the user directs it, execute: %s capture submit-binding --repo %s --store %s --session-id %s --request %s --capture-id %s --capture-action %s\nThe native worker verifies the request and processes the capture operation.",
+		offer.Action, quote(binary), quote(s.project), quote(row.Identity.Store), quote(row.Identity.SessionID), quote(offer.Request), quote(offer.CaptureID), offer.Action), nil
+}
+
+func codexInboxPrompt(project, binary string, r domain.CaptureRegistration) (string, error) {
+	initial := needsExplicitBinding(r)
+	credential := NativePublicationDestinationRequest(r)
+	if initial {
+		credential = inboxCredential(project, r)
+	}
+	if credential == "" {
+		return "", nil
+	}
+	installed, err := CodexInboxInstalled(r.Identity.Store)
+	if err != nil || !installed {
+		return "", err
+	}
+	quote := QuoteArgument
+	command := fmt.Sprintf("%s capture submit-binding --repo %s --store %s --session-id %s --request %s", quote(binary), quote(project), quote(r.Identity.Store), quote(r.Identity.SessionID), quote(credential))
+	if initial {
+		message := "AgenticLens is collecting pending metrics for this Codex session. When the ticket ID, title and conventional type are known, execute: "
+		ticket := "<EXPLICIT_TICKET_ID>"
+		title := "<EXPLICIT_TICKET_TITLE>"
+		if r.TicketID != "" {
+			message = "AgenticLens needs explicit ticket metadata for this Codex session's recorded ticket. Use the recorded ticket and supply its title and conventional type. Execute: "
+			ticket = quote(r.TicketID)
+			if r.TicketTitle != "" {
+				title = quote(r.TicketTitle)
+			}
+		}
+		return message + command + " --ticket-id " + ticket + " --ticket-title " + title + " --ticket-type <EXPLICIT_TYPE> [--destination-directory <EXISTING_DIRECTORY>]. Include the exact existing directory when known. A queued response awaits native source verification. While required ticket information is unknown, capture remains pending.", nil
+	}
+	return "AgenticLens has verified this session's ticket binding. If first publication still needs a destination and the exact existing directory is known, execute: " + command + " --destination-only --ticket-id " + quote(r.TicketID) + " --destination-directory <EXISTING_DIRECTORY>. The native worker validates the indicated directory before publication.", nil
 }
 
 func projectBindingArgument(s *Store) string {
@@ -220,5 +283,5 @@ func WrapperBindingPrompt(r domain.CaptureRegistration, wrapper, project, direct
 	quote := QuoteArgument
 	command := quote(wrapper)
 	command += " --al-offline --al-project " + quote(project)
-	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user explicitly identified the active ticket, respond by executing: %s capture bind --repo %s --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> [--ticket-type <EXPLICIT_TYPE>]. Otherwise ask the user for the ticket and leave capture unassigned. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, command, quote(project), quote(directory), r.Identity.Source, quote(r.Identity.Store), quote(r.Identity.SessionID), quote(r.Request))
+	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user explicitly identified the active ticket, respond by executing: %s capture bind --repo %s --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> --ticket-type <EXPLICIT_TYPE>. Otherwise continue with capture pending until the user provides the ticket. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, command, quote(project), quote(directory), r.Identity.Source, quote(r.Identity.Store), quote(r.Identity.SessionID), quote(r.Request))
 }

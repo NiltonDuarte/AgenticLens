@@ -97,6 +97,11 @@ type CaptureRegistration struct {
 	UpdatedAt             string              `json:"updated_at"`
 	Revision              int64               `json:"revision"`
 	Snapshot              []SessionFact       `json:"-"`
+
+	// PublicationDestination is an authenticated hint. The publisher grants
+	// first-write authority only after validating the exact directory.
+	PublicationDestination string `json:"publication_destination,omitempty"`
+	DestinationRevision    uint64 `json:"destination_revision,omitempty"`
 }
 
 // CaptureOwnerCheckpoint is the latest source-reported invocation completion.
@@ -123,5 +128,5 @@ func CaptureOwnerCheckpoint(owner SessionFact) (time.Time, bool) {
 // CaptureNeedsPeriodicRefresh uses recorded lifecycle activity, never a guessed
 // completion time. Idle/terminal owners do not keep a native worker alive.
 func CaptureNeedsPeriodicRefresh(row CaptureRegistration) bool {
-	return row.TicketID != "" && row.Activity != "idle" && row.Event != "SessionEnd" && row.Event != "Stop" && row.Event != "session.idle" && row.Event != "session.error"
+	return row.Activity != "idle" && row.Event != "SessionEnd" && row.Event != "Stop" && row.Event != "session.idle" && row.Event != "session.error"
 }

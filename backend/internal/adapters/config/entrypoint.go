@@ -212,6 +212,14 @@ func parseEntrypoint(data []byte, local bool) (domain.EntrypointConfig, error) {
 	}
 	for i := 0; i < len(entry.Content); i += 2 {
 		key, value := entry.Content[i].Value, entry.Content[i+1]
+		if key == "pending_dir" {
+			if local {
+				return result, errors.New("agenticlens.pending_dir belongs only in shared YAML")
+			}
+			// The engine validates this capture-only setting when it loads shared
+			// policy. Release routing also has to work when setup repairs it.
+			continue
+		}
 		for value.Kind == yaml.AliasNode && value.Alias != nil {
 			value = value.Alias
 		}

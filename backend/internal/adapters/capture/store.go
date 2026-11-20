@@ -92,6 +92,29 @@ func openRegistryContext(ctx context.Context, directory, name, project string, r
 	return openRegistryModeContext(ctx, directory, name, project, readOnly, "")
 }
 
+// IsRegistryContention identifies exclusively temporary SQLite lock errors.
+// A joined permanent error or expired context retains ordinary failure policy.
+func IsRegistryContention(err error) bool {
+	switch cause := err.(type) {
+	case *sqlite.Error:
+		code := cause.Code() & 255
+		return code == 5 || code == 6 // SQLITE_BUSY or SQLITE_LOCKED
+	case interface{ Unwrap() []error }:
+		causes := cause.Unwrap()
+		if len(causes) == 0 {
+			return false
+		}
+		for _, nested := range causes {
+			if !IsRegistryContention(nested) {
+				return false
+			}
+		}
+		return true
+	default:
+		return err != nil && IsRegistryContention(errors.Unwrap(err))
+	}
+}
+
 // Concurrent first opens can contend while SQLite switches the new database to
 // WAL, before ordinary transaction busy handling applies. Retry only lock errors
 // within the constructor's bounded allowance; all other errors remain explicit.
@@ -99,8 +122,7 @@ func openRegistryModeContext(ctx context.Context, directory, name, project strin
 	retryUntil := time.Now().Add(time.Second)
 	for {
 		store, err := openRegistryAttemptContext(ctx, directory, name, project, readOnly, migrationID)
-		var sqliteErr *sqlite.Error
-		if err == nil || readOnly || !errors.As(err, &sqliteErr) || sqliteErr.Code()&255 != 5 && sqliteErr.Code()&255 != 6 || !time.Now().Before(retryUntil) {
+		if err == nil || readOnly || !IsRegistryContention(err) || !time.Now().Before(retryUntil) {
 			return store, err
 		}
 		timer := time.NewTimer(10 * time.Millisecond)
@@ -555,7 +577,7 @@ func (s *Store) change(ctx context.Context, id domain.CaptureIdentity, schedule 
 		return domain.CaptureRegistration{}, normalizeErr
 	}
 	var row domain.CaptureRegistration
-	err := s.withRegistrationWrite(ctx, func(conn *sql.Conn) error {
+	err := s.withLifecycleRegistrationWrite(ctx, func(conn *sql.Conn) error {
 		var err error
 		row, err = s.changeRegistration(ctx, conn, id, change)
 		if err == nil && schedule {
@@ -638,6 +660,7 @@ func (s *Store) changeRegistration(ctx context.Context, conn *sql.Conn, id domai
 	if len(matched) > 1 {
 		return r, errors.New("duplicate actual-store session registrations; explicit local repair required before binding or refresh")
 	}
+	previous := r
 	r.Identity = id
 
 	if r.Request == "" {
@@ -666,7 +689,21 @@ func (s *Store) changeRegistration(ctx context.Context, conn *sql.Conn, id domai
 	if err != nil {
 		return r, err
 	}
+	if s.project != "" && captureMembershipChanged(previous, r) {
+		if _, err = conn.ExecContext(ctx, `UPDATE capture_lifecycle_revision SET revision=revision+1 WHERE worktree_id=? AND EXISTS (SELECT 1 FROM capture_controls WHERE worktree_id=? AND state IN (?,?))`, s.worktreeID, s.worktreeID, CaptureControlDiscarded, CaptureControlRestoring); err != nil {
+			return r, err
+		}
+	}
 	return r, nil
+}
+
+func captureMembershipChanged(previous, current domain.CaptureRegistration) bool {
+	if previous.ProjectDirectory == "" && current.ProjectDirectory == "" {
+		return false
+	}
+	return previous.Identity != current.Identity || previous.ProjectProof != current.ProjectProof ||
+		previous.ProjectDirectory != current.ProjectDirectory || previous.ParentID != current.ParentID ||
+		previous.TicketID != current.TicketID || previous.Binding != current.Binding
 }
 
 // AcceptedRegistrationError reports a post-handoff failure without pretending
@@ -740,27 +777,17 @@ func (s *Store) bindVerified(ctx context.Context, r domain.CaptureRegistration, 
 	if bound == "" {
 		return r, errors.New("binding requires explicit ticket ID")
 	}
-	if s.project != "" && r.Identity.Source == domain.SourceCodex && r.TranscriptPath == "" {
-		var path string
-		var err error
-		if budget == nil {
-			path, err = discoverExactCaptureRollout(s.configuration, r.Identity.Store, r.Identity.SessionID)
-		} else {
-			path, err = codex.DiscoverExactRolloutPathWithBudget(r.Identity.Store, r.Identity.SessionID, budget)
-		}
-		if err != nil {
-			return r, fmt.Errorf("%w: binding source identity unavailable; minimal registration retained: %w", ErrBindingProofPending, err)
-		}
-		r.TranscriptPath = path
-	}
+	path := r.TranscriptPath
 	if s.project != "" {
-		if err := validateOwnerSource(ctx, s.project, r, s.configuration, false, budget); err != nil {
+		path, err = s.verifyBindingSource(ctx, r, budget)
+		if err != nil {
 			return r, fmt.Errorf("%w: binding source/project verification failed; minimal registration retained: %w", ErrBindingProofPending, err)
 		}
 	}
 	if err := ctx.Err(); err != nil {
 		return r, err
 	}
+	r.TranscriptPath = path
 	r.ProjectDirectory = s.project
 	r.ProjectProof = domain.CaptureProjectVerified
 	r.TicketID = bound

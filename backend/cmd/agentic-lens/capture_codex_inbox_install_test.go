@@ -63,10 +63,6 @@ func fixtureCaptureEngine() string {
 func newCodexInboxFixture(t *testing.T) captureGenerationFixture {
 	t.Helper()
 	f := newCaptureGenerationFixture(t)
-	path := filepath.Join(f.project, ".agenticlens-config.yaml")
-	if err := os.WriteFile(path, append([]byte("agenticlens:\n  version: v9.8.7\n"), readCaptureFile(t, path)...), 0600); err != nil {
-		t.Fatal(err)
-	}
 	newCaptureOperatorHome(t, f.project)
 	f.store = filepath.Join(os.Getenv("HOME"), ".codex")
 	if err := os.MkdirAll(filepath.Join(f.store, "sessions"), 0700); err != nil {

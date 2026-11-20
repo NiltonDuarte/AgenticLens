@@ -54,6 +54,9 @@ func decodeCapturePolicy(data []byte) (domain.CaptureConfig, error) {
 	if err != nil {
 		return overlay.Telemetry.Capture, err
 	}
+	if pendingDirectoryNode(nodes) != nil {
+		return overlay.Telemetry.Capture, errors.New("agenticlens.pending_dir belongs only in shared YAML")
+	}
 	for _, key := range []string{"enabled", "state_dir", "refresh_ms", "debounce_ms", "idle_ms", "max_lifetime_ms", "pass_timeout_ms", "max_sessions", "max_source_bytes", "commit_warning"} {
 		n := nodes["telemetry.capture."+key]
 		if n == nil {

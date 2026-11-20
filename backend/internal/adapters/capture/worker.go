@@ -121,16 +121,22 @@ func startWorkerProcess(binary, project, state, protectedHome string) error {
 
 // WorkerProgress is local operational evidence, never source telemetry.
 type WorkerProgress struct {
-	BindingScan BindingScan      `json:"binding_scan"`
-	Executable  string           `json:"executable,omitempty"`
-	Build       domain.BuildInfo `json:"build"`
-	PID         int              `json:"pid"`
-	State       string           `json:"state"`
-	Heartbeat   int64            `json:"heartbeat"`
-	Deadline    int64            `json:"deadline"`
-	NextAttempt int64            `json:"next_attempt"`
-	Detail      string           `json:"detail"`
+	LifecycleProtocol int              `json:"lifecycle_protocol,omitempty"`
+	RestorePasses     int              `json:"restore_passes,omitempty"`
+	BindingScan       BindingScan      `json:"binding_scan"`
+	Executable        string           `json:"executable,omitempty"`
+	Build             domain.BuildInfo `json:"build"`
+	PID               int              `json:"pid"`
+	State             string           `json:"state"`
+	Heartbeat         int64            `json:"heartbeat"`
+	Deadline          int64            `json:"deadline"`
+	NextAttempt       int64            `json:"next_attempt"`
+	Detail            string           `json:"detail"`
 }
+
+// RestoreSchedulerRotationPasses gives each work class the full configured
+// budget in both the ordinary and restore-prioritized rounds.
+const RestoreSchedulerRotationPasses = 2 * int(workClassCount)
 
 func WriteWorkerProgress(directory string, progress WorkerProgress) error {
 	body, err := json.Marshal(progress)
@@ -166,7 +172,7 @@ func WorkerStatus(directory string) (WorkerProgress, error) {
 		if err = json.Unmarshal(body, &p); err != nil {
 			return WorkerProgress{}, errors.Join(ErrInvalidWorkerStatus, err)
 		}
-		if p.BindingScan.Remaining < 0 {
+		if p.BindingScan.Remaining < 0 || p.RestorePasses < 0 || p.RestorePasses > RestoreSchedulerRotationPasses {
 			return WorkerProgress{}, ErrInvalidWorkerStatus
 		}
 	}

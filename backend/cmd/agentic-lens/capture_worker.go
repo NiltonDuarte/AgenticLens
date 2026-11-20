@@ -10,11 +10,20 @@ import (
 	"strconv"
 	"time"
 
+	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
 	"agenticlens/internal/domain"
 )
+
+// Internal publisher status for a bounded retry of SQLite registry contention.
+const capturePublicationBusyExit = 75
+const capturePublicationBlockedExit = 76
+
+func acquireCaptureControlWorkerAdmission(state string) (func() error, error) {
+	return capture.AcquireWorkerControlAdmission(state)
+}
 
 func captureWorker(s *capture.Store, project, state string, policy domain.CaptureConfig, protectedHome string) (returnErr error) {
 	if err := policy.ValidateWorker(); err != nil {
@@ -28,7 +37,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		defer cancel()
 		returnErr = errors.Join(returnErr, s.RecordDiagnostic(ctx, domain.CaptureDiagnostic{Phase: "worker", Outcome: "failed", Detail: "Native worker stopped before completing its pass. Accepted facts and pending generations remain recoverable; inspect capture diagnostics and retry capture reconcile."}))
 	}()
-	lock, err := capture.AcquireWorker(state)
+	lock, err := capture.AcquireLifecycleWorker(state)
 	if err != nil || lock == nil {
 		return err
 	}
@@ -57,6 +66,9 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	if err != nil {
 		return err
 	}
+	if _, err := adaptersconfig.ResolvePendingDirectory(cfg, project); err != nil {
+		return fmt.Errorf("pending capture configuration: %w", err)
+	}
 	binary, err := os.Executable()
 	if err != nil {
 		return err
@@ -66,6 +78,10 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		return err
 	}
 	binary = fence.binary
+	var protection *capture.ProtectedPublication
+	if protectedHome != "" {
+		protection = &fence.publication
+	}
 	previous, err := capture.WorkerStatus(state)
 	if err != nil {
 		if !errors.Is(err, capture.ErrInvalidWorkerStatus) {
@@ -80,6 +96,40 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	}
 	scan := previous.BindingScan
 	madeInboxProgress := false
+	restores, err := s.CaptureRestoreProgress(context.Background())
+	if err != nil {
+		return err
+	}
+	restorePasses := previous.RestorePasses
+	if len(restores) == 0 {
+		restorePasses = 0
+	}
+	progress := capture.WorkerProgress{
+		LifecycleProtocol: capture.WorkerLifecycleProtocol,
+		Executable:        binary,
+		Build:             domain.GetBuildInfo(),
+		PID:               os.Getpid(),
+	}
+	writeProgress := func(label, detail string, heartbeat, deadline, nextAttempt time.Time) error {
+		progress.BindingScan = scan
+		progress.State = label
+		progress.Detail = detail
+		progress.Heartbeat = heartbeat.UnixMilli()
+		progress.Deadline = deadline.UnixMilli()
+		progress.NextAttempt = nextAttempt.UnixMilli()
+		progress.RestorePasses = 0
+		return capture.WriteWorkerProgress(state, progress)
+	}
+	carryRestorePasses := func() error {
+		if restorePasses == 0 {
+			return nil
+		}
+		// Transfer only the remaining allowance so several finite owners can
+		// finish a scheduler rotation without restarting the stalled budget.
+		progress.RestorePasses = restorePasses
+		progress.BindingScan = scan
+		return capture.WriteWorkerProgress(state, progress)
+	}
 	retire := func() error {
 		// Disablement may race an earlier policy read and make the fence false.
 		// It stops this owner without a superseded diagnostic or successor.
@@ -91,6 +141,9 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			return err
 		}
 		if held {
+			if err := carryRestorePasses(); err != nil {
+				return err
+			}
 			if err := lock.Close(); err != nil {
 				return err
 			}
@@ -100,13 +153,16 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		if err != nil {
 			return err
 		}
-		rows, err := s.List(context.Background())
+		rows, err := s.ListActive(context.Background())
 		if err != nil {
 			return err
 		}
 		active, _ := captureWorkerActive(project, rows, policy.MaxSourceBytes)
-		if pending.Generation == pending.Acknowledged && !active && scan.Remaining == 0 && time.Now().UnixMilli() >= scan.RetryUntil {
-			return nil
+		if pending.Generation == pending.Acknowledged && !active && restorePasses == 0 && scan.Remaining == 0 && time.Now().UnixMilli() >= scan.RetryUntil {
+			children, err := s.CodexChildDiscoveryCursors(context.Background())
+			if err != nil || len(children) == 0 {
+				return err
+			}
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
@@ -129,13 +185,23 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		return nil
 	}
 	started := time.Now()
+	refresh := time.Duration(policy.RefreshMS) * time.Millisecond
+	debounce := time.Duration(policy.DebounceMS) * time.Millisecond
+	deadline := started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond)
 	var lastPass time.Time
 	var nextAttempt time.Time
+	var wakeAfterBlockedGeneration int64 = -1
 	var lastFailure string
 	successfulPass := false
-	backoff := time.Duration(policy.RefreshMS) * time.Millisecond
+	shortRegistryRetryUsed := false
+	backoff := refresh
 	lastActivity := time.Now()
-	for time.Since(started) < time.Duration(policy.MaxLifetimeMS)*time.Millisecond {
+	initialChildren, err := s.CodexChildDiscoveryCursors(context.Background())
+	if err != nil {
+		return err
+	}
+	active := false
+	for time.Now().Before(deadline) {
 		// Capture before fencing: a request delivered after a release switch
 		// cannot be pulled into an older owner's already accepted pass.
 		req, err := s.PublicationRequest(context.Background())
@@ -164,13 +230,13 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		if proofErr != nil {
 			return proofErr
 		}
-		rowsForActivity, activityErr := s.List(context.Background())
+		inboxRows, activityErr := s.List(context.Background())
 		if activityErr != nil {
 			return activityErr
 		}
 		inboxCtx, inboxCancel := context.WithTimeout(context.Background(), min(time.Until(started.Add(time.Duration(policy.MaxLifetimeMS)*time.Millisecond)), time.Duration(policy.PassTimeoutMS)*time.Millisecond))
 		lastRegistration := scan.Last
-		accepted, inboxErr := s.ScanCodexBindings(inboxCtx, protectedHome, rowsForActivity, &scan, req.Generation, policy.MaxSessions, policy.MaxSourceBytes)
+		accepted, inboxErr := s.ScanCodexBindings(inboxCtx, protectedHome, inboxRows, &scan, req.Generation, policy.MaxSessions, policy.MaxSourceBytes)
 		inboxCancel()
 		madeInboxProgress = madeInboxProgress || lastRegistration != scan.Last
 		proofPending := errors.Is(inboxErr, capture.ErrBindingProofPending)
@@ -178,7 +244,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		if firstPending {
 			scan.RetryUntil = time.Now().Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli()
 		}
-		if err := capture.WriteWorkerProgress(state, capture.WorkerProgress{BindingScan: scan, Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "running", Heartbeat: now.UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: nextAttempt.UnixMilli(), Detail: lastFailure + fmt.Sprintf(" generation=%d acknowledged=%d pass_timeout_ms=%d max_sessions=%d max_source_bytes=%d", req.Generation, req.Acknowledged, policy.PassTimeoutMS, policy.MaxSessions, policy.MaxSourceBytes)}); err != nil {
+		if err := writeProgress("running", lastFailure+fmt.Sprintf(" generation=%d acknowledged=%d pass_timeout_ms=%d max_sessions=%d max_source_bytes=%d", req.Generation, req.Acknowledged, policy.PassTimeoutMS, policy.MaxSessions, policy.MaxSourceBytes), now, deadline, nextAttempt); err != nil {
 			return err
 		}
 
@@ -199,39 +265,54 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				return err
 			}
 		}
-		active, activityDetail := captureWorkerActive(project, rowsForActivity, policy.MaxSourceBytes)
+		rowsForActivity, err := s.ListActive(context.Background())
+		if err != nil {
+			return err
+		}
+		var activityDetail string
+		active, activityDetail = captureWorkerActive(project, rowsForActivity, policy.MaxSourceBytes)
 		if activityDetail != "" {
 			lastFailure = activityDetail
 		}
-		if scan.Remaining == 0 && time.Now().UnixMilli() >= scan.RetryUntil && !active && time.Since(lastActivity) >= time.Duration(policy.IdleMS)*time.Millisecond && now.UnixMilli()-req.RequestedAt >= int64(policy.IdleMS) && req.Generation == req.Acknowledged {
-			// Release before checking again: an event racing shutdown either starts a
-			// new owner or is seen here. Never consume a generation without a pass.
-			if err = lock.Close(); err != nil {
-				return err
-			}
-			held = false
-			after, err := s.PublicationRequest(context.Background())
+		if scan.Remaining == 0 && time.Now().UnixMilli() >= scan.RetryUntil && !active && restorePasses == 0 && time.Since(lastActivity) >= time.Duration(policy.IdleMS)*time.Millisecond && now.UnixMilli()-req.RequestedAt >= int64(policy.IdleMS) && req.Generation == req.Acknowledged {
+			children, err := s.CodexChildDiscoveryCursors(context.Background())
 			if err != nil {
 				return err
 			}
-			if after.Generation != after.Acknowledged {
-				enabled, e := automaticCaptureEnabled(project, state)
-				if e != nil || !enabled {
-					return e
+			if len(children) == 0 {
+				// Release before checking again: an event racing shutdown either starts a
+				// new owner or is seen here. Never consume a generation without a pass.
+				if err = lock.Close(); err != nil {
+					return err
 				}
-				current, e := fence.current(project, state)
-				if e != nil {
-					return e
+				held = false
+				after, err := s.PublicationRequest(context.Background())
+				if err != nil {
+					return err
 				}
-				if !current {
-					return retire()
+				if after.Generation != after.Acknowledged {
+					enabled, e := automaticCaptureEnabled(project, state)
+					if e != nil || !enabled {
+						return e
+					}
+					current, e := fence.current(project, state)
+					if e != nil {
+						return e
+					}
+					if !current {
+						return retire()
+					}
+					return launchCaptureWorker(binary, project, state, protectedHome)
 				}
-				return launchCaptureWorker(binary, project, state, protectedHome)
+				return nil
 			}
-			return nil
 		}
-		due := req.Generation != req.Acknowledged || time.Since(lastPass) >= time.Duration(policy.RefreshMS)*time.Millisecond
-		if due && !now.Before(nextAttempt) && (time.Since(lastPass) >= time.Duration(policy.RefreshMS)*time.Millisecond || now.UnixMilli()-req.RequestedAt >= int64(policy.DebounceMS)) {
+		now = time.Now()
+		periodicDue := now.Sub(lastPass) >= refresh
+		retryDue := !nextAttempt.IsZero() && !now.Before(nextAttempt)
+		requestDue := captureRequestReady(req, debounce, now)
+		newWorkAfterBlock := wakeAfterBlockedGeneration >= 0 && req.Generation > wakeAfterBlockedGeneration && requestDue
+		if (!now.Before(nextAttempt) || newWorkAfterBlock) && (retryDue || periodicDue || requestDue) {
 			current, e := fence.current(project, state)
 			if e != nil {
 				return e
@@ -243,13 +324,65 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			if remaining <= 0 {
 				break
 			}
+			if restorePasses > 0 {
+				restorePasses--
+			}
 			unassignedCtx, unassignedCancel := context.WithTimeout(context.Background(), min(remaining, time.Duration(policy.PassTimeoutMS)*time.Millisecond))
-			unassigned, unassignedErr := s.Reconcile(unassignedCtx, "", git.GetGitUserInDirContext(unassignedCtx, project), policy.MaxSessions, policy.MaxSourceBytes)
+			passConfig, err := adaptersconfig.Load(project)
+			if err != nil {
+				unassignedCancel()
+				return err
+			}
+			pendingDirectory, err := adaptersconfig.ResolvePendingDirectory(passConfig, project)
+			if err != nil {
+				unassignedCancel()
+				return fmt.Errorf("pending capture configuration: %w", err)
+			}
+			cleanup := func() error {
+				return cleanupDiscardedCaptures(unassignedCtx, s, project, pendingDirectory, passConfig, protection)
+			}
+			var cleanupErr error
+			if protection == nil {
+				cleanupErr = adaptersconfig.WithOrdinaryCapture(project, cleanup)
+			} else {
+				cleanupErr = cleanup()
+			}
+			if errors.Is(cleanupErr, adaptersconfig.ErrProtectedCodexProject) {
+				unassignedCancel()
+				return retire()
+			}
+			unassigned, unassignedErr := s.Reconcile(unassignedCtx, "", git.GetGitUserInDirContext(unassignedCtx, project), policy.MaxSessions, policy.MaxSourceBytes, passConfig.Generation.Metrics)
+			if unassignedErr == nil {
+				writePending := func() error {
+					enabled, err := automaticCaptureEnabled(project, state)
+					if err != nil || !enabled {
+						return err
+					}
+					entries, err := syncPendingCapture(unassignedCtx, s, pendingDirectory, project, unassigned, true, protection, nil)
+					if err != nil {
+						return err
+					}
+					return recordPendingSnapshots(unassignedCtx, s, pendingDirectory, "", "Native metrics captured before ticket binding.", unassigned.Cutoff, entries)
+				}
+				if protection == nil {
+					unassignedErr = adaptersconfig.WithOrdinaryCapture(project, writePending)
+				} else {
+					unassignedErr = writePending()
+				}
+			}
 			unassignedCancel()
+			if errors.Is(unassignedErr, adaptersconfig.ErrProtectedCodexProject) {
+				return retire()
+			}
+			unassignedErr = errors.Join(cleanupErr, unassignedErr)
 			if unassignedErr != nil {
 				lastFailure = unassignedErr.Error()
 			}
-			rows, err := s.List(context.Background())
+			lifecycleRevision, err := s.CaptureLifecycleRevision(context.Background())
+			if err != nil {
+				return err
+			}
+			rows, err := s.ListActive(context.Background())
 			if err != nil {
 				return err
 			}
@@ -269,44 +402,45 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				return err
 			}
 			success := unassignedErr == nil
+			busyOnly := unassignedErr == nil || capture.IsRegistryContention(unassignedErr)
+			refreshedUnassigned := map[string]bool{}
+			for _, owner := range unassigned.RefreshedSessions {
+				refreshedUnassigned[owner.ID] = true
+			}
 			for _, registration := range unassigned.Registrations {
-				if registration.State == domain.CaptureFailed || registration.State == domain.CapturePending {
+				if registration.State == domain.CaptureFailed || (registration.State == domain.CapturePending && !refreshedUnassigned[registration.Identity.SessionID]) {
 					success = false
+					busyOnly = false
+					lastFailure = registration.Detail
 				}
 			}
+			publicationBlocked := errors.Is(unassignedErr, capture.ErrCaptureLifecycleChanged)
 			for _, ticket := range ordered {
 				enabled, e := automaticCaptureEnabled(project, state)
 				if e != nil || !enabled {
 					return e
 				}
-				// The writer resolves and retains its own directory selection
-				// rather than receiving a path previously selected by this process.
-				args := []string{"generate", "--ticket-id", ticket, "--capture-dir", state, "--capture-auto", "--max-sessions", strconv.Itoa(policy.MaxSessions), "--max-source-bytes", strconv.FormatInt(policy.MaxSourceBytes, 10)}
-				title, kind, metadataErr := domain.CaptureTicketMetadata(rows, ticket)
-				if metadataErr != nil {
-					success = false
-					lastFailure = metadataErr.Error()
-					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Detail: "Conflicting ticket types prevent publication. Supply one explicit ticket type through the binding request and retry reconciliation."}); e != nil {
-						return e
-					}
-					fmt.Fprintln(os.Stderr, "automatic publication pending:", metadataErr)
-					continue
-				}
-				if title != "" {
-					args = append(args, "--ticket-title", title)
-				}
-				if kind != "" {
-					args = append(args, "--ticket-type", kind)
-				}
 				remaining := time.Duration(policy.MaxLifetimeMS)*time.Millisecond - time.Since(started)
 				if remaining <= 0 {
 					success = false
+					busyOnly = false
 					break
 				}
 				if err := s.AttemptPublicationTicket(context.Background(), ticket); err != nil {
 					return err
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), min(remaining, time.Duration(policy.PassTimeoutMS)*time.Millisecond))
+				// The writer resolves any disagreement against its owned ledger.
+				title, kind, _ := domain.CaptureTicketMetadata(rows, ticket)
+				// The writer resolves and retains its own directory selection
+				// rather than receiving a path previously selected by this process.
+				args := []string{"generate", "--ticket-id", ticket, "--capture-dir", state, "--capture-auto", "--capture-lifecycle-revision", strconv.FormatInt(lifecycleRevision, 10), "--max-sessions", strconv.Itoa(policy.MaxSessions), "--max-source-bytes", strconv.FormatInt(policy.MaxSourceBytes, 10)}
+				if title != "" {
+					args = append(args, "--ticket-title", title)
+				}
+				if kind != "" {
+					args = append(args, "--ticket-type", kind)
+				}
 				publisher := binary
 				home, err := captureWorkerHome(project, protectedHome)
 				if err != nil {
@@ -353,14 +487,18 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				}
 				if err != nil {
 					success = false
+					var exit *exec.ExitError
+					exited := errors.As(err, &exit)
+					busyOnly = busyOnly && exited && exit.ExitCode() == capturePublicationBusyExit
 					lastFailure = err.Error()
-					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Detail: "Native generation failed or timed out. Inspect the worker output. Automatic publication requires an existing ledger; use explicit generation for the first destination or to recover interrupted output."}); e != nil {
-						return e
+					if exited && exit.ExitCode() == capturePublicationBlockedExit {
+						publicationBlocked = true
+					} else {
+						if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Detail: "Native publication failed or timed out. Inspect pending snapshots and publication diagnostics."}); e != nil {
+							return e
+						}
 					}
 					fmt.Fprintln(os.Stderr, "automatic publication pending:", err)
-					if e := capture.WriteWorkerProgress(state, capture.WorkerProgress{BindingScan: scan, Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "failure", Heartbeat: time.Now().UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: time.Now().Add(backoff * 2).UnixMilli(), Detail: err.Error()}); e != nil {
-						return e
-					}
 				}
 			}
 			if success {
@@ -369,12 +507,27 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				}
 				successfulPass = true
 				lastFailure = ""
-				backoff = time.Duration(policy.RefreshMS) * time.Millisecond
+				backoff = refresh
+				shortRegistryRetryUsed = false
+				nextAttempt = time.Time{}
+				wakeAfterBlockedGeneration = -1
 				if err = s.AcknowledgePublication(context.Background(), req.Generation); err != nil {
 					return err
 				}
 			}
-			afterRows, readErr := s.List(context.Background())
+			afterRestores, err := s.CaptureRestoreProgress(context.Background())
+			if err != nil {
+				return err
+			}
+			// Other work classes may spend the next pass's budget first. Give
+			// the existing rotation a chance after a new wake or durable progress.
+			if len(afterRestores) == 0 {
+				restorePasses = 0
+			} else if capture.CaptureRestoreProgressAdvanced(restores, afterRestores) || (success && req.Generation != req.Acknowledged) {
+				restorePasses = capture.RestoreSchedulerRotationPasses
+			}
+			restores = afterRestores
+			afterRows, readErr := s.ListActive(context.Background())
 			if readErr != nil {
 				return readErr
 			}
@@ -387,13 +540,31 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 					lastActivity = time.Now()
 				}
 			}
-			if !success {
-				backoff = min(backoff*2, time.Duration(policy.RefreshMS)*8*time.Millisecond)
-			}
-			nextAttempt = time.Now().Add(backoff)
 			lastPass = time.Now()
+			if !success {
+				wakeAfterBlockedGeneration = -1
+				if publicationBlocked {
+					wakeAfterBlockedGeneration = req.Generation
+				}
+				delay := backoff
+				if busyOnly && !shortRegistryRetryUsed {
+					// The next pass retains the normal rotated ticket order,
+					// session/byte allowances and remaining worker lifetime.
+					shortRegistryRetryUsed = true
+					delay = min(refresh, 250*time.Millisecond)
+				} else {
+					backoff = min(backoff*2, 8*refresh)
+					delay = backoff
+				}
+				nextAttempt = lastPass.Add(delay)
+				if e := writeProgress("failure", lastFailure, lastPass, deadline, nextAttempt); e != nil {
+					return e
+				}
+			}
 		}
-		time.Sleep(time.Duration(policy.RefreshMS) * time.Millisecond)
+		if err := waitForCaptureRequest(s, refresh, debounce, nextAttempt, deadline, wakeAfterBlockedGeneration); err != nil {
+			return err
+		}
 	}
 	current, e := fence.current(project, state)
 	if e != nil {
@@ -402,14 +573,33 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	if !current {
 		return retire()
 	}
-	// Failed publication cannot create an unbounded retry process chain. Durable
-	// pending work restarts on the next supported lifecycle/reconcile integration.
-	// An unfinished inbox sweep can hand off if this owner advanced its saved
-	// cursor. Publication failures still stop retries once the sweep finishes.
-	if (!successfulPass || lastFailure != "") && !(madeInboxProgress && scan.Remaining > 0) && time.Now().UnixMilli() >= scan.RetryUntil {
-		return fmt.Errorf("native worker lifetime exhausted; pending generation retained for next integration event: %s", lastFailure)
+	children, err := s.CodexChildDiscoveryCursors(context.Background())
+	if err != nil {
+		return err
+	}
+	childProgress := codexChildDiscoveryAdvanced(initialChildren, children)
+	inboxProgress := (madeInboxProgress && scan.Remaining > 0) || time.Now().UnixMilli() < scan.RetryUntil
+	restoreContinuation := !lastPass.IsZero() && restorePasses > 0
+	// A bounded successor can finish an advancing discovery sweep. A hint
+	// whose sweep completed or made no progress cannot create a retry chain.
+	if !childProgress && !inboxProgress && !restoreContinuation {
+		if !successfulPass || lastFailure != "" {
+			return fmt.Errorf("native worker lifetime exhausted; pending generation retained for next integration event: %s", lastFailure)
+		}
+		pending, err := s.PublicationRequest(context.Background())
+		if err != nil {
+			return err
+		}
+		if !active && pending.Generation == pending.Acknowledged {
+			return nil
+		}
 	}
 	// A healthy finite owner transfers active work to another bounded native process.
+	if restoreContinuation {
+		if err := carryRestorePasses(); err != nil {
+			return err
+		}
+	}
 	if err = lock.Close(); err != nil {
 		return err
 	}
@@ -432,6 +622,104 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		}
 		return entry.NativePath(adaptersconfig.RuntimeCodexHome(), cfg.Telemetry.Sources.CodexHome)
 	})
+}
+
+func cleanupDiscardedCaptures(ctx context.Context, store *capture.Store, project, directory string, cfg domain.ProjectConfig, protection *capture.ProtectedPublication) error {
+	discards, err := store.PendingCaptureDiscards(ctx)
+	if err != nil || len(discards) == 0 {
+		return err
+	}
+	rows, err := store.List(ctx)
+	if err != nil {
+		return err
+	}
+	tickets := make(map[string]string, len(rows))
+	for _, row := range rows {
+		tickets[capture.IdentityKey(row.Identity)] = row.TicketID
+	}
+	recovery := map[string]error{}
+	var failures error
+	for _, discard := range discards {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(failures, err)
+		}
+		var err error
+		if ticket := tickets[capture.IdentityKey(discard.Root)]; ticket != "" {
+			if prior, checked := recovery[ticket]; checked {
+				err = prior
+			} else {
+				err = recoverMarkedCapturePublication(ctx, project, ticket, cfg, protection)
+				recovery[ticket] = err
+			}
+		}
+		if err == nil {
+			err = adapters.RemoveDiscardedPendingSnapshot(ctx, store, directory, project, discard, protection)
+		}
+		if err != nil && !errors.Is(err, capture.ErrCaptureLifecycleChanged) {
+			failures = errors.Join(failures, fmt.Errorf("cleaning discarded capture %s: %w", discard.CaptureID, err))
+		}
+	}
+	return failures
+}
+
+func codexChildDiscoveryAdvanced(before, after map[string]string) bool {
+	for parent, current := range after {
+		if prior, existed := before[parent]; !existed || current > prior {
+			return true
+		}
+	}
+	return false
+}
+
+func captureRequestReady(request capture.PublicationRequest, debounce time.Duration, now time.Time) bool {
+	return request.Generation != request.Acknowledged && !now.Before(time.UnixMilli(request.RequestedAt).Add(debounce))
+}
+
+// waitForCaptureRequest checks only the durable worktree request between
+// periodic passes. Source proof, activity and extraction stay in the worker
+// pass. An unchanged destination block retains backoff while a subsequent
+// native callback can wake the worker after the workspace has changed.
+func waitForCaptureRequest(store *capture.Store, refresh, debounce time.Duration, nextAttempt, deadline time.Time, wakeAfterBlockedGeneration int64) error {
+	now := time.Now()
+	wake := now.Add(refresh)
+	if deadline.Before(wake) {
+		wake = deadline
+	}
+	if now.Before(nextAttempt) {
+		if nextAttempt.Before(wake) {
+			wake = nextAttempt
+		}
+		if wakeAfterBlockedGeneration < 0 {
+			time.Sleep(time.Until(wake))
+			return nil
+		}
+	}
+
+	ctx, cancel := context.WithDeadline(context.Background(), wake)
+	defer cancel()
+	const requestPoll = 250 * time.Millisecond
+	ticker := time.NewTicker(requestPoll)
+	defer ticker.Stop()
+	for ctx.Err() == nil {
+		request, err := store.PublicationRequest(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
+			return err
+		}
+		now := time.Now()
+		if captureRequestReady(request, debounce, now) &&
+			(!now.Before(nextAttempt) || (wakeAfterBlockedGeneration >= 0 && request.Generation > wakeAfterBlockedGeneration)) {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+		}
+	}
+	return nil
 }
 
 // Disabled policy stops new passes and handoffs. A publication already committing

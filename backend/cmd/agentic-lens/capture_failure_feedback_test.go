@@ -27,7 +27,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	path := f.write(t, 10)
 	f.bind(t, path)
 	earlyCallbacksDone := captureWorkerCompletion(t, f.coordination(t))
-	held, err := capture.AcquireWorker(f.coordination(t))
+	held, err := capture.AcquireLifecycleWorker(f.coordination(t))
 	if err != nil || held == nil {
 		t.Fatalf("fixture worker ownership: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	if !failed {
 		t.Fatal("real worker failure was not durably diagnosed")
 	}
-	held, err = capture.AcquireWorker(f.coordination(t))
+	held, err = capture.AcquireLifecycleWorker(f.coordination(t))
 	if err != nil || held == nil {
 		t.Fatalf("failed worker ownership not released: %v", err)
 	}
@@ -256,7 +256,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 			t.Fatal(err)
 		}
 		if request.Acknowledged >= partialRequest.Generation && request.Generation == request.Acknowledged {
-			held, err = capture.AcquireWorker(f.coordination(t))
+			held, err = capture.AcquireLifecycleWorker(f.coordination(t))
 			if err != nil {
 				t.Fatal(err)
 			}

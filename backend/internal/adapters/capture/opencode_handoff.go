@@ -29,32 +29,69 @@ func OpenCodeHandoffParent(ctx context.Context, cfg domain.ProjectConfig, projec
 	return parent, nil, nil
 }
 
-// InheritOpenCodeParent answers a child's initial context request immediately
-// when the exact database already proves a bound parent. Worker reconciliation
-// handles delayed sources or a parent bound later.
+// RecordOpenCodeHandoff preserves the exact native parent even while its ticket
+// is unknown. A conflict cannot turn a previously observed child into a root.
+func RecordOpenCodeHandoff(row domain.CaptureRegistration, project, parentID string) (domain.CaptureRegistration, error) {
+	if row.Identity.Source != domain.SourceOpenCode || parentID == row.Identity.SessionID {
+		return row, errors.New("invalid OpenCode source parent evidence")
+	}
+	if row.ParentID != "" && row.ParentID != parentID {
+		return row, errors.New("OpenCode source parent conflicts with the recorded parent")
+	}
+	row.ParentID = parentID
+	row.ProjectDirectory = project
+	row.ProjectProof = domain.CaptureProjectVerified
+	return row, nil
+}
+
+// InheritOpenCodeParent records a source-proven edge from the initial context
+// request and inherits a ticket when the parent already has one.
 func (s *Store) InheritOpenCodeParent(ctx context.Context, child domain.CaptureRegistration, parentID string) (domain.CaptureRegistration, error) {
-	if parentID == "" || child.TicketID != "" {
-		return child, nil
-	}
-	parentIdentity := child.Identity
-	parentIdentity.SessionID = parentID
 	var ticket string
-	err := s.db.QueryRowContext(ctx, "SELECT ticket FROM registrations WHERE worktree_id=? AND identity=?", s.worktreeID, IdentityKey(parentIdentity)).Scan(&ticket)
-	if errors.Is(err, sql.ErrNoRows) || (err == nil && ticket == "") {
-		return child, nil
+	if parentID != "" && child.TicketID == "" {
+		parent, err := s.openCodeParentTicket(ctx, child.Identity, parentID)
+		if err != nil {
+			return child, err
+		}
+		ticket = parent
 	}
-	if err != nil {
-		return child, err
+	if ticket == "" && child.ParentID == parentID && child.ProjectProof == domain.CaptureProjectVerified && child.ProjectDirectory == s.project {
+		return child, nil
 	}
 	return s.Change(ctx, child.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-		if current.TicketID == "" {
+		current, err := RecordOpenCodeHandoff(current, s.project, parentID)
+		if err != nil {
+			return current, err
+		}
+		if current.TicketID == "" && ticket != "" {
 			current.TicketID = ticket
-			current.ParentID = parentID
 			current.Binding = "source_parent"
-			current.ProjectDirectory = s.project
-			current.ProjectProof = domain.CaptureProjectVerified
 			current.State = domain.CapturePending
 		}
 		return current, nil
 	})
+}
+
+func (s *Store) openCodeParentTicket(ctx context.Context, child domain.CaptureIdentity, parentID string) (string, error) {
+	parent := child
+	parent.SessionID = parentID
+	var ticket string
+	err := s.db.QueryRowContext(ctx, "SELECT ticket FROM registrations WHERE worktree_id=? AND identity=?", s.worktreeID, IdentityKey(parent)).Scan(&ticket)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return ticket, err
+}
+
+// Native controls require current independent ownership even when a durable
+// operation for this identity predates discovery of its native parent.
+func (s *Store) openCodeControlRoot(ctx context.Context, row domain.CaptureRegistration) (bool, error) {
+	if row.ParentID == "" {
+		return true, nil
+	}
+	if !independentCapture(row, domain.CaptureRegistration{}) {
+		return false, nil
+	}
+	ticket, err := s.openCodeParentTicket(ctx, row.Identity, row.ParentID)
+	return err == nil && independentCapture(row, domain.CaptureRegistration{TicketID: ticket}), err
 }

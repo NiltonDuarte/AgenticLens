@@ -94,6 +94,7 @@ These examples illustrate syntax, not presets. Review and approve each value for
 project_name: PaymentGateway
 agenticlens:
   version: v1.2.3 # replace with the approved exact published release
+  pending_dir: .agenticlens/pending/
 ticket:
   prefixes:
     - prefix: PAY-
@@ -383,7 +384,33 @@ Context saturation severely impacts model reasoning quality, instruction adheren
 
 ### Automatic publication policy
 
-Installed lifecycle callbacks hand off to a bounded native worker. Contributing agents answer the session-ticket binding request with the exact ticket ID and the requested display title and conventional type. Automatic publication matches the ledger by ticket ID and preserves its existing display title. For a ledger without a title, the worker uses a single agreed title hint or the ticket ID as the display label. Agents can use `generate` for manual recovery and explicit title selection. Automatic and manual generation acquire the same output lock before reading ledger or source facts.
+Installed lifecycle callbacks hand off to a bounded native worker as soon as a session begins. The worker can capture before the ticket or its directory exists. Pending snapshots contain portable source-backed facts and use the same capture identity when ticket metadata is added later.
+
+Set `agenticlens.pending_dir` in the shared project YAML. Full configuration setup writes `.agenticlens/pending/` when no other path was chosen. Relative paths resolve from the project root. Pending capture requires a valid explicit setting and uses a matching installed manager and engine. The worker never stages these files. Keep them available to Git if the team wants to review or version pending snapshots. Native sources, capture state and publication journals stay in their separate private locations.
+
+Respond to the native binding request with the exact ticket ID, display title and conventional type. For a fresh ticket, the agent can then indicate the exact existing destination within the configured workspace roots through the native integration. The worker checks the destination and publishes through the normal transaction. It removes the pending snapshot once canonical publication is durable. If the ticket or its destination is missing, or a selection is ambiguous, `capture diagnostics --repo <PROJECT>` shows the current reason.
+
+Use the ID in the pending snapshot filename or the native invitation. `capture status --repo <PROJECT>` lists stored capture controls. Add `--capture-id <CAPTURE_ID>` to inspect one capture. Discard the capture in the same project to pause automatic publication for an exploratory session.
+
+```sh
+agentic-lens --al-offline --al-project <PROJECT> capture discard \
+  --repo <PROJECT> --capture-id <CAPTURE_ID>
+agentic-lens --al-offline --al-project <PROJECT> capture restore \
+  --repo <PROJECT> --capture-id <CAPTURE_ID>
+```
+
+Discard removes the pending snapshot and pauses automatic publication for the selected root and its verified descendants. A child explicitly bound to another ticket has its own capture. Restore reuses the capture ID and rereads all available native history, including activity during discard. Consult capture status for pending cleanup, reconciliation or incomplete source coverage.
+
+Operators can also select the destination explicitly before launching the harness.
+
+```sh
+agentic-lens --al-offline --al-project <PROJECT> capture prepare-publication \
+  --repo <PROJECT> --ticket-id <TICKET> --json-output <EXISTING_DIRECTORY>/agentic_metrics.json
+```
+
+The directory must already exist within the configured workspace roots and have no ledger. The command records a one-time selection in the project's private `agenticlens.state_dir`. The worker uses it after verified native binding.
+
+Later automatic publication resolves the current ledger by recorded ticket ID, including after a move within configured roots, and preserves its existing title. An untitled historical ledger uses a single agreed title hint or the ticket ID as its display label. First publication consumes the selection. If the worker observes an existing canonical ledger before using it, it retires the selection. Neither case can recreate a removed ledger. Agents can use `generate` for explicit manual recovery or title selection. Automatic and manual writers acquire the same output lock before reading ledger or source facts.
 
 Automatic capture selects one whole `.agenticlens-config.local.yaml`: worktree-local if present, otherwise base-local through Git metadata. It never inherits missing worktree-local keys from base-local/shared capture settings. Explicit boolean `telemetry.capture.enabled` and valid `state_dir` are required; consumed timings/budgets require explicit approved values with the bounds in the configuration reference. Relative state/source paths resolve from the selected local file. Shared YAML must exist in the active checkout. Native Codex user hooks route validated session context through the installed native manager and freeze no project/source/state path. Disabled callbacks validate configuration, then avoid capture-only I/O. No CI settings or harness trust changes are installed.
 
@@ -408,11 +435,11 @@ The shared database is `state_dir/projects/<configured-project-name>/registry.db
 
 Aliases for the configured state base are supported. An alias inside its project namespace must stay within that physical base and preserve the `projects/<configured-project-name>` suffix; escaping or differently shaped targets are rejected. Configure the intended base explicitly when using another layout.
 
-Home state survives worktree deletion, but missing sources or publication destinations still require explicit recovery. No deleted checkout is recreated or rebound by name. Existing explicit project-local/external paths remain unchanged on narrow configuration update; relocation is explicit, preserves pending/failed work and retained original data, and refuses unsupported layouts or active owned workers. Copying a live database or changing a YAML path alone is not a migration. No automatic cleanup removes registrations or pending observations.
+Home state survives worktree deletion, but missing sources or publication destinations still require explicit recovery. No deleted checkout is recreated or rebound by name. Existing explicit project-local/external paths remain unchanged on narrow configuration update; relocation is explicit, preserves pending/failed work and retained original data, and refuses unsupported layouts or active owned workers. Copying a live database or changing a YAML path alone is not a migration. The capture registry retains registrations and unresolved observations.
 
 The relocation command supports only the inspected legacy registry protocol1 family into schema2 named state. Moving or renaming populated schema2 state is currently unsupported and fails without retiring the source or modifying configuration; preserve it and report the limitation rather than inventing a copy/rename repair.
 
-The worker uses durable request generations and acknowledges only the generation observed before its pass. Kernel process locks release on crashes. Later callbacks restart workers; workers periodically refresh active sessions, debounce bursts, back off after failed publication, and exit after idle terminal sessions. A finite maximum lifetime transfers active/pending work to a fresh native worker. Check `capture status --repo PROJECT` and local `worker.log` for failures. This is native child-process scheduling, with no separately installed service, model recursion or callback network/self-update work.
+The worker uses durable request generations and acknowledges only the generation observed before its pass. Kernel process locks release on crashes. Later callbacks restart workers or request a pass from the existing worker. An eligible callback request starts a pass after debounce without waiting for the periodic source refresh. Workers back off after failed publication and exit after idle terminal sessions. A finite maximum lifetime transfers active/pending work to a fresh native worker. Check `capture status --repo PROJECT` and local `worker.log` for failures. This is native child-process scheduling, with no separately installed service, model recursion or callback network/self-update work.
 
 The ledger uses schema v6 at its actual selected directory’s `agentic_metrics.json`; moving the directory across configured roots does not change recorded identity. Readers and writers resolve that same location instead of reconstructing it from the ticket. Top-level `completed_at` is the observability snapshot finalization boundary, equal to artifact `updated_at`; it does not assert source-session termination or ticket merge. Source invocation completion timestamps remain unchanged. Each owner has its own source-read checkpoint; there is no simultaneous source-read guarantee. Source failures preserve accepted facts and visibly degrade coverage.
 

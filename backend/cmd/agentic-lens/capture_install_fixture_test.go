@@ -46,6 +46,9 @@ func prepareCaptureInstall(t *testing.T, cwd string, args []string) []string {
 	if !bytes.Contains(body, []byte("  install_root:")) {
 		body = bytes.Replace(body, []byte("agenticlens:\n"), []byte(fmt.Sprintf("agenticlens:\n  install_root: %q\n", filepath.Join(t.TempDir(), "native cache"))), 1)
 	}
+	if !bytes.Contains(body, []byte("  pending_dir:")) {
+		body = bytes.Replace(body, []byte("agenticlens:\n"), []byte("agenticlens:\n  pending_dir: "+captureFixturePendingDir+"\n"), 1)
+	}
 	if err = os.WriteFile(shared, body, 0600); err != nil {
 		t.Fatal(err)
 	}

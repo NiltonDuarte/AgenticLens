@@ -357,8 +357,8 @@ func TestCaptureSamePinOtherProjectInstallPreservesAcknowledgedActiveWorker(t *t
 		t.Fatal(err)
 	}
 	cache, wrappers := t.TempDir(), t.TempDir()
-	header := fmt.Sprintf("agenticlens:\n  version: %s\n  install_root: %q\n", "v9.8.7", cache)
-	shared := append([]byte(header), readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))...)
+	header := fmt.Sprintf("agenticlens:\n  install_root: %q\n", cache)
+	shared := bytes.Replace(readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml")), []byte("agenticlens:\n"), []byte(header), 1)
 	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), shared, 0600); err != nil {
 		t.Fatal(err)
 	}

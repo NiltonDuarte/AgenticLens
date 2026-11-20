@@ -89,7 +89,7 @@ parsed:
 			return nativeHook("Codex", []string{"capture", "user-hook"}, input, output, diagnostic)
 		case "opencode-hook":
 			if len(args) < 2 {
-				return errors.New("opencode-hook requires receive, request or bind")
+				return errors.New("opencode-hook requires receive, request, bind, discard or restore")
 			}
 			return nativeHook("OpenCode", append([]string{"capture", "opencode-hook"}, args[1:]...), input, output, diagnostic)
 		}
@@ -121,8 +121,11 @@ parsed:
 		}
 		return execute(native, args, input, output, diagnostic, "")
 	}
-	if !resolve && len(args) >= 2 && args[0] == "capture" && args[1] == "reconcile" {
-		return captureReconcile(entry, args, input, output, diagnostic)
+	if !resolve && len(args) >= 2 && args[0] == "capture" {
+		switch args[1] {
+		case "reconcile", "discard", "restore":
+			return captureRuntimeOperation(entry, args, input, output, diagnostic)
+		}
 	}
 	native, identity, err := selectEngine(entry, codexHomes...)
 	if err != nil {
@@ -393,8 +396,13 @@ func nativeHook(harness string, engineArgs []string, input io.Reader, output, di
 	return execute(native, append(engineArgs, "--protected-codex-home", home), bytes.NewReader(body), output, diagnostic, project)
 }
 
-func captureReconcile(entry config.Entrypoint, args []string, input io.Reader, output, diagnostic io.Writer) error {
-	home, err := config.ProtectedReconcileHome(entry.Project)
+func captureRuntimeOperation(entry config.Entrypoint, args []string, input io.Reader, output, diagnostic io.Writer) error {
+	resolveHome := config.ProtectedCodexProjectHome
+	admit := args[1] == "reconcile"
+	if admit {
+		resolveHome = config.ProtectedReconcileHome
+	}
+	home, err := resolveHome(entry.Project)
 	if err != nil {
 		return err
 	}
@@ -412,10 +420,10 @@ func captureReconcile(entry config.Entrypoint, args []string, input io.Reader, o
 		}
 		home, err = config.ProtectedCodexProjectHome(entry.Project)
 		if err != nil || home == "" {
-			return errors.Join(errors.New("protected admission changed during reconcile; retry"), err)
+			return errors.Join(fmt.Errorf("protected admission changed during %s; retry", args[1]), err)
 		}
 	}
-	native, err := protectedCaptureEngine(entry.Project, home, true, diagnostic)
+	native, err := protectedCaptureEngine(entry.Project, home, admit, diagnostic)
 	if err != nil {
 		return err
 	}

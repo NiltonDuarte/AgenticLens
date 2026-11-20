@@ -35,6 +35,9 @@ func runCaptureConfigUpdate(output, replacement string, dryRun bool) error {
 		fmt.Println("Capture configuration already declares telemetry.capture.state_dir; existing file preserved.")
 		return nil
 	}
+	if err := adaptersconfig.ValidateExistingPendingDirectoryForSetup(selection.SharedPath, path, update.Data); err != nil {
+		return err
+	}
 	if dryRun {
 		fmt.Printf("# Preview: %s\n%s", path, update.Data)
 		return nil

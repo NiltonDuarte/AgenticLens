@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters/capture"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -124,8 +125,9 @@ func verifyLateCodexSubmission(t *testing.T, ownerCount int) {
 	if response.Context == nil || !strings.Contains(response.Context.Context, fixtureCaptureEngine()) {
 		t.Fatal("trusted callback did not return the protected engine for submission")
 	}
-	// Wait for the initial callback to finish its first publication pass.
-	// A user can answer the request after the configured 300 ms idle interval.
+	// End the initial unbound turn so the active worker can go idle. The
+	// delayed answer must still wake publication after that worker exits.
+	receive("Stop")
 	ackDeadline := time.Now().Add(5 * time.Second)
 	for {
 		progress, err := store.PublicationRequest(context.Background())
@@ -439,7 +441,7 @@ func TestCodexInboxVerifiesExactOwnerAndRetriesAfterSourceFlush(t *testing.T) {
 	if err := os.WriteFile(localPath, overlap, 0600); err != nil {
 		t.Fatal(err)
 	}
-	out, submitErr := captureCLI(t, f.project, "", "submit-binding", "--repo", f.project, "--store", f.store, "--session-id", "root", "--request", rootKey, "--ticket-id", "TEST-100", "--ticket-title", "Root")
+	out, submitErr := captureCLI(t, f.project, "", "submit-binding", "--repo", f.project, "--store", f.store, "--session-id", "root", "--request", rootKey, "--ticket-id", "TEST-100", "--ticket-title", "Root", "--ticket-type", "fix")
 	if submitErr == nil || !strings.Contains(strings.ToLower(string(out)), "overlap") {
 		t.Fatalf("stale settings allowed submission or failed for the wrong reason: %s %v", out, submitErr)
 	}
@@ -656,7 +658,7 @@ func TestCodexInboxPassSharesBytesAcrossOwnerProofs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		out, err := captureCLI(t, f.project, "", "submit-binding", "--repo", f.project, "--store", f.store, "--session-id", id, "--request", inboxCredentialFromHook(t, reply), "--ticket-id", "TEST-100", "--ticket-title", id)
+		out, err := captureCLI(t, f.project, "", "submit-binding", "--repo", f.project, "--store", f.store, "--session-id", id, "--request", inboxCredentialFromHook(t, reply), "--ticket-id", "TEST-100", "--ticket-title", id, "--ticket-type", "fix")
 		if err != nil {
 			t.Fatalf("submission for %s: %s %v", id, out, err)
 		}
@@ -762,6 +764,10 @@ func TestManagerReconcileAdmitsPreviouslyQueuedCodexBinding(t *testing.T) {
 	f := newCodexInboxFixture(t)
 	codexInboxOperation(t, f.project, "install-user")
 	ledger := seedCaptureTicketHome(t, f, "TEST-100")
+	policy, err := adaptersconfig.ResolveCapture(f.project, "")
+	if err != nil {
+		t.Fatal(err)
+	}
 	store, err := capture.OpenProject(f.state, f.project)
 	if err != nil {
 		t.Fatal(err)
@@ -790,7 +796,16 @@ func TestManagerReconcileAdmitsPreviouslyQueuedCodexBinding(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("reconcile existing enrollment: %s %v", out, err)
 	}
-	waitCorrectionLedger(t, ledger, "root", 83)
+	// Reconcile starts the protected worker asynchronously. Allow one full
+	// configured worker lifetime and one pass interval for launch scheduling.
+	budget := time.Duration(policy.MaxLifetimeMS+policy.PassTimeoutMS) * time.Millisecond
+	if !correctionLedgerReadyWithin(ledger, "root", 83, budget) {
+		progress, progressErr := capture.WorkerStatus(store.CoordinationDirectory())
+		request, requestErr := store.PublicationRequest(context.Background())
+		log, logErr := os.ReadFile(filepath.Join(store.CoordinationDirectory(), "worker.log"))
+		t.Fatalf("no source-backed ledger for root input=83 at %s after %s\nworker: %+v (%v)\nrequest: %+v (%v)\nworker log (%v): %s",
+			ledger, budget, progress, progressErr, request, requestErr, logErr, log)
+	}
 	status, err := capture.WorkerStatus(store.CoordinationDirectory())
 	if err != nil || status.Executable != fixtureCaptureEngine() {
 		t.Fatalf("upgrade used the wrong worker for pending generation: %+v %v", status, err)

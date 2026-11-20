@@ -43,6 +43,7 @@ All listed containers/booleans must be explicit where required. Missing/null/wro
 | Setting | Meaning and validity |
 | --- | --- |
 | `project_name` | Project label and capture namespace; nonblank. |
+| `agenticlens.pending_dir` | Explicit shared directory for portable pending capture snapshots. Relative paths resolve from the physical project root. The directory must be inside the project and separate from Git metadata and private state. Full setup writes `.agenticlens/pending/` when no value was selected and preserves an existing valid choice. Pending capture fails on a missing or invalid value. |
 | `workspaces.roots` | Required list of explicit path/discovery entries, including a one-entry list for a single location. |
 | `workspaces.roots[].discovery` | Required integer `max_depth` >=0 and `max_directories` >0. Writers initialize 0/300; containers require an explicit deeper selection. |
 | `workspaces.artifacts` | Explicit list; `[]` means none. Safe nonblank ticket-relative paths; optional title/description. Nonblank title wins, otherwise basename including extension. Missing files remain unavailable content. API/UI uses required `artifacts.items`; `[]` is a genuine empty state. |

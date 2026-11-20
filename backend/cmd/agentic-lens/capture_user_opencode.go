@@ -18,11 +18,12 @@ import (
 )
 
 // nativeOpenCodeHook accepts routing identity only from the plugin's session
-// context. Binding tool arguments are restricted to the user's ticket response.
+// context. Tool arguments carry the ticket response and optional directory.
 func nativeOpenCodeHook(args []string, input io.Reader, output io.Writer, protectedHome string) error {
 	if len(args) == 0 {
 		return errors.New("OpenCode callback requires an operation")
 	}
+	control := captureControlAction(args[0])
 	hook, err := capture.ReadHook(input)
 	if err != nil {
 		return err
@@ -35,6 +36,9 @@ func nativeOpenCodeHook(args []string, input io.Reader, output io.Writer, protec
 		return err
 	}
 	if shared == "" {
+		if control {
+			return errors.New("native OpenCode capture control requires a configured project")
+		}
 		_, err := io.WriteString(output, "{}\n")
 		return err
 	}
@@ -50,8 +54,17 @@ func nativeOpenCodeHook(args []string, input io.Reader, output io.Writer, protec
 		return err
 	}
 	if !policy.Enabled {
+		if control {
+			return errors.New("automatic capture is disabled for this OpenCode project")
+		}
 		_, err := io.WriteString(output, "{}\n")
 		return err
+	}
+	if control {
+		if hook.SessionID == "" || hook.Event != "agent_capture_control" {
+			return errors.New("OpenCode capture control requires native session and operation context")
+		}
+		return runCaptureControl(args[0], args[1:], output, protectedHome, project, hook.SessionID)
 	}
 	command := []string{args[0], "--user-level", "--source", "opencode", "--repo", project, "--session-id", hook.SessionID}
 	switch args[0] {
@@ -66,13 +79,26 @@ func nativeOpenCodeHook(args []string, input io.Reader, output io.Writer, protec
 		title := response.String("ticket-title", "", "Ticket title")
 		kind := response.String("ticket-type", "", "Conventional type")
 		request := response.String("request", "", "Session request")
+		destination := response.String("destination-directory", "", "Publication directory")
+		destinationOnly := response.Bool("destination-only", false, "Indicate a destination after binding")
 		if err := response.Parse(args[1:]); err != nil {
 			return err
 		}
-		if response.NArg() != 0 || strings.TrimSpace(*ticket) == "" || strings.TrimSpace(*title) == "" || *request == "" {
-			return errors.New("OpenCode binding requires ticket ID, title and session request")
+		if response.NArg() != 0 || strings.TrimSpace(*ticket) == "" || *request == "" {
+			return errors.New("OpenCode response requires ticket ID and session request")
+		}
+		if !*destinationOnly && (strings.TrimSpace(*title) == "" || strings.TrimSpace(*kind) == "") {
+			return errors.New("OpenCode binding requires ticket ID, title, explicit conventional type and session request")
 		}
 		command = append(command, "--ticket-id", *ticket, "--ticket-title", *title, "--ticket-type", *kind, "--request", *request)
+		if *destinationOnly {
+			command = append(command, "--destination-only")
+		}
+		response.Visit(func(f *flag.Flag) {
+			if f.Name == "destination-directory" {
+				command = append(command, "--destination-directory", *destination)
+			}
+		})
 	default:
 		return fmt.Errorf("unknown OpenCode operation %q", args[0])
 	}
@@ -80,7 +106,7 @@ func nativeOpenCodeHook(args []string, input io.Reader, output io.Writer, protec
 	if err != nil {
 		return err
 	}
-	return captureAction(command, bytes.NewReader(body), output, protectedHome)
+	return captureNativeAction(command, bytes.NewReader(body), output, protectedHome, true)
 }
 
 // Re-read source selection under the native capture admission before opening

@@ -1,0 +1,607 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "DATA-01",
+      "severity": 8,
+      "issue": "First-publication recovery can remove its pending marker before the private consumption record is durable.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Recovery re-syncs the exact consumed receipt before finalizing the public artifact set."
+    },
+    {
+      "finding_id": "BEHAVIOR-01",
+      "severity": 7,
+      "issue": "Two interrupted first publications can prevent one another from reaching recovery.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Recover each exact owned journal before requiring complete workspace discovery for another write."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 7,
+      "issue": "Idle shutdown can strand an advancing Codex child search before source-proven descendants are discovered.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "An advancing bounded search continues across the idle boundary and worker lifetimes."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 7,
+      "issue": "A consumed receipt can divert a moved ledger or reject an interrupted ordinary refresh at its original home.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Current canonical resolution takes precedence, and exact owned v2 recovery validates the saved prior ledger."
+    },
+    {
+      "finding_id": "ARCH-02",
+      "severity": 7,
+      "issue": "A receipt retired after observing a portable ledger can strand an interrupted ordinary refresh.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "A closed receipt permits same-inode v2 recovery with an exact valid prior ledger and no fresh first-write authority."
+    },
+    {
+      "finding_id": "ARCH-03",
+      "severity": 7,
+      "issue": "Repeated terminal scans for the same unresolved hints can cause unbounded worker handoffs.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Completed sweeps stay closed until fresh native evidence or explicit reconciliation warrants a new pass."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 5,
+      "issue": "The gate can accept a rendered active-duration total that disagrees with native and ledger totals.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Compare the rendered duration, ledger rollup and independent native measurements."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 6,
+      "issue": "The native gate can credit later artifacts to a prior publication or miss the actual first completion-aware commit.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Retain ordered fixture-local diagnostic copies and verify the artifact pair against the earliest eligible commit."
+    },
+    {
+      "finding_id": "TEST-03",
+      "severity": 5,
+      "issue": "The held ledger snapshot can misclassify completed child time as provisional.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Check held duration per owner against native completion and active interval evidence at the cutoff."
+    },
+    {
+      "finding_id": "TEST-04",
+      "severity": 5,
+      "issue": "A missing OpenCode task tool can let the pinned gate pass without its supported grandchild.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Require exact nested native and ledger parentage for both pinned clients."
+    },
+    {
+      "finding_id": "TEST-05",
+      "severity": 3,
+      "issue": "The native oracle can overlook duplicate ledger tool rows and a fabricated cache-write field.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Reject duplicate tool rows and unsupported persisted cache-write fields, and record what the native fixture exposes."
+    },
+    {
+      "finding_id": "TEST-06",
+      "severity": 3,
+      "issue": "The focused SQLite test does not force a full worker retry after registry contention.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "The test exercises real typed lock classification and review traces the bounded retry. The native timing sample with contention predates the retry change."
+    },
+    {
+      "finding_id": "BEHAVIOR-02",
+      "severity": 8,
+      "issue": "Native binding without a conventional type could permanently block first publication.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. Native bindings require an explicit type and an incomplete historical binding can complete for the exact ticket."
+    },
+    {
+      "finding_id": "BEHAVIOR-03",
+      "severity": 6,
+      "issue": "Conflicting native types stopped refresh before resolving a unique canonical ledger.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. The canonical ledger supplies its recorded type and history. A fresh ticket with conflicting types stays pending."
+    },
+    {
+      "finding_id": "BEHAVIOR-04",
+      "severity": 6,
+      "issue": "A vanished tentative destination prevented a later verified correction.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. A durably unattempted receipt may yield to the new eligible destination. Attempted receipts retain exact recovery."
+    },
+    {
+      "finding_id": "ARCH-04",
+      "severity": 7,
+      "issue": "Title-only conflicts blocked first publication before reconciling either pending root.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. Each root retains its accepted metadata and refreshed facts while publication is blocked."
+    },
+    {
+      "finding_id": "ARCH-05",
+      "severity": 6,
+      "issue": "Setup could write a pending path that overlapped effective local private state.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. Setup and local updates validate the effective configuration pair before writing."
+    },
+    {
+      "finding_id": "DATA-03",
+      "severity": 8,
+      "issue": "A tentative native selection could publish despite a later conflicting verified indication.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. The ticket and directory leases protect destination revalidation, and registration writes serialize with marker admission."
+    },
+    {
+      "finding_id": "DATA-04",
+      "severity": 8,
+      "issue": "Promotion could discard the only recorded anomaly evidence for an unavailable owner.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. Coverage checks distinguish omitted and recorded-empty or nonempty summaries. A conflict retains both artifacts."
+    },
+    {
+      "finding_id": "DATA-05",
+      "severity": 5,
+      "issue": "Pending publication could acknowledge a directory entry whose durability was unconfirmed.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. Admission syncs the pending leaf and ancestors, including no-op retries after rename or unlink."
+    },
+    {
+      "finding_id": "DATA-06",
+      "severity": 7,
+      "issue": "A rolled-back marker could reappear after its attempted selection was superseded.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. The original directory is synced under its lease after marker and ledger absence are verified."
+    },
+    {
+      "finding_id": "TEST-07",
+      "severity": 5,
+      "issue": "Focused tests omitted retry after a durable commit with pending cleanup interrupted.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. Tests reconstruct that state, verify nonduplicating cleanup and preserve a replacement snapshot observed after the original digest."
+    },
+    {
+      "finding_id": "TEST-08",
+      "severity": 7,
+      "issue": "The native gate could validate a later corrected ledger instead of the first commit.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. The oracle checks the first committed artifact against native facts at its own cutoff, including intervals crossing the cutoff."
+    },
+    {
+      "finding_id": "TEST-09",
+      "severity": 4,
+      "issue": "Staged path-name comparisons could miss changes to already-staged content.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "requested"
+        }
+      ],
+      "disposition": "Fixed. The native gate compares full Git index entries and blob IDs through promotion."
+    },
+    {
+      "finding_id": "BEHAVIOR-05",
+      "severity": 8,
+      "issue": "A temporary native proof failure can detach previously accepted descendants from discard suppression and restore coverage.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Retain accepted project and parent membership through proof downgrades. Require valid current coverage on restore."
+    },
+    {
+      "finding_id": "BEHAVIOR-06",
+      "severity": 7,
+      "issue": "OpenCode can issue a root control invitation before recording a verified link to an unbound parent.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Persist native parentage and recheck it when accepting control. Preserve controls for independently bound roots."
+    },
+    {
+      "finding_id": "BEHAVIOR-07",
+      "severity": 7,
+      "issue": "An idle OpenCode worker can acknowledge a restore wake and retire before bounded descendant discovery finishes.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Give exact group progress a finite scheduler rotation and carry only the remaining allowance across worker lifetimes."
+    },
+    {
+      "finding_id": "BEHAVIOR-08",
+      "severity": 6,
+      "issue": "Restore can wait for an upstream registration outside the admitted independent capture.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Require reads and discovery within the admitted group and retain its verified native parent link."
+    },
+    {
+      "finding_id": "BEHAVIOR-09",
+      "severity": 8,
+      "issue": "A restore can be acknowledged while the published ledger still holds old facts for an owner covered in an earlier pass.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": null,
+          "reasoning_effort": null,
+          "identity_note": "Native tester role observed. Execution model and effort were unavailable."
+        }
+      ],
+      "disposition": "Merge the exact operation's accepted snapshots and compare every group member before acknowledging durable materialization."
+    },
+    {
+      "finding_id": "BEHAVIOR-10",
+      "severity": 7,
+      "issue": "An OpenCode restore receipt can remain valid when the owner's native history changes without a callback.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "reasoning_effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Revalidate the exact native owner checkpoint before reusing a read. A silent native edit requires a new bounded read."
+    },
+    {
+      "finding_id": "DATA-07",
+      "severity": 8,
+      "issue": "Normal workspace discovery can reject an interrupted ordinary refresh before discard can recover a ledger without a first-publication receipt.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Validate the exact prior ledger in the retained transaction journal under publication ownership before recovery."
+    },
+    {
+      "finding_id": "DATA-08",
+      "severity": 6,
+      "issue": "An unrelated same-ticket branch can keep an otherwise covered restore pending.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Scope native descendant checks and accepted reads to the exact restoring group."
+    },
+    {
+      "finding_id": "DATA-09",
+      "severity": 8,
+      "issue": "A stale manual reconciliation can overwrite the accepted source snapshot that a newer restore pass used for coverage.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fence source and annotation commits by the observed control revision and exact owner observation. Recheck the persisted record before accepting coverage."
+    },
+    {
+      "finding_id": "ARCH-06",
+      "severity": 7,
+      "issue": "An exposed OpenCode binding credential can serve as the signing seed for a control request.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Use a distinct private seed per worktree and native owner for revision- and action-scoped control credentials."
+    },
+    {
+      "finding_id": "ARCH-07",
+      "severity": 6,
+      "issue": "A legacy worker can lose its leader and leave an automatic child publisher alive before the child has a ticket lease.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Require a recorded incompatible process group to retire before admitting a compatible worker or control."
+    },
+    {
+      "finding_id": "ARCH-08",
+      "severity": 7,
+      "issue": "Same-ticket siblings can exhaust the restore scheduler's rotation before it reaches the requested group.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Give restoring owners their own bounded rotation and cursors alongside the ordinary work classes."
+    },
+    {
+      "finding_id": "ARCH-09",
+      "severity": 8,
+      "issue": "A stale OpenCode page can overwrite the cursor reset by restore and skip available descendants.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Save the OpenCode cursor only when the observed operation revision still matches under the lifecycle lock."
+    },
+    {
+      "finding_id": "TEST-10",
+      "severity": 7,
+      "issue": "The native gate can sample its canonical baseline after discard has already changed the root or summary.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Capture exact bytes under the publication directory lock before starting native discard and compare both artifacts through acknowledgement and suppressed work."
+    },
+    {
+      "finding_id": "DATA-10",
+      "severity": 8,
+      "issue": "Late binding can accept a relocated Codex source with different parentage and bypass the existing relocation guard.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Compare recovered native parentage with accepted facts before storing the archived path and binding."
+    },
+    {
+      "finding_id": "ARCH-10",
+      "severity": 7,
+      "issue": "Late binding can accept a relocated rollout physically outside the registered Codex store via a symlinked archive.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Reuse physical store containment for both the registered and recovered paths before binding."
+    }
+  ]
+}

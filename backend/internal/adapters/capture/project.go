@@ -279,21 +279,7 @@ func validateOwnerSource(ctx context.Context, project string, r domain.CaptureRe
 				return err
 			}
 		}
-		if err := codex.ValidateRolloutStore(r.Identity.Store, path); err != nil {
-			return err
-		}
-		var t codex.SessionMetadataContext
-		var err error
-		if manual {
-			t, err = codex.ReadSessionContext(path)
-		} else if budget != nil {
-			t, err = codex.ReadSessionContextWithBudget(path, budget)
-		} else {
-			if err := cfg.Telemetry.Capture.ValidateBudgets(); err != nil {
-				return err
-			}
-			t, err = codex.ReadSessionContextWithinBudget(path, cfg.Telemetry.Capture.MaxSourceBytes)
-		}
+		t, err := readCodexOwnerMetadata(r.Identity.Store, path, cfg, manual, budget)
 		if err != nil {
 			return err
 		}
@@ -313,6 +299,22 @@ func validateOwnerSource(ctx context.Context, project string, r domain.CaptureRe
 		return err
 	}
 	return ValidateProject(project, directory)
+}
+
+func readCodexOwnerMetadata(store, path string, cfg domain.ProjectConfig, manual bool, budget *codex.DiscoveryBudget) (codex.SessionMetadataContext, error) {
+	if err := codex.ValidateRolloutStore(store, path); err != nil {
+		return codex.SessionMetadataContext{}, err
+	}
+	if manual {
+		return codex.ReadSessionContext(path)
+	}
+	if budget != nil {
+		return codex.ReadSessionContextWithBudget(path, budget)
+	}
+	if err := cfg.Telemetry.Capture.ValidateBudgets(); err != nil {
+		return codex.SessionMetadataContext{}, err
+	}
+	return codex.ReadSessionContextWithinBudget(path, cfg.Telemetry.Capture.MaxSourceBytes)
 }
 
 func validateCodexOwnerMetadata(project string, r domain.CaptureRegistration, metadata codex.SessionMetadataContext) error {

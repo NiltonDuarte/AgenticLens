@@ -106,6 +106,12 @@ func (s *Store) indexDiagnostic(ctx context.Context, tx *sql.Tx, d domain.Captur
 	if err := head("", "latest"); err != nil {
 		return err
 	}
+	if d.Phase == "pending_snapshot" && len(d.Owners) == 1 {
+		root := d.Owners[0]
+		if err := head(pendingDiagnosticOwner(root.Source, root.SessionID), "latest"); err != nil {
+			return err
+		}
+	}
 	switch d.Outcome {
 	case "committed", "failed", "accepted", "completed":
 		if err := head("", d.Outcome); err != nil {
@@ -161,6 +167,10 @@ func (s *Store) indexDiagnostic(ctx context.Context, tx *sql.Tx, d domain.Captur
 	}
 	return nil
 }
+func pendingDiagnosticOwner(source domain.SourceHarness, sessionID string) string {
+	return string(source) + ":" + sessionID
+}
+
 func (s *Store) pruneIndexedDiagnostics(ctx context.Context, tx *sql.Tx) error {
 	// Current/terminal rows remain referenced independently of recent history.
 	_, err := tx.ExecContext(ctx, `DELETE FROM capture_diagnostics WHERE worktree_id=? AND sequence NOT IN(SELECT sequence FROM capture_diagnostic_heads WHERE worktree_id=? UNION SELECT sequence FROM capture_diagnostic_failures WHERE worktree_id=?)`, s.worktreeID, s.worktreeID, s.worktreeID)
