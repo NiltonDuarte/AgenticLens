@@ -36,25 +36,27 @@ func (s *Store) QueueChild(ctx context.Context, store, path, parent string) erro
 
 type ReconcileResult struct {
 	archiveReadGroups     []archiveReadGroup
-	LifecycleRevision     int64                        `json:"-"`
-	RestoresReady         []CaptureControl             `json:"-"`
-	ProjectRegistrations  []domain.CaptureRegistration `json:"-"`
-	SourceEvents          domain.SourceEvents          `json:"-"`
-	DiagnosticIndex       *DiagnosticIndexProgress     `json:"diagnostic_index,omitempty"`
-	StartedAt             string                       `json:"started_at"`
-	CutoffSemantics       string                       `json:"cutoff_semantics"`
-	SourceBytes           int64                        `json:"source_bytes_reserved"`
-	SourceAttempts        int                          `json:"source_attempts"`
-	RefreshedSessions     []domain.SessionFact         `json:"-"`
-	DiscoveryPending      bool                         `json:"child_discovery_pending"`
-	PendingChildren       int                          `json:"pending_children"`
-	UnresolvedParentLinks int                          `json:"unresolved_parent_links"`
-	Protocol              int                          `json:"protocol"`
-	Cutoff                string                       `json:"cutoff"`
-	TicketID              string                       `json:"ticket_id"`
-	Registrations         []domain.CaptureRegistration `json:"registrations"`
-	Sessions              []domain.SessionFact         `json:"-"`
-	Limits                []string                     `json:"limits"`
+	LifecycleRevision     int64                               `json:"-"`
+	RestoresReady         []CaptureControl                    `json:"-"`
+	ProjectRegistrations  []domain.CaptureRegistration        `json:"-"`
+	SourceEvents          domain.SourceEvents                 `json:"-"`
+	DiagnosticIndex       *DiagnosticIndexProgress            `json:"diagnostic_index,omitempty"`
+	StartedAt             string                              `json:"started_at"`
+	CutoffSemantics       string                              `json:"cutoff_semantics"`
+	SourceBytes           int64                               `json:"source_bytes_reserved"`
+	SourceAttempts        int                                 `json:"source_attempts"`
+	RefreshedSessions     []domain.SessionFact                `json:"-"`
+	RestoredSessions      []domain.SessionFact                `json:"-"`
+	RestoredOwners        map[string][]domain.CaptureIdentity `json:"-"`
+	DiscoveryPending      bool                                `json:"child_discovery_pending"`
+	PendingChildren       int                                 `json:"pending_children"`
+	UnresolvedParentLinks int                                 `json:"unresolved_parent_links"`
+	Protocol              int                                 `json:"protocol"`
+	Cutoff                string                              `json:"cutoff"`
+	TicketID              string                              `json:"ticket_id"`
+	Registrations         []domain.CaptureRegistration        `json:"registrations"`
+	Sessions              []domain.SessionFact                `json:"-"`
+	Limits                []string                            `json:"limits"`
 }
 
 func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64, policies ...domain.GenerationPolicy) (ReconcileResult, error) {
@@ -308,7 +310,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 			}
 		}
 	}
-	result.RestoresReady, err = s.captureRestoresReady(ctx, result, cutoff, registrations, attempted, refreshed, budget.openCodeAttempts)
+	err = s.captureRestoresReady(ctx, &result, cutoff, registrations, attempted, refreshed, budget.openCodeAttempts)
 	if err != nil {
 		return result, err
 	}
@@ -604,9 +606,22 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 	indexes := []int{}
 	for i, r := range registrations {
 		identity := IdentityKey(r.Identity)
-		if r.TicketID == ticket && !attempted[identity] && (budget.restorePriority == nil || budget.restorePriority.reads[identity] > 0) {
-			indexes = append(indexes, i)
+		if r.TicketID != ticket || attempted[identity] {
+			continue
 		}
+		if budget.restorePriority != nil {
+			switch budget.restorePriority.reads[identity] {
+			case 0:
+				continue
+			case restoreReadCovered:
+				readAt, err := time.Parse(time.RFC3339Nano, r.RefreshedAt)
+				if err == nil && s.restoreReadSourceUnchanged(ctx, r, readAt) {
+					continue
+				}
+				budget.restorePriority.reads[identity] = restoreAttemptPriority(true)
+			}
+		}
+		indexes = append(indexes, i)
 	}
 	// Persisted rotation prevents an early growing owner from starving later roots.
 	split := 0

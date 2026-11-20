@@ -193,6 +193,8 @@ type restorePriorities struct {
 	discovery map[string]int
 }
 
+const restoreReadCovered = 1
+
 func (s *Store) restoreWorkPriorities(ctx context.Context, ticket string) (*restorePriorities, error) {
 	progress, err := s.CaptureRestoreProgress(ctx)
 	if err != nil {
@@ -210,7 +212,9 @@ func (s *Store) restoreWorkPriorities(ctx context.Context, ticket string) (*rest
 			if !owner.Member {
 				continue
 			}
-			if !owner.readReady {
+			if owner.readReady {
+				priorities.reads[key] = restoreReadCovered
+			} else {
 				priorities.reads[key] = restoreAttemptPriority(owner.readAttempted)
 			}
 			if entry.root.Source == domain.SourceCodex || owner.Discovery != CaptureRestoreDiscoveryComplete {
@@ -223,7 +227,7 @@ func (s *Store) restoreWorkPriorities(ctx context.Context, ticket string) (*rest
 
 func restoreAttemptPriority(attempted bool) int {
 	if attempted {
-		return 1
+		return 2
 	}
-	return 2
+	return 3
 }

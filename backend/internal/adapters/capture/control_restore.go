@@ -12,10 +12,10 @@ import (
 // A restore may spend several bounded passes proving the whole group. Record
 // accepted reads for its exact revision so a later pass cannot mistake cached
 // pre-discard facts, or a stale pass after a concurrent transition, for proof.
-func (s *Store) captureRestoresReady(ctx context.Context, result ReconcileResult, cutoff time.Time, rows []domain.CaptureRegistration, attempted, refreshed, openCodeAttempts map[string]bool) (ready []CaptureControl, returnErr error) {
+func (s *Store) captureRestoresReady(ctx context.Context, result *ReconcileResult, cutoff time.Time, rows []domain.CaptureRegistration, attempted, refreshed, openCodeAttempts map[string]bool) error {
 	controls, err := s.captureControls(ctx, nil, "", CaptureControlRestoring, false)
 	if err != nil || len(controls) == 0 {
-		return nil, err
+		return err
 	}
 	roots := make(map[string]bool, len(controls))
 	for _, control := range controls {
@@ -34,7 +34,20 @@ func (s *Store) captureRestoresReady(ctx context.Context, result ReconcileResult
 			owners[key] = append(owners[key], row)
 		}
 	}
-	returnErr = s.WithCaptureLifecycle(ctx, result.LifecycleRevision, func() error {
+	staleReads := map[string]bool{}
+	for _, control := range controls {
+		root := IdentityKey(control.Root)
+		if ticket, present := activeRootTickets[root]; !present || ticket != result.TicketID || cutoff.Before(control.requestedAt) {
+			continue
+		}
+		for _, row := range owners[root] {
+			key := IdentityKey(row.Identity)
+			if !attempted[key] && !s.restoreReadStillCurrent(ctx, control, row) {
+				staleReads[key] = true
+			}
+		}
+	}
+	return s.WithCaptureLifecycle(ctx, result.LifecycleRevision, func() error {
 		return s.withRegistrationWrite(ctx, func(conn *sql.Conn) error {
 			for _, control := range controls {
 				if cutoff.Before(control.requestedAt) {
@@ -49,7 +62,7 @@ func (s *Store) captureRestoresReady(ctx context.Context, result ReconcileResult
 				if err := s.recordRestoreAttempts(ctx, conn, control, group, attempted, openCodeAttempts); err != nil {
 					return err
 				}
-				covered, err := s.recordRestoreReads(ctx, conn, control, group, attempted, refreshed)
+				covered, err := s.recordRestoreReads(ctx, conn, control, group, attempted, refreshed, staleReads)
 				if err != nil {
 					return err
 				}
@@ -58,13 +71,40 @@ func (s *Store) captureRestoresReady(ctx context.Context, result ReconcileResult
 					return err
 				}
 				if covered && !pending {
-					ready = append(ready, control)
+					result.RestoresReady = append(result.RestoresReady, control)
+					if result.RestoredOwners == nil {
+						result.RestoredOwners = map[string][]domain.CaptureIdentity{}
+					}
+					for _, owner := range group {
+						result.RestoredOwners[control.CaptureID] = append(result.RestoredOwners[control.CaptureID], owner.Identity)
+						result.RestoredSessions = append(result.RestoredSessions, owner.Snapshot...)
+					}
 				}
 			}
 			return nil
 		})
 	})
-	return ready, returnErr
+}
+
+func (s *Store) restoreReadStillCurrent(ctx context.Context, control CaptureControl, row domain.CaptureRegistration) bool {
+	readAt, err := time.Parse(time.RFC3339Nano, row.RefreshedAt)
+	return err == nil && !readAt.Before(control.requestedAt) && s.restoreReadSourceUnchanged(ctx, row, readAt)
+}
+
+func (s *Store) restoreReadSourceUnchanged(ctx context.Context, row domain.CaptureRegistration, readAt time.Time) bool {
+	if ctx.Err() != nil || row.ProjectProof != domain.CaptureProjectVerified || row.State == domain.CaptureFailed || len(row.Snapshot) == 0 {
+		return false
+	}
+	if callbackAt, err := time.Parse(time.RFC3339Nano, row.CallbackObservedAt); err == nil && callbackAt.After(readAt) {
+		return false
+	}
+	if row.Identity.Source == domain.SourceCodex {
+		// This exact rollout stat reads no transcript bytes. A changed or
+		// unavailable file needs a new bounded extraction before completion.
+		fingerprint, err := sourceFingerprint(ctx, row, s.configuration)
+		return err == nil && fingerprint == row.SourceFingerprint
+	}
+	return true
 }
 
 func (s *Store) recordRestoreAttempts(ctx context.Context, conn *sql.Conn, control CaptureControl, owners []domain.CaptureRegistration, attempted, openCodeAttempts map[string]bool) error {
@@ -136,7 +176,7 @@ func (s *Store) recordRestoreOpenCodeScan(ctx context.Context, conn *sql.Conn, c
 	return !complete, err
 }
 
-func (s *Store) recordRestoreReads(ctx context.Context, conn *sql.Conn, control CaptureControl, owners []domain.CaptureRegistration, attempted, refreshed map[string]bool) (bool, error) {
+func (s *Store) recordRestoreReads(ctx context.Context, conn *sql.Conn, control CaptureControl, owners []domain.CaptureRegistration, attempted, refreshed, staleReads map[string]bool) (bool, error) {
 	all := true
 	for _, row := range owners {
 		key := IdentityKey(row.Identity)
@@ -153,7 +193,7 @@ func (s *Store) recordRestoreReads(ctx context.Context, conn *sql.Conn, control 
 			}
 			continue
 		}
-		if attempted[key] || !verified || row.State == domain.CaptureFailed || len(row.Snapshot) == 0 {
+		if attempted[key] || staleReads[key] || !verified || row.State == domain.CaptureFailed || len(row.Snapshot) == 0 {
 			if _, err := conn.ExecContext(ctx, `DELETE FROM capture_restore_reads WHERE worktree_id=? AND capture_id=? AND revision=? AND identity=?`, s.worktreeID, control.CaptureID, control.Revision, key); err != nil {
 				return false, err
 			}

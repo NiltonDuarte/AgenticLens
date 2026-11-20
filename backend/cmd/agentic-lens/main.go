@@ -665,9 +665,6 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			fmt.Fprintln(os.Stderr, "Baseline ticket association conflict:", associationErr)
 			os.Exit(1)
 		}
-		if captureResult != nil {
-			freshSessions = captureResult.RefreshedSessions
-		}
 	} else if activeSource == "codex" {
 		codexHome, pathErr := adaptersconfig.ResolveCodexHome(*codexHomeFlag, projCfg.Telemetry.Sources.CodexHome)
 		if pathErr != nil {
@@ -818,8 +815,9 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		// Retained snapshots fill missing owners only; canonical and explicit facts remain authoritative.
 		sessions = fillMissingCaptureSessions(sessions, pendingSessions)
 		sessions = fillMissingCaptureSessions(sessions, captureResult.Sessions)
-		// Explicit extraction runs after capture and has precedence for a duplicate refreshed owner.
-		freshSessions = mergeSessions(captureResult.RefreshedSessions, freshSessions)
+		// Coverage-ready restores can include accepted reads from earlier passes.
+		// A current-pass read still wins for the same owner.
+		freshSessions = mergeSessions(captureResult.RestoredSessions, captureResult.RefreshedSessions)
 		for _, session := range captureResult.Sessions {
 			knownThreadIDs = append(knownThreadIDs, session.ID)
 		}
@@ -972,7 +970,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		return publishGenerationArtifacts(*jsonOutputFlag, *appendFlag, tableMD, factLedger, baseline.HistoryDTOs, begin)
 	}
 	if *autoFlag && *jsonOutputFlag != "" {
-		if err := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, later lifecycle publication uses the transaction journal to recover.", freshSessions); err != nil {
+		if err := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, later lifecycle publication uses the transaction journal to recover.", captureResult.RefreshedSessions); err != nil {
 			fmt.Fprintln(os.Stderr, "Cannot persist publication diagnostic:", err)
 			os.Exit(1)
 		}
@@ -1010,7 +1008,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 		fmt.Println(tableMD)
 	}
 	if *jsonOutputFlag != "" && *autoFlag {
-		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Ledger and requested summary replacement committed.", freshSessions); e != nil {
+		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Ledger and requested summary replacement committed.", captureResult.RefreshedSessions); e != nil {
 			fmt.Fprintln(os.Stderr, "Artifacts committed but diagnostic acknowledgement failed; publication verification remains incomplete:", e)
 			os.Exit(1)
 		}

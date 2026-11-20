@@ -142,13 +142,10 @@ func publishAutomaticCaptureArtifacts(project, registry, ticket, ledger string, 
 		if len(result.RestoresReady) == 0 {
 			return nil
 		}
-		materialized := make(map[string]bool, len(facts))
-		for _, fact := range facts {
-			materialized[capture.StableCaptureID(fact.Source, fact.ID)] = true
-		}
-		if err := completeMaterializedCaptureRestores(ctx, store, result.RestoresReady, func(control capture.CaptureControl) bool {
-			return materialized[control.CaptureID]
-		}); err != nil {
+		materialized := restorationFactsByOwner(facts)
+		if err := completeMaterializedCaptureRestores(ctx, store, result, func(string) map[domain.CaptureIdentity]domain.SessionFact {
+			return materialized
+		}, true); err != nil {
 			return fmt.Errorf("artifacts committed; restore coverage acknowledgement pending: %w", err)
 		}
 		return nil
@@ -339,7 +336,9 @@ func syncGenerationPendingSnapshots(project, registry, directory string, result 
 		return nil, err
 	}
 	defer func() { returnErr = errors.Join(returnErr, store.Close()) }()
-	return syncPendingCapture(ctx, store, directory, project, result, create, protection, canonical)
+	// This path already owns the canonical destination. A pending copy is
+	// recoverable staging; the restore is acknowledged after canonical commit.
+	return adapters.SyncPendingSnapshots(ctx, store, directory, project, result, create, protection, canonical)
 }
 
 func syncPendingCapture(ctx context.Context, store *capture.Store, directory, project string, result capture.ReconcileResult, create bool, protection *capture.ProtectedPublication, canonical *capture.PublicationLock) ([]adapters.PendingSnapshotEntry, error) {
@@ -347,21 +346,48 @@ func syncPendingCapture(ctx context.Context, store *capture.Store, directory, pr
 	if err != nil || len(entries) == 0 || len(result.RestoresReady) == 0 {
 		return entries, err
 	}
-	materialized := make(map[string]bool, len(entries))
+	materialized := make(map[string]map[domain.CaptureIdentity]domain.SessionFact, len(entries))
 	for _, entry := range entries {
-		materialized[entry.Snapshot.CaptureID] = true
+		materialized[entry.Snapshot.CaptureID] = restorationFactsByOwner(entry.Sessions())
 	}
 	return entries, store.WithCaptureLifecycle(ctx, result.LifecycleRevision, func() error {
-		return completeMaterializedCaptureRestores(ctx, store, result.RestoresReady, func(control capture.CaptureControl) bool {
-			return materialized[control.CaptureID]
-		})
+		return completeMaterializedCaptureRestores(ctx, store, result, func(captureID string) map[domain.CaptureIdentity]domain.SessionFact {
+			return materialized[captureID]
+		}, false)
 	})
 }
 
-func completeMaterializedCaptureRestores(ctx context.Context, store *capture.Store, ready []capture.CaptureControl, materialized func(capture.CaptureControl) bool) error {
-	complete := make([]capture.CaptureControl, 0, len(ready))
-	for _, control := range ready {
-		if materialized(control) {
+func restorationFactsByOwner(facts []domain.SessionFact) map[domain.CaptureIdentity]domain.SessionFact {
+	owners := make(map[domain.CaptureIdentity]domain.SessionFact, len(facts))
+	for _, fact := range facts {
+		owners[domain.CaptureIdentity{Source: fact.Source, SessionID: fact.ID}] = fact
+	}
+	return owners
+}
+
+func completeMaterializedCaptureRestores(ctx context.Context, store *capture.Store, result capture.ReconcileResult, materialized func(string) map[domain.CaptureIdentity]domain.SessionFact, canonical bool) error {
+	expected := restorationFactsByOwner(result.RestoredSessions)
+	for _, fact := range result.RefreshedSessions {
+		owner := domain.CaptureIdentity{Source: fact.Source, SessionID: fact.ID}
+		if _, restoring := expected[owner]; restoring {
+			expected[owner] = fact
+		}
+	}
+	complete := make([]capture.CaptureControl, 0, len(result.RestoresReady))
+	for _, control := range result.RestoresReady {
+		owners := result.RestoredOwners[control.CaptureID]
+		actual := materialized(control.CaptureID)
+		covered := len(owners) > 0
+		for _, identity := range owners {
+			owner := domain.CaptureIdentity{Source: identity.Source, SessionID: identity.SessionID}
+			accepted, haveAccepted := expected[owner]
+			written, haveWritten := actual[owner]
+			if !haveAccepted || !haveWritten || !matchesRestorationFacts(written, accepted, canonical) {
+				covered = false
+				break
+			}
+		}
+		if covered {
 			complete = append(complete, control)
 		}
 	}
@@ -369,6 +395,23 @@ func completeMaterializedCaptureRestores(ctx context.Context, store *capture.Sto
 		return nil
 	}
 	return store.CompleteCaptureRestores(ctx, complete)
+}
+
+func matchesRestorationFacts(written, accepted domain.SessionFact, canonical bool) bool {
+	actual := adapters.SessionFactDTOFromDomain(written)
+	expected := adapters.SessionFactDTOFromDomain(accepted)
+	if canonical {
+		// Canonical rendering may recalculate anomalies with all owners
+		// present and retain optional categories omitted by the source pass.
+		actual.Anomalies, expected.Anomalies = nil, nil
+		if expected.Skills == nil {
+			actual.Skills = nil
+		}
+		if expected.Delegations == nil {
+			actual.Delegations = nil
+		}
+	}
+	return reflect.DeepEqual(actual, expected)
 }
 
 func verifyPendingPromotionCoverage(published, refreshed, pending []domain.SessionFact) error {

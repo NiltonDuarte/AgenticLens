@@ -360,9 +360,12 @@ func SyncPendingSnapshots(ctx context.Context, store *capture.Store, directory, 
 func syncPendingOwnerGroups(ctx context.Context, directory string, owner *capture.PublicationLock, result capture.ReconcileResult, groups map[string]*pendingOwnerGroup, rows map[string]domain.CaptureRegistration, assignments map[string]string, create bool) ([]PendingSnapshotEntry, error) {
 	entries := make([]PendingSnapshotEntry, 0, len(groups))
 	title, kind, _ := domain.CaptureTicketMetadata(result.Registrations, result.TicketID)
-	refreshed := map[string]bool{}
+	accepted := make(map[domain.CaptureIdentity]domain.SessionFact, len(result.RestoredSessions)+len(result.RefreshedSessions))
+	for _, session := range result.RestoredSessions {
+		accepted[domain.CaptureIdentity{Source: session.Source, SessionID: session.ID}] = session
+	}
 	for _, session := range result.RefreshedSessions {
-		refreshed[session.ID] = true
+		accepted[domain.CaptureIdentity{Source: session.Source, SessionID: session.ID}] = session
 	}
 	ids := make([]string, 0, len(groups))
 	for id := range groups {
@@ -393,6 +396,11 @@ func syncPendingOwnerGroups(ctx context.Context, directory string, owner *captur
 			return entries, fmt.Errorf("pending snapshot %s has conflicting ticket metadata", id)
 		}
 		facts := group.facts
+		for sessionID, fact := range facts {
+			if current, ok := accepted[domain.CaptureIdentity{Source: fact.Source, SessionID: sessionID}]; ok {
+				facts[sessionID] = current
+			}
+		}
 		for _, oldFact := range prior.Sessions {
 			identity := group.root.Identity
 			identity.SessionID = oldFact.ID
@@ -400,7 +408,8 @@ func syncPendingOwnerGroups(ctx context.Context, directory string, owner *captur
 			if row, known := rows[key]; known && (row.TicketID != result.TicketID || assignments[key] != id) {
 				continue
 			}
-			if _, present := facts[oldFact.ID]; !present || !refreshed[oldFact.ID] {
+			_, updated := accepted[domain.CaptureIdentity{Source: group.root.Identity.Source, SessionID: oldFact.ID}]
+			if _, present := facts[oldFact.ID]; !present || !updated {
 				facts[oldFact.ID] = oldFact.ToDomain()
 			}
 		}

@@ -16,6 +16,7 @@ import (
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
 	adaptersconfig "agenticlens/internal/adapters/config"
+	"agenticlens/internal/adapters/git"
 	"agenticlens/internal/domain"
 )
 
@@ -294,8 +295,35 @@ func TestCaptureDiscardRetainsCanonicalHistoryUntilBoundRestore(t *testing.T) {
 		t.Fatal(err)
 	}
 	appendDiscardFixtureTurn(t, source, "root", "after", 23, "05")
-	runDiscardFixtureWorker(t, f)
+	output, workerErr := runInitialPublicationWorker(t, f)
 	final := f.ledger(t)
+	settled, statusErr := store.CaptureControl(ctx, id)
+	canonicalInput := int64(-1)
+	for _, owner := range final.Sessions {
+		if owner.ID == "root" && len(owner.Invocations) == 1 {
+			canonicalInput = owner.Invocations[0].Tokens.Input
+		}
+	}
+	if workerErr != nil || statusErr != nil || settled.State != capture.CaptureControlActive || settled.CoveragePending || canonicalInput != 59 {
+		progress, progressErr := store.CaptureRestoreProgress(ctx)
+		workers, workerStatusErr := capture.WorkerStatus(store.CoordinationDirectory())
+		rows, listErr := store.List(ctx)
+		owners := make(map[string]string, len(rows))
+		proofs := make(map[string]capture.CaptureRestoreOwnerProgress)
+		for _, owner := range rows {
+			var sourceInput int64
+			for _, fact := range owner.Snapshot {
+				for _, invocation := range fact.Invocations {
+					sourceInput += invocation.Tokens.Input
+				}
+			}
+			owners[owner.Identity.SessionID] = fmt.Sprintf("%s %s input=%d %s", owner.State, owner.ProjectProof, sourceInput, owner.Detail)
+			if proof, ok := progress[id].Owners[capture.IdentityKey(owner.Identity)]; ok {
+				proofs[owner.Identity.SessionID] = proof
+			}
+		}
+		t.Fatalf("bound restore worker did not settle at 59 input tokens: got=%d capture=%+v (%v); owners=%v (%v); receipts=%v (%v); worker=%+v (%v)\n%v\n%s", canonicalInput, settled, statusErr, owners, listErr, proofs, progressErr, workers, workerStatusErr, workerErr, output)
+	}
 	assertCaptureRootInput(t, final, 59)
 	if final.TicketID == nil || *final.TicketID != initialPublicationTicket || len(final.Sessions) != 4 {
 		t.Fatalf("restoration changed the canonical ticket or owner set: %+v", final)
@@ -493,8 +521,10 @@ func reconcileDiscardFixture(t *testing.T, store *capture.Store, f captureGenera
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := context.Background()
+	user := git.GetGitUserInDirContext(ctx, f.project)
 	for attempt := 0; attempt < 6; attempt++ {
-		result, err := store.Reconcile(context.Background(), ticket, "fixture", 32, 64<<20, cfg.Generation.Metrics)
+		result, err := store.Reconcile(ctx, ticket, user, 32, 64<<20, cfg.Generation.Metrics)
 		if !errors.Is(err, capture.ErrCaptureLifecycleChanged) {
 			if err != nil {
 				t.Fatal(err)
