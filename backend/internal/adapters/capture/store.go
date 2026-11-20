@@ -777,27 +777,17 @@ func (s *Store) bindVerified(ctx context.Context, r domain.CaptureRegistration, 
 	if bound == "" {
 		return r, errors.New("binding requires explicit ticket ID")
 	}
-	if s.project != "" && r.Identity.Source == domain.SourceCodex && r.TranscriptPath == "" {
-		var path string
-		var err error
-		if budget == nil {
-			path, err = discoverExactCaptureRollout(s.configuration, r.Identity.Store, r.Identity.SessionID)
-		} else {
-			path, err = codex.DiscoverExactRolloutPathWithBudget(r.Identity.Store, r.Identity.SessionID, budget)
-		}
-		if err != nil {
-			return r, fmt.Errorf("%w: binding source identity unavailable; minimal registration retained: %w", ErrBindingProofPending, err)
-		}
-		r.TranscriptPath = path
-	}
+	path := r.TranscriptPath
 	if s.project != "" {
-		if err := validateOwnerSource(ctx, s.project, r, s.configuration, false, budget); err != nil {
+		path, err = s.verifyBindingSource(ctx, r, budget)
+		if err != nil {
 			return r, fmt.Errorf("%w: binding source/project verification failed; minimal registration retained: %w", ErrBindingProofPending, err)
 		}
 	}
 	if err := ctx.Err(); err != nil {
 		return r, err
 	}
+	r.TranscriptPath = path
 	r.ProjectDirectory = s.project
 	r.ProjectProof = domain.CaptureProjectVerified
 	r.TicketID = bound

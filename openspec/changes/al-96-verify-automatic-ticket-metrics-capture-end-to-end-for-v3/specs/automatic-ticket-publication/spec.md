@@ -32,6 +32,11 @@ Capture SHALL collect source-backed metrics for native sessions in capture-enabl
 - **WHEN** the verified native session binds to an explicit ticket ID, title and conventional type
 - **THEN** the same pending file gains the ticket metadata and retains previously collected facts, including descendants whose native parentage is verified. If publication has no eligible destination, the status reports that the ticket is awaiting a destination or shows the specific blocking condition.
 
+#### Scenario: Codex archives a session before ticket binding
+
+- **WHEN** an authorized request binds a Codex session whose registered rollout path is missing because Codex archived it
+- **THEN** capture can use the archived rollout after verifying the exact native session and project. It stores the verified path with the accepted binding. If source verification fails, capture retains the pending facts and leaves the binding unresolved.
+
 #### Scenario: Pending snapshot is visible in Git
 
 - **WHEN** the worker creates or refreshes a pending snapshot

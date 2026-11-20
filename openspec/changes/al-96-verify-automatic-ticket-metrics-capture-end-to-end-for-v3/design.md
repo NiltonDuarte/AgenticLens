@@ -81,6 +81,10 @@ The registry coder owns capture state, reconciliation and child discovery under 
 
 Verify interrupted and repeated operations, stale writers, delayed descendants, missing sources, portable canonical history and exact staged Git entries. On the installed Codex and OpenCode candidates, compare the restored root and descendant facts against independent source records for activity before, during and after discard. Exercise the Codex agent route under workspace-write and run the integrated `make` gate.
 
+### Codex archives a session before binding
+
+Four verified AL-96 review sessions stayed pending after Codex archived their rollouts. The user requested the fix with “conserte o bug”. The shared binding path must recover a missing registered path through bounded exact-owner discovery, prove source and project before accepting the binding, and persist the recovered path with that binding. Preserve exact request checks, authority for already-bound history and retained facts on failure. The coder owns the binding implementation and the tester owns the archive regression fixtures. Focused review covers binding authority, recovery, and the regression assertions. Publication and destination selection retain their earlier verification.
+
 ### Original first-publication scope and verification
 
 The AL-96 conversation established that the worker owns first ledger creation and directed that manual `generate` be avoided. This supersedes using manual first publication as the setup bridge for this work. The gate starts at an empty selected destination and records binding, first commit and completion refresh as separate observations. Existing ledger reads, explicit manual recovery for other work and established source ownership remain available.

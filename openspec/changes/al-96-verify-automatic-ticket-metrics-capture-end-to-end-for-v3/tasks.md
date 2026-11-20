@@ -30,6 +30,11 @@ Use the [design](design.md) for approval and the [delta spec](specs/automatic-ti
 - [x] **Tester and reviewers** · Exercise native work before, during and after discard. Verify suppression after restart or resume and exact recovery without double counting. Cover missing source history and review the discard status contract for AL-97.
 - [x] **Orchestrator** · Verify the integrated candidate and record results alongside the earlier delivery.
 
+## Bind an archived Codex session
+
+- [ ] **Coder and tester** · Recover an exact archived rollout when its registered path is missing. Verify operator and inbox binding, durable path recovery, and refusal when source proof fails.
+- [ ] **Reviewers and orchestrator** · Verify binding authority and the archive regression, then run integrated checks and record the tested revision.
+
 ## Workflow follow-up
 
 Archive only after verified delivery. Reconcile roadmap status separately.

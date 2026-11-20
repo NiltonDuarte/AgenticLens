@@ -194,8 +194,18 @@ func TestCodexDestinationInboxAuthenticatesPurposeTicketAndRevision(t *testing.T
 	if got, _ := envelope(filepath.Join(inbox, slotName(freshRequest))); got.Version != 2 || got.Purpose != bindingWithDestination {
 		t.Fatalf("initial binding with destination did not use its own v2 purpose: %+v", got)
 	}
+	// Codex can archive a completed session before the worker consumes its
+	// authenticated response. The accepted row must point at the archive.
+	archive := filepath.Join(home, "archived_sessions")
+	if err := os.Mkdir(archive, 0700); err != nil {
+		t.Fatal(err)
+	}
+	archived := filepath.Join(archive, filepath.Base(fresh.TranscriptPath))
+	if err := os.Rename(fresh.TranscriptPath, archived); err != nil {
+		t.Fatal(err)
+	}
 	consume(fresh, 1, "")
-	if after := lookup(freshID); after.TicketID != ticket.ID || after.PublicationDestination != target || after.DestinationRevision != 0 {
+	if after := lookup(freshID); after.TicketID != ticket.ID || after.PublicationDestination != target || after.DestinationRevision != 0 || after.TranscriptPath != archived {
 		t.Fatalf("initial explicit hint and binding were not recorded together: %+v", after)
 	}
 

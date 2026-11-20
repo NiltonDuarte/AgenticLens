@@ -3,6 +3,8 @@ package capture_test
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,6 +15,90 @@ import (
 	"agenticlens/internal/adapters/capture"
 	"agenticlens/internal/domain"
 )
+
+func TestBindArchivedUnboundCodex(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		want string
+	}{
+		{name: "exact project"},
+		{name: "foreign project", want: "conflicts with configured project"},
+		{name: "ambiguous owner", want: "ambiguous rollout paths"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			project, err := filepath.EvalSymlinks(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			captureProjectConfig(t, project, "ArchivedBindingFixture")
+			s, err := capture.OpenProject(t.TempDir(), project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := s.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			home, active, archive := archivedRolloutFixture(t)
+			path := filepath.Join(active, "root.jsonl")
+			archived := filepath.Join(archive, filepath.Base(path))
+			writeSource := func(path, cwd string) {
+				t.Helper()
+				body := fmt.Sprintf(`{"type":"session_meta","payload":{"id":"root","cwd":%q,"timestamp":"2026-01-01T00:00:00Z"}}`+"\n"+
+					`{"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"fixture","turn_id":"turn"}}`+"\n"+
+					`{"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"thread_id":"root","turn_id":"turn","usage":{"input_tokens":17}}}`+"\n", cwd)
+				if err := os.WriteFile(path, []byte(body), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			writeSource(path, project)
+			if _, err := capture.ReceiveCodex(ctx, s, capture.HookInput{SessionID: "root", Event: "SessionStart", TranscriptPath: path}, home, "/native", s.CoordinationDirectory()); err != nil {
+				t.Fatal(err)
+			}
+			observed, err := s.Reconcile(ctx, "", "tester", 16, fixtureByteBudget, fixtureGenerationPolicy())
+			if err != nil {
+				t.Fatal(err)
+			}
+			before := archivedFixtureOwner(t, observed, "root")
+			if before.TicketID != "" || before.ProjectProof != domain.CaptureProjectVerified || before.TranscriptPath != path || len(before.Snapshot) != 1 {
+				t.Fatal("fixture must have a verified unbound capture at its original path")
+			}
+			if err := os.Rename(path, archived); err != nil {
+				t.Fatal(err)
+			}
+			switch tc.name {
+			case "foreign project":
+				writeSource(archived, t.TempDir())
+			case "ambiguous owner":
+				writeSource(filepath.Join(archive, "copy.jsonl"), project)
+			}
+			bound, bindErr := s.Bind(ctx, before.Identity, "TEST-100", before.Request)
+			rows, err := s.List(ctx)
+			if err != nil || len(rows) != 1 {
+				t.Fatalf("expected one persisted registration: got %d, err=%v", len(rows), err)
+			}
+			if tc.want != "" {
+				if !errors.Is(bindErr, capture.ErrBindingProofPending) || !strings.Contains(bindErr.Error(), tc.want) {
+					t.Fatalf("binding rejected without checking the archive: want %q, got %v", tc.want, bindErr)
+				}
+				if !reflect.DeepEqual(rows[0], before) {
+					t.Fatal("rejected archive changed the persisted registration or captured facts")
+				}
+				return
+			}
+			if bindErr != nil {
+				t.Fatalf("late binding did not recover the archived source: %v", bindErr)
+			}
+			if bound.Identity != before.Identity || bound.TicketID != "TEST-100" || bound.TranscriptPath != archived ||
+				bound.Binding != "explicit_agent_response" || bound.BindingAcceptedAt == "" || !reflect.DeepEqual(rows[0], bound) ||
+				!reflect.DeepEqual(before.Snapshot, bound.Snapshot) {
+				t.Fatal("binding did not persist the verified archived path and preserve captured facts")
+			}
+		})
+	}
+}
 
 func TestReconcileArchivedBoundCodexChildPreservesParent(t *testing.T) {
 	for _, sourceParent := range []string{"parent", "conflicting-parent"} {
