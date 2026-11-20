@@ -91,6 +91,12 @@ func DiscoverWorkspacePublicationLocations(cfg domain.ProjectConfig) ([]Workspac
 // Completeness describes enumeration, independently of rejected individual ledgers.
 // Only a complete enumeration can establish uniqueness or absence without selection.
 func discoverWorkspaceLocations(cfg domain.ProjectConfig, retainDirectory bool) ([]WorkspaceLocation, []domain.WorkspaceDiagnostic, bool) {
+	return discoverWorkspaceLocationsWithMarkers(cfg, retainDirectory, false)
+}
+
+// Recovery may observe a marker in a directory whose public ledger is
+// unavailable. Its identity is established later from exact private evidence.
+func discoverWorkspaceLocationsWithMarkers(cfg domain.ProjectConfig, retainDirectory, includeMarked bool) ([]WorkspaceLocation, []domain.WorkspaceDiagnostic, bool) {
 	found := map[string]WorkspaceLocation{}
 	rejected := map[string]bool{}
 	diagnostics := []domain.WorkspaceDiagnostic{}
@@ -153,8 +159,14 @@ func discoverWorkspaceLocations(cfg domain.ProjectConfig, retainDirectory bool) 
 			}
 			visited++
 			ledger := filepath.Join(actual, "agentic_metrics.json")
-			if fi, e := os.Lstat(ledger); e == nil {
-				if !fi.Mode().IsRegular() {
+			fi, e := os.Lstat(ledger)
+			if includeMarked && errors.Is(e, os.ErrNotExist) {
+				if _, markerErr := os.Lstat(journalPath(ledger)); !errors.Is(markerErr, os.ErrNotExist) {
+					e = markerErr
+				}
+			}
+			if e == nil {
+				if fi != nil && !fi.Mode().IsRegular() {
 					reject(ledger, fmt.Errorf("ledger must be a regular file"))
 				} else {
 					artifacts := root.Artifacts
@@ -170,7 +182,7 @@ func discoverWorkspaceLocations(cfg domain.ProjectConfig, retainDirectory bool) 
 					} else if retainDirectory {
 						root, err := candidate.retainPublicationDirectory()
 						if err == nil {
-							_, err = selectedLedgerExists(root, candidate.LedgerPath, false)
+							_, err = selectedLedgerExists(root, candidate.LedgerPath, fi == nil)
 						}
 						if err != nil {
 							add(ledger, errors.Join(err, candidate.Close()))
@@ -432,7 +444,13 @@ func RecordedLedgerTicket(data []byte) (string, error) {
 	return ticket, nil
 }
 
-func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, maintenance, retainDirectory bool, ownedRecoveryPath string) (resolved WorkspaceLocation, reference *os.File, err error) {
+type pendingWorkspaceIdentity func(WorkspaceLocation) (string, os.FileInfo, *os.File, error)
+
+func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, maintenance, retainDirectory bool, ownedRecoveryPath string) (WorkspaceLocation, *os.File, error) {
+	return resolveTicketLocationWithPendingProbe(cfg, ticket, selection, maintenance, retainDirectory, ownedRecoveryPath, nil)
+}
+
+func resolveTicketLocationWithPendingProbe(cfg domain.ProjectConfig, ticket, selection string, maintenance, retainDirectory bool, ownedRecoveryPath string, probe pendingWorkspaceIdentity) (resolved WorkspaceLocation, reference *os.File, err error) {
 	var retained *os.File
 	defer func() {
 		if err != nil && retained != nil {
@@ -443,7 +461,7 @@ func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, m
 	if strings.TrimSpace(ticket) == "" && !(maintenance && selection != "") {
 		return WorkspaceLocation{}, nil, fmt.Errorf("ticket ID must be nonblank")
 	}
-	locations, diagnostics, incomplete := discoverWorkspaceLocations(cfg, false)
+	locations, diagnostics, incomplete := discoverWorkspaceLocationsWithMarkers(cfg, false, probe != nil)
 	matches := []WorkspaceLocation{}
 	selected := ""
 	if selection != "" {
@@ -489,6 +507,8 @@ func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, m
 			ledger, location.directoryInfo, candidateReference, err = readWorkspaceLedgerSnapshot(location, cfg, retainDirectory)
 			if err == nil {
 				identity = *ledger.TicketID
+			} else if probe != nil && errors.Is(err, ErrPublicationPending) {
+				identity, location.directoryInfo, candidateReference, err = probe(location)
 			}
 		}
 		if err != nil {

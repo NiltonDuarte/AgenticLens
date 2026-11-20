@@ -224,7 +224,7 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 	if err != nil {
 		return 0, err
 	}
-	parents, err := s.List(ctx)
+	parents, err := s.ListActive(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -480,6 +480,22 @@ func (s *Store) clearExactCodexStart(ctx context.Context, parent domain.CaptureR
 // parents. An unresolved hint after a complete sweep remains diagnostic
 // evidence without keeping a terminal worker alive.
 func (s *Store) CodexChildDiscoveryCursors(ctx context.Context) (map[string]string, error) {
+	controls, err := s.captureControls(ctx, nil, "", CaptureControlDiscarded, false)
+	if err != nil {
+		return nil, err
+	}
+	var eligible map[string]bool
+	if len(controls) != 0 {
+		registrations, err := s.List(ctx)
+		if err != nil {
+			return nil, err
+		}
+		active, _ := activeCaptureRows(s.project, registrations, controls)
+		eligible = make(map[string]bool, len(active))
+		for _, row := range active {
+			eligible[IdentityKey(row.Identity)] = true
+		}
+	}
 	rows, err := s.db.QueryContext(ctx, `
 SELECT r.identity,coalesce(c.path,'')
 FROM registrations r
@@ -496,6 +512,9 @@ WHERE r.worktree_id=? AND r.source='codex' AND (c.path IS NULL OR c.path<>'')
 		var parent, cursor string
 		if err := rows.Scan(&parent, &cursor); err != nil {
 			return nil, err
+		}
+		if eligible != nil && !eligible[parent] {
+			continue
 		}
 		cursors[parent] = cursor
 	}

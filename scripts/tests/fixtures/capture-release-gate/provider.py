@@ -15,7 +15,9 @@ TITLE = "Native capture release gate"
 MODEL = "gpt-5.4"
 EDIT = "printf 'def answer():\\n    return 42\\n' > fixture.py"
 VERIFY = "python3 -B -c 'from fixture import answer; assert answer() == 42'"
-STAGES = r"AL96:(ROOT|UNBOUND|BIND|DESTINATION|RETRY|IMPLEMENT|VERIFY|NESTED|RESUME|UNRELATED)"
+STAGES = (r"AL96:(ROOT|UNBOUND|BIND|DESTINATION|RETRY|IMPLEMENT|VERIFY|NESTED|RESUME|UNRELATED|"
+          r"DISCARD|DURING_DISCARD|RESTORE|DISCARD_BOUND|DURING_DISCARD_BOUND|RESTORE_BOUND)\b")
+CONTROL_REQUEST = r"[0-9a-f]{64}\.(0|[1-9][0-9]*)\.[0-9a-f]{64}"
 
 
 def strings(value):
@@ -52,6 +54,7 @@ class FixtureModel:
         self.project = str(project)
         self.destination = str(destination)
         self.binding_engine = ""
+        self.capture_control = None
         self.nested_supported = None
         self.release = Event()
         self.holding = Event()
@@ -122,6 +125,8 @@ class FixtureModel:
             return Action("done")
         if stage in ("VERIFY", "NESTED", "RESUME"):
             return shell("verify", VERIFY) if "verify" not in prior else Action("done")
+        if stage.startswith("DURING_DISCARD"):
+            return shell("verify", VERIFY) if "verify" not in prior else Action("done")
         if stage == "RETRY":
             command = f"mkdir -- {shlex.quote(self.destination)} && {VERIFY}"
             return shell("create", command) if "create" not in prior else Action("hold_repair")
@@ -135,6 +140,16 @@ class FixtureModel:
                     or command[1:5] != ["capture", "submit-binding", "--repo", self.project]):
                 raise ValueError("Unexpected executable or project in Codex capture challenge")
             return command
+
+        if stage in ("DISCARD", "RESTORE", "DISCARD_BOUND", "RESTORE_BOUND"):
+            if "control" in prior:
+                return Action("done")
+            action = stage.split("_")[0].lower()
+            command, request = self.native_control("\n".join(strings(request)), action, codex)
+            if codex:
+                return shell("control", shlex.join(command))
+            return Action("control", "agenticlens_" + action,
+                          {"capture_id": self.capture_control[1], "request": request})
 
         if stage == "DESTINATION":
             if "destination" in prior:
@@ -182,6 +197,28 @@ class FixtureModel:
             return wait("waitverify", "verification")
         check_wait("waitverify")
         return Action("hold")
+
+    def native_control(self, body, action, codex):
+        root, key, revision, store = self.capture_control
+        prefix = f"To {action} this capture when the user directs it, "
+        if codex:
+            commands = re.findall(re.escape(prefix) + r"execute: ([^\r\n]+)", body)
+            for line in reversed(commands):
+                command = shlex.split(line)
+                if (len(command) != 15 or command[0] not in (self.manager, self.binding_engine)
+                        or command[1:5] != ["capture", "submit-binding", "--repo", self.project]
+                        or command[5:10] != ["--store", store, "--session-id", root, "--request"]
+                        or command[11:] != ["--capture-id", key, "--capture-action", action]):
+                    continue
+                request = re.fullmatch(CONTROL_REQUEST, command[10])
+                if request and int(request[1]) == revision:
+                    return command, None
+        else:
+            pattern = re.escape(prefix + f"call agenticlens_{action} with capture ID {key} and request ")
+            for request in reversed(list(re.finditer(pattern + "(" + CONTROL_REQUEST + r")(?![0-9A-Za-z.])", body))):
+                if int(request[2]) == revision:
+                    return None, request[1]
+        raise ValueError(f"{action} did not receive a native control challenge for the expected capture and revision")
 
     def begin(self):
         server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
@@ -234,6 +271,10 @@ class Handler(BaseHTTPRequestHandler):
                     if id_key is None:
                         raise ValueError(f"Unexpected Codex wait_agent schema keys: {list(properties)}")
                     action.args[id_key] = action.args.pop("ids")
+            if not codex and action.tool in ("agenticlens_discard", "agenticlens_restore") and not any(
+                tool.get("function", {}).get("name") == action.tool for tool in definitions
+            ):
+                raise ValueError("OpenCode did not offer the expected native capture control tool")
             stage = request_stage(request.get("input" if codex else "messages", []))
             call_id = f"call_al96_{stage.lower()}_{action.step}"
         except (ValueError, KeyError, StopIteration) as exc:

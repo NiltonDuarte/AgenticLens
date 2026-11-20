@@ -331,6 +331,138 @@ def exact_children(snapshot, root):
     return {row["id"]: row for row in snapshot["sessions"] if row["id"] != root}
 
 
+def native_turn(project, root, stage, processes):
+    turn, log = launch(project, stage, root)
+    processes.append(turn)
+    wait_success(turn, stage)
+    require(native_id(log) == root, f"{stage} ran in a different native session")
+
+
+def capture_status(project, root, key, ticket):
+    control = json.loads(project.capture("status", "--capture-id", key))
+    require((control.get("capture_id"), control.get("root_session_id"), control.get("source"),
+             control.get("ticket_id", "")) == (key, root, project.source, ticket),
+            "Local capture status changed its identity or binding")
+    return control
+
+
+def publication_boundary(project):
+    return max((row["sequence"] for row in publication_diagnostics(project.diagnostic_history())), default=0)
+
+
+def discard_cycle(project, model, root, key, path, processes, check_index, before, canonical=None):
+    bound = canonical is not None
+    suffix, ticket = ("_BOUND", TICKET) if bound else ("", "")
+    tool = "exec_command" if project.source == "codex" else "bash"
+    active = capture_status(project, root, key, ticket)
+    require(active["state"] == "active", "Capture was not active before native discard")
+    model.capture_control = root, key, active["revision"], str(project.codex_home)
+    native_turn(project, root, "DISCARD" + suffix, processes)
+
+    def discarded_status():
+        control = capture_status(project, root, key, ticket)
+        if control["state"] == "discarded" and not control["cleanup_pending"]:
+            require(control["revision"] > active["revision"], "Native discard did not advance the capture revision")
+            require(not path.exists(), "Discard acknowledged cleanup with its pending snapshot still present")
+            return control
+        return None
+
+    discarded = event_until(time.monotonic() + SETTLE_SECONDS, discarded_status,
+                            "Native discard did not settle in local capture status")
+    check_index("native discard" + suffix)
+    if bound:
+        ledger = json.loads(project.ledger.read_bytes())
+        require(ledger["ticket_id"] == TICKET and exact_children(ledger, root) == exact_children(canonical[0], root),
+                "Discard lost recorded canonical owners or their accepted child facts")
+        require(any(row["id"] == root for row in ledger["sessions"]), "Discard removed the canonical root")
+        retained = project.ledger.read_bytes(), project.summary.read_bytes()
+    else:
+        no_canonical_output(project)
+        retained = None
+
+    before_during = tree(source_owners(project), root)
+    require(before_during[root].latest_completion > before[root].latest_completion,
+            "The native discard turn added no completed activity")
+    request_before = status(project)["publication"]["Generation"]
+    pending_state = "awaiting_destination" if bound else "awaiting_ticket"
+    pending_before = max((row["sequence"] for row in pending_diagnostics(project, root, path, pending_state)), default=0)
+    publication_before = publication_boundary(project)
+
+    def assert_suppressed_files():
+        require(not path.exists(), "The worker recreated a discarded pending snapshot")
+        if bound:
+            require((project.ledger.read_bytes(), project.summary.read_bytes()) == retained,
+                    "Activity during discard changed the accepted canonical files")
+        else:
+            require(not project.ledger.exists() and not project.summary.exists(),
+                    "Activity during discard produced a canonical artifact")
+
+    during_started = time.time()
+    during_turn, during_log = launch(project, "DURING_DISCARD" + suffix, root)
+    processes.append(during_turn)
+
+    def during_turn_finished():
+        assert_suppressed_files()
+        return during_turn.poll() is not None
+
+    event_until(time.monotonic() + 45, during_turn_finished, "Native work during discard did not complete")
+    wait_success(during_turn, "work during discard" + suffix)
+    require(native_id(during_log) == root, "Native work during discard ran in a different session")
+    during = tree(source_owners(project), root)
+    require(during[root].latest_completion > before_during[root].latest_completion and during[root].open == 0
+            and during[root].tools[tool] == before_during[root].tools[tool] + 1,
+            "Native work during discard did not complete an extra verified tool call")
+
+    def worker_observed_discarded_activity():
+        control = capture_status(project, root, key, ticket)
+        require(control == discarded, "Resumed native activity changed the discarded disposition")
+        assert_suppressed_files()
+        require(not any(row["sequence"] > pending_before for row in pending_diagnostics(project, root, path, pending_state)),
+                "The worker reported a refresh of the discarded pending snapshot")
+        if bound:
+            require(not any(row["outcome"] == "committed" and row["sequence"] > publication_before
+                            for row in publication_diagnostics(project.diagnostic_history())),
+                    "The worker reported a canonical commit while the capture was discarded")
+        else:
+            no_canonical_output(project)
+        check_index("resumed activity during discard" + suffix)
+        publication = status(project)["publication"]
+        if (publication["Generation"] > request_before and publication["Acknowledged"] == publication["Generation"]
+                and publication["RequestedAt"] >= int(during_started * 1000)):
+            return publication["Acknowledged"]
+        return None
+
+    observed_generation = event_until(time.monotonic() + SETTLE_SECONDS, worker_observed_discarded_activity,
+                                      "The worker did not process a native wake from activity during discard")
+    model.capture_control = root, key, discarded["revision"], str(project.codex_home)
+    native_turn(project, root, "RESTORE" + suffix, processes)
+    restored_source = tree(source_owners(project), root)
+    require(restored_source[root].latest_completion > during[root].latest_completion and restored_source[root].open == 0,
+            "The native restore turn added no completed activity")
+
+    def restored_status():
+        control = capture_status(project, root, key, ticket)
+        return control if (control["revision"] > discarded["revision"] and control["state"] == "active"
+                           and not control["coverage_pending"] and not control["cleanup_pending"]) else None
+
+    restored = event_until(time.monotonic() + SETTLE_SECONDS, restored_status,
+                           "Native restore did not finish reconciliation for the exact capture")
+    check_index("native restore" + suffix)
+    return restored_source, {
+        "discard_revision": discarded["revision"], "restored_revision": restored["revision"],
+        "processed_discarded_generation": observed_generation,
+        "pending_remained_absent_during_discard": True,
+        "native_completion_before_discard": before[root].latest_completion,
+        "native_completion_during_discard": during[root].latest_completion,
+        "native_completion_after_restore": restored_source[root].latest_completion,
+        "native_tool_calls_before_discard": sum(before[root].tools.values()),
+        "native_tool_calls_during_discard": sum(during[root].tools.values()),
+        "native_tool_calls_after_restore": sum(restored_source[root].tools.values()),
+        "pending_publication_boundary": pending_before,
+        "canonical_publication_boundary": publication_before,
+    }
+
+
 def resume_and_check(project, root, unrelated, earlier, earlier_commit, earlier_source, processes, evidence):
     continued, continued_log = launch(project, "RESUME", root)
     processes.append(continued)
@@ -398,13 +530,17 @@ def exercise_pending(project, model, evidence, unrelated, processes, index_befor
         "awaiting_ticket": check_complete_pending(unbound, project.source, expected, root, unrelated),
     })
 
-    def native_turn(stage):
-        turn, turn_log = launch(project, stage, root)
-        processes.append(turn)
-        wait_success(turn, stage)
-        require(native_id(turn_log) == root, f"{stage} ran in a different native session")
+    restored_source, unbound_discard = discard_cycle(project, model, root, key, path, processes, check_index, expected)
+    target = restored_source[root].latest_completion
+    restored, restored_record = wait_completed_pending(
+        project, root, path, "awaiting_ticket", target, unbound_discard["pending_publication_boundary"],
+    )
+    require(exact_children(restored, root) == exact_children(unbound, root),
+            "Unbound restoration changed previously accepted child facts")
+    unbound_discard["restored_snapshot"] = check_complete_pending(restored, project.source, restored_source, root, unrelated)
+    evidence["unbound_discard_restore"] = unbound_discard
 
-    native_turn("BIND")
+    native_turn(project, root, "BIND", processes)
     registration = event_until(time.monotonic() + FIRST_SECONDS, lambda: verified_registration(project, root),
                                "Resumed native root did not verify its binding")
     require((registration["ticket_id"], registration["ticket_title"], registration["ticket_type"]) == (TICKET, TITLE, "fix")
@@ -413,7 +549,7 @@ def exercise_pending(project, model, evidence, unrelated, processes, index_befor
     bound_target = bound_source[root].latest_completion
     require(bound_target > target, "Native binding turn has no completion")
     bound, bound_record = wait_completed_pending(
-        project, root, path, "awaiting_destination", bound_target, unbound_record["sequence"],
+        project, root, path, "awaiting_destination", bound_target, restored_record["sequence"],
     )
     check_index("binding without a destination")
     require(exact_children(bound, root) == exact_children(unbound, root),
@@ -422,7 +558,7 @@ def exercise_pending(project, model, evidence, unrelated, processes, index_befor
     evidence["pending_binding_observed_at"] = bound_record["observed_at"]
     evidence["awaiting_destination"] = check_complete_pending(bound, project.source, bound_source, root, unrelated)
 
-    native_turn("DESTINATION")
+    native_turn(project, root, "DESTINATION", processes)
 
     def destination_registered():
         row = verified_registration(project, root)
@@ -460,7 +596,7 @@ def exercise_pending(project, model, evidence, unrelated, processes, index_befor
             "The resumed root did not create its indicated directory")
     assert_complete_coverage(first_commit, first_reconciliation, birth_source)
     evidence["first_publication"] = check_birth(
-        birth, project.source, birth_source, root, unrelated, first_commit, first_reconciliation, unbound,
+        birth, project.source, birth_source, root, unrelated, first_commit, first_reconciliation, restored,
     )
 
     def promoted():
@@ -494,7 +630,20 @@ def exercise_pending(project, model, evidence, unrelated, processes, index_befor
         "published_tree": {row["id"]: row.get("parent_id") for row in terminal[0]["sessions"]},
         "after_completion": check_complete(terminal, project.source, published_source, root, unrelated),
     })
-    resume_and_check(project, root, unrelated, terminal, terminal_commit, published_source, processes, evidence)
+    restored_source, bound_discard = discard_cycle(
+        project, model, root, key, path, processes, check_index, published_source, terminal,
+    )
+    restored, restored_commit, restored_reconciliation, _ = wait_terminal_snapshot(
+        project, root, restored_source[root].latest_completion, bound_discard["canonical_publication_boundary"],
+        terminal[0]["updated_at"],
+    )
+    assert_complete_coverage(restored_commit, restored_reconciliation, restored_source)
+    require(exact_children(restored[0], root) == exact_children(terminal[0], root),
+            "Bound restoration changed previously accepted child facts")
+    bound_discard["restored_publication"] = check_complete(restored, project.source, restored_source, root, unrelated)
+    bound_discard["canonical_bytes_preserved_during_discard"] = True
+    evidence["bound_discard_restore"] = bound_discard
+    resume_and_check(project, root, unrelated, restored, restored_commit, restored_source, processes, evidence)
     check_index("subsequent canonical refresh")
     evidence["git_index_unchanged"] = True
     require(not path.exists(), "An already published root reappeared in pending capture")

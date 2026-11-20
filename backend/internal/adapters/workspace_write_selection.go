@@ -54,6 +54,41 @@ func SelectWorkspacePublication(cfg domain.ProjectConfig, ticket, path string) (
 	return location, nil
 }
 
+// SelectWorkspacePublicationRecovery uses normal configured uniqueness checks.
+// A pending directory can contribute its existing ticket only when its prior
+// ledger is verified in the exact private journal under directory ownership.
+// The caller retains the normalized ticket lease and revalidates the selected
+// journal under final ownership before writing.
+func SelectWorkspacePublicationRecovery(ctx context.Context, cfg domain.ProjectConfig, project, ticket string, paths func(string) ([]string, error), protection *capture.ProtectedPublication) (WorkspaceLocation, error) {
+	probe := func(location WorkspaceLocation) (identity string, info os.FileInfo, reference *os.File, returnErr error) {
+		root, err := location.retainPublicationDirectory()
+		if err != nil {
+			return "", nil, nil, err
+		}
+		defer func() { returnErr = errors.Join(returnErr, location.Close()) }()
+		members, err := paths(location.LedgerPath)
+		if err != nil {
+			return "", nil, nil, err
+		}
+		owner, err := location.AcquirePublicationWithProtection(ctx, project, protection)
+		if err != nil {
+			return "", nil, nil, err
+		}
+		defer func() { returnErr = errors.Join(returnErr, owner.Close()) }()
+		identity, err = ownedOrdinaryPublicationPriorTicket(location.LedgerPath, members)
+		if err != nil {
+			return "", nil, nil, err
+		}
+		reference, err = root.Open(".")
+		return identity, location.directoryInfo, reference, err
+	}
+	location, ref, err := resolveTicketLocationWithPendingProbe(cfg, ticket, "", false, true, "", probe)
+	if err == nil {
+		location.reference = ref
+	}
+	return location, err
+}
+
 // Close releases the observation. A successfully acquired publication keeps
 // its own directory handles and remains valid after this method returns.
 func (location *WorkspaceLocation) Close() error {

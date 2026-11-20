@@ -23,6 +23,13 @@ Use the [design](design.md) for approval and the [delta spec](specs/automatic-ti
 - [x] **Orchestrator** · Verify the revised candidate and record the results alongside the previous delivery.
 - [x] **Planning** · Record the optional, advisory Git pre-commit hook and its installation choice in [AL-97](../../../alspaces/plan/to-do/AL-97%20warn%20about%20staged%20pending%20capture%20snapshots.md).
 
+## Reversible discard and restore
+
+- [x] **Planner** · Define CLI selection, registry state and worker coordination contracts. Assign writable-path owners and record the approved implementation scope.
+- [x] **Coder and tester** · Implement discard, discoverable status and restore with full native history. Verify unbound and bound captures, repeat operations, cleanup retry, concurrent worker passes, delayed descendants, and preservation of Git and canonical ledgers.
+- [ ] **Tester and reviewers** · Exercise native work before, during and after discard. Verify suppression after restart or resume and exact recovery without double counting. Cover missing source history and review the discard status contract for AL-97.
+- [ ] **Orchestrator** · Verify the integrated candidate and record results alongside the earlier delivery.
+
 ## Workflow follow-up
 
 Archive only after verified delivery. Reconcile roadmap status separately.

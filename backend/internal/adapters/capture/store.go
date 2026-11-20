@@ -577,7 +577,7 @@ func (s *Store) change(ctx context.Context, id domain.CaptureIdentity, schedule 
 		return domain.CaptureRegistration{}, normalizeErr
 	}
 	var row domain.CaptureRegistration
-	err := s.withRegistrationWrite(ctx, func(conn *sql.Conn) error {
+	err := s.withLifecycleRegistrationWrite(ctx, func(conn *sql.Conn) error {
 		var err error
 		row, err = s.changeRegistration(ctx, conn, id, change)
 		if err == nil && schedule {
@@ -660,6 +660,7 @@ func (s *Store) changeRegistration(ctx context.Context, conn *sql.Conn, id domai
 	if len(matched) > 1 {
 		return r, errors.New("duplicate actual-store session registrations; explicit local repair required before binding or refresh")
 	}
+	previous := r
 	r.Identity = id
 
 	if r.Request == "" {
@@ -688,7 +689,21 @@ func (s *Store) changeRegistration(ctx context.Context, conn *sql.Conn, id domai
 	if err != nil {
 		return r, err
 	}
+	if s.project != "" && captureMembershipChanged(previous, r) {
+		if _, err = conn.ExecContext(ctx, `UPDATE capture_lifecycle_revision SET revision=revision+1 WHERE worktree_id=? AND EXISTS (SELECT 1 FROM capture_controls WHERE worktree_id=? AND state IN (?,?))`, s.worktreeID, s.worktreeID, CaptureControlDiscarded, CaptureControlRestoring); err != nil {
+			return r, err
+		}
+	}
 	return r, nil
+}
+
+func captureMembershipChanged(previous, current domain.CaptureRegistration) bool {
+	if previous.ProjectDirectory == "" && current.ProjectDirectory == "" {
+		return false
+	}
+	return previous.Identity != current.Identity || previous.ProjectProof != current.ProjectProof ||
+		previous.ProjectDirectory != current.ProjectDirectory || previous.ParentID != current.ParentID ||
+		previous.TicketID != current.TicketID || previous.Binding != current.Binding
 }
 
 // AcceptedRegistrationError reports a post-handoff failure without pretending

@@ -22,4 +22,9 @@ CREATE TABLE IF NOT EXISTS publication_request(worktree_id INTEGER NOT NULL,sing
 CREATE TABLE IF NOT EXISTS publication_cursor(worktree_id INTEGER NOT NULL,singleton INTEGER NOT NULL CHECK(singleton=1),ticket TEXT NOT NULL,PRIMARY KEY(worktree_id,singleton));
 CREATE TABLE IF NOT EXISTS recovery_phase(worktree_id INTEGER NOT NULL,ticket TEXT,phase INTEGER NOT NULL,PRIMARY KEY(worktree_id,ticket));
 CREATE TABLE IF NOT EXISTS reconcile_cursor(worktree_id INTEGER NOT NULL,ticket TEXT,identity TEXT NOT NULL,PRIMARY KEY(worktree_id,ticket));
+CREATE TABLE IF NOT EXISTS capture_controls(worktree_id INTEGER NOT NULL,capture_id TEXT NOT NULL,source TEXT NOT NULL,store TEXT NOT NULL,session_id TEXT NOT NULL,state TEXT NOT NULL,revision INTEGER NOT NULL,cleanup_pending INTEGER NOT NULL,requested_at TEXT NOT NULL,PRIMARY KEY(worktree_id,capture_id));
+CREATE TABLE IF NOT EXISTS capture_lifecycle_revision(worktree_id INTEGER PRIMARY KEY,revision INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS capture_restore_reads(worktree_id INTEGER NOT NULL,capture_id TEXT NOT NULL,revision INTEGER NOT NULL,identity TEXT NOT NULL,PRIMARY KEY(worktree_id,capture_id,revision,identity));
+CREATE TABLE IF NOT EXISTS capture_restore_progress(worktree_id INTEGER NOT NULL,capture_id TEXT NOT NULL,revision INTEGER NOT NULL,identity TEXT NOT NULL,discovery INTEGER NOT NULL,position TEXT NOT NULL,complete INTEGER NOT NULL,source_read INTEGER NOT NULL,PRIMARY KEY(worktree_id,capture_id,revision,identity));
+CREATE TABLE IF NOT EXISTS capture_control_credentials(worktree_id INTEGER NOT NULL,identity TEXT NOT NULL,seed BLOB NOT NULL,PRIMARY KEY(worktree_id,identity));
 ` + coordinationSchema + diagnosticSchema

@@ -37,6 +37,30 @@ Capture SHALL collect source-backed metrics for native sessions in capture-enabl
 - **WHEN** the worker creates or refreshes a pending snapshot
 - **THEN** the file contains portable metrics available for review and normal Git versioning. The worker SHALL NOT stage the file in Git. Canonical ledger discovery excludes pending snapshots, and operational state, journals and raw source records remain private.
 
+### Requirement: Discard and restore a pending capture
+
+AgenticLens SHALL let a user or agent discard and restore a capture by its stable identity, with or without a ticket binding.
+
+#### Scenario: Discard a pending capture
+
+- **WHEN** the user or agent discards a pending capture
+- **THEN** AgenticLens records the discard durably in local capture state and removes the pending snapshot. Discard leaves the Git index, native source records and existing canonical ledgers intact.
+
+#### Scenario: A discarded session continues or resumes
+
+- **WHEN** callbacks arrive, the worker restarts, the session resumes, or a descendant of the discarded root is discovered
+- **THEN** the worker suppresses pending snapshot recreation and canonical publication for that capture until restore. Capture status can list the discarded root and the identity used to restore it.
+
+#### Scenario: Restore after activity during discard
+
+- **WHEN** the user or agent restores the discarded capture
+- **THEN** the worker reconciles all available native history for the same root and its verified descendants, including activity before and during discard, without counting facts twice. The original capture identity and verified binding are retained. The restored capture follows normal pending or publication rules, and missing native history is reported as incomplete coverage.
+
+#### Scenario: Retry an interrupted discard or restore
+
+- **WHEN** either operation is repeated or interrupted while the worker is processing the same capture
+- **THEN** recovery honors the durable capture state, retries any incomplete cleanup or reconciliation, and prevents a stale pass from undoing the latest operation.
+
 ### Requirement: Publish the first ledger after native ticket binding
 
 Automatic capture SHALL create the first canonical ledger at an explicitly selected, eligible destination after verified ticket binding and source collection.

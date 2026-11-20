@@ -15,6 +15,8 @@ The automatic worker can collect bound sessions but resolves its output by looki
 - Verify the packaged candidate through the supported setup path with real Codex and OpenCode sessions. Check first publication, exact session coverage, later refresh and the time it takes for provisional duration to settle after native completion.
 - Fix supported-path defects exposed by the gate and rerun it on the corrected package before stable v3 delivery. Record manual-only combinations separately.
 
+- Let users and agents discard an ad hoc pending capture and restore the same capture with its full available native history, including the discarded period.
+
 ## Capabilities
 
 Add `automatic-ticket-publication` for first publication, lifecycle refresh and native release evidence. It applies to the existing [OpenCode capture capability](../../specs/global-opencode-capture/spec.md) and installed Codex user hooks.

@@ -173,6 +173,16 @@ func receiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 		if err != nil {
 			return HookOutput{}, err
 		}
+		control, err := s.codexCaptureControlPrompt(ctx, binary, r)
+		if err != nil {
+			return HookOutput{}, err
+		}
+		if control != "" {
+			if prompt != "" {
+				prompt += "\n"
+			}
+			prompt += control
+		}
 		if prompt != "" {
 			return HookOutput{Context: &HookContext{Event: input.Event, Context: prompt}}, nil
 		}
@@ -197,6 +207,23 @@ func receiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 		return HookOutput{Context: &HookContext{Event: input.Event, Context: prompt + projectBindingArgument(s)}}, nil
 	}
 	return HookOutput{}, nil
+}
+
+func (s *Store) codexCaptureControlPrompt(ctx context.Context, binary string, row domain.CaptureRegistration) (string, error) {
+	if !controlInboxEligible(row) {
+		return "", nil
+	}
+	installed, err := CodexInboxInstalled(row.Identity.Store)
+	if err != nil || !installed {
+		return "", err
+	}
+	offer, err := s.CaptureControlInvitation(ctx, row)
+	if err != nil || offer == nil {
+		return "", err
+	}
+	quote := QuoteArgument
+	return fmt.Sprintf("To %s this capture when the user directs it, execute: %s capture submit-binding --repo %s --store %s --session-id %s --request %s --capture-id %s --capture-action %s\nThe native worker verifies the request and processes the capture operation.",
+		offer.Action, quote(binary), quote(s.project), quote(row.Identity.Store), quote(row.Identity.SessionID), quote(offer.Request), quote(offer.CaptureID), offer.Action), nil
 }
 
 func codexInboxPrompt(project, binary string, r domain.CaptureRegistration) (string, error) {

@@ -2,13 +2,14 @@
 
 import unittest
 from collections import Counter
+from shlex import join
 
 from gate import birth_commit, first_completion_commit
 from oracle import (
     Owner, artifact_matches_commit, capture_id, check_birth, check_complete, check_held, check_pending_identity,
     check_rollup, snapshot_matches_pending_record, unix_time,
 )
-from provider import TICKET, TITLE
+from provider import FixtureModel, TICKET, TITLE, request_stage
 
 
 def snapshot(rendered):
@@ -70,6 +71,45 @@ class TicketDurationOracleTest(unittest.TestCase):
         summary = "- **Active Agent Duration:** 0m 7s (recorded duration)"
         with self.assertRaisesRegex(RuntimeError, "published duplicate tool rows"):
             check_complete((ledger, summary), "opencode", {"root": owner}, "root", "unrelated")
+
+
+class NativeCaptureControlOracleTest(unittest.TestCase):
+    def setUp(self):
+        self.model = FixtureModel("/fixture/bin/manager", "/fixture/project", "/fixture/destination")
+        self.model.binding_engine = "/fixture/bin/engine"
+        self.key = "a" * 64
+        self.store = "/fixture/codex stores"
+        self.model.capture_control = "verified-root", self.key, 7, self.store
+        self.receipt = f"{'b' * 64}.7.{'c' * 64}"
+
+    def test_bound_stage_does_not_reuse_unbound_tool_history(self):
+        self.assertEqual(request_stage([
+            {"role": "user", "content": "AL96:DISCARD"},
+            {"role": "user", "content": "AL96:DISCARD_BOUND"},
+        ]), "DISCARD_BOUND")
+
+    def test_codex_control_rejects_a_stale_or_different_root_invitation(self):
+        def invitation(root, receipt):
+            command = [self.model.binding_engine, "capture", "submit-binding", "--repo", self.model.project,
+                       "--store", self.store, "--session-id", root, "--request", receipt,
+                       "--capture-id", self.key, "--capture-action", "discard"]
+            return "To discard this capture when the user directs it, execute: " + join(command)
+
+        stale = invitation("verified-root", self.receipt.replace(".7.", ".6."))
+        outsider = invitation("another-root", self.receipt)
+        with self.assertRaisesRegex(ValueError, "expected capture and revision"):
+            self.model.native_control(stale + "\n" + outsider, "discard", True)
+        current = invitation("verified-root", self.receipt)
+        command, _ = self.model.native_control("\n".join((stale, current, outsider)), "discard", True)
+        self.assertEqual(command[6:11], [self.store, "--session-id", "verified-root", "--request", self.receipt])
+
+    def test_opencode_control_rejects_a_stale_or_malformed_receipt(self):
+        invitation = f"To restore this capture when the user directs it, call agenticlens_restore with capture ID {self.key} and request "
+        stale = invitation + self.receipt.replace(".7.", ".6.")
+        with self.assertRaisesRegex(ValueError, "expected capture and revision"):
+            self.model.native_control(stale + "\n" + invitation + self.receipt + "0", "restore", False)
+        _, receipt = self.model.native_control(stale + "\n" + invitation + self.receipt, "restore", False)
+        self.assertEqual(receipt, self.receipt)
 
 
 class PendingSnapshotOracleTest(unittest.TestCase):

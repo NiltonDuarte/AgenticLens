@@ -313,10 +313,16 @@ supports_websockets = false
         args.append({
             "ROOT": f"AL96:ROOT Bind ticket {TICKET} with title 'Native capture release gate' and type fix. Delegate the fixture edit and verification, then wait.",
             "UNBOUND": "AL96:UNBOUND Delegate the fixture edit and verification, then wait. I don't have a ticket or a destination yet.",
+            "DISCARD": "AL96:DISCARD Discard this pending capture using the native capture control.",
+            "DURING_DISCARD": "AL96:DURING_DISCARD Verify the edited fixture.py while this capture is discarded.",
+            "RESTORE": "AL96:RESTORE Restore this capture using the native capture control.",
             "BIND": f"AL96:BIND Assign this existing session to {TICKET} with title 'Native capture release gate' and type fix. The destination has not been created yet.",
             "DESTINATION": f"AL96:DESTINATION Indicate {self.workspace} for the bound ticket. Leave creation of the directory to the next turn.",
             "RETRY": f"AL96:RETRY Create {self.workspace} and verify the edited fixture.py. Keep the previously indicated destination.",
             "UNRELATED": "AL96:UNRELATED Read fixture.py. This session has no ticket.",
+            "DISCARD_BOUND": "AL96:DISCARD_BOUND Discard this bound capture using the native capture control.",
+            "DURING_DISCARD_BOUND": "AL96:DURING_DISCARD_BOUND Verify the edited fixture.py while the bound capture is discarded.",
+            "RESTORE_BOUND": "AL96:RESTORE_BOUND Restore this bound capture using the native capture control.",
             "RESUME": "AL96:RESUME Verify the edited fixture.py on this normal continuation.",
         }[stage])
         return args

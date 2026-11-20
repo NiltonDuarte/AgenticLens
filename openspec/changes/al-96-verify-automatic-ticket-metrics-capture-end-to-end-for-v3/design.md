@@ -54,6 +54,31 @@ Independent review covers native request authentication and worker scheduling, p
 - **Native transport coder** owns `backend/internal/domain/capture.go`, `backend/cmd/agentic-lens/{capture.go,capture_submit_binding.go}`, `backend/internal/adapters/capture/{binding_inbox.go,user_plugin.ts}` and the manager's native binding wake or OpenCode handoff implementation where needed. This lane persists authenticated hints and exposes native request and status feedback.
 - **Core coder** owns `backend/cmd/agentic-lens/{capture_worker.go,main.go,generation_publication.go}`, `backend/internal/adapters/{pending_snapshot.go,publication_set.go,workspace_write_selection.go}` and the relevant reconciliation and child-discovery paths. The focused tester owns new core and transport verification files outside the configuration lane. The native tester owns the packaged gate runner and fixtures. The orchestrator owns roadmap, integration and delivery evidence.
 
+### Reversible discard of ad hoc capture
+
+The user requested an explicit way to remove pending snapshots from exploratory or housekeeping sessions and confirmed that restore includes all available native history, including the discarded period. Existing native-gate evidence covers the previous lifecycle. The new transitions require separate verification.
+
+- Expose discard and restore through the capture CLI for users and agents. Keep the discard state in the local capture registry, keyed by verified root identity, and apply it to source-verified descendants, including those discovered later. Surface the stable capture ID for discarded entries in status or diagnostics.
+- Persist the discard before removing the pending snapshot. Coordinate cleanup and both publication paths with worker reconciliation so an in-flight pass cannot recreate the snapshot after discard. Make repeat operations safe. Preserve native sources, accepted canonical history and the Git index.
+- Restore reactivates the same capture and queues a full native reconciliation starting at the beginning of available history. Preserve verified ticket metadata and use normal destination admission. Report incomplete source coverage when records are unavailable.
+- Give the future AL-97 hook a way to check local discard status by capture ID and suppress warnings for stale staged copies of discarded snapshots. Hook installation and implementation remain in AL-97.
+
+#### Approved implementation contract
+
+The user explicitly approved implementing this extension with “aprovado, continue” at `b7931a28`. Earlier approval and evidence cover the previous lifecycle.
+
+- `capture discard --repo <root> --capture-id <id>` and `capture restore --repo <root> --capture-id <id>` select one verified root in the local worktree registry. Reject unknown or ambiguous mutation targets. `capture status --capture-id <id>` provides an exact, read-only result for AL-97, including pending cleanup or reconciliation and explicit errors when local state is unavailable. The native agent route uses the existing trusted handoff and sandbox grants.
+- Persist a monotonic operation revision and durable worker request before removing the pending snapshot. Check the revision under the directory lease through cleanup or commit, including first publication and refresh of existing ledgers. Acknowledge discard only after any incompatible writer already admitted under the old engine has finished or retired. Preserve exact publication recovery and let eligible roots on the same ticket continue independently.
+- Restore rereads available native history through the existing bounded source adapters and reopens verified child discovery. Treat a child explicitly bound to another ticket as an independent capture. Keep the original capture identity, verified binding and accepted canonical owners, and expose incomplete source coverage on restore.
+
+Accepted ancestry continues to suppress descendants during a temporary proof failure. Restore checks only its own group. An independently bound root can finish when its upstream native parent is absent from the local registry. A new restore request or a durable advance in that group's source reads or descendant discovery gives the bounded worker scheduler another rotation so idle retirement cannot strand unfinished work. Repeated reads and failed probes do not renew that rotation.
+
+OpenCode records native parentage before issuing a control invitation and signs controls with a private key separate from binding credentials. A recorded legacy worker group must retire before the worker can acknowledge a control. For an interrupted ordinary refresh, use the prior ledger in the exact private journal to verify the ticket under configured workspace ownership.
+
+The registry coder owns capture state, reconciliation and child discovery under `backend/internal/adapters/capture/`. The publication coder owns `pending_snapshot.go`, `capture_worker.go`, `generation_publication.go`, `main.go` and any publication transaction changes. The CLI and transport coder owns capture commands, status and explicitly assigned native handoff files. Assign shared files to one coder before edits. The focused tester owns Go tests and the native tester owns the packaged runner and fixtures.
+
+Verify interrupted and repeated operations, stale writers, delayed descendants, missing sources, portable canonical history and exact staged Git entries. On the installed Codex and OpenCode candidates, compare the restored root and descendant facts against independent source records for activity before, during and after discard. Exercise the Codex agent route under workspace-write and run the integrated `make` gate.
+
 ### Original first-publication scope and verification
 
 The AL-96 conversation established that the worker owns first ledger creation and directed that manual `generate` be avoided. This supersedes using manual first publication as the setup bridge for this work. The gate starts at an empty selected destination and records binding, first commit and completion refresh as separate observations. Existing ledger reads, explicit manual recovery for other work and established source ownership remain available.

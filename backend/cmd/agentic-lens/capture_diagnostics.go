@@ -33,6 +33,8 @@ type captureInspection struct {
 	Publication                    capture.PublicationRequest    `json:"publication"`
 	Worker                         capture.WorkerProgress        `json:"worker"`
 	Registrations                  []domain.CaptureRegistration  `json:"registrations"`
+	CaptureControls                []capture.CaptureControl      `json:"capture_controls,omitempty"`
+	CaptureControlsContinuation    bool                          `json:"capture_controls_continuation,omitempty"`
 	Installation                   []capture.Manifest            `json:"installation"`
 	Diagnostics                    []domain.CaptureDiagnostic    `json:"diagnostics"`
 	Verification                   domain.CaptureHealth          `json:"verification"`
@@ -105,6 +107,12 @@ func inspectCapture(ctx context.Context, command, directory, project string, pol
 		view.Registrations, view.Continuation, err = store.ListBounded(ctx, policy.MaxSessions)
 		if err != nil {
 			return err
+		}
+		if command == "status" {
+			view.CaptureControls, view.CaptureControlsContinuation, err = store.ListCaptureControls(ctx, policy.MaxSessions)
+			if err != nil {
+				return fmt.Errorf("read local capture control state: %w", err)
+			}
 		}
 		if policy.MaxSessions > (int(^uint(0)>>1)-8)/10 {
 			return errors.New("capture diagnostic session budget is too large")
@@ -184,6 +192,9 @@ func inspectCapture(ctx context.Context, command, directory, project string, pol
 	}
 	if view.Continuation {
 		view.Limits = append(view.Limits, "Registration inspection reached max_sessions; output is partial. Increase the explicit capture session budget for a complete local inspection.")
+	}
+	if view.CaptureControlsContinuation {
+		view.Limits = append(view.Limits, "Capture control inspection reached max_sessions. Use capture status --capture-id for exact lookup.")
 	}
 	if caller.Store != "" {
 		caller.Store, err = capture.CanonicalStore(caller.Store)

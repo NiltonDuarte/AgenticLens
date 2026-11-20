@@ -142,7 +142,7 @@ func TestCapturePendingCleanupPreservesReplacementAfterObservation(t *testing.T)
 		if err != nil {
 			t.Fatal(err)
 		}
-		entries, err := adapters.SyncPendingSnapshots(ctx, pending, f.project, result, true, nil, nil)
+		entries, err := adapters.SyncPendingSnapshots(ctx, store, pending, f.project, result, true, nil, nil)
 		if err != nil || len(entries) != 1 {
 			t.Fatalf("observe pending root: %v (%d entries)", err, len(entries))
 		}
@@ -158,7 +158,11 @@ func TestCapturePendingCleanupPreservesReplacementAfterObservation(t *testing.T)
 	if bytes.Equal(before, after) {
 		t.Fatal("test did not capture a source-derived replacement")
 	}
-	err = adapters.RemovePromotedPendingSnapshots(ctx, pending, f.project, older, nil, nil)
+	revision, err := store.CaptureLifecycleRevision(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = adapters.RemovePromotedPendingSnapshots(ctx, store, revision, pending, f.project, older, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "pending snapshot changed during promotion") {
 		t.Fatalf("cleanup did not reject an obsolete observation: %v", err)
 	}

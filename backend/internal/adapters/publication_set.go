@@ -1,7 +1,6 @@
 package adapters
 
 import (
-	"agenticlens/internal/adapters/capture"
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
@@ -13,6 +12,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"agenticlens/internal/adapters/capture"
+	"agenticlens/internal/domain"
 )
 
 const publicationLimit = 128 << 20
@@ -464,20 +466,58 @@ func validateInitialPublicationRecovery(ticket, ledger string, paths []string, s
 	if !selection.Closed() {
 		return true, errors.New("pending first publication does not match its prepared selection")
 	}
+	prior, err := ordinaryPublicationPriorTicket(journal)
+	if err != nil {
+		return true, err
+	}
+	if prior != ticket {
+		return true, errors.New("pending refresh backup belongs to a different ticket")
+	}
+	return true, nil
+}
+
+func ordinaryPublicationPriorTicket(journal publicationJournal) (string, error) {
+	if journal.Initial != nil {
+		return "", errors.New("pending first publication requires its exact prepared selection")
+	}
 	for _, artifact := range journal.Artifacts {
 		if artifact.Path != journal.Ledger || !artifact.Present {
 			continue
 		}
 		prior, err := DecodeExistingFactLedger(artifact.Data)
 		if err != nil {
-			return true, fmt.Errorf("pending refresh backup is not an accepted ledger: %w", err)
+			return "", fmt.Errorf("pending refresh backup is not an accepted ledger: %w", err)
 		}
-		if prior.TicketID == nil || *prior.TicketID != ticket {
-			return true, errors.New("pending refresh backup belongs to a different ticket")
+		if prior.TicketID == nil || strings.TrimSpace(*prior.TicketID) == "" {
+			return "", errors.New("pending refresh backup has no accepted ticket identity")
 		}
-		return true, nil
+		return *prior.TicketID, nil
 	}
-	return true, errors.New("pending refresh does not contain a prior accepted ledger")
+	return "", errors.New("pending refresh does not contain a prior accepted ledger")
+}
+
+func ownedOrdinaryPublicationPriorTicket(ledger string, paths []string) (string, error) {
+	journal, _, present, err := loadRecovery(ledger, paths)
+	if err != nil {
+		return "", err
+	}
+	if !present {
+		return "", errors.New("pending refresh changed before recovery admission; resolve and retry")
+	}
+	return ordinaryPublicationPriorTicket(journal)
+}
+
+// ValidateOrdinaryPublicationRecovery rechecks a prior ledger's recorded
+// ticket in the pending private journal under current output ownership.
+func ValidateOrdinaryPublicationRecovery(cfg domain.ProjectConfig, ticket, ledger string, paths []string) error {
+	prior, err := ownedOrdinaryPublicationPriorTicket(ledger, paths)
+	if err != nil {
+		return err
+	}
+	if !sameTicket(prior, ticket, cfg.Ticket) {
+		return errors.New("pending refresh backup belongs to a different ticket")
+	}
+	return nil
 }
 
 func RecoverPublication(ledger string, authorizedPaths []string) (bool, error) {

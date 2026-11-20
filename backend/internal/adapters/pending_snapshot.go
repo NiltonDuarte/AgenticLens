@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -42,11 +41,6 @@ type PendingSnapshotEntry struct {
 	digest   [sha256.Size]byte
 }
 
-func pendingCaptureID(source domain.SourceHarness, root string) string {
-	digest := sha256.Sum256([]byte(string(source) + "\x00" + root))
-	return hex.EncodeToString(digest[:])
-}
-
 func pendingSnapshotState(ticket string) string {
 	if ticket == "" {
 		return "awaiting_ticket"
@@ -59,7 +53,7 @@ func (snapshot PendingSnapshot) validate() error {
 	if err := root.Validate(); err != nil {
 		return err
 	}
-	if snapshot.Version != 1 || snapshot.CaptureID != pendingCaptureID(snapshot.Source, snapshot.RootSessionID) || snapshot.State != pendingSnapshotState(snapshot.TicketID) {
+	if snapshot.Version != 1 || snapshot.CaptureID != capture.StableCaptureID(snapshot.Source, snapshot.RootSessionID) || snapshot.State != pendingSnapshotState(snapshot.TicketID) {
 		return errors.New("invalid pending snapshot version, identity or state")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, snapshot.SourceCutoff); err != nil {
@@ -324,7 +318,7 @@ func pendingOwnerGroups(project string, result capture.ReconcileResult) (map[str
 		if root.Identity.SessionID == "" {
 			continue
 		}
-		id := pendingCaptureID(root.Identity.Source, root.Identity.SessionID)
+		id := capture.StableCaptureID(root.Identity.Source, root.Identity.SessionID)
 		assignments[key] = id
 		group := groups[id]
 		if group == nil {
@@ -342,7 +336,7 @@ func pendingOwnerGroups(project string, result capture.ReconcileResult) (map[str
 
 // SyncPendingSnapshots writes exact project-verified roots and their native
 // descendants. Accepted unavailable owners survive refresh within their group.
-func SyncPendingSnapshots(ctx context.Context, directory, project string, result capture.ReconcileResult, create bool, protection *capture.ProtectedPublication, canonical *capture.PublicationLock) (entries []PendingSnapshotEntry, returnErr error) {
+func SyncPendingSnapshots(ctx context.Context, store *capture.Store, directory, project string, result capture.ReconcileResult, create bool, protection *capture.ProtectedPublication, canonical *capture.PublicationLock) (entries []PendingSnapshotEntry, returnErr error) {
 	groups, rows, assignments := pendingOwnerGroups(project, result)
 	if len(groups) == 0 {
 		return nil, nil
@@ -355,6 +349,16 @@ func SyncPendingSnapshots(ctx context.Context, directory, project string, result
 	if err := verifyPendingConfiguration(project, directory); err != nil {
 		return nil, err
 	}
+	returnErr = store.WithCaptureLifecycle(ctx, result.LifecycleRevision, func() error {
+		var err error
+		entries, err = syncPendingOwnerGroups(ctx, directory, admission.owner, result, groups, rows, assignments, create)
+		return err
+	})
+	return entries, returnErr
+}
+
+func syncPendingOwnerGroups(ctx context.Context, directory string, owner *capture.PublicationLock, result capture.ReconcileResult, groups map[string]*pendingOwnerGroup, rows map[string]domain.CaptureRegistration, assignments map[string]string, create bool) ([]PendingSnapshotEntry, error) {
+	entries := make([]PendingSnapshotEntry, 0, len(groups))
 	title, kind, _ := domain.CaptureTicketMetadata(result.Registrations, result.TicketID)
 	refreshed := map[string]bool{}
 	for _, session := range result.RefreshedSessions {
@@ -371,7 +375,7 @@ func SyncPendingSnapshots(ctx context.Context, directory, project string, result
 		}
 		group := groups[id]
 		path := filepath.Join(directory, id+".json")
-		if err := checkPendingDirectory(admission.owner, path); err != nil {
+		if err := checkPendingDirectory(owner, path); err != nil {
 			return entries, err
 		}
 		prior, previous, err := readPendingSnapshot(path)
@@ -472,7 +476,7 @@ func pendingConnectedFacts(root string, facts map[string]domain.SessionFact) []S
 
 // RemovePromotedPendingSnapshots runs only after the normal canonical transaction
 // commits. An independently replaced snapshot survives until the next promotion.
-func RemovePromotedPendingSnapshots(ctx context.Context, directory, project string, entries []PendingSnapshotEntry, protection *capture.ProtectedPublication, canonical *capture.PublicationLock) (returnErr error) {
+func RemovePromotedPendingSnapshots(ctx context.Context, store *capture.Store, revision int64, directory, project string, entries []PendingSnapshotEntry, protection *capture.ProtectedPublication, canonical *capture.PublicationLock) (returnErr error) {
 	if len(entries) == 0 {
 		return nil
 	}
@@ -484,12 +488,18 @@ func RemovePromotedPendingSnapshots(ctx context.Context, directory, project stri
 	if err := verifyPendingConfiguration(project, directory); err != nil {
 		return err
 	}
+	return store.WithCaptureLifecycle(ctx, revision, func() error {
+		return removePromotedPendingEntries(ctx, directory, admission.owner, entries)
+	})
+}
+
+func removePromotedPendingEntries(ctx context.Context, directory string, owner *capture.PublicationLock, entries []PendingSnapshotEntry) error {
 	for _, entry := range entries {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 		path := filepath.Join(directory, entry.Snapshot.CaptureID+".json")
-		if err := checkPendingDirectory(admission.owner, path); err != nil {
+		if err := checkPendingDirectory(owner, path); err != nil {
 			return err
 		}
 		_, body, err := readPendingSnapshot(path)
@@ -510,4 +520,45 @@ func RemovePromotedPendingSnapshots(ctx context.Context, directory, project stri
 		}
 	}
 	return nil
+}
+
+// RemoveDiscardedPendingSnapshot acknowledges cleanup only for the current
+// discard revision and the validated artifact for its native root.
+func RemoveDiscardedPendingSnapshot(ctx context.Context, store *capture.Store, directory, project string, discard capture.CaptureControl, protection *capture.ProtectedPublication) (returnErr error) {
+	if err := discard.Root.Validate(); err != nil {
+		return err
+	}
+	if discard.CaptureID != capture.StableCaptureID(discard.Root.Source, discard.Root.SessionID) {
+		return errors.New("discarded snapshot does not match the verified capture identity")
+	}
+	admission, err := pendingDirectoryLease(ctx, directory, project, false, protection, nil)
+	if err != nil {
+		return err
+	}
+	if admission != nil {
+		defer func() { returnErr = errors.Join(returnErr, admission.Close()) }()
+	}
+	if err := verifyPendingConfiguration(project, directory); err != nil {
+		return err
+	}
+	return store.WithDiscardedCapture(ctx, discard.CaptureID, discard.Revision, func() error {
+		if admission == nil {
+			return nil
+		}
+		path := filepath.Join(directory, discard.CaptureID+".json")
+		if err := checkPendingDirectory(admission.owner, path); err != nil {
+			return err
+		}
+		snapshot, body, err := readPendingSnapshot(path)
+		if err != nil || body == nil {
+			return err
+		}
+		if snapshot.Source != discard.Root.Source || snapshot.RootSessionID != discard.Root.SessionID {
+			return errors.New("pending snapshot belongs to a different capture")
+		}
+		if err := capture.RemovePublicationFile(path); err != nil {
+			return err
+		}
+		return syncDirectory(directory)
+	})
 }

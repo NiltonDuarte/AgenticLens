@@ -13,7 +13,7 @@ type SessionContext = {
 };
 
 function notify(
-  operation: "receive" | "request" | "bind",
+  operation: "receive" | "request" | "bind" | "discard" | "restore",
   context: SessionContext,
   args: string[] = [],
 ): Promise<string> {
@@ -65,6 +65,15 @@ function bindingFeedback(body: string): string[] {
   if ("destination_request" in response && typeof response.destination_request === "string" && response.destination_request &&
     "ticket_id" in response && typeof response.ticket_id === "string" && response.ticket_id) {
     lines.push(`AgenticLens has verified this session's ticket binding. If first publication still needs a destination and the directory is known, call agenticlens_destination with the bound ticket ${response.ticket_id}, exact existing directory and request ${response.destination_request}. The native worker validates the indicated directory before publication.`);
+  }
+  if ("capture_control" in response) {
+    const control = response.capture_control;
+    if (typeof control === "object" && control !== null &&
+      "action" in control && (control.action === "discard" || control.action === "restore") &&
+      "capture_id" in control && typeof control.capture_id === "string" &&
+      "request" in control && typeof control.request === "string") {
+      lines.push(`To ${control.action} this capture when the user directs it, call agenticlens_${control.action} with capture ID ${control.capture_id} and request ${control.request}`);
+    }
   }
   return lines;
 }
@@ -131,6 +140,20 @@ export const AgenticLensCapture: Plugin = async ({ client, directory }) => ({
       execute: async ({ ticket, destination, request }, context) => notify("bind",
         { cwd: context.directory, session_id: context.sessionID, hook_event_name: "agent_binding" },
         ["--destination-only", "--ticket-id", ticket, "--destination-directory", destination, "--request", request]),
+    }),
+    agenticlens_discard: tool({
+      description: "Discard this verified capture using the native capture control request.",
+      args: { capture_id: tool.schema.string(), request: tool.schema.string() },
+      execute: async ({ capture_id, request }, context) => notify("discard",
+        { cwd: context.directory, session_id: context.sessionID, hook_event_name: "agent_capture_control" },
+        ["--capture-id", capture_id, "--request", request]),
+    }),
+    agenticlens_restore: tool({
+      description: "Restore this verified capture and reconcile its available native history.",
+      args: { capture_id: tool.schema.string(), request: tool.schema.string() },
+      execute: async ({ capture_id, request }, context) => notify("restore",
+        { cwd: context.directory, session_id: context.sessionID, hook_event_name: "agent_capture_control" },
+        ["--capture-id", capture_id, "--request", request]),
     }),
   },
 });

@@ -211,28 +211,9 @@ func submitCodexResponse(project, home, sessionID, credential string, envelope b
 	if b, err := hex.DecodeString(credential); err != nil || len(b) != sha256.Size {
 		return errors.New("invalid Codex binding request")
 	}
-	var err error
-	project, err = ProjectDirectory(project)
+	dir, project, id, err := openCodexSubmission(project, id)
 	if err != nil {
 		return err
-	}
-	id, err = canonicalIdentity(id)
-	if err != nil {
-		return err
-	}
-	installed, err := CodexInboxInstalled(id.Store)
-	if err != nil {
-		return err
-	}
-	if !installed {
-		return errors.New("Codex binding inbox is not installed")
-	}
-	if err := CheckInstalledInboxIsolation(project, id.Store); err != nil {
-		return err
-	}
-	dir, err := openBindingInbox(id.Store)
-	if err != nil {
-		return fmt.Errorf("open Codex binding inbox; verify the installed integration: %w", err)
 	}
 	defer unix.Close(dir)
 	envelope.MAC = envelope.signature(credential, project, id)
@@ -240,6 +221,40 @@ func submitCodexResponse(project, home, sessionID, credential string, envelope b
 	if err != nil {
 		return err
 	}
+	slot := slotName(credential)
+	if envelope.Purpose == destinationIndication {
+		slot = destinationSlotName(credential)
+	}
+	return writeCodexInboxEntry(dir, slot, body)
+}
+
+func openCodexSubmission(project string, id domain.CaptureIdentity) (int, string, domain.CaptureIdentity, error) {
+	project, err := ProjectDirectory(project)
+	if err != nil {
+		return -1, "", id, err
+	}
+	id, err = canonicalIdentity(id)
+	if err != nil {
+		return -1, "", id, err
+	}
+	installed, err := CodexInboxInstalled(id.Store)
+	if err != nil {
+		return -1, "", id, err
+	}
+	if !installed {
+		return -1, "", id, errors.New("Codex binding inbox is not installed")
+	}
+	if err := CheckInstalledInboxIsolation(project, id.Store); err != nil {
+		return -1, "", id, err
+	}
+	dir, err := openBindingInbox(id.Store)
+	if err != nil {
+		return -1, "", id, fmt.Errorf("open Codex binding inbox; verify the installed integration: %w", err)
+	}
+	return dir, project, id, nil
+}
+
+func writeCodexInboxEntry(dir int, slot string, body []byte) error {
 	if len(body) > bindingEnvelopeLimit {
 		return errors.New("Codex binding envelope exceeds its size limit")
 	}
@@ -262,52 +277,56 @@ func submitCodexResponse(project, home, sessionID, credential string, envelope b
 	if err = errors.Join(err, f.Close()); err != nil {
 		return err
 	}
-	slot := slotName(credential)
-	if envelope.Purpose == destinationIndication {
-		slot = destinationSlotName(credential)
-	}
 	if err := unix.Renameat(dir, name, dir, slot); err != nil {
 		return err
 	}
 	return unix.Fsync(dir)
 }
 
-func readBindingEnvelope(dir int, name string, remaining *int64) (bindingEnvelope, error) {
-	var env bindingEnvelope
+func readCodexInboxEntry(dir int, name string, remaining *int64) ([]byte, error) {
 	var before unix.Stat_t
 	if err := unix.Fstatat(dir, name, &before, unix.AT_SYMLINK_NOFOLLOW); err != nil {
-		return env, err
+		return nil, err
 	}
 	if before.Mode&unix.S_IFMT != unix.S_IFREG || before.Nlink != 1 {
-		return env, errors.New("binding inbox entry must be a single-link bounded regular file")
+		return nil, errors.New("binding inbox entry must be a single-link bounded regular file")
 	}
 	fd, err := unix.Openat(dir, name, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return env, err
+		return nil, err
 	}
 	f := os.NewFile(uintptr(fd), name)
 	defer f.Close()
 	var st unix.Stat_t
 	if err := unix.Fstat(fd, &st); err != nil {
-		return env, err
+		return nil, err
 	}
 	if st.Dev != before.Dev || st.Ino != before.Ino || st.Mode&unix.S_IFMT != unix.S_IFREG || st.Nlink != 1 || st.Size <= 0 || st.Size > bindingEnvelopeLimit {
-		return env, errors.New("binding inbox entry must be a single-link bounded regular file")
+		return nil, errors.New("binding inbox entry must be a single-link bounded regular file")
 	}
 	if st.Size > *remaining {
-		return env, errBindingBudget
+		return nil, errBindingBudget
 	}
 	body, err := io.ReadAll(io.LimitReader(f, min(*remaining, bindingEnvelopeLimit)))
 	*remaining -= int64(len(body))
 	if err != nil {
-		return env, err
+		return nil, err
 	}
 	var after unix.Stat_t
 	if err := unix.Fstat(fd, &after); err != nil {
-		return env, err
+		return nil, err
 	}
 	if int64(len(body)) != st.Size || after.Size != st.Size {
-		return env, errors.New("binding inbox entry changed while reading")
+		return nil, errors.New("binding inbox entry changed while reading")
+	}
+	return body, nil
+}
+
+func readBindingEnvelope(dir int, name string, remaining *int64) (bindingEnvelope, error) {
+	var env bindingEnvelope
+	body, err := readCodexInboxEntry(dir, name, remaining)
+	if err != nil {
+		return env, err
 	}
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	decoder.DisallowUnknownFields()
@@ -405,7 +424,7 @@ func (s *Store) applyVerifiedDestination(ctx context.Context, r domain.CaptureRe
 
 func eligibleCodexBinding(home string, r domain.CaptureRegistration) bool {
 	return r.Identity.Source == domain.SourceCodex && r.Identity.Store == home && r.CallbackObservedAt != "" &&
-		(needsExplicitBinding(r) || NativePublicationDestinationRequest(r) != "")
+		(needsExplicitBinding(r) || NativePublicationDestinationRequest(r) != "" || controlInboxEligible(r))
 }
 
 // ConsumeCodexBindings probes only challenge-derived entries belonging to this
@@ -473,6 +492,9 @@ func (s *Store) consumeCodexBindings(ctx context.Context, home string, rows []do
 	var firstErr error
 	visited := 0
 	budget := codex.DiscoveryBudget{Context: ctx, MaxSessions: maxSessions, MaxSourceBytes: maxBytes}
+	// Control envelopes have their own bounded inbox allowance. A retained
+	// stale control must not reduce the established source proof budget.
+	controlRemaining := maxBytes
 	for visited < min(len(rows), maxSessions) && budget.SourceBytesRead < maxBytes {
 		if err := ctx.Err(); err != nil {
 			return accepted, visited, errors.Join(firstErr, err)
@@ -495,54 +517,72 @@ func (s *Store) consumeCodexBindings(ctx context.Context, home string, rows []do
 			}
 			defer unix.Close(dir)
 		}
-		credential := inboxCredential(s.project, r)
-		name := slotName(credential)
-		destination := !needsExplicitBinding(r)
-		if destination {
-			credential = NativePublicationDestinationRequest(r)
-			name = destinationSlotName(credential)
-		}
-		sharedAllowance := budget.SourceBytesRead > 0 || budget.SessionsRead > 0
-		remaining := maxBytes - budget.SourceBytesRead
-		env, err := readBindingEnvelope(dir, name, &remaining)
-		budget.SourceBytesRead = maxBytes - remaining
-		if errors.Is(err, os.ErrNotExist) {
+		usedControlAllowance := controlRemaining < maxBytes
+		control, err := s.consumeCodexCaptureControl(ctx, dir, r, &controlRemaining)
+		retryFirst := usedControlAllowance && errors.Is(err, errBindingBudget)
+		if control {
+			accepted++
 			continue
 		}
 		if err == nil {
-			want := env.signature(credential, s.project, r.Identity)
-			if destination != (env.Purpose == destinationIndication) || !hmac.Equal([]byte(want), []byte(env.MAC)) {
-				err = errors.New("binding authentication failed")
-			}
-		}
-		if err == nil {
-			err = env.validate(s.configuration.Ticket)
-		}
-		if err == nil {
-			_, err = s.change(ctx, r.Identity, true, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-				if destination {
-					return s.applyVerifiedDestination(ctx, current, env.Ticket, credential, &budget)
-				}
-				if !needsExplicitBinding(current) || current.CallbackObservedAt == "" || inboxCredential(s.project, current) != credential {
-					return current, errors.New("binding request is no longer pending")
-				}
-				return s.bindTicketResponse(ctx, current, env.Ticket, &budget)
-			})
-			if err == nil {
+			sharedAllowance := budget.SourceBytesRead > 0 || budget.SessionsRead > 0
+			var acceptedBinding bool
+			acceptedBinding, err = s.consumeCodexBinding(ctx, dir, r, &budget, maxBytes)
+			retryFirst = sharedAllowance && (errors.Is(err, errBindingBudget) || errors.Is(err, codex.ErrDiscoveryBudget))
+			if acceptedBinding {
 				accepted++
-				// A completed registration rejects replays. Leave the slot in place:
-				// a replacement after our read belongs to its writer.
 			}
 		}
 		// A response that only exceeded the remainder gets first use of the
 		// next pass. One that exceeds a whole pass cannot starve later owners.
-		if sharedAllowance && (errors.Is(err, errBindingBudget) || errors.Is(err, codex.ErrDiscoveryBudget)) {
+		if retryFirst {
 			*cursor = index
 			return accepted, visited - 1, errors.Join(firstErr, err)
 		}
 		if err != nil && (firstErr == nil || (errors.Is(err, ErrBindingProofPending) && !errors.Is(firstErr, ErrBindingProofPending))) {
-			firstErr = errors.Join(firstErr, fmt.Errorf("Codex binding for session %s: %w", r.Identity.SessionID, err))
+			firstErr = errors.Join(firstErr, fmt.Errorf("Codex inbox for session %s: %w", r.Identity.SessionID, err))
 		}
 	}
 	return accepted, visited, firstErr
+}
+
+func (s *Store) consumeCodexBinding(ctx context.Context, dir int, row domain.CaptureRegistration, budget *codex.DiscoveryBudget, maxBytes int64) (bool, error) {
+	credential := inboxCredential(s.project, row)
+	name := slotName(credential)
+	destination := !needsExplicitBinding(row)
+	if destination {
+		credential = NativePublicationDestinationRequest(row)
+		if credential == "" {
+			return false, nil
+		}
+		name = destinationSlotName(credential)
+	}
+	remaining := maxBytes - budget.SourceBytesRead
+	env, err := readBindingEnvelope(dir, name, &remaining)
+	budget.SourceBytesRead = maxBytes - remaining
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	want := env.signature(credential, s.project, row.Identity)
+	if destination != (env.Purpose == destinationIndication) || !hmac.Equal([]byte(want), []byte(env.MAC)) {
+		return false, errors.New("binding authentication failed")
+	}
+	if err := env.validate(s.configuration.Ticket); err != nil {
+		return false, err
+	}
+	_, err = s.change(ctx, row.Identity, true, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+		if destination {
+			return s.applyVerifiedDestination(ctx, current, env.Ticket, credential, budget)
+		}
+		if !needsExplicitBinding(current) || current.CallbackObservedAt == "" || inboxCredential(s.project, current) != credential {
+			return current, errors.New("binding request is no longer pending")
+		}
+		return s.bindTicketResponse(ctx, current, env.Ticket, budget)
+	})
+	// A completed registration rejects replays. Leave the slot in place:
+	// a replacement after our read belongs to its writer.
+	return err == nil, err
 }

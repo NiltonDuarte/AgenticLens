@@ -21,6 +21,10 @@ import (
 const capturePublicationBusyExit = 75
 const capturePublicationBlockedExit = 76
 
+func acquireCaptureControlWorkerAdmission(state string) (func() error, error) {
+	return capture.AcquireWorkerControlAdmission(state)
+}
+
 func captureWorker(s *capture.Store, project, state string, policy domain.CaptureConfig, protectedHome string) (returnErr error) {
 	if err := policy.ValidateWorker(); err != nil {
 		return err
@@ -33,7 +37,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		defer cancel()
 		returnErr = errors.Join(returnErr, s.RecordDiagnostic(ctx, domain.CaptureDiagnostic{Phase: "worker", Outcome: "failed", Detail: "Native worker stopped before completing its pass. Accepted facts and pending generations remain recoverable; inspect capture diagnostics and retry capture reconcile."}))
 	}()
-	lock, err := capture.AcquireWorker(state)
+	lock, err := capture.AcquireLifecycleWorker(state)
 	if err != nil || lock == nil {
 		return err
 	}
@@ -92,6 +96,40 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	}
 	scan := previous.BindingScan
 	madeInboxProgress := false
+	restores, err := s.CaptureRestoreProgress(context.Background())
+	if err != nil {
+		return err
+	}
+	restorePasses := previous.RestorePasses
+	if len(restores) == 0 {
+		restorePasses = 0
+	}
+	progress := capture.WorkerProgress{
+		LifecycleProtocol: capture.WorkerLifecycleProtocol,
+		Executable:        binary,
+		Build:             domain.GetBuildInfo(),
+		PID:               os.Getpid(),
+	}
+	writeProgress := func(label, detail string, heartbeat, deadline, nextAttempt time.Time) error {
+		progress.BindingScan = scan
+		progress.State = label
+		progress.Detail = detail
+		progress.Heartbeat = heartbeat.UnixMilli()
+		progress.Deadline = deadline.UnixMilli()
+		progress.NextAttempt = nextAttempt.UnixMilli()
+		progress.RestorePasses = 0
+		return capture.WriteWorkerProgress(state, progress)
+	}
+	carryRestorePasses := func() error {
+		if restorePasses == 0 {
+			return nil
+		}
+		// Transfer only the remaining allowance so several finite owners can
+		// finish a scheduler rotation without restarting the stalled budget.
+		progress.RestorePasses = restorePasses
+		progress.BindingScan = scan
+		return capture.WriteWorkerProgress(state, progress)
+	}
 	retire := func() error {
 		// Disablement may race an earlier policy read and make the fence false.
 		// It stops this owner without a superseded diagnostic or successor.
@@ -103,6 +141,9 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			return err
 		}
 		if held {
+			if err := carryRestorePasses(); err != nil {
+				return err
+			}
 			if err := lock.Close(); err != nil {
 				return err
 			}
@@ -112,12 +153,12 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		if err != nil {
 			return err
 		}
-		rows, err := s.List(context.Background())
+		rows, err := s.ListActive(context.Background())
 		if err != nil {
 			return err
 		}
 		active, _ := captureWorkerActive(project, rows, policy.MaxSourceBytes)
-		if pending.Generation == pending.Acknowledged && !active && scan.Remaining == 0 && time.Now().UnixMilli() >= scan.RetryUntil {
+		if pending.Generation == pending.Acknowledged && !active && restorePasses == 0 && scan.Remaining == 0 && time.Now().UnixMilli() >= scan.RetryUntil {
 			children, err := s.CodexChildDiscoveryCursors(context.Background())
 			if err != nil || len(children) == 0 {
 				return err
@@ -189,13 +230,13 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		if proofErr != nil {
 			return proofErr
 		}
-		rowsForActivity, activityErr := s.List(context.Background())
+		inboxRows, activityErr := s.List(context.Background())
 		if activityErr != nil {
 			return activityErr
 		}
 		inboxCtx, inboxCancel := context.WithTimeout(context.Background(), min(time.Until(started.Add(time.Duration(policy.MaxLifetimeMS)*time.Millisecond)), time.Duration(policy.PassTimeoutMS)*time.Millisecond))
 		lastRegistration := scan.Last
-		accepted, inboxErr := s.ScanCodexBindings(inboxCtx, protectedHome, rowsForActivity, &scan, req.Generation, policy.MaxSessions, policy.MaxSourceBytes)
+		accepted, inboxErr := s.ScanCodexBindings(inboxCtx, protectedHome, inboxRows, &scan, req.Generation, policy.MaxSessions, policy.MaxSourceBytes)
 		inboxCancel()
 		madeInboxProgress = madeInboxProgress || lastRegistration != scan.Last
 		proofPending := errors.Is(inboxErr, capture.ErrBindingProofPending)
@@ -203,7 +244,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		if firstPending {
 			scan.RetryUntil = time.Now().Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli()
 		}
-		if err := capture.WriteWorkerProgress(state, capture.WorkerProgress{BindingScan: scan, Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "running", Heartbeat: now.UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: nextAttempt.UnixMilli(), Detail: lastFailure + fmt.Sprintf(" generation=%d acknowledged=%d pass_timeout_ms=%d max_sessions=%d max_source_bytes=%d", req.Generation, req.Acknowledged, policy.PassTimeoutMS, policy.MaxSessions, policy.MaxSourceBytes)}); err != nil {
+		if err := writeProgress("running", lastFailure+fmt.Sprintf(" generation=%d acknowledged=%d pass_timeout_ms=%d max_sessions=%d max_source_bytes=%d", req.Generation, req.Acknowledged, policy.PassTimeoutMS, policy.MaxSessions, policy.MaxSourceBytes), now, deadline, nextAttempt); err != nil {
 			return err
 		}
 
@@ -224,12 +265,16 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				return err
 			}
 		}
+		rowsForActivity, err := s.ListActive(context.Background())
+		if err != nil {
+			return err
+		}
 		var activityDetail string
 		active, activityDetail = captureWorkerActive(project, rowsForActivity, policy.MaxSourceBytes)
 		if activityDetail != "" {
 			lastFailure = activityDetail
 		}
-		if scan.Remaining == 0 && time.Now().UnixMilli() >= scan.RetryUntil && !active && time.Since(lastActivity) >= time.Duration(policy.IdleMS)*time.Millisecond && now.UnixMilli()-req.RequestedAt >= int64(policy.IdleMS) && req.Generation == req.Acknowledged {
+		if scan.Remaining == 0 && time.Now().UnixMilli() >= scan.RetryUntil && !active && restorePasses == 0 && time.Since(lastActivity) >= time.Duration(policy.IdleMS)*time.Millisecond && now.UnixMilli()-req.RequestedAt >= int64(policy.IdleMS) && req.Generation == req.Acknowledged {
 			children, err := s.CodexChildDiscoveryCursors(context.Background())
 			if err != nil {
 				return err
@@ -279,6 +324,9 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			if remaining <= 0 {
 				break
 			}
+			if restorePasses > 0 {
+				restorePasses--
+			}
 			unassignedCtx, unassignedCancel := context.WithTimeout(context.Background(), min(remaining, time.Duration(policy.PassTimeoutMS)*time.Millisecond))
 			passConfig, err := adaptersconfig.Load(project)
 			if err != nil {
@@ -290,6 +338,19 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				unassignedCancel()
 				return fmt.Errorf("pending capture configuration: %w", err)
 			}
+			cleanup := func() error {
+				return cleanupDiscardedCaptures(unassignedCtx, s, project, pendingDirectory, passConfig, protection)
+			}
+			var cleanupErr error
+			if protection == nil {
+				cleanupErr = adaptersconfig.WithOrdinaryCapture(project, cleanup)
+			} else {
+				cleanupErr = cleanup()
+			}
+			if errors.Is(cleanupErr, adaptersconfig.ErrProtectedCodexProject) {
+				unassignedCancel()
+				return retire()
+			}
 			unassigned, unassignedErr := s.Reconcile(unassignedCtx, "", git.GetGitUserInDirContext(unassignedCtx, project), policy.MaxSessions, policy.MaxSourceBytes, passConfig.Generation.Metrics)
 			if unassignedErr == nil {
 				writePending := func() error {
@@ -297,7 +358,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 					if err != nil || !enabled {
 						return err
 					}
-					entries, err := adapters.SyncPendingSnapshots(unassignedCtx, pendingDirectory, project, unassigned, true, protection, nil)
+					entries, err := syncPendingCapture(unassignedCtx, s, pendingDirectory, project, unassigned, true, protection, nil)
 					if err != nil {
 						return err
 					}
@@ -313,10 +374,15 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			if errors.Is(unassignedErr, adaptersconfig.ErrProtectedCodexProject) {
 				return retire()
 			}
+			unassignedErr = errors.Join(cleanupErr, unassignedErr)
 			if unassignedErr != nil {
 				lastFailure = unassignedErr.Error()
 			}
-			rows, err := s.List(context.Background())
+			lifecycleRevision, err := s.CaptureLifecycleRevision(context.Background())
+			if err != nil {
+				return err
+			}
+			rows, err := s.ListActive(context.Background())
 			if err != nil {
 				return err
 			}
@@ -348,7 +414,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 					lastFailure = registration.Detail
 				}
 			}
-			publicationBlocked := false
+			publicationBlocked := errors.Is(unassignedErr, capture.ErrCaptureLifecycleChanged)
 			for _, ticket := range ordered {
 				enabled, e := automaticCaptureEnabled(project, state)
 				if e != nil || !enabled {
@@ -368,7 +434,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				title, kind, _ := domain.CaptureTicketMetadata(rows, ticket)
 				// The writer resolves and retains its own directory selection
 				// rather than receiving a path previously selected by this process.
-				args := []string{"generate", "--ticket-id", ticket, "--capture-dir", state, "--capture-auto", "--max-sessions", strconv.Itoa(policy.MaxSessions), "--max-source-bytes", strconv.FormatInt(policy.MaxSourceBytes, 10)}
+				args := []string{"generate", "--ticket-id", ticket, "--capture-dir", state, "--capture-auto", "--capture-lifecycle-revision", strconv.FormatInt(lifecycleRevision, 10), "--max-sessions", strconv.Itoa(policy.MaxSessions), "--max-source-bytes", strconv.FormatInt(policy.MaxSourceBytes, 10)}
 				if title != "" {
 					args = append(args, "--ticket-title", title)
 				}
@@ -449,7 +515,19 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 					return err
 				}
 			}
-			afterRows, readErr := s.List(context.Background())
+			afterRestores, err := s.CaptureRestoreProgress(context.Background())
+			if err != nil {
+				return err
+			}
+			// Other work classes may spend the next pass's budget first. Give
+			// the existing rotation a chance after a new wake or durable progress.
+			if len(afterRestores) == 0 {
+				restorePasses = 0
+			} else if capture.CaptureRestoreProgressAdvanced(restores, afterRestores) || (success && req.Generation != req.Acknowledged) {
+				restorePasses = capture.RestoreSchedulerRotationPasses
+			}
+			restores = afterRestores
+			afterRows, readErr := s.ListActive(context.Background())
 			if readErr != nil {
 				return readErr
 			}
@@ -479,7 +557,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 					delay = backoff
 				}
 				nextAttempt = lastPass.Add(delay)
-				if e := capture.WriteWorkerProgress(state, capture.WorkerProgress{BindingScan: scan, Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "failure", Heartbeat: lastPass.UnixMilli(), Deadline: deadline.UnixMilli(), NextAttempt: nextAttempt.UnixMilli(), Detail: lastFailure}); e != nil {
+				if e := writeProgress("failure", lastFailure, lastPass, deadline, nextAttempt); e != nil {
 					return e
 				}
 			}
@@ -501,9 +579,10 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	}
 	childProgress := codexChildDiscoveryAdvanced(initialChildren, children)
 	inboxProgress := (madeInboxProgress && scan.Remaining > 0) || time.Now().UnixMilli() < scan.RetryUntil
+	restoreContinuation := !lastPass.IsZero() && restorePasses > 0
 	// A bounded successor can finish an advancing discovery sweep. A hint
 	// whose sweep completed or made no progress cannot create a retry chain.
-	if !childProgress && !inboxProgress {
+	if !childProgress && !inboxProgress && !restoreContinuation {
 		if !successfulPass || lastFailure != "" {
 			return fmt.Errorf("native worker lifetime exhausted; pending generation retained for next integration event: %s", lastFailure)
 		}
@@ -516,6 +595,11 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		}
 	}
 	// A healthy finite owner transfers active work to another bounded native process.
+	if restoreContinuation {
+		if err := carryRestorePasses(); err != nil {
+			return err
+		}
+	}
 	if err = lock.Close(); err != nil {
 		return err
 	}
@@ -538,6 +622,44 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		}
 		return entry.NativePath(adaptersconfig.RuntimeCodexHome(), cfg.Telemetry.Sources.CodexHome)
 	})
+}
+
+func cleanupDiscardedCaptures(ctx context.Context, store *capture.Store, project, directory string, cfg domain.ProjectConfig, protection *capture.ProtectedPublication) error {
+	discards, err := store.PendingCaptureDiscards(ctx)
+	if err != nil || len(discards) == 0 {
+		return err
+	}
+	rows, err := store.List(ctx)
+	if err != nil {
+		return err
+	}
+	tickets := make(map[string]string, len(rows))
+	for _, row := range rows {
+		tickets[capture.IdentityKey(row.Identity)] = row.TicketID
+	}
+	recovery := map[string]error{}
+	var failures error
+	for _, discard := range discards {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(failures, err)
+		}
+		var err error
+		if ticket := tickets[capture.IdentityKey(discard.Root)]; ticket != "" {
+			if prior, checked := recovery[ticket]; checked {
+				err = prior
+			} else {
+				err = recoverMarkedCapturePublication(ctx, project, ticket, cfg, protection)
+				recovery[ticket] = err
+			}
+		}
+		if err == nil {
+			err = adapters.RemoveDiscardedPendingSnapshot(ctx, store, directory, project, discard, protection)
+		}
+		if err != nil && !errors.Is(err, capture.ErrCaptureLifecycleChanged) {
+			failures = errors.Join(failures, fmt.Errorf("cleaning discarded capture %s: %w", discard.CaptureID, err))
+		}
+	}
+	return failures
 }
 
 func codexChildDiscoveryAdvanced(before, after map[string]string) bool {

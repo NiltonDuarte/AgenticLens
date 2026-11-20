@@ -23,6 +23,7 @@ func nativeOpenCodeHook(args []string, input io.Reader, output io.Writer, protec
 	if len(args) == 0 {
 		return errors.New("OpenCode callback requires an operation")
 	}
+	control := captureControlAction(args[0])
 	hook, err := capture.ReadHook(input)
 	if err != nil {
 		return err
@@ -35,6 +36,9 @@ func nativeOpenCodeHook(args []string, input io.Reader, output io.Writer, protec
 		return err
 	}
 	if shared == "" {
+		if control {
+			return errors.New("native OpenCode capture control requires a configured project")
+		}
 		_, err := io.WriteString(output, "{}\n")
 		return err
 	}
@@ -50,8 +54,17 @@ func nativeOpenCodeHook(args []string, input io.Reader, output io.Writer, protec
 		return err
 	}
 	if !policy.Enabled {
+		if control {
+			return errors.New("automatic capture is disabled for this OpenCode project")
+		}
 		_, err := io.WriteString(output, "{}\n")
 		return err
+	}
+	if control {
+		if hook.SessionID == "" || hook.Event != "agent_capture_control" {
+			return errors.New("OpenCode capture control requires native session and operation context")
+		}
+		return runCaptureControl(args[0], args[1:], output, protectedHome, project, hook.SessionID)
 	}
 	command := []string{args[0], "--user-level", "--source", "opencode", "--repo", project, "--session-id", hook.SessionID}
 	switch args[0] {

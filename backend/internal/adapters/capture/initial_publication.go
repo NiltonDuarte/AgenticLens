@@ -22,6 +22,24 @@ import (
 // with binding writes until the public transaction indicator is durable.
 func (s *Store) WithInitialPublicationRegistrations(ctx context.Context, ticket string, admit func([]domain.CaptureRegistration) error) error {
 	return s.withRegistrationWrite(ctx, func(conn *sql.Conn) error {
+		controls, err := s.captureControls(ctx, conn, "", CaptureControlDiscarded, false)
+		if err != nil {
+			return err
+		}
+		if len(controls) != 0 {
+			rows, err := readRegistrationRows(conn.QueryContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? ORDER BY identity`, s.worktreeID))
+			if err != nil {
+				return err
+			}
+			active, _ := activeCaptureRows(s.project, rows, controls)
+			var eligible []domain.CaptureRegistration
+			for _, row := range active {
+				if row.TicketID == ticket {
+					eligible = append(eligible, row)
+				}
+			}
+			return admit(eligible)
+		}
 		rows, err := readRegistrationRows(conn.QueryContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? AND ticket=? ORDER BY identity`, s.worktreeID, ticket))
 		if err != nil {
 			return err

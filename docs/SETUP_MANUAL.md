@@ -390,6 +390,17 @@ Set `agenticlens.pending_dir` in the shared project YAML. Full configuration set
 
 Respond to the native binding request with the exact ticket ID, display title and conventional type. For a fresh ticket, the agent can then indicate the exact existing destination within the configured workspace roots through the native integration. The worker checks the destination and publishes through the normal transaction. It removes the pending snapshot once canonical publication is durable. If the ticket or its destination is missing, or a selection is ambiguous, `capture diagnostics --repo <PROJECT>` shows the current reason.
 
+Use the ID in the pending snapshot filename or the native invitation. `capture status --repo <PROJECT>` lists stored capture controls. Add `--capture-id <CAPTURE_ID>` to inspect one capture. Discard the capture in the same project to pause automatic publication for an exploratory session.
+
+```sh
+agentic-lens --al-offline --al-project <PROJECT> capture discard \
+  --repo <PROJECT> --capture-id <CAPTURE_ID>
+agentic-lens --al-offline --al-project <PROJECT> capture restore \
+  --repo <PROJECT> --capture-id <CAPTURE_ID>
+```
+
+Discard removes the pending snapshot and pauses automatic publication for the selected root and its verified descendants. A child explicitly bound to another ticket has its own capture. Restore reuses the capture ID and rereads all available native history, including activity during discard. Consult capture status for pending cleanup, reconciliation or incomplete source coverage.
+
 Operators can also select the destination explicitly before launching the harness.
 
 ```sh

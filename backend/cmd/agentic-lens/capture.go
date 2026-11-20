@@ -64,7 +64,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	home := ""
 	if len(args) >= 3 && args[len(args)-2] == "--protected-codex-home" {
 		switch args[0] {
-		case "user-hook", "opencode-hook", "worker", "reconcile", "admit-protected-worktree":
+		case "user-hook", "opencode-hook", "worker", "reconcile", "discard", "restore", "admit-protected-worktree":
 		default:
 			return errors.New("protected Codex selection applies only to native hooks and their worker")
 		}
@@ -89,9 +89,12 @@ func captureAction(args []string, input io.Reader, output io.Writer, protectedHo
 
 func captureNativeAction(args []string, input io.Reader, output io.Writer, protectedHome string, nativeOpenCode bool) (returnErr error) {
 	if len(args) == 0 {
-		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|submit-binding|prepare-publication|reconcile|relocate-state|disable|uninstall|protocol")
+		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|submit-binding|discard|restore|prepare-publication|reconcile|relocate-state|disable|uninstall|protocol")
 	}
 	command := args[0]
+	if captureControlAction(command) {
+		return runCaptureControl(command, args[1:], output, protectedHome, "", "")
+	}
 	if command == "publish-protected" {
 		if len(args) < 5 {
 			return errors.New("protected generation requires project, Codex home, admitted state and generation arguments")
@@ -152,6 +155,10 @@ func captureNativeAction(args []string, input io.Reader, output io.Writer, prote
 	dryRun := flags.Bool("dry-run", false, "Show owned installation changes without writing")
 	byteBudget := flags.Int64("max-source-bytes", 0, "Source or diagnostic payload bytes per bounded pass")
 	sessionBudget := flags.Int("max-sessions", 0, "Session work budget per reconciliation or inspection pass")
+	var captureID string
+	if command == "status" {
+		flags.StringVar(&captureID, "capture-id", "", "Read exact local discard or restore status for this capture ID")
+	}
 	beforeDiagnostic := flags.Int64("before-diagnostic", 0, "Read retained diagnostic history before this sequence (status/diagnostics only)")
 	timeout := flags.Duration("timeout", 2*time.Second, "Bound handler/registry work or each required installation phase; optional harness inspection has a separate budget")
 	if err := flags.Parse(args[1:]); err != nil {
@@ -236,6 +243,14 @@ func captureNativeAction(args []string, input io.Reader, output io.Writer, prote
 	project, err := adaptersconfig.ProjectRoot(*repo)
 	if err != nil {
 		return err
+	}
+	if provided["capture-id"] {
+		for option := range provided {
+			if option != "repo" && option != "capture-id" && option != "timeout" {
+				return fmt.Errorf("--%s cannot be combined with exact capture ID status", option)
+			}
+		}
+		return inspectCaptureControl(ctx, project, captureID, output)
 	}
 	inspection := command == "status" || command == "diagnostics" || command == "verify" || command == "check"
 	gitOnly := command == "install-check" || command == "uninstall-check"
@@ -611,8 +626,11 @@ func captureNativeAction(args []string, input io.Reader, output io.Writer, prote
 				if openCodePending != nil {
 					r.ProjectProof = domain.CaptureProjectUnverified
 				} else {
-					r.ProjectProof = domain.CaptureProjectVerified
-					r.ProjectDirectory = project
+					var err error
+					r, err = capture.RecordOpenCodeHandoff(r, project, openCodeParent)
+					if err != nil {
+						return r, err
+					}
 				}
 			}
 			if value.Event == "session.created" {
@@ -654,10 +672,15 @@ func captureNativeAction(args []string, input io.Reader, output io.Writer, prote
 		}
 		response := captureAgentResponse{CaptureRegistration: r, CaptureFeedback: feedback}
 		if nativeOpenCode {
+			control, e := s.CaptureControlInvitation(ctx, r)
+			if e != nil {
+				return e
+			}
 			return json.NewEncoder(output).Encode(struct {
 				captureAgentResponse
-				DestinationRequest string `json:"destination_request,omitempty"`
-			}{response, capture.NativePublicationDestinationRequest(r)})
+				DestinationRequest string                        `json:"destination_request,omitempty"`
+				CaptureControl     *capture.NativeCaptureControl `json:"capture_control,omitempty"`
+			}{response, capture.NativePublicationDestinationRequest(r), control})
 		}
 		return json.NewEncoder(output).Encode(response)
 	case "bind":
