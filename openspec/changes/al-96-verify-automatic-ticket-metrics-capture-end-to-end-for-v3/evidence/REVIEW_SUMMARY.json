@@ -354,6 +354,226 @@
         }
       ],
       "disposition": "Fixed. The native gate compares full Git index entries and blob IDs through promotion."
+    },
+    {
+      "finding_id": "BEHAVIOR-05",
+      "severity": 8,
+      "issue": "A temporary native proof failure can detach previously accepted descendants from discard suppression and restore coverage.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Retain accepted project and parent membership through proof downgrades. Require valid current coverage on restore."
+    },
+    {
+      "finding_id": "BEHAVIOR-06",
+      "severity": 7,
+      "issue": "OpenCode can issue a root control invitation before recording a verified link to an unbound parent.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Persist native parentage and recheck it when accepting control. Preserve controls for independently bound roots."
+    },
+    {
+      "finding_id": "BEHAVIOR-07",
+      "severity": 7,
+      "issue": "An idle OpenCode worker can acknowledge a restore wake and retire before bounded descendant discovery finishes.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Give exact group progress a finite scheduler rotation and carry only the remaining allowance across worker lifetimes."
+    },
+    {
+      "finding_id": "BEHAVIOR-08",
+      "severity": 6,
+      "issue": "Restore can wait for an upstream registration outside the admitted independent capture.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Require reads and discovery within the admitted group and retain its verified native parent link."
+    },
+    {
+      "finding_id": "BEHAVIOR-09",
+      "severity": 8,
+      "issue": "A restore can be acknowledged while the published ledger still holds old facts for an owner covered in an earlier pass.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": null,
+          "reasoning_effort": null,
+          "identity_note": "Native tester role observed. Execution model and effort were unavailable."
+        }
+      ],
+      "disposition": "Merge the exact operation's accepted snapshots and compare every group member before acknowledging durable materialization."
+    },
+    {
+      "finding_id": "BEHAVIOR-10",
+      "severity": 7,
+      "issue": "An OpenCode restore receipt can remain valid when the owner's native history changes without a callback.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "reasoning_effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Revalidate the exact native owner checkpoint before reusing a read. A silent native edit requires a new bounded read."
+    },
+    {
+      "finding_id": "DATA-07",
+      "severity": 8,
+      "issue": "Normal workspace discovery can reject an interrupted ordinary refresh before discard can recover a ledger without a first-publication receipt.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Validate the exact prior ledger in the retained transaction journal under publication ownership before recovery."
+    },
+    {
+      "finding_id": "DATA-08",
+      "severity": 6,
+      "issue": "An unrelated same-ticket branch can keep an otherwise covered restore pending.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Scope native descendant checks and accepted reads to the exact restoring group."
+    },
+    {
+      "finding_id": "DATA-09",
+      "severity": 8,
+      "issue": "A stale manual reconciliation can overwrite the accepted source snapshot that a newer restore pass used for coverage.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fence source and annotation commits by the observed control revision and exact owner observation. Recheck the persisted record before accepting coverage."
+    },
+    {
+      "finding_id": "ARCH-06",
+      "severity": 7,
+      "issue": "An exposed OpenCode binding credential can serve as the signing seed for a control request.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Use a distinct private seed per worktree and native owner for revision- and action-scoped control credentials."
+    },
+    {
+      "finding_id": "ARCH-07",
+      "severity": 6,
+      "issue": "A legacy worker can lose its leader and leave an automatic child publisher alive before the child has a ticket lease.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Require a recorded incompatible process group to retire before admitting a compatible worker or control."
+    },
+    {
+      "finding_id": "ARCH-08",
+      "severity": 7,
+      "issue": "Same-ticket siblings can exhaust the restore scheduler's rotation before it reaches the requested group.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Give restoring owners their own bounded rotation and cursors alongside the ordinary work classes."
+    },
+    {
+      "finding_id": "ARCH-09",
+      "severity": 8,
+      "issue": "A stale OpenCode page can overwrite the cursor reset by restore and skip available descendants.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Save the OpenCode cursor only when the observed operation revision still matches under the lifecycle lock."
+    },
+    {
+      "finding_id": "TEST-10",
+      "severity": 7,
+      "issue": "The native gate can sample its canonical baseline after discard has already changed the root or summary.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "reasoning_effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Capture exact bytes under the publication directory lock before starting native discard and compare both artifacts through acknowledgement and suppressed work."
     }
   ]
 }

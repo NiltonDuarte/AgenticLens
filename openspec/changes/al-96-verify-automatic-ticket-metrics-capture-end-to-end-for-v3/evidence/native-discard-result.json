@@ -1,0 +1,886 @@
+{
+  "archive_sha256": "d819e2aee83b75b4579baa6dd34e215b7619612de8f84c03dfdde262c65c1f7e",
+  "base": "a5c8a25e739418c360a68371996bb6f2ae240760",
+  "candidate": "v3.0.0-rc.0+al96.discard.598d4ce8",
+  "engine_sha256": "b660a0934a5d251f2cfbe0ccc7d4bc8bc37a59356b1336a78f391fe8bf318289",
+  "manager_sha256": "586fd733c173cb1eb3a62aab342c87659234e7e51252275e9fefca556fb443ec",
+  "manual_only_prior_evidence": [
+    "OpenCode 2.2.0 standalone"
+  ],
+  "platform": "linux/amd64",
+  "product_revision": "598d4ce8c4a194e22fed2fb7fd53fe991491e7cb",
+  "result": "passed",
+  "runner_content_sha256": "275ffe204e7b6c6ba751419e0f382892c167576953b546c3e8372abadcd01c0e",
+  "runner_revision": "598d4ce8c4a194e22fed2fb7fd53fe991491e7cb",
+  "runs": [
+    {
+      "after_completion": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": 0,
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": 0,
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": 0,
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": 0
+        },
+        "native_measured_seconds": 19,
+        "per_session": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": {
+            "active_seconds": 15,
+            "measured_seconds": 15,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          }
+        },
+        "rendered_active_duration": "0m 19s",
+        "ticket_active_seconds": 19,
+        "ticket_measured_seconds": 19,
+        "ticket_provisional_seconds": 0
+      },
+      "after_resume": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": 0,
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": 0,
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": 0,
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": 0
+        },
+        "native_measured_seconds": 25,
+        "per_session": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": {
+            "active_seconds": 21,
+            "measured_seconds": 21,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          }
+        },
+        "rendered_active_duration": "0m 25s",
+        "ticket_active_seconds": 25,
+        "ticket_measured_seconds": 25,
+        "ticket_provisional_seconds": 0
+      },
+      "awaiting_destination": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": 0,
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": 0,
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": 0,
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": 0
+        },
+        "native_measured_seconds": 15,
+        "per_session": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": {
+            "active_seconds": 11,
+            "measured_seconds": 11,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          }
+        },
+        "ticket_active_seconds": 15,
+        "ticket_measured_seconds": 15,
+        "ticket_provisional_seconds": 0
+      },
+      "awaiting_ticket": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": 0,
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": 0,
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": 0,
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": 0
+        },
+        "native_measured_seconds": 10,
+        "per_session": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": {
+            "active_seconds": 6,
+            "measured_seconds": 6,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          }
+        },
+        "ticket_active_seconds": 10,
+        "ticket_measured_seconds": 10,
+        "ticket_provisional_seconds": 0
+      },
+      "before_completion": {
+        "native_intervals": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": {
+            "active_seconds": 5,
+            "measured_seconds": 0,
+            "native_completed_intervals": 0,
+            "native_latest_completion_epoch": null,
+            "open_intervals": [
+              {
+                "activity_epoch_ms": 1795173580374,
+                "id": "01a1f8ae-fe3d-77f1-be67-1d60babd137a",
+                "model": "gpt-5.4",
+                "started_epoch_ms": 1795173580374
+              }
+            ],
+            "provisional_seconds": 5
+          },
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "native_completed_intervals": 1,
+            "native_latest_completion_epoch": 1795173583.647,
+            "open_intervals": [],
+            "provisional_seconds": 0
+          },
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "native_completed_intervals": 1,
+            "native_latest_completion_epoch": 1795173583.394,
+            "open_intervals": [],
+            "provisional_seconds": 0
+          },
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "native_completed_intervals": 1,
+            "native_latest_completion_epoch": 1795173584.774,
+            "open_intervals": [],
+            "provisional_seconds": 0
+          }
+        },
+        "pending_snapshot_observed_at": "2026-11-20T11:19:45.576511115Z",
+        "per_session": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": {
+            "active_seconds": 5,
+            "measured_seconds": 0,
+            "provisional_seconds": 5
+          },
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          }
+        },
+        "source_duration_cutoff": "2026-11-20T11:19:45.433340165Z",
+        "ticket_active_seconds": 9,
+        "ticket_measured_seconds": 4,
+        "ticket_provisional_seconds": 5
+      },
+      "binding_accepted_at": "2026-11-20T11:19:57.090839951Z",
+      "bound_discard_restore": {
+        "canonical_bytes_preserved_during_discard": true,
+        "canonical_publication_boundary": 76,
+        "discard_revision": 3,
+        "native_completion_after_restore": 1795173618.902,
+        "native_completion_before_discard": 1795173604.792,
+        "native_completion_during_discard": 1795173615.781,
+        "native_tool_calls_after_restore": 13,
+        "native_tool_calls_before_discard": 10,
+        "native_tool_calls_during_discard": 12,
+        "pending_publication_boundary": 75,
+        "pending_remained_absent_during_discard": true,
+        "processed_discarded_generation": 54,
+        "restored_publication": {
+          "ledger_cache_write": "unpersisted",
+          "native_cache_write_by_session": {
+            "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": 0,
+            "01a1f8af-0133-7f42-a109-f6d501c40ffd": 0,
+            "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": 0,
+            "01a1f8af-0b5a-7cc2-9baf-222bf39be508": 0
+          },
+          "native_measured_seconds": 24,
+          "per_session": {
+            "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": {
+              "active_seconds": 20,
+              "measured_seconds": 20,
+              "provisional_seconds": 0
+            },
+            "01a1f8af-0133-7f42-a109-f6d501c40ffd": {
+              "active_seconds": 2,
+              "measured_seconds": 2,
+              "provisional_seconds": 0
+            },
+            "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": {
+              "active_seconds": 1,
+              "measured_seconds": 1,
+              "provisional_seconds": 0
+            },
+            "01a1f8af-0b5a-7cc2-9baf-222bf39be508": {
+              "active_seconds": 1,
+              "measured_seconds": 1,
+              "provisional_seconds": 0
+            }
+          },
+          "rendered_active_duration": "0m 24s",
+          "ticket_active_seconds": 24,
+          "ticket_measured_seconds": 24,
+          "ticket_provisional_seconds": 0
+        },
+        "restored_revision": 4
+      },
+      "completion_to_commit_seconds": 1.431,
+      "completion_to_pending_seconds": 1.061,
+      "destination_repair_to_first_publication_seconds": 1.753,
+      "excluded_native_session": "01a1f8ae-f28d-7731-8ae0-7e53a99997aa",
+      "expected_version": "codex-cli 0.170.0",
+      "first_completion_commit": "2026-11-20T11:20:06.223280867Z",
+      "first_completion_pending": "2026-11-20T11:19:46.989159304Z",
+      "first_publication": {
+        "ledger_cache_write": "unpersisted",
+        "ledger_updated_at": "2026-11-20T11:20:04.354869+00:00",
+        "native_cache_write_by_session": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": 0,
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": 0,
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": 0,
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": 0
+        },
+        "native_intervals": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": {
+            "active_seconds": 14,
+            "measured_seconds": 13,
+            "native_completed_intervals": 6,
+            "native_latest_completion_epoch": 1795173600.786,
+            "open_intervals": [
+              {
+                "activity_epoch_ms": 1795173602905,
+                "id": "01a1f8af-5642-7f92-a9d0-f3b5d91b3964",
+                "model": "gpt-5.4",
+                "started_epoch_ms": 1795173602905
+              }
+            ],
+            "provisional_seconds": 1,
+            "published_completion_checkpoint": null
+          },
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "native_completed_intervals": 1,
+            "native_latest_completion_epoch": 1795173583.647,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-20T11:19:43.647Z"
+          },
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "native_completed_intervals": 1,
+            "native_latest_completion_epoch": 1795173583.394,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-20T11:19:43.394Z"
+          },
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "native_completed_intervals": 1,
+            "native_latest_completion_epoch": 1795173584.774,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-20T11:19:44.774Z"
+          }
+        },
+        "per_session": {
+          "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": {
+            "active_seconds": 14,
+            "measured_seconds": 13,
+            "provisional_seconds": 1
+          },
+          "01a1f8af-0133-7f42-a109-f6d501c40ffd": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "01a1f8af-0b5a-7cc2-9baf-222bf39be508": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          }
+        },
+        "publication_observed_at": "2026-11-20T11:20:04.434614355Z",
+        "rendered_active_duration": "0m 18s",
+        "source_duration_cutoff": "2026-11-20T11:20:04.060448022Z",
+        "source_reconciliation_completed_at": "2026-11-20T11:20:04.305215585Z",
+        "ticket_active_seconds": 18,
+        "ticket_measured_seconds": 17,
+        "ticket_provisional_seconds": 1
+      },
+      "first_published_at": "2026-11-20T11:20:04.434614355Z",
+      "git_index_unchanged": true,
+      "harness_version": "codex-cli 0.170.0",
+      "native_completion_epoch": 1795173585.928,
+      "native_publication_completion_epoch": 1795173604.792,
+      "native_tree": {
+        "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": null,
+        "01a1f8af-0133-7f42-a109-f6d501c40ffd": "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5",
+        "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": "01a1f8af-0133-7f42-a109-f6d501c40ffd",
+        "01a1f8af-0b5a-7cc2-9baf-222bf39be508": "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5"
+      },
+      "nested_delegation_offered": true,
+      "pending_binding_observed_at": "2026-11-20T11:19:58.86252823Z",
+      "pending_capture_id": "f44026839937dc158c0c17b2f0d3105ad9f266c10066cfb58292499866507c08",
+      "pending_file": "review/pending-capture/f44026839937dc158c0c17b2f0d3105ad9f266c10066cfb58292499866507c08.json",
+      "pending_removed_at": "2026-11-20T11:20:04.455325947Z",
+      "pending_visible_unstaged": true,
+      "published_tree": {
+        "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": null,
+        "01a1f8af-0133-7f42-a109-f6d501c40ffd": "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5",
+        "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": "01a1f8af-0133-7f42-a109-f6d501c40ffd",
+        "01a1f8af-0b5a-7cc2-9baf-222bf39be508": "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5"
+      },
+      "result": "passed",
+      "resumed_completion_to_commit_seconds": 1.566,
+      "source": "codex",
+      "unavailable_destination_diagnostic": "native destination must be an existing directory: stat project/selected/ordinary-directory: no such file or directory",
+      "unavailable_destination_observed_at": "2026-11-20T11:20:02.621044187Z",
+      "unbound_discard_restore": {
+        "canonical_publication_boundary": 0,
+        "discard_revision": 1,
+        "native_completion_after_restore": 1795173594.981,
+        "native_completion_before_discard": 1795173585.928,
+        "native_completion_during_discard": 1795173592.186,
+        "native_tool_calls_after_restore": 7,
+        "native_tool_calls_before_discard": 4,
+        "native_tool_calls_during_discard": 6,
+        "pending_publication_boundary": 23,
+        "pending_remained_absent_during_discard": true,
+        "processed_discarded_generation": 22,
+        "restored_revision": 2,
+        "restored_snapshot": {
+          "ledger_cache_write": "unpersisted",
+          "native_cache_write_by_session": {
+            "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": 0,
+            "01a1f8af-0133-7f42-a109-f6d501c40ffd": 0,
+            "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": 0,
+            "01a1f8af-0b5a-7cc2-9baf-222bf39be508": 0
+          },
+          "native_measured_seconds": 14,
+          "per_session": {
+            "01a1f8ae-fe22-7e80-8a0a-38a1ad7fc8b5": {
+              "active_seconds": 10,
+              "measured_seconds": 10,
+              "provisional_seconds": 0
+            },
+            "01a1f8af-0133-7f42-a109-f6d501c40ffd": {
+              "active_seconds": 2,
+              "measured_seconds": 2,
+              "provisional_seconds": 0
+            },
+            "01a1f8af-06c6-7c32-b24f-ec759c1bbe7a": {
+              "active_seconds": 1,
+              "measured_seconds": 1,
+              "provisional_seconds": 0
+            },
+            "01a1f8af-0b5a-7cc2-9baf-222bf39be508": {
+              "active_seconds": 1,
+              "measured_seconds": 1,
+              "provisional_seconds": 0
+            }
+          },
+          "ticket_active_seconds": 14,
+          "ticket_measured_seconds": 14,
+          "ticket_provisional_seconds": 0
+        }
+      }
+    },
+    {
+      "after_completion": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": 0,
+          "ses_e074fd9faffekK25zm9VNkTS4l": 0,
+          "ses_e074fe09fffezc716wwfV3dhtn": 0,
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": 0
+        },
+        "native_measured_seconds": 40,
+        "per_session": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "ses_e074fd9faffekK25zm9VNkTS4l": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e074fe09fffezc716wwfV3dhtn": {
+            "active_seconds": 4,
+            "measured_seconds": 4,
+            "provisional_seconds": 0
+          },
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": {
+            "active_seconds": 33,
+            "measured_seconds": 33,
+            "provisional_seconds": 0
+          }
+        },
+        "rendered_active_duration": "0m 40s",
+        "ticket_active_seconds": 40,
+        "ticket_measured_seconds": 40,
+        "ticket_provisional_seconds": 0
+      },
+      "after_resume": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": 0,
+          "ses_e074fd9faffekK25zm9VNkTS4l": 0,
+          "ses_e074fe09fffezc716wwfV3dhtn": 0,
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": 0
+        },
+        "native_measured_seconds": 54,
+        "per_session": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "ses_e074fd9faffekK25zm9VNkTS4l": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e074fe09fffezc716wwfV3dhtn": {
+            "active_seconds": 4,
+            "measured_seconds": 4,
+            "provisional_seconds": 0
+          },
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": {
+            "active_seconds": 47,
+            "measured_seconds": 47,
+            "provisional_seconds": 0
+          }
+        },
+        "rendered_active_duration": "0m 54s",
+        "ticket_active_seconds": 54,
+        "ticket_measured_seconds": 54,
+        "ticket_provisional_seconds": 0
+      },
+      "awaiting_destination": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": 0,
+          "ses_e074fd9faffekK25zm9VNkTS4l": 0,
+          "ses_e074fe09fffezc716wwfV3dhtn": 0,
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": 0
+        },
+        "native_measured_seconds": 31,
+        "per_session": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "ses_e074fd9faffekK25zm9VNkTS4l": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e074fe09fffezc716wwfV3dhtn": {
+            "active_seconds": 4,
+            "measured_seconds": 4,
+            "provisional_seconds": 0
+          },
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": {
+            "active_seconds": 24,
+            "measured_seconds": 24,
+            "provisional_seconds": 0
+          }
+        },
+        "ticket_active_seconds": 31,
+        "ticket_measured_seconds": 31,
+        "ticket_provisional_seconds": 0
+      },
+      "awaiting_ticket": {
+        "ledger_cache_write": "unpersisted",
+        "native_cache_write_by_session": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": 0,
+          "ses_e074fd9faffekK25zm9VNkTS4l": 0,
+          "ses_e074fe09fffezc716wwfV3dhtn": 0,
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": 0
+        },
+        "native_measured_seconds": 18,
+        "per_session": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "ses_e074fd9faffekK25zm9VNkTS4l": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e074fe09fffezc716wwfV3dhtn": {
+            "active_seconds": 4,
+            "measured_seconds": 4,
+            "provisional_seconds": 0
+          },
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": {
+            "active_seconds": 11,
+            "measured_seconds": 11,
+            "provisional_seconds": 0
+          }
+        },
+        "ticket_active_seconds": 18,
+        "ticket_measured_seconds": 18,
+        "ticket_provisional_seconds": 0
+      },
+      "before_completion": {
+        "native_intervals": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "native_completed_intervals": 2,
+            "native_latest_completion_epoch": 1795173661.05,
+            "open_intervals": [],
+            "provisional_seconds": 0
+          },
+          "ses_e074fd9faffekK25zm9VNkTS4l": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "native_completed_intervals": 2,
+            "native_latest_completion_epoch": 1795173657.415,
+            "open_intervals": [],
+            "provisional_seconds": 0
+          },
+          "ses_e074fe09fffezc716wwfV3dhtn": {
+            "active_seconds": 4,
+            "measured_seconds": 4,
+            "native_completed_intervals": 3,
+            "native_latest_completion_epoch": 1795173658.401,
+            "open_intervals": [],
+            "provisional_seconds": 0
+          },
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": {
+            "active_seconds": 11,
+            "measured_seconds": 9,
+            "native_completed_intervals": 2,
+            "native_latest_completion_epoch": 1795173661.21,
+            "open_intervals": [
+              {
+                "activity_epoch_ms": 1795173662677,
+                "id": "msg_1f8b03a29001zeHT4VfIEoGFeM",
+                "model": "mock-model",
+                "started_epoch_ms": 1795173661225
+              }
+            ],
+            "provisional_seconds": 2
+          }
+        },
+        "pending_snapshot_observed_at": "2026-11-20T11:21:03.3191465Z",
+        "per_session": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "ses_e074fd9faffekK25zm9VNkTS4l": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e074fe09fffezc716wwfV3dhtn": {
+            "active_seconds": 4,
+            "measured_seconds": 4,
+            "provisional_seconds": 0
+          },
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": {
+            "active_seconds": 11,
+            "measured_seconds": 9,
+            "provisional_seconds": 2
+          }
+        },
+        "source_duration_cutoff": "2026-11-20T11:21:03.051065013Z",
+        "ticket_active_seconds": 18,
+        "ticket_measured_seconds": 16,
+        "ticket_provisional_seconds": 2
+      },
+      "binding_accepted_at": "2026-11-20T11:21:40.661996344Z",
+      "bound_discard_restore": {
+        "canonical_bytes_preserved_during_discard": true,
+        "canonical_publication_boundary": 156,
+        "discard_revision": 3,
+        "native_completion_after_restore": 1795173762.26,
+        "native_completion_before_discard": 1795173726.186,
+        "native_completion_during_discard": 1795173751.774,
+        "native_tool_calls_after_restore": 11,
+        "native_tool_calls_before_discard": 8,
+        "native_tool_calls_during_discard": 10,
+        "pending_publication_boundary": 140,
+        "pending_remained_absent_during_discard": true,
+        "processed_discarded_generation": 174,
+        "restored_publication": {
+          "ledger_cache_write": "unpersisted",
+          "native_cache_write_by_session": {
+            "ses_e074fccf1ffeEnuS1BxFuaYgUu": 0,
+            "ses_e074fd9faffekK25zm9VNkTS4l": 0,
+            "ses_e074fe09fffezc716wwfV3dhtn": 0,
+            "ses_e074ff09dffeWzdsEFkCkaH5Tu": 0
+          },
+          "native_measured_seconds": 51,
+          "per_session": {
+            "ses_e074fccf1ffeEnuS1BxFuaYgUu": {
+              "active_seconds": 2,
+              "measured_seconds": 2,
+              "provisional_seconds": 0
+            },
+            "ses_e074fd9faffekK25zm9VNkTS4l": {
+              "active_seconds": 1,
+              "measured_seconds": 1,
+              "provisional_seconds": 0
+            },
+            "ses_e074fe09fffezc716wwfV3dhtn": {
+              "active_seconds": 4,
+              "measured_seconds": 4,
+              "provisional_seconds": 0
+            },
+            "ses_e074ff09dffeWzdsEFkCkaH5Tu": {
+              "active_seconds": 44,
+              "measured_seconds": 44,
+              "provisional_seconds": 0
+            }
+          },
+          "rendered_active_duration": "0m 51s",
+          "ticket_active_seconds": 51,
+          "ticket_measured_seconds": 51,
+          "ticket_provisional_seconds": 0
+        },
+        "restored_revision": 4
+      },
+      "completion_to_commit_seconds": 1.335,
+      "completion_to_pending_seconds": 1.32,
+      "destination_repair_to_first_publication_seconds": 10.435,
+      "excluded_native_session": "ses_e07500b83ffeUjBjv2WqBEBgOB",
+      "expected_version": "1.19.5",
+      "first_completion_commit": "2026-11-20T11:22:07.521421485Z",
+      "first_completion_pending": "2026-11-20T11:21:05.031895248Z",
+      "first_publication": {
+        "ledger_cache_write": "unpersisted",
+        "ledger_updated_at": "2026-11-20T11:22:05.216195+00:00",
+        "native_cache_write_by_session": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": 0,
+          "ses_e074fd9faffekK25zm9VNkTS4l": 0,
+          "ses_e074fe09fffezc716wwfV3dhtn": 0,
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": 0
+        },
+        "native_intervals": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "native_completed_intervals": 2,
+            "native_latest_completion_epoch": 1795173661.05,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-20T11:21:01.05Z"
+          },
+          "ses_e074fd9faffekK25zm9VNkTS4l": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "native_completed_intervals": 2,
+            "native_latest_completion_epoch": 1795173657.415,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-20T11:20:57.415Z"
+          },
+          "ses_e074fe09fffezc716wwfV3dhtn": {
+            "active_seconds": 4,
+            "measured_seconds": 4,
+            "native_completed_intervals": 3,
+            "native_latest_completion_epoch": 1795173658.401,
+            "open_intervals": [],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": "2026-11-20T11:20:58.401Z"
+          },
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": {
+            "active_seconds": 31,
+            "measured_seconds": 31,
+            "native_completed_intervals": 14,
+            "native_latest_completion_epoch": 1795173723.952,
+            "open_intervals": [
+              {
+                "activity_epoch_ms": 1795173724847,
+                "id": "msg_1f8b12f3b0016LcKF5KAmWJSHt",
+                "model": "mock-model",
+                "started_epoch_ms": 1795173723963
+              }
+            ],
+            "provisional_seconds": 0,
+            "published_completion_checkpoint": null
+          }
+        },
+        "per_session": {
+          "ses_e074fccf1ffeEnuS1BxFuaYgUu": {
+            "active_seconds": 2,
+            "measured_seconds": 2,
+            "provisional_seconds": 0
+          },
+          "ses_e074fd9faffekK25zm9VNkTS4l": {
+            "active_seconds": 1,
+            "measured_seconds": 1,
+            "provisional_seconds": 0
+          },
+          "ses_e074fe09fffezc716wwfV3dhtn": {
+            "active_seconds": 4,
+            "measured_seconds": 4,
+            "provisional_seconds": 0
+          },
+          "ses_e074ff09dffeWzdsEFkCkaH5Tu": {
+            "active_seconds": 31,
+            "measured_seconds": 31,
+            "provisional_seconds": 0
+          }
+        },
+        "publication_observed_at": "2026-11-20T11:22:05.60097556Z",
+        "rendered_active_duration": "0m 38s",
+        "source_duration_cutoff": "2026-11-20T11:22:03.983850449Z",
+        "source_reconciliation_completed_at": "2026-11-20T11:22:04.972782663Z",
+        "ticket_active_seconds": 38,
+        "ticket_measured_seconds": 38,
+        "ticket_provisional_seconds": 0
+      },
+      "first_published_at": "2026-11-20T11:22:05.60097556Z",
+      "git_index_unchanged": true,
+      "harness_version": "1.19.5",
+      "native_completion_epoch": 1795173663.712,
+      "native_publication_completion_epoch": 1795173726.186,
+      "native_tree": {
+        "ses_e074fccf1ffeEnuS1BxFuaYgUu": "ses_e074ff09dffeWzdsEFkCkaH5Tu",
+        "ses_e074fd9faffekK25zm9VNkTS4l": "ses_e074fe09fffezc716wwfV3dhtn",
+        "ses_e074fe09fffezc716wwfV3dhtn": "ses_e074ff09dffeWzdsEFkCkaH5Tu",
+        "ses_e074ff09dffeWzdsEFkCkaH5Tu": null
+      },
+      "nested_delegation_offered": true,
+      "pending_binding_observed_at": "2026-11-20T11:21:43.654190816Z",
+      "pending_capture_id": "6e7cb79b9ea66e15f15af59ef29eb40f880580db0e5e5390c8c9f4a3187a40f4",
+      "pending_file": "review/pending-capture/6e7cb79b9ea66e15f15af59ef29eb40f880580db0e5e5390c8c9f4a3187a40f4.json",
+      "pending_removed_at": "2026-11-20T11:22:05.677892111Z",
+      "pending_visible_unstaged": true,
+      "published_tree": {
+        "ses_e074fccf1ffeEnuS1BxFuaYgUu": "ses_e074ff09dffeWzdsEFkCkaH5Tu",
+        "ses_e074fd9faffekK25zm9VNkTS4l": "ses_e074fe09fffezc716wwfV3dhtn",
+        "ses_e074fe09fffezc716wwfV3dhtn": "ses_e074ff09dffeWzdsEFkCkaH5Tu",
+        "ses_e074ff09dffeWzdsEFkCkaH5Tu": null
+      },
+      "result": "passed",
+      "resumed_completion_to_commit_seconds": 1.163,
+      "source": "opencode",
+      "unavailable_destination_diagnostic": "native destination must be an existing directory: stat project/selected/ordinary-directory: no such file or directory",
+      "unavailable_destination_observed_at": "2026-11-20T11:21:55.039578191Z",
+      "unbound_discard_restore": {
+        "canonical_publication_boundary": 0,
+        "discard_revision": 1,
+        "native_completion_after_restore": 1795173690.592,
+        "native_completion_before_discard": 1795173663.712,
+        "native_completion_during_discard": 1795173679.304,
+        "native_tool_calls_after_restore": 5,
+        "native_tool_calls_before_discard": 2,
+        "native_tool_calls_during_discard": 4,
+        "pending_publication_boundary": 50,
+        "pending_remained_absent_during_discard": true,
+        "processed_discarded_generation": 106,
+        "restored_revision": 2,
+        "restored_snapshot": {
+          "ledger_cache_write": "unpersisted",
+          "native_cache_write_by_session": {
+            "ses_e074fccf1ffeEnuS1BxFuaYgUu": 0,
+            "ses_e074fd9faffekK25zm9VNkTS4l": 0,
+            "ses_e074fe09fffezc716wwfV3dhtn": 0,
+            "ses_e074ff09dffeWzdsEFkCkaH5Tu": 0
+          },
+          "native_measured_seconds": 29,
+          "per_session": {
+            "ses_e074fccf1ffeEnuS1BxFuaYgUu": {
+              "active_seconds": 2,
+              "measured_seconds": 2,
+              "provisional_seconds": 0
+            },
+            "ses_e074fd9faffekK25zm9VNkTS4l": {
+              "active_seconds": 1,
+              "measured_seconds": 1,
+              "provisional_seconds": 0
+            },
+            "ses_e074fe09fffezc716wwfV3dhtn": {
+              "active_seconds": 4,
+              "measured_seconds": 4,
+              "provisional_seconds": 0
+            },
+            "ses_e074ff09dffeWzdsEFkCkaH5Tu": {
+              "active_seconds": 22,
+              "measured_seconds": 22,
+              "provisional_seconds": 0
+            }
+          },
+          "ticket_active_seconds": 29,
+          "ticket_measured_seconds": 29,
+          "ticket_provisional_seconds": 0
+        }
+      }
+    }
+  ],
+  "scenario": "pending_capture"
+}

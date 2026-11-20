@@ -51,3 +51,16 @@ The [structured result](native-pending-result.json) records the passing Linux am
 | OpenCode 1.19.5 | 1.078 s | 10.480 s | 1.055 s | 1.289 s |
 
 The first ledger included exactly the root, two direct children and one grandchild, with source-matched tools, usage and duration. The unrelated native session stayed absent. The held first ledgers recorded 16 measured and 1 provisional seconds for Codex and 33 measured and 1 provisional seconds for OpenCode. Native completion settled the remaining provisional seconds. Each client preserved the staged Git entries and removed the pending snapshot only after canonical commit. The later turn preserved the owner tree and cumulative facts.
+
+## Integrated discard and restore package
+
+The Linux amd64 archive, manager and engine passed checksum and version verification for `v3.0.0-rc.0+al96.discard.598d4ce8`. The installed native gate passed on that exact product and runner revision. [Structured result](native-discard-result.json)
+
+| Client | Unbound completion to pending update | Native repair turn to first ledger | Repair completion to commit | Resume completion to commit |
+| --- | ---: | ---: | ---: | ---: |
+| Codex 0.170.0 | 1.061 s | 1.753 s | 1.431 s | 1.566 s |
+| OpenCode 1.19.5 | 1.320 s | 10.435 s | 1.335 s | 1.163 s |
+
+Both clients discarded and restored the same verified identity before and after binding. They performed native work during discard, observed its worker request being acknowledged without publication, and restored that activity in the exact four-owner tree. The unrelated owner remained absent. The gate checked the canonical ledger and authored summary bytes from before bound discard through cleanup and discarded activity. Exact staged entries and blob IDs matched throughout. Two negative checks verify that a root fact rewrite and an independent summary edit fail the byte comparison.
+
+An intermediate Codex repair reached a second backoff that matched the fixture's 60-second observation deadline. The fixture now uses a 10-second refresh interval so that two blocked passes leave time for native command and worker startup. The first-publication and settlement deadlines stayed at 60 and 30 seconds respectively. The runner still relies on the installed workflow to notice the repaired destination.

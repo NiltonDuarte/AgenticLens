@@ -27,8 +27,8 @@ Use the [design](design.md) for approval and the [delta spec](specs/automatic-ti
 
 - [x] **Planner** · Define CLI selection, registry state and worker coordination contracts. Assign writable-path owners and record the approved implementation scope.
 - [x] **Coder and tester** · Implement discard, discoverable status and restore with full native history. Verify unbound and bound captures, repeat operations, cleanup retry, concurrent worker passes, delayed descendants, and preservation of Git and canonical ledgers.
-- [ ] **Tester and reviewers** · Exercise native work before, during and after discard. Verify suppression after restart or resume and exact recovery without double counting. Cover missing source history and review the discard status contract for AL-97.
-- [ ] **Orchestrator** · Verify the integrated candidate and record results alongside the earlier delivery.
+- [x] **Tester and reviewers** · Exercise native work before, during and after discard. Verify suppression after restart or resume and exact recovery without double counting. Cover missing source history and review the discard status contract for AL-97.
+- [x] **Orchestrator** · Verify the integrated candidate and record results alongside the earlier delivery.
 
 ## Workflow follow-up
 
