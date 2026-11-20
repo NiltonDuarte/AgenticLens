@@ -26,5 +26,6 @@ CREATE TABLE IF NOT EXISTS capture_controls(worktree_id INTEGER NOT NULL,capture
 CREATE TABLE IF NOT EXISTS capture_lifecycle_revision(worktree_id INTEGER PRIMARY KEY,revision INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS capture_restore_reads(worktree_id INTEGER NOT NULL,capture_id TEXT NOT NULL,revision INTEGER NOT NULL,identity TEXT NOT NULL,PRIMARY KEY(worktree_id,capture_id,revision,identity));
 CREATE TABLE IF NOT EXISTS capture_restore_progress(worktree_id INTEGER NOT NULL,capture_id TEXT NOT NULL,revision INTEGER NOT NULL,identity TEXT NOT NULL,discovery INTEGER NOT NULL,position TEXT NOT NULL,complete INTEGER NOT NULL,source_read INTEGER NOT NULL,PRIMARY KEY(worktree_id,capture_id,revision,identity));
+CREATE TABLE IF NOT EXISTS capture_restore_attempts(worktree_id INTEGER NOT NULL,capture_id TEXT NOT NULL,revision INTEGER NOT NULL,identity TEXT NOT NULL,source_read INTEGER NOT NULL,discovery INTEGER NOT NULL,PRIMARY KEY(worktree_id,capture_id,revision,identity));
 CREATE TABLE IF NOT EXISTS capture_control_credentials(worktree_id INTEGER NOT NULL,identity TEXT NOT NULL,seed BLOB NOT NULL,PRIMARY KEY(worktree_id,identity));
 ` + coordinationSchema + diagnosticSchema

@@ -134,9 +134,9 @@ type WorkerProgress struct {
 	Detail            string           `json:"detail"`
 }
 
-// RestoreSchedulerRotationPasses allows each existing work class to receive
-// the full configured pass budget once before declaring a restore stalled.
-const RestoreSchedulerRotationPasses = int(workClassCount)
+// RestoreSchedulerRotationPasses gives each work class the full configured
+// budget in both the ordinary and restore-prioritized rounds.
+const RestoreSchedulerRotationPasses = 2 * int(workClassCount)
 
 func WriteWorkerProgress(directory string, progress WorkerProgress) error {
 	body, err := json.Marshal(progress)

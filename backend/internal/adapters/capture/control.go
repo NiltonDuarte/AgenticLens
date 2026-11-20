@@ -120,6 +120,14 @@ func (s *Store) CaptureLifecycleRevision(ctx context.Context) (int64, error) {
 	return revision, err
 }
 
+func (s *Store) captureControlRevision(ctx context.Context) (int64, error) {
+	// Membership changes advance the publishing fence, but do not reset a
+	// source cursor. Control rows remain durable through completed operations.
+	var revision int64
+	err := s.db.QueryRowContext(ctx, `SELECT coalesce(max(revision),0) FROM capture_controls WHERE worktree_id=?`, s.worktreeID).Scan(&revision)
+	return revision, err
+}
+
 func (s *Store) advanceLifecycleRevision(ctx context.Context, conn *sql.Conn) (int64, error) {
 	var revision int64
 	err := conn.QueryRowContext(ctx, `INSERT INTO capture_lifecycle_revision VALUES(?,1) ON CONFLICT(worktree_id) DO UPDATE SET revision=revision+1 RETURNING revision`, s.worktreeID).Scan(&revision)
@@ -408,6 +416,9 @@ func (s *Store) SetCaptureDiscarded(ctx context.Context, id string, discarded bo
 		if _, err := conn.ExecContext(ctx, `DELETE FROM capture_restore_progress WHERE worktree_id=? AND capture_id=?`, s.worktreeID, id); err != nil {
 			return err
 		}
+		if _, err := conn.ExecContext(ctx, `DELETE FROM capture_restore_attempts WHERE worktree_id=? AND capture_id=?`, s.worktreeID, id); err != nil {
+			return err
+		}
 		_, err = conn.ExecContext(ctx, requestPublicationSQL, s.worktreeID, control.requestedAt.UnixMilli())
 		return err
 	})
@@ -485,6 +496,9 @@ func (s *Store) CompleteCaptureRestores(ctx context.Context, controls []CaptureC
 				return err
 			}
 			if _, err := conn.ExecContext(ctx, `DELETE FROM capture_restore_progress WHERE worktree_id=? AND capture_id=? AND revision=?`, s.worktreeID, control.CaptureID, control.Revision); err != nil {
+				return err
+			}
+			if _, err := conn.ExecContext(ctx, `DELETE FROM capture_restore_attempts WHERE worktree_id=? AND capture_id=? AND revision=?`, s.worktreeID, control.CaptureID, control.Revision); err != nil {
 				return err
 			}
 		}

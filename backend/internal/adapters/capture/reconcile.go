@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"agenticlens/internal/adapters/codex"
@@ -78,7 +79,11 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	if err != nil {
 		return result, err
 	}
-	budget := &workBudget{bytes: byteBudget, sessions: sessionBudget}
+	controlRevision, err := s.captureControlRevision(ctx)
+	if err != nil {
+		return result, err
+	}
+	budget := &workBudget{bytes: byteBudget, sessions: sessionBudget, controlRevision: controlRevision, openCodeAttempts: map[string]bool{}}
 	refreshed := map[string]bool{}
 	defer func() {
 		result.archiveReadGroups = nil
@@ -118,9 +123,9 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 			returnErr = errors.Join(returnErr, fmt.Errorf("persisting reconciliation diagnostics: %w", err))
 		}
 	}()
-	// All work classes rotate priority durably. The first eligible class can
-	// use the full session AND byte budget; leftovers are shared in that order.
-	// Thus no persistent failure can monopolize either resource across passes.
+	// Alternate ordinary and restore-prioritized rounds. The first eligible
+	// class can use the full session and byte budget. Each round keeps its own
+	// owner rotation so a blocked restore cannot starve ordinary capture.
 	if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS recovery_phase(worktree_id INTEGER NOT NULL,ticket TEXT,phase INTEGER NOT NULL,PRIMARY KEY(worktree_id,ticket))`); err != nil {
 		return result, err
 	}
@@ -129,9 +134,15 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	if phaseErr != nil && !errors.Is(phaseErr, sql.ErrNoRows) {
 		return result, phaseErr
 	}
-	phase = phase % int(workClassCount)
-	if _, err := s.db.ExecContext(ctx, `INSERT INTO recovery_phase VALUES(?,?,?)ON CONFLICT(worktree_id,ticket) DO UPDATE SET phase=excluded.phase`, s.worktreeID, ticket, (phase+1)%int(workClassCount)); err != nil {
+	phase = phase % RestoreSchedulerRotationPasses
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO recovery_phase VALUES(?,?,?)ON CONFLICT(worktree_id,ticket) DO UPDATE SET phase=excluded.phase`, s.worktreeID, ticket, (phase+1)%RestoreSchedulerRotationPasses); err != nil {
 		return result, err
+	}
+	if phase >= int(workClassCount) {
+		budget.restorePriority, err = s.restoreWorkPriorities(ctx, ticket)
+		if err != nil {
+			return result, err
+		}
 	}
 	attempted := map[string]bool{}
 	refreshProjection := map[string]domain.CaptureRegistration{}
@@ -297,7 +308,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 			}
 		}
 	}
-	result.RestoresReady, err = s.captureRestoresReady(ctx, result, cutoff, registrations, attempted, refreshed)
+	result.RestoresReady, err = s.captureRestoresReady(ctx, result, cutoff, registrations, attempted, refreshed, budget.openCodeAttempts)
 	if err != nil {
 		return result, err
 	}
@@ -562,8 +573,8 @@ func CoverageSummary(result ReconcileResult) string {
 	return summary
 }
 
-// refreshTicketOwners is one scheduler work class; source acceptance and the
-// existing owner continuation are unchanged.
+// refreshTicketOwners is one scheduler work class. Restore-prioritized turns
+// cover owners that still need exact-revision source evidence.
 func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, budget *workBudget, result *ReconcileResult, attempted map[string]bool, archiveProjection map[string]domain.CaptureRegistration, policies ...domain.GenerationPolicy) ([]domain.CaptureRegistration, map[string]bool, error) {
 	registrations, err := s.ListActive(ctx)
 	if err != nil {
@@ -580,14 +591,20 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 	if _, err = s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS reconcile_cursor(worktree_id INTEGER NOT NULL,ticket TEXT,identity TEXT NOT NULL,PRIMARY KEY(worktree_id,ticket))`); err != nil {
 		return nil, nil, err
 	}
-	cursor := ""
-	cursorErr := s.db.QueryRowContext(ctx, `SELECT identity FROM reconcile_cursor WHERE worktree_id=? AND ticket=?`, s.worktreeID, ticket).Scan(&cursor)
-	if cursorErr != nil && !errors.Is(cursorErr, sql.ErrNoRows) {
-		return nil, nil, cursorErr
+	const restoreCursorKind = "restore-owner-reads"
+	var cursor string
+	if budget.restorePriority == nil {
+		err = s.db.QueryRowContext(ctx, `SELECT identity FROM reconcile_cursor WHERE worktree_id=? AND ticket=?`, s.worktreeID, ticket).Scan(&cursor)
+	} else {
+		cursor, err = s.childCursor(ctx, restoreCursorKind, ticket)
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, nil, err
 	}
 	indexes := []int{}
 	for i, r := range registrations {
-		if r.TicketID == ticket && !attempted[IdentityKey(r.Identity)] {
+		identity := IdentityKey(r.Identity)
+		if r.TicketID == ticket && !attempted[identity] && (budget.restorePriority == nil || budget.restorePriority.reads[identity] > 0) {
 			indexes = append(indexes, i)
 		}
 	}
@@ -597,6 +614,12 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		split++
 	}
 	indexes = append(append([]int{}, indexes[split:]...), indexes[:split]...)
+	if budget.restorePriority != nil {
+		sort.SliceStable(indexes, func(i, j int) bool {
+			left, right := registrations[indexes[i]].Identity, registrations[indexes[j]].Identity
+			return budget.restorePriority.reads[IdentityKey(left)] > budget.restorePriority.reads[IdentityKey(right)]
+		})
+	}
 
 	if len(policies) == 0 {
 		if err := adaptersconfig.ValidateGenerationPolicy(s.configuration); err != nil {
@@ -734,7 +757,12 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			budget.refreshCursorHeld = true
 		}
 		if !budget.refreshCursorHeld {
-			if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,ticket) DO UPDATE SET identity=excluded.identity`, s.worktreeID, ticket, IdentityKey(r.Identity)); err != nil {
+			if budget.restorePriority == nil {
+				_, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,ticket) DO UPDATE SET identity=excluded.identity`, s.worktreeID, ticket, key)
+			} else {
+				err = s.saveChildCursor(ctx, restoreCursorKind, ticket, key, false)
+			}
+			if err != nil {
 				return nil, nil, err
 			}
 		}

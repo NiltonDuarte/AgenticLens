@@ -1,7 +1,10 @@
 """Exercise the installed integrations and report the packaged release gate."""
 
 import argparse
+from contextlib import contextmanager, nullcontext
+import fcntl
 import json
+import os
 from pathlib import Path
 import shutil
 import sqlite3
@@ -350,35 +353,70 @@ def publication_boundary(project):
     return max((row["sequence"] for row in publication_diagnostics(project.diagnostic_history())), default=0)
 
 
-def discard_cycle(project, model, root, key, path, processes, check_index, before, canonical=None):
-    bound = canonical is not None
+@contextmanager
+def canonical_discard_baseline(project):
+    directory = os.open(project.workspace, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        def lock_directory():
+            try:
+                fcntl.flock(directory, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return False
+            return True
+
+        # Establish the byte baseline after any already admitted active write.
+        event_until(time.monotonic() + SETTLE_SECONDS, lock_directory,
+                    "Could not acquire the canonical directory before native discard")
+        yield project.ledger.read_bytes(), project.summary.read_bytes()
+    finally:
+        os.close(directory)
+
+
+def assert_canonical_unchanged(project, baseline, stage):
+    ledger, summary = baseline
+    require(project.ledger.read_bytes() == ledger, f"{stage} changed the accepted canonical ledger")
+    require(project.summary.read_bytes() == summary, f"{stage} changed the accepted canonical summary")
+
+
+def discard_cycle(project, model, root, key, path, processes, check_index, before, bound=False):
     suffix, ticket = ("_BOUND", TICKET) if bound else ("", "")
     tool = "exec_command" if project.source == "codex" else "bash"
     active = capture_status(project, root, key, ticket)
     require(active["state"] == "active", "Capture was not active before native discard")
     model.capture_control = root, key, active["revision"], str(project.codex_home)
-    native_turn(project, root, "DISCARD" + suffix, processes)
 
-    def discarded_status():
+    def discarded_status(stage):
+        require(discard_turn.poll() in (None, 0), "Native discard failed, see fixture logs")
         control = capture_status(project, root, key, ticket)
-        if control["state"] == "discarded" and not control["cleanup_pending"]:
+        if bound:
+            assert_canonical_unchanged(project, retained, stage)
+        if control["state"] == "discarded":
             require(control["revision"] > active["revision"], "Native discard did not advance the capture revision")
-            require(not path.exists(), "Discard acknowledged cleanup with its pending snapshot still present")
             return control
         return None
 
-    discarded = event_until(time.monotonic() + SETTLE_SECONDS, discarded_status,
-                            "Native discard did not settle in local capture status")
+    with canonical_discard_baseline(project) if bound else nullcontext() as retained:
+        discard_turn, discard_log = launch(project, "DISCARD" + suffix, root)
+        processes.append(discard_turn)
+        event_until(time.monotonic() + SETTLE_SECONDS, lambda: discarded_status("Persisting discard"),
+                    "Native discard did not persist in local capture status")
+
+    # The directory is released so native cleanup can acquire it. Keep checking
+    # the files until cleanup has settled and the native turn has finished.
+    def discarded_cleanup_finished():
+        control = discarded_status("Acknowledging discard cleanup")
+        if control and not control["cleanup_pending"]:
+            require(not path.exists(), "Discard acknowledged cleanup with its pending snapshot still present")
+            if discard_turn.poll() == 0:
+                return control
+        return None
+
+    discarded = event_until(time.monotonic() + SETTLE_SECONDS, discarded_cleanup_finished,
+                            "Native discard did not settle and finish its turn")
+    require(native_id(discard_log) == root, "Native discard ran in a different session")
     check_index("native discard" + suffix)
-    if bound:
-        ledger = json.loads(project.ledger.read_bytes())
-        require(ledger["ticket_id"] == TICKET and exact_children(ledger, root) == exact_children(canonical[0], root),
-                "Discard lost recorded canonical owners or their accepted child facts")
-        require(any(row["id"] == root for row in ledger["sessions"]), "Discard removed the canonical root")
-        retained = project.ledger.read_bytes(), project.summary.read_bytes()
-    else:
+    if not bound:
         no_canonical_output(project)
-        retained = None
 
     before_during = tree(source_owners(project), root)
     require(before_during[root].latest_completion > before[root].latest_completion,
@@ -391,8 +429,7 @@ def discard_cycle(project, model, root, key, path, processes, check_index, befor
     def assert_suppressed_files():
         require(not path.exists(), "The worker recreated a discarded pending snapshot")
         if bound:
-            require((project.ledger.read_bytes(), project.summary.read_bytes()) == retained,
-                    "Activity during discard changed the accepted canonical files")
+            assert_canonical_unchanged(project, retained, "Activity during discard")
         else:
             require(not project.ledger.exists() and not project.summary.exists(),
                     "Activity during discard produced a canonical artifact")
@@ -631,7 +668,7 @@ def exercise_pending(project, model, evidence, unrelated, processes, index_befor
         "after_completion": check_complete(terminal, project.source, published_source, root, unrelated),
     })
     restored_source, bound_discard = discard_cycle(
-        project, model, root, key, path, processes, check_index, published_source, terminal,
+        project, model, root, key, path, processes, check_index, published_source, bound=True,
     )
     restored, restored_commit, restored_reconciliation, _ = wait_terminal_snapshot(
         project, root, restored_source[root].latest_completion, bound_discard["canonical_publication_boundary"],

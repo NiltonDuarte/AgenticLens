@@ -141,7 +141,9 @@ class Project:
                 "sources": {source: source_config},
                 "capture": {
                     "enabled": True, "state_dir": str(self.home / ".agenticlens" / "capture"),
-                    "refresh_ms": 15000, "debounce_ms": 500, "idle_ms": 16000,
+                    # The second destination-block backoff is 40s at this cadence.
+                    # Leave time in the 60s first-publication window for the native repair and commit.
+                    "refresh_ms": 10000, "debounce_ms": 500, "idle_ms": 11000,
                     "max_lifetime_ms": 180000, "pass_timeout_ms": 10000,
                     "max_sessions": 32, "max_source_bytes": 16777216, "commit_warning": False,
                 },

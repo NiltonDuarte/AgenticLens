@@ -1,10 +1,14 @@
 """Focused regressions for native release gate assertions."""
 
-import unittest
 from collections import Counter
+import json
+from pathlib import Path
 from shlex import join
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+import unittest
 
-from gate import birth_commit, first_completion_commit
+from gate import assert_canonical_unchanged, birth_commit, canonical_discard_baseline, first_completion_commit
 from oracle import (
     Owner, artifact_matches_commit, capture_id, check_birth, check_complete, check_held, check_pending_identity,
     check_rollup, snapshot_matches_pending_record, unix_time,
@@ -81,6 +85,32 @@ class NativeCaptureControlOracleTest(unittest.TestCase):
         self.store = "/fixture/codex stores"
         self.model.capture_control = "verified-root", self.key, 7, self.store
         self.receipt = f"{'b' * 64}.7.{'c' * 64}"
+
+    def test_bound_discard_detects_canonical_rewrites_before_acknowledgement(self):
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            project = SimpleNamespace(workspace=workspace, ledger=workspace / "agentic_metrics.json",
+                                      summary=workspace / "delivery.md")
+            original = {"ticket_id": TICKET, "sessions": [
+                {"id": "root", "tools": [{"name": "bash", "calls": 2}]},
+                {"id": "child", "parent_id": "root"},
+            ]}
+            rewritten = {**original, "sessions": [{"id": "root", "tools": []}, original["sessions"][1]]}
+            summary = b"# Accepted delivery\n\nAuthor's release notes.\n"
+            for artifact, write in (
+                ("ledger", lambda: project.ledger.write_text(json.dumps(rewritten))),
+                ("summary", lambda: project.summary.write_bytes(summary.replace(b"Author's", b"Generated"))),
+            ):
+                with self.subTest(artifact=artifact):
+                    project.ledger.write_text(json.dumps(original))
+                    project.summary.write_bytes(summary)
+                    with canonical_discard_baseline(project) as retained:
+                        assert_canonical_unchanged(project, retained, "Before discard")
+                        write()
+                        with self.assertRaisesRegex(RuntimeError, f"Persisting discard changed the accepted canonical {artifact}"):
+                            assert_canonical_unchanged(project, retained, "Persisting discard")
+                    with self.assertRaisesRegex(RuntimeError, f"Acknowledging discard cleanup changed the accepted canonical {artifact}"):
+                        assert_canonical_unchanged(project, retained, "Acknowledging discard cleanup")
 
     def test_bound_stage_does_not_reuse_unbound_tool_history(self):
         self.assertEqual(request_stage([

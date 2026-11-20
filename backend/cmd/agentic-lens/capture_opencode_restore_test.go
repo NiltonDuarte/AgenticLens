@@ -1,19 +1,23 @@
 package main_test
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"agenticlens/internal/adapters/capture"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
 func TestCaptureOpenCodeIdleRestoreContinuesBoundedDescendantDiscovery(t *testing.T) {
-	f, native, store, root := prepareOpenCodeRestoreFixture(t, "", 1)
+	const siblings = 8
+	f, native, store, root := prepareOpenCodeRestoreFixture(t, "", 1, siblings)
 	id := capture.StableCaptureID(root.Identity.Source, root.Identity.SessionID)
 	assertCaptureRootInput(t, f.ledger(t), 17)
 
@@ -24,35 +28,73 @@ func TestCaptureOpenCodeIdleRestoreContinuesBoundedDescendantDiscovery(t *testin
 	addOpenCodeRestoreTask(t, native, "root", "child")
 	addOpenCodeRestoreTask(t, native, "child", "grandchild")
 	rows, err := store.List(context.Background())
-	if err != nil || len(rows) != 1 || rows[0].Identity != root.Identity {
+	if err != nil || len(rows) != 1+siblings {
 		t.Fatalf("descendants were already registered before restore: %d rows, %v", len(rows), err)
 	}
+	for _, row := range rows {
+		if row.ParentID != "" || domain.CaptureNeedsPeriodicRefresh(row) {
+			t.Fatalf("fixture must have only independent idle roots, got %s", row.Identity.SessionID)
+		}
+	}
+	positionBeforeUnrelatedOpenCodeOwners(t, store, root.Identity)
 
 	restoreOpenCodeFixtureAndWait(t, f, store, id)
-	assertOpenCodeRestoredOwners(t, f.ledger(t), map[string]openCodeRestoreOwner{
+	wanted := map[string]openCodeRestoreOwner{
 		"root":       {input: 17},
 		"child":      {parent: "root", input: 23},
 		"grandchild": {parent: "child", input: 29},
-	})
+	}
+	for number := 0; number < siblings; number++ {
+		wanted[fmt.Sprintf("other-%d", number)] = openCodeRestoreOwner{input: int64(50 + number)}
+	}
+	assertOpenCodeRestoredOwners(t, f.ledger(t), wanted)
 }
 
 func TestCaptureOpenCodeIndependentRestoreKeepsUnavailableUpstreamParent(t *testing.T) {
 	const upstream = "unavailable-parent"
-	f, _, store, root := prepareOpenCodeRestoreFixture(t, upstream, 8)
+	f, native, store, root := prepareOpenCodeRestoreFixture(t, upstream, 8, 0)
 	if root.ParentID != upstream || root.Binding != "explicit_agent_response" || root.TicketID != initialPublicationTicket {
 		t.Fatalf("fixture lacks an admitted independent native root: %+v", root)
 	}
+	assertCaptureRootInput(t, f.ledger(t), 17)
 	rows, err := store.List(context.Background())
 	if err != nil || len(rows) != 1 || rows[0].Identity != root.Identity {
 		t.Fatalf("upstream owner must remain unavailable in the local registry: %d rows, %v", len(rows), err)
 	}
+	if _, err := native.Exec(`UPDATE message SET data=json_set(data,'$.tokens.input',41),time_updated=3500 WHERE id='m-root'`); err != nil {
+		t.Fatal(err)
+	}
 	restoreOpenCodeFixtureAndWait(t, f, store, capture.StableCaptureID(root.Identity.Source, root.Identity.SessionID))
 	assertOpenCodeRestoredOwners(t, f.ledger(t), map[string]openCodeRestoreOwner{
-		"root": {parent: upstream, input: 17},
+		"root": {parent: upstream, input: 41},
 	})
 }
 
-func prepareOpenCodeRestoreFixture(t *testing.T, parent string, restoreBudget int) (captureGenerationFixture, *sql.DB, *capture.Store, domain.CaptureRegistration) {
+func positionBeforeUnrelatedOpenCodeOwners(t *testing.T, store *capture.Store, root domain.CaptureIdentity) {
+	t.Helper()
+	registry, err := sql.Open("sqlite", filepath.Join(store.RegistryDirectory(), "registry.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+	// Ordinary rotation visits IDs after each cursor, then wraps. Put the
+	// restored root behind every unrelated root without generating a wake.
+	key := capture.IdentityKey(root)
+	for _, statement := range []string{
+		`UPDATE reconcile_cursor SET identity=? WHERE ticket=?`,
+		`UPDATE child_cursor SET key=? WHERE kind='parents-opencode' AND parent=?`,
+	} {
+		result, err := registry.Exec(statement, key, initialPublicationTicket)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if affected, err := result.RowsAffected(); err != nil || affected != 1 {
+			t.Fatalf("fixture requires one existing ticket cursor, got %d, %v", affected, err)
+		}
+	}
+}
+
+func prepareOpenCodeRestoreFixture(t *testing.T, parent string, restoreBudget, siblings int) (captureGenerationFixture, *sql.DB, *capture.Store, domain.CaptureRegistration) {
 	t.Helper()
 	f := newCaptureGenerationFixture(t)
 	enableCLIFixtureSummary(t, f.project)
@@ -68,6 +110,9 @@ func prepareOpenCodeRestoreFixture(t *testing.T, parent string, restoreBudget in
 		}
 	}
 	settings(32)
+	if out, err := runCaptureNative(t, f.project, "", "capture", "install", "--repo", f.project, "--source", "opencode", "--store", path, "--state-dir", f.state, "--binary", cliBinaryPath); err != nil {
+		t.Fatalf("install isolated OpenCode worker selection: %v\n%s", err, out)
+	}
 	native, err := sql.Open("sqlite", path)
 	if err != nil {
 		t.Fatal(err)
@@ -77,7 +122,6 @@ func prepareOpenCodeRestoreFixture(t *testing.T, parent string, restoreBudget in
 			t.Error(err)
 		}
 	})
-	addOpenCodeRestoreSession(t, native, f.project, "root", parent, 17)
 	ctx := context.Background()
 	store, err := capture.OpenProject(f.state, f.project)
 	if err != nil {
@@ -88,20 +132,37 @@ func prepareOpenCodeRestoreFixture(t *testing.T, parent string, restoreBudget in
 			t.Error(err)
 		}
 	})
-	identity := domain.CaptureIdentity{Source: domain.SourceOpenCode, Store: path, SessionID: "root"}
-	row, err := store.Register(ctx, identity, "", "session.idle")
-	if err != nil {
-		t.Fatal(err)
+	bind := func(id, parent string, input int) domain.CaptureIdentity {
+		t.Helper()
+		addOpenCodeRestoreSession(t, native, f.project, id, parent, input)
+		identity := domain.CaptureIdentity{Source: domain.SourceOpenCode, Store: path, SessionID: id}
+		row, err := store.Register(ctx, identity, "", "session.idle")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := store.BindNativeOpenCode(ctx, identity, capture.BindingTicket{ID: initialPublicationTicket, Title: "Idle restore fixture", Type: "fix"}, row.Request); err != nil {
+			t.Fatal(err)
+		}
+		return identity
 	}
-	if _, err := store.BindNativeOpenCode(ctx, identity, capture.BindingTicket{ID: initialPublicationTicket, Title: "Idle restore fixture", Type: "fix"}, row.Request); err != nil {
-		t.Fatal(err)
+	identity := bind("root", parent, 17)
+	for number := 0; number < siblings; number++ {
+		bind(fmt.Sprintf("other-%d", number), "", 50+number)
 	}
 	runDiscardFixtureWorker(t, f)
 	rows, err := store.List(ctx)
-	if err != nil || len(rows) != 1 || rows[0].Identity != identity || rows[0].ParentID != parent || domain.CaptureNeedsPeriodicRefresh(rows[0]) {
-		t.Fatalf("fixture must start with one verified idle native root: %d rows, %v", len(rows), err)
+	if err != nil || len(rows) != 1+siblings {
+		t.Fatalf("fixture did not register native roots: %d rows, %v", len(rows), err)
 	}
-	root := rows[0]
+	var root domain.CaptureRegistration
+	for _, row := range rows {
+		if row.Identity == identity {
+			root = row
+		}
+	}
+	if root.Identity != identity || root.ParentID != parent || domain.CaptureNeedsPeriodicRefresh(root) {
+		t.Fatal("fixture needs an exact verified idle native root")
+	}
 	if _, err := store.SetCaptureDiscarded(ctx, capture.StableCaptureID(identity.Source, identity.SessionID), true, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -112,10 +173,15 @@ func prepareOpenCodeRestoreFixture(t *testing.T, parent string, restoreBudget in
 
 func restoreOpenCodeFixtureAndWait(t *testing.T, f captureGenerationFixture, store *capture.Store, id string) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
-	completion := captureWorkerCompletion(t, store.CoordinationDirectory())
+	var log bytes.Buffer
+	completion := captureWorkerCompletionWithLog(t, store.CoordinationDirectory(), &log)
 	t.Cleanup(func() { captureCleanupWorkers(t, completion) })
+	previous, err := capture.WorkerStatus(store.CoordinationDirectory())
+	if err != nil {
+		t.Fatal(err)
+	}
 	out, err := runCaptureNative(t, f.project, "", "capture", "restore", "--repo", f.project, "--capture-id", id)
 	if err != nil {
 		t.Fatalf("operator restore: %v\n%s", err, out)
@@ -124,7 +190,22 @@ func restoreOpenCodeFixtureAndWait(t *testing.T, f captureGenerationFixture, sto
 	if err := json.Unmarshal(out, &queued); err != nil || queued.CaptureID != id || queued.State != capture.CaptureControlRestoring || !queued.CoveragePending {
 		t.Fatalf("restore did not queue an exact coverage check: %+v, %v\n%s", queued, err, out)
 	}
-	settled := completion(ctx)
+	done := make(chan error, 1)
+	go func() { done <- completion(ctx) }()
+	tick := time.NewTicker(50 * time.Millisecond)
+	defer tick.Stop()
+	seen := make(map[int]string)
+	var settled error
+	for done != nil {
+		select {
+		case settled = <-done:
+			done = nil
+		case <-tick.C:
+			if progress, err := capture.WorkerStatus(store.CoordinationDirectory()); err == nil && progress.PID != previous.PID && progress.PID > 0 {
+				seen[progress.PID] = progress.State
+			}
+		}
+	}
 	status := readDiscardFixtureStatus(t, f, id)
 	request, err := store.PublicationRequest(context.Background())
 	if settled != nil || err != nil || status.State != capture.CaptureControlActive || status.CoveragePending || status.Revision != queued.Revision || request.Generation != request.Acknowledged {
@@ -148,8 +229,14 @@ func restoreOpenCodeFixtureAndWait(t *testing.T, f captureGenerationFixture, sto
 			}
 		}
 		progress, progressErr := capture.WorkerStatus(store.CoordinationDirectory())
-		t.Fatalf("restore did not finish on the original wake: status=%+v request=%+v read=%v completion=%v; owners=%v (%v); proofs=%v (%v); retained passes=%v (%v); worker=%+v (%v)", status, request, err, settled, owners, listErr, proofs, proofErr, attempts, diagnosticErr, progress, progressErr)
+		entry, entryErr := adaptersconfig.ResolveEntrypoint(f.project)
+		logText := "worker log is still open"
+		if settled == nil {
+			logText = log.String()
+		}
+		t.Fatalf("restore did not finish on the original wake: status=%+v request=%+v read=%v completion=%v; owners=%v (%v); proofs=%v (%v); retained passes=%v (%v); worker=%+v (%v); observed worker PIDs=%v; manager entry=%+v (%v)\n%s", status, request, err, settled, owners, listErr, proofs, proofErr, attempts, diagnosticErr, progress, progressErr, seen, entry, entryErr, logText)
 	}
+	t.Logf("exact restore completed across %d observed worker processes", len(seen))
 }
 
 func addOpenCodeRestoreSession(t *testing.T, native *sql.DB, project, id, parent string, input int) {

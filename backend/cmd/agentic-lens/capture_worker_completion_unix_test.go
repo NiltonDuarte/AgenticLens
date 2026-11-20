@@ -18,6 +18,11 @@ import (
 // registry cleanup after the worker lease is released.
 func captureWorkerCompletion(t *testing.T, directory string) func(context.Context) error {
 	t.Helper()
+	return captureWorkerCompletionWithLog(t, directory, io.Discard)
+}
+
+func captureWorkerCompletionWithLog(t *testing.T, directory string, log io.Writer) func(context.Context) error {
+	t.Helper()
 	path := filepath.Join(directory, "worker.log")
 	if err := syscall.Mkfifo(path, 0600); err != nil {
 		t.Fatal(err)
@@ -40,7 +45,7 @@ func captureWorkerCompletion(t *testing.T, directory string) func(context.Contex
 	finished := make(chan struct{})
 	var drainErr error
 	go func() {
-		_, drainErr = io.Copy(io.Discard, reader)
+		_, drainErr = io.Copy(log, reader)
 		close(finished)
 	}()
 	t.Cleanup(func() {

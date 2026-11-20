@@ -12,7 +12,7 @@ import (
 // A restore may spend several bounded passes proving the whole group. Record
 // accepted reads for its exact revision so a later pass cannot mistake cached
 // pre-discard facts, or a stale pass after a concurrent transition, for proof.
-func (s *Store) captureRestoresReady(ctx context.Context, result ReconcileResult, cutoff time.Time, rows []domain.CaptureRegistration, attempted, refreshed map[string]bool) (ready []CaptureControl, returnErr error) {
+func (s *Store) captureRestoresReady(ctx context.Context, result ReconcileResult, cutoff time.Time, rows []domain.CaptureRegistration, attempted, refreshed, openCodeAttempts map[string]bool) (ready []CaptureControl, returnErr error) {
 	controls, err := s.captureControls(ctx, nil, "", CaptureControlRestoring, false)
 	if err != nil || len(controls) == 0 {
 		return nil, err
@@ -46,6 +46,9 @@ func (s *Store) captureRestoresReady(ctx context.Context, result ReconcileResult
 				if !present || len(group) == 0 || ticket != result.TicketID {
 					continue
 				}
+				if err := s.recordRestoreAttempts(ctx, conn, control, group, attempted, openCodeAttempts); err != nil {
+					return err
+				}
 				covered, err := s.recordRestoreReads(ctx, conn, control, group, attempted, refreshed)
 				if err != nil {
 					return err
@@ -62,6 +65,20 @@ func (s *Store) captureRestoresReady(ctx context.Context, result ReconcileResult
 		})
 	})
 	return ready, returnErr
+}
+
+func (s *Store) recordRestoreAttempts(ctx context.Context, conn *sql.Conn, control CaptureControl, owners []domain.CaptureRegistration, attempted, openCodeAttempts map[string]bool) error {
+	for _, row := range owners {
+		key := IdentityKey(row.Identity)
+		if attempted[key] || openCodeAttempts[key] {
+			// Count a first attempt once so later owners remain reachable even
+			// when an unavailable sibling has consumed its turn in the rotation.
+			if _, err := conn.ExecContext(ctx, `INSERT INTO capture_restore_attempts VALUES(?,?,?,?,?,?) ON CONFLICT(worktree_id,capture_id,revision,identity) DO UPDATE SET source_read=max(source_read,excluded.source_read),discovery=max(discovery,excluded.discovery)`, s.worktreeID, control.CaptureID, control.Revision, key, attempted[key], openCodeAttempts[key]); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // A ticket can contain independent captures. Only this group's actual native

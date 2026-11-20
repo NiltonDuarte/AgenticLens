@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"agenticlens/internal/adapters/codex"
@@ -102,6 +103,9 @@ func (class workClass) cursorKind() string {
 
 type workBudget struct {
 	codexDiscovery    *codex.DiscoveryBudget
+	controlRevision   int64
+	restorePriority   *restorePriorities
+	openCodeAttempts  map[string]bool
 	refreshCursorHeld bool
 	bytes             int64
 	sessions          int
@@ -228,7 +232,11 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 	if err != nil {
 		return 0, err
 	}
-	parentCursor, e := s.childCursor(ctx, class.cursorKind(), ticket)
+	cursorKind := class.cursorKind()
+	if budget.restorePriority != nil {
+		cursorKind = "restore-" + cursorKind
+	}
+	parentCursor, e := s.childCursor(ctx, cursorKind, ticket)
 	if e != nil {
 		return 0, e
 	}
@@ -236,6 +244,9 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 	eligible := []domain.CaptureRegistration{}
 	for _, parent := range parents {
 		if parent.TicketID != ticket {
+			continue
+		}
+		if budget.restorePriority != nil && budget.restorePriority.discovery[IdentityKey(parent.Identity)] == 0 {
 			continue
 		}
 		if class == workOpenCode {
@@ -269,6 +280,11 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 		split++
 	}
 	eligible = append(append([]domain.CaptureRegistration{}, eligible[split:]...), eligible[:split]...)
+	if budget.restorePriority != nil {
+		sort.SliceStable(eligible, func(i, j int) bool {
+			return budget.restorePriority.discovery[IdentityKey(eligible[i].Identity)] > budget.restorePriority.discovery[IdentityKey(eligible[j].Identity)]
+		})
+	}
 	parentLimit := max(1, budget.sessions)
 	known := map[string]domain.CaptureRegistration{}
 	for _, r := range parents {
@@ -283,7 +299,7 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 			budget.discoveryPending = true
 			break
 		}
-		if err = s.saveChildCursor(ctx, class.cursorKind(), ticket, IdentityKey(parent.Identity), parentIndex+1 < len(eligible)); err != nil {
+		if err = s.saveChildCursor(ctx, cursorKind, ticket, IdentityKey(parent.Identity), parentIndex+1 < len(eligible)); err != nil {
 			return 0, err
 		}
 		if parent.Identity.Source == domain.SourceOpenCode {
@@ -291,6 +307,9 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 			if budget.sessions < 1 || budget.bytes < 256 {
 				budget.discoveryPending = true
 				continue
+			}
+			if budget.openCodeAttempts != nil {
+				budget.openCodeAttempts[IdentityKey(parent.Identity)] = true
 			}
 			db, e := openOpenCodeSource(s.configuration, parent.Identity.Store)
 			if e != nil {
@@ -329,7 +348,7 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 			if more {
 				budget.discoveryPending = true
 			}
-			if e = s.saveChildCursor(ctx, "opencode", IdentityKey(parent.Identity), last, more); e != nil {
+			if e = s.saveOpenCodeChildCursor(ctx, IdentityKey(parent.Identity), last, more, budget.controlRevision); e != nil {
 				return 0, e
 			}
 			continue
@@ -553,4 +572,19 @@ func (s *Store) childCursor(ctx context.Context, kind, parent string) (string, e
 func (s *Store) saveChildCursor(ctx context.Context, kind, parent, key string, more bool) error {
 	_, err := s.db.ExecContext(ctx, `INSERT INTO child_cursor(worktree_id,kind,parent,key,more)VALUES(?,?,?,?,?) ON CONFLICT(worktree_id,kind,parent) DO UPDATE SET key=excluded.key,more=excluded.more`, s.worktreeID, kind, parent, key, more)
 	return err
+}
+
+func (s *Store) saveOpenCodeChildCursor(ctx context.Context, parent, key string, more bool, observedControlRevision int64) error {
+	// Restore clears the previous scan's cursor inside this same fence. A
+	// source query begun earlier cannot put that old continuation back.
+	return s.withLifecycleLock(ctx, func() error {
+		current, err := s.captureControlRevision(ctx)
+		if err != nil {
+			return err
+		}
+		if current != observedControlRevision {
+			return ErrCaptureLifecycleChanged
+		}
+		return s.saveChildCursor(ctx, "opencode", parent, key, more)
+	})
 }
