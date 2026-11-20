@@ -1284,8 +1284,8 @@ func writeCaptureFixtureLocal(t *testing.T, f captureGenerationFixture, body []b
 }
 
 // These fixtures test source guards or explicit publication, while autonomous
-// worker behavior has its own process tests. Hold the actual worker lease and
-// drain every launched child's inherited log handle before releasing its files.
+// worker behavior has its own process tests. Hold the current worker election
+// and drain every launched child's log without excluding compatible publishers.
 func serializeCaptureFixtureWorkers(t *testing.T, f captureGenerationFixture) {
 	t.Helper()
 	state, err := capture.ProjectState(f.state, f.project)
@@ -1296,7 +1296,7 @@ func serializeCaptureFixtureWorkers(t *testing.T, f captureGenerationFixture) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lease, err := capture.AcquireWorker(store.CoordinationDirectory())
+	lease, err := capture.AcquireLifecycleWorker(store.CoordinationDirectory())
 	if err != nil || lease == nil {
 		store.Close()
 		t.Fatalf("fixture worker serialization: %v", err)

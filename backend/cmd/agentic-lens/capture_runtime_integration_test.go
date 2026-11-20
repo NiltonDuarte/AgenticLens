@@ -42,7 +42,7 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 	if h := verify("root", f.store); h.State != "verification_pending" || h.CallbackObserved {
 		t.Fatalf("installation alone established callback health: %+v", h)
 	}
-	lease, err := capture.AcquireWorker(f.coordination(t))
+	lease, err := capture.AcquireLifecycleWorker(f.coordination(t))
 	if err != nil || lease == nil {
 		t.Fatalf("fixture worker serialization: %v", err)
 	}
