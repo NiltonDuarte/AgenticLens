@@ -211,7 +211,13 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 				registrations[i] = pendingChangedObservation(owner)
 			}
 		} else if projected, ok := refreshProjection[key]; ok {
-			registrations[i] = projected
+			if sameCaptureReadObservation(owner, projected) {
+				registrations[i] = projected
+			} else if refreshed[key] {
+				delete(refreshed, key)
+				staleEvidence[owner.Identity.SessionID] = true
+				registrations[i] = pendingChangedObservation(owner)
+			}
 		}
 	}
 	for key, missing := range archiveProjection {
@@ -415,20 +421,24 @@ func sameCaptureReadObservation(current, observed domain.CaptureRegistration) bo
 		current.SnapshotNeedsRefresh == observed.SnapshotNeedsRefresh
 }
 
-func (s *Store) commitCaptureRead(ctx context.Context, observed domain.CaptureRegistration, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
-	return s.Change(ctx, observed.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-		if !sameCaptureReadObservation(current, observed) {
-			return current, errCaptureReadObservationChanged
-		}
-		return apply(current)
-	})
-}
-
-func (s *Store) saveCaptureRead(ctx context.Context, observed domain.CaptureRegistration, relocated bool, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
-	if relocated {
-		return s.commitCaptureRead(ctx, observed, apply)
+func (s *Store) saveCaptureRead(ctx context.Context, observed domain.CaptureRegistration, controlRevision int64, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (updated domain.CaptureRegistration, returnErr error) {
+	if err := observed.Identity.Validate(); err != nil {
+		return domain.CaptureRegistration{}, err
 	}
-	return s.Change(ctx, observed.Identity, apply)
+	id, err := canonicalIdentity(observed.Identity)
+	if err != nil {
+		return domain.CaptureRegistration{}, err
+	}
+	returnErr = s.withCaptureControlRegistrationWrite(ctx, controlRevision, func(conn *sql.Conn) error {
+		updated, err = s.changeRegistration(ctx, conn, id, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+			if !sameCaptureReadObservation(current, observed) {
+				return current, errCaptureReadObservationChanged
+			}
+			return apply(current)
+		})
+		return err
+	})
+	return updated, returnErr
 }
 
 func pendingChangedObservation(current domain.CaptureRegistration) domain.CaptureRegistration {
@@ -614,6 +624,9 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			case 0:
 				continue
 			case restoreReadCovered:
+				if budget.sessions < 1 || budget.bytes < 1 {
+					continue
+				}
 				readAt, err := time.Parse(time.RFC3339Nano, r.RefreshedAt)
 				if err == nil && s.restoreReadSourceUnchanged(ctx, r, readAt) {
 					continue
@@ -689,7 +702,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		}
 		budget.charge(revision)
 		key := IdentityKey(r.Identity)
-		updated, updateErr := s.saveCaptureRead(ctx, r, relocating, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+		updated, updateErr := s.saveCaptureRead(ctx, r, budget.controlRevision, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 			if extractErr != nil {
 				current.State = domain.CaptureFailed
 				current.Detail = "Source snapshot unavailable or invalid; previous facts preserved: " + extractErr.Error()
@@ -722,9 +735,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			current.SnapshotNeedsRefresh = false
 			current.ProjectDirectory = s.project
 			current.ProjectProof = domain.CaptureProjectVerified
-			if fingerprintErr == nil {
-				current.SourceFingerprint = fingerprint
-			}
+			current.SourceFingerprint = fingerprint
 			current.Revision = revision
 			current.UpdatedAt = updatedAt
 			current.State = domain.CaptureCurrent
@@ -782,14 +793,11 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			}
 		}
 	}
-	finish := func(write captureAnnotationWriter) error {
-		return s.finishCaptureAnnotations(ctx, ticket, registrations, refreshed, &source, write, policies)
-	}
-	if acceptedRelocation {
-		// A recovered owner can be superseded after its primary snapshot commits.
+	if len(refreshed) > 0 {
+		// A source read may be superseded after its primary snapshot commits.
 		// Establish one registry view for accepting all inputs and saving their
 		// per-owner and family-derived annotations.
-		err = s.withLifecycleRegistrationWrite(ctx, func(conn *sql.Conn) error {
+		err = s.withCaptureControlRegistrationWrite(ctx, budget.controlRevision, func(conn *sql.Conn) error {
 			current, readErr := readRegistrationRows(conn.QueryContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? ORDER BY identity`, s.worktreeID))
 			if readErr != nil {
 				return readErr
@@ -799,7 +807,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			if discarded {
 				budget.refreshCursorHeld = true
 			}
-			return finish(func(ctx context.Context, identity domain.CaptureIdentity, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
+			return s.finishCaptureAnnotations(ctx, ticket, registrations, refreshed, &source, func(ctx context.Context, identity domain.CaptureIdentity, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
 				if err := identity.Validate(); err != nil {
 					return domain.CaptureRegistration{}, err
 				}
@@ -808,13 +816,11 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 					return domain.CaptureRegistration{}, err
 				}
 				return s.changeRegistration(ctx, conn, id, apply)
-			})
+			}, policies)
 		})
-	} else {
-		err = finish(s.Change)
-	}
-	if err != nil {
-		return nil, nil, err
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	for _, row := range registrations {
 		key := IdentityKey(row.Identity)

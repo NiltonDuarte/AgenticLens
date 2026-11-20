@@ -120,11 +120,13 @@ func (s *Store) CaptureLifecycleRevision(ctx context.Context) (int64, error) {
 	return revision, err
 }
 
+const captureControlRevisionSQL = `SELECT coalesce(max(revision),0) FROM capture_controls WHERE worktree_id=?`
+
 func (s *Store) captureControlRevision(ctx context.Context) (int64, error) {
 	// Membership changes advance the publishing fence, but do not reset a
 	// source cursor. Control rows remain durable through completed operations.
 	var revision int64
-	err := s.db.QueryRowContext(ctx, `SELECT coalesce(max(revision),0) FROM capture_controls WHERE worktree_id=?`, s.worktreeID).Scan(&revision)
+	err := s.db.QueryRowContext(ctx, captureControlRevisionSQL, s.worktreeID).Scan(&revision)
 	return revision, err
 }
 
@@ -178,6 +180,19 @@ func (s *Store) withLifecycleLock(ctx context.Context, action func() error) (ret
 
 func (s *Store) withLifecycleRegistrationWrite(ctx context.Context, write func(*sql.Conn) error) error {
 	return s.withLifecycleLock(ctx, func() error { return s.withRegistrationWrite(ctx, write) })
+}
+
+func (s *Store) withCaptureControlRegistrationWrite(ctx context.Context, observed int64, write func(*sql.Conn) error) error {
+	return s.withLifecycleRegistrationWrite(ctx, func(conn *sql.Conn) error {
+		var current int64
+		if err := conn.QueryRowContext(ctx, captureControlRevisionSQL, s.worktreeID).Scan(&current); err != nil {
+			return err
+		}
+		if current != observed {
+			return ErrCaptureLifecycleChanged
+		}
+		return write(conn)
+	})
 }
 
 // WithCaptureLifecycle fences a prepared publication against a later control

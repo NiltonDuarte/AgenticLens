@@ -98,13 +98,10 @@ func (s *Store) restoreReadSourceUnchanged(ctx context.Context, row domain.Captu
 	if callbackAt, err := time.Parse(time.RFC3339Nano, row.CallbackObservedAt); err == nil && callbackAt.After(readAt) {
 		return false
 	}
-	if row.Identity.Source == domain.SourceCodex {
-		// This exact rollout stat reads no transcript bytes. A changed or
-		// unavailable file needs a new bounded extraction before completion.
-		fingerprint, err := sourceFingerprint(ctx, row, s.configuration)
-		return err == nil && fingerprint == row.SourceFingerprint
-	}
-	return true
+	// Exact native revision probes read no transcript or message bodies. A
+	// changed or unavailable owner requires a bounded extraction.
+	fingerprint, err := sourceFingerprint(ctx, row, s.configuration)
+	return err == nil && fingerprint == row.SourceFingerprint
 }
 
 func (s *Store) recordRestoreAttempts(ctx context.Context, conn *sql.Conn, control CaptureControl, owners []domain.CaptureRegistration, attempted, openCodeAttempts map[string]bool) error {
@@ -180,6 +177,27 @@ func (s *Store) recordRestoreReads(ctx context.Context, conn *sql.Conn, control 
 	all := true
 	for _, row := range owners {
 		key := IdentityKey(row.Identity)
+		var record []byte
+		err := conn.QueryRowContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? AND identity=?`, s.worktreeID, key).Scan(&record)
+		if errors.Is(err, sql.ErrNoRows) {
+			all = false
+			continue
+		}
+		if err != nil {
+			return false, err
+		}
+		current, err := decode(record)
+		if err != nil {
+			return false, err
+		}
+		// A competing pass can commit after these observations were gathered.
+		// Leave the newer pass's receipts alone and retry with its exact facts.
+		if !sameCaptureReadObservation(current, row) || current.CallbackObservedAt != row.CallbackObservedAt ||
+			(current.State == domain.CaptureFailed && row.State != domain.CaptureFailed) ||
+			row.Detail == errCaptureReadObservationChanged.Error() {
+			all = false
+			continue
+		}
 		verified := row.ProjectProof == domain.CaptureProjectVerified
 		if verified && refreshed[key] && len(row.Snapshot) != 0 && (row.State == domain.CaptureCurrent || row.State == domain.CaptureUnassigned) {
 			if _, err := conn.ExecContext(ctx, `INSERT OR IGNORE INTO capture_restore_reads VALUES(?,?,?,?)`, s.worktreeID, control.CaptureID, control.Revision, key); err != nil {
