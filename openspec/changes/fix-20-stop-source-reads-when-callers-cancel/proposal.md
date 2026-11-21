@@ -18,9 +18,12 @@ The existing timeout policy, source selection and supported schema families rema
 
 - Modified `live-source-reporting` for live reads and historical hydration.
 - Added `backfill-source-cancellation` for source-backed backfill and its publication boundary.
+- Added `stable-ledger-order` for consistent raw ledger array ordering across generation, backfill and migration.
 
 ## Impact
 
 Live clients can recover after an interrupted read without accepting a cancelled snapshot. Historical clients retain usable evidence with explicit coverage. Backfill preserves recorded owner facts and ordinary partial-refresh behavior on source failures.
 
 The user also requested optional capture observation in generated Markdown. Add an opt-in setting for the diagnostic block while preserving the metrics tables, ledger and local capture diagnostics.
+
+Use stable array ordering when publishing the raw metrics ledger so that changing which sessions are refreshed does not move otherwise unchanged records.

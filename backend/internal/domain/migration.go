@@ -1,7 +1,7 @@
 package domain
 
 import (
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -23,48 +23,37 @@ type MigrationEvaluationInput struct {
 func EvaluateMigrationStatus(input MigrationEvaluationInput) MigrationInfo {
 	completedSet := make(map[string]bool)
 	pendingSet := make(map[string]bool)
+	var stepsCompleted, stepsPending []string
 
 	// Preserve prior steps if existing migration exists
 	if input.ExistingMigration != nil {
 		for _, s := range input.ExistingMigration.StepsCompleted {
-			clean := strings.TrimSpace(s)
-			if clean != "" {
-				completedSet[clean] = true
-			}
+			stepsCompleted = appendMigrationStep(stepsCompleted, completedSet, s)
 		}
 		for _, s := range input.ExistingMigration.StepsPending {
-			clean := strings.TrimSpace(s)
-			if clean != "" {
-				pendingSet[clean] = true
-			}
+			stepsPending = appendMigrationStep(stepsPending, pendingSet, s)
 		}
 	}
 
 	var notes []string
 
-	// Process Git code facts step
-	if input.RecomputeGit {
-		if input.GitSucceeded {
-			completedSet[MigrationStepGitCodeFacts] = true
-			delete(pendingSet, MigrationStepGitCodeFacts)
-		} else if !completedSet[MigrationStepGitCodeFacts] {
-			pendingSet[MigrationStepGitCodeFacts] = true
-		}
-	} else if input.GitSucceeded {
-		// Existing ledger already has valid git facts
-		completedSet[MigrationStepGitCodeFacts] = true
+	// Newly recorded steps follow workflow order: Git facts, then source recovery.
+	if input.GitSucceeded {
+		stepsCompleted = appendMigrationStep(stepsCompleted, completedSet, MigrationStepGitCodeFacts)
 		delete(pendingSet, MigrationStepGitCodeFacts)
+	} else if input.RecomputeGit && !completedSet[MigrationStepGitCodeFacts] {
+		stepsPending = appendMigrationStep(stepsPending, pendingSet, MigrationStepGitCodeFacts)
 	}
 
 	// Process OpenCode DB step
 	if input.RecomputeDB {
 		if input.DBAttempted && input.DBSessionFound {
-			completedSet[MigrationStepOpenCodeDB] = true
+			stepsCompleted = appendMigrationStep(stepsCompleted, completedSet, MigrationStepOpenCodeDB)
 			delete(pendingSet, MigrationStepOpenCodeDB)
 		} else {
 			// Session was not found in local database
 			if !completedSet[MigrationStepOpenCodeDB] {
-				pendingSet[MigrationStepOpenCodeDB] = true
+				stepsPending = appendMigrationStep(stepsPending, pendingSet, MigrationStepOpenCodeDB)
 			}
 			if input.HasExistingDBFacts {
 				notes = append(notes, "Local SQLite session not found; preserved existing invocations and telemetry for subsequent host migration")
@@ -74,21 +63,11 @@ func EvaluateMigrationStatus(input MigrationEvaluationInput) MigrationInfo {
 		}
 	}
 
-	// If no recompute flags were set, but existing migration had completed/pending steps, preserve them.
-	// If both steps are already completed, it's completed.
-	// Otherwise evaluate status:
-	// If there are pending steps, status is partial (or pending if nothing completed yet).
-	var stepsCompleted []string
-	for step := range completedSet {
-		stepsCompleted = append(stepsCompleted, step)
+	// Remove completed steps without moving the other recorded pending steps.
+	stepsPending = slices.DeleteFunc(stepsPending, func(step string) bool { return !pendingSet[step] })
+	if len(stepsPending) == 0 {
+		stepsPending = nil
 	}
-	sort.Strings(stepsCompleted)
-
-	var stepsPending []string
-	for step := range pendingSet {
-		stepsPending = append(stepsPending, step)
-	}
-	sort.Strings(stepsPending)
 
 	var status MigrationStatus
 	if len(stepsPending) == 0 {
@@ -134,4 +113,13 @@ func EvaluateMigrationStatus(input MigrationEvaluationInput) MigrationInfo {
 		LastMigratedBy: author,
 		Notes:          noteText,
 	}
+}
+
+func appendMigrationStep(steps []string, recorded map[string]bool, step string) []string {
+	step = strings.TrimSpace(step)
+	if step == "" || recorded[step] {
+		return steps
+	}
+	recorded[step] = true
+	return append(steps, step)
 }

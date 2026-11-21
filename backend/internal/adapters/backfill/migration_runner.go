@@ -232,7 +232,7 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, location adapter
 	if cleanupCurrent {
 		data = current.CleanupCandidate
 	} else {
-		data, err = json.Marshal(dto)
+		data, err = adapters.MarshalFactLedger(dto, adapters.FactLedgerHistory{})
 	}
 	if err != nil {
 		res.Status = "error"

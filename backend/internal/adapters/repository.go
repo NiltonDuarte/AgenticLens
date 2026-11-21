@@ -317,8 +317,8 @@ func NormalizeHistorySessionForPublication(owner SessionFactDTO, schemaVersion i
 
 // SaveFactLedgerPreservingHistory compacts current owners and serializes
 // previously authorized immutable historical DTOs through the same canonical
-// validation and writer. Supported lean facts, summaries, order and nullable
-// values in retained rows never pass through source persistence transforms.
+// validation and writer. Retained rows keep their nested sequence, including
+// nullable values and supported summaries.
 func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []SessionFactDTO) error {
 
 	if ledger.TicketID == nil || strings.TrimSpace(*ledger.TicketID) == "" {
@@ -388,7 +388,7 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 		return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
 	}
 
-	data, err := json.Marshal(dto)
+	data, err := MarshalFactLedger(dto, FactLedgerHistory{SessionIDs: matched})
 	if err != nil {
 		return fmt.Errorf("failed to marshal fact ledger: %w", err)
 	}

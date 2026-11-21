@@ -3,7 +3,6 @@ package backfill
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -718,6 +717,15 @@ func (e *BackfillEngine) processSingleWorkspace(
 		}
 	}
 	dtoToSave := adapters.AgenticFactLedgerDTOFromDomain(persistedLedger)
+	var history adapters.FactLedgerHistory
+	if current != nil {
+		anomaliesEnabled := e.generationPolicy != nil && e.generationPolicy.Anomalies
+		history, err = current.retainStoredFacts(&dtoToSave, persistedLedger, sourceEvents.CompleteSessionIDs, anomaliesEnabled)
+		if err != nil {
+			result.Error = err
+			return result
+		}
+	}
 	if err := dtoToSave.Validate(); err != nil {
 		result.Error = fmt.Errorf("validating updated ledger: %w", err)
 		return result
@@ -725,7 +733,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	if opts.DryRun {
 		return result
 	}
-	data, err := json.Marshal(dtoToSave)
+	data, err := adapters.MarshalFactLedger(dtoToSave, history)
 	if err != nil {
 		result.Error = fmt.Errorf("marshaling updated JSON: %w", err)
 		return result

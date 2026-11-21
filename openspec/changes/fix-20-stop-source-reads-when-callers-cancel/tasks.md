@@ -27,3 +27,8 @@ Archive after verified delivery and reconcile the roadmap separately.
 - [x] Verify default omission, opt-in and replacement of the previously generated block.
 - [x] Review the follow-up, run integrated verification and prepare the FIX-20 PR update.
 - [x] Write the setting explicitly as `false` by default and require it when loading shared YAML. Verify explicit `true`, absence with summary publication enabled and disabled, and replacement of the generated report when set back to `false`.
+
+## Stable ledger array order
+
+- [x] Apply one stable ordering policy to serialized raw facts across generation, source backfill and schema migration. Preserve timeline order, repeated occurrences and recorded evidence.
+- [x] Verify exact array order across alternating successful refresh subsets and cover nested arrays, retained history and migration.

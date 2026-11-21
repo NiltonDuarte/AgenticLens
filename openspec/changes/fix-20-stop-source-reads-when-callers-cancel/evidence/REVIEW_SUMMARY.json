@@ -73,6 +73,51 @@
         {"persona": "reviewer-tests", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
       ],
       "disposition": "Fixed. The native completion oracles fail when context is detached in disposable mutations."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 5,
+      "issue": "Partial backfill discarded stored anomaly evidence when retained records passed through the domain projection.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed. Current-schema backfill restores validated unchanged wire evidence for retained sessions and the retained ticket snapshot."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 3,
+      "issue": "Backfill alphabetized surviving migration steps whenever it evaluated status.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed. Surviving steps keep their sequence and new steps are appended in workflow order."
+    },
+    {
+      "finding_id": "DATA-03",
+      "severity": 4,
+      "issue": "A proposed mixed-coverage case would lose unchanged ticket anomaly evidence if a partial analysis replaced individual ticket summaries.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6-luna", "reasoning_effort": "medium", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Refuted for the supported backfill path. Partial coverage leaves the entire ticket snapshot intact. Complete coverage replaces the aggregate and its evidence together."
+    },
+    {
+      "finding_id": "DATA-04",
+      "severity": 5,
+      "issue": "Backfill dropped stored group evidence when a parent refreshed but its child source remained unavailable.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed. An unchanged group summary retains ordered references until backfill recovers the complete group."
+    },
+    {
+      "finding_id": "DATA-05",
+      "severity": 5,
+      "issue": "A current-schema pending migration can remain incomplete after successful OpenCode recovery.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Outside the ordering scope. Backfill already classifies pending status as completed before step evaluation. A separate migration-state change owns the correction."
     }
   ]
 }
