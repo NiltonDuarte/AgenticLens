@@ -38,6 +38,12 @@ The final persistence re-checks by gpt-6.2-sol/high and gpt-6-luna/medium passed
 
 The integrated `make` passed on `d7e64263` against `origin/main` at `83f6f6c1`, using `GORACE=atexit_sleep_ms=0` and `GOFLAGS='-p=3 -timeout=20m'`. It ran the Go race and frontend suites, installation and distribution checks, and all four native builds.
 
+## Ledger timestamps
+
+Generation and backfill preserve the accepted ledger when only the publication timestamps differ. Equivalent JSON object formatting is ignored. Session timestamps, array order and recorded evidence still determine whether facts changed. The summary and capture bookkeeping can finish independently. A failed summary update leaves a ledger that already matches the journal in place. [Timestamp regression evidence](evidence/TESTS.md#stable-ledger-timestamps)
+
+The persistence re-review approved the timestamp and recovery corrections. Integrated `make` passed on `bcb27a08` with `GORACE=atexit_sleep_ms=0` and `GOFLAGS='-p=3 -timeout=20m'`. It covered the Go race suites, frontend checks and tests, installation and distribution checks, and native builds for all four platforms.
+
 ## Pull request
 
 ### What changed
@@ -47,6 +53,7 @@ The integrated `make` passed on `d7e64263` against `origin/main` at `83f6f6c1`, 
 - Stop backfill on cancellation before publication and preserve the interrupted workspace's ledger and summary. Earlier committed workspaces keep their updates.
 - Make the capture observation in generated Markdown opt-in. Setup writes `generation.summary.capture_observation: false` explicitly, and shared YAML that omits the key fails validation. Ordinary metrics and CLI diagnostics remain available.
 - Keep raw ledger array order stable across partial refreshes, backfill and schema migration while preserving historical evidence.
+- Keep the ledger bytes and timestamps stable when generation or backfill produces equivalent facts.
 
 ### Verification
 
@@ -58,20 +65,21 @@ The integrated `make` passed on `d7e64263` against `origin/main` at `83f6f6c1`, 
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 83
-- **Active Agent Duration:** 20h 17m (recorded duration including 57809s provisional)
+- **Software Development Life Cycle Iterations:** 91
+- **Active Agent Duration:** 21h 36m (recorded duration including 61124s provisional)
 - **Context Window Health:** ELEVATED — Root agent peak 191.3k tokens (43% of 450k healthy ceiling, 2 compactions) | Subagents peak 447.2k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 2.1 avg turns/run (peak: 5 turns) | Planner 1.0, Coder 2.1, Tester 2.4
-- **Test-to-Production Code Ratio:** 1.5:1 (+1,848 test lines / +1,248 prod lines)
-- **Code Delivered:** +3,096 / -444 lines across 56 code files (excluding docs)
-- **Reasoning Effort:** 96,343 reasoning tokens (22.0% of generated output)
-- **Tool Health & Self-Correction:** 1,305 tool calls (95 self-corrections, 92.7% success rate)
+- **Subagent Turn Velocity & Thrashing:** 2.0 avg turns/run (peak: 5 turns) | Planner 1.0, Coder 2.0, Tester 2.5
+- **Test-to-Production Code Ratio:** 1.4:1 (+2,128 test lines / +1,476 prod lines)
+- **Code Delivered:** +3,604 / -493 lines across 64 code files (excluding docs)
+- **Reasoning Effort:** 111,499 reasoning tokens (22.3% of generated output)
+- **Tool Health & Self-Correction:** 1,464 tool calls (109 self-corrections, 92.6% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 11 execution anomalies detected (3 CRITICAL, 8 WARNING).
+- **Status:** 15 execution anomalies detected (4 CRITICAL, 11 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+436.8k tokens) — Context tokens surged by 436.8k to 436.8k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+151.3k tokens) — Context tokens surged by 151.3k to 151.3k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+327.7k tokens) — Context tokens surged by 327.7k to 327.7k tokens.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> coder (6 cycles) — Subagent roles 'tester' and 'coder' alternated for 6 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (256.3k tokens) — Context tokens reached 256.3k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (253.3k tokens) — Context tokens reached 253.3k, breaching the 250k warning ceiling.
@@ -80,6 +88,9 @@ The integrated `make` passed on `d7e64263` against `origin/main` at `83f6f6c1`, 
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (401.1k tokens) — Context tokens reached 401.1k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (436.8k tokens) — Context tokens reached 436.8k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (441.1k tokens) — Context tokens reached 441.1k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (319.2k tokens) — Context tokens reached 319.2k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (327.7k tokens) — Context tokens reached 327.7k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (323.0k tokens) — Context tokens reached 323.0k, breaching the 250k warning ceiling.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (4 consecutive errors) — Tool 'command' encountered 4 consecutive execution failures.
 
 ### Agentic Execution Metrics
@@ -89,18 +100,18 @@ The integrated `make` passed on `d7e64263` against `origin/main` at `83f6f6c1`, 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 2 | 379,011 | 5,109 | 2,958,080 | 88.6% | 192.8k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **coder** | 7 | 1,026,914 | 92,988 | 74,272,128 | 98.6% | 447.2k | ELEVATED | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
-| **tester** | 5 | 538,277 | 92,604 | 78,579,328 | 99.3% | 441.3k | ELEVATED | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **Unknown** | 33 | 2,596,176 | 151,105 | 42,989,056 | 94.3% | 191.3k | HEALTHY | Unavailable (0 observed, 0 partial, 33 unavailable / 33 invocations) |
-| **Total** | **47** | **4,540,378** | **341,806** | **198,798,592** | **97.8%** | **447.2k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 47 unavailable / 47 invocations)** |
+| **planner** | 3 | 723,180 | 7,557 | 6,617,088 | 90.1% | 341.7k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **coder** | 8 | 1,097,594 | 109,625 | 92,339,072 | 98.8% | 447.2k | ELEVATED | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
+| **tester** | 6 | 601,013 | 108,466 | 99,050,624 | 99.4% | 441.3k | ELEVATED | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **Unknown** | 37 | 2,843,440 | 163,698 | 44,763,904 | 94.0% | 191.3k | HEALTHY | Unavailable (0 observed, 0 partial, 37 unavailable / 37 invocations) |
+| **Total** | **54** | **5,265,227** | **389,346** | **242,770,688** | **97.9%** | **447.2k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 54 unavailable / 54 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 16 | 891,249 | 49,799 | 9,083,904 | 91.1% | Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations) |
-| **gpt-6.2-sol** | 31 | 3,649,129 | 292,007 | 189,714,688 | 98.1% | Unavailable (0 observed, 0 partial, 31 unavailable / 31 invocations) |
-| **Total** | **47** | **4,540,378** | **341,806** | **198,798,592** | **97.8%** | **Unavailable (0 observed, 0 partial, 47 unavailable / 47 invocations)** |
+| **gpt-6-luna** | 18 | 981,973 | 53,723 | 9,482,112 | 90.6% | Unavailable (0 observed, 0 partial, 18 unavailable / 18 invocations) |
+| **gpt-6.2-sol** | 36 | 4,283,254 | 335,623 | 233,288,576 | 98.2% | Unavailable (0 observed, 0 partial, 36 unavailable / 36 invocations) |
+| **Total** | **54** | **5,265,227** | **389,346** | **242,770,688** | **97.9%** | **Unavailable (0 observed, 0 partial, 54 unavailable / 54 invocations)** |
 
-Retained recorded history: 43 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
+Retained recorded history: 50 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
 <!-- agentic-lens:metrics:end -->
