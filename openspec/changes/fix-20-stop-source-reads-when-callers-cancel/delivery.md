@@ -59,7 +59,7 @@ The integrated `make` passed on `d7e64263` against `origin/main` at `83f6f6c1`, 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 83
-- **Active Agent Duration:** 20h 14m (recorded duration including 57588s provisional)
+- **Active Agent Duration:** 20h 17m (recorded duration including 57809s provisional)
 - **Context Window Health:** ELEVATED — Root agent peak 191.3k tokens (43% of 450k healthy ceiling, 2 compactions) | Subagents peak 447.2k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 2.1 avg turns/run (peak: 5 turns) | Planner 1.0, Coder 2.1, Tester 2.4
@@ -102,5 +102,5 @@ The integrated `make` passed on `d7e64263` against `origin/main` at `83f6f6c1`, 
 | **gpt-6.2-sol** | 31 | 3,649,129 | 292,007 | 189,714,688 | 98.1% | Unavailable (0 observed, 0 partial, 31 unavailable / 31 invocations) |
 | **Total** | **47** | **4,540,378** | **341,806** | **198,798,592** | **97.8%** | **Unavailable (0 observed, 0 partial, 47 unavailable / 47 invocations)** |
 
-Retained recorded history: 43 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
+Retained recorded history: 44 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
 <!-- agentic-lens:metrics:end -->
