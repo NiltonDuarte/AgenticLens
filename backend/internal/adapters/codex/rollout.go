@@ -3,6 +3,7 @@ package codex
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -213,16 +214,39 @@ type turnContext struct {
 // Malformed records, including a possibly partial final write, produce warnings
 // while parsing continues. Consumers replacing stored facts must check warnings.
 func ParseRollout(reader io.Reader) (Transcript, error) {
-	return ParseRolloutAt(reader, time.Now().UTC())
+	return ParseRolloutContext(context.Background(), reader)
 }
 
 // ParseRolloutAt measures source lifecycle activity through an explicit cutoff.
 func ParseRolloutAt(reader io.Reader, cutoff time.Time) (Transcript, error) {
+	return ParseRolloutAtContext(context.Background(), reader, cutoff)
+}
+
+// ParseRolloutContext stops reading and decoding records on cancellation.
+func ParseRolloutContext(ctx context.Context, reader io.Reader) (Transcript, error) {
+	return ParseRolloutAtContext(ctx, reader, time.Now().UTC())
+}
+
+func ParseRolloutAtContext(ctx context.Context, reader io.Reader, cutoff time.Time) (transcript Transcript, err error) {
+	if err := ctx.Err(); err != nil {
+		return Transcript{}, err
+	}
 	if reader == nil {
 		return Transcript{}, errors.New("rollout reader is nil")
 	}
+	inheritedHistory := false
+	defer func() {
+		if cancelled := ctx.Err(); cancelled != nil {
+			if inheritedHistory {
+				// This fork has not established the boundary where its native
+				// thread resumes, so its prefix cannot establish owned events.
+				transcript = Transcript{}
+			}
+			err = cancelled
+		}
+	}()
 
-	transcript := Transcript{
+	transcript = Transcript{
 		snapshotCutoff:      cutoff.UTC(),
 		checkpointNativeIDs: make(map[string]bool),
 		seenTurns:           make(map[string]bool),
@@ -238,11 +262,13 @@ func ParseRolloutAt(reader io.Reader, cutoff time.Time) (Transcript, error) {
 		pendingSelection:    -1,
 	}
 	usageRecordSeen := false
-	inheritedHistory := false
-	scanner := bufio.NewScanner(reader)
+	scanner := bufio.NewScanner(rolloutContextReader{ctx: ctx, reader: reader})
 	scanner.Buffer(make([]byte, 64*1024), maxRolloutLineBytes)
 	lineNumber := 0
 	for scanner.Scan() {
+		if err := ctx.Err(); err != nil {
+			return transcript, err
+		}
 		lineNumber++
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
@@ -343,6 +369,9 @@ func ParseRolloutAt(reader io.Reader, cutoff time.Time) (Transcript, error) {
 		default:
 			return Transcript{}, fmt.Errorf("line %d: unsupported Codex rollout record type %q", lineNumber, record.Type)
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		return transcript, err
 	}
 	if err := scanner.Err(); err != nil {
 		return transcript, fmt.Errorf("reading rollout JSONL: %w", err)
@@ -1048,6 +1077,14 @@ func CombineTranscripts(transcripts []Transcript) (Transcript, error) {
 
 // CombineTranscriptsWithPolicy carries generate output policy through grouping.
 func CombineTranscriptsWithPolicy(transcripts []Transcript, policies ...domain.GenerationPolicy) (Transcript, error) {
+	return CombineTranscriptsWithPolicyContext(context.Background(), transcripts, policies...)
+}
+
+// CombineTranscriptsWithPolicyContext checks cancellation while grouping native owners.
+func CombineTranscriptsWithPolicyContext(ctx context.Context, transcripts []Transcript, policies ...domain.GenerationPolicy) (Transcript, error) {
+	if err := ctx.Err(); err != nil {
+		return Transcript{}, err
+	}
 	if len(transcripts) == 0 {
 		return Transcript{}, errors.New("cannot combine an empty Codex transcript set")
 	}
@@ -1060,15 +1097,24 @@ func CombineTranscriptsWithPolicy(transcripts []Transcript, policies ...domain.G
 			owners = []domain.SessionFact{{ID: transcript.sessionIDOrThread()}}
 		}
 		for _, owner := range owners {
+			if err := ctx.Err(); err != nil {
+				return Transcript{}, err
+			}
 			if seenOwners[owner.ID] {
 				return Transcript{}, fmt.Errorf("incomplete Codex transcript set: owner %s has ambiguous snapshots", owner.ID)
 			}
 			seenOwners[owner.ID] = true
 		}
 	}
-	transcripts = resolveSourceChildren(transcripts)
+	transcripts, err := resolveSourceChildren(ctx, transcripts)
+	if err != nil {
+		return Transcript{}, err
+	}
 	combined := Transcript{RecordKinds: make(map[string]int64), EventKinds: make(map[string]int64), sessions: []domain.SessionFact{}, completeOwners: []string{}}
 	for index, transcript := range transcripts {
+		if err := ctx.Err(); err != nil {
+			return Transcript{}, err
+		}
 		sessions, err := transcript.SessionFacts(policies...)
 		if err != nil {
 			return Transcript{}, fmt.Errorf("grouping Codex transcript %d: %w", index, err)
@@ -1127,7 +1173,7 @@ func CombineTranscriptsWithPolicy(transcripts []Transcript, policies ...domain.G
 		return combined.Tools[i].Name < combined.Tools[j].Name
 	})
 	sort.SliceStable(combined.Events, func(i, j int) bool { return combined.Events[i].Timestamp < combined.Events[j].Timestamp })
-	return combined, nil
+	return combined, ctx.Err()
 }
 
 func addUsage(target *Usage, usage tokenUsage) {

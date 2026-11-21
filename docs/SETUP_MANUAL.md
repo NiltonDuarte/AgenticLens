@@ -146,6 +146,7 @@ generation:
   summary:
     enabled: true
     filename: METRICS.md
+    capture_observation: false
 role_mappings: {}
 role_order: []
 ```
@@ -444,6 +445,8 @@ The worker uses durable request generations and acknowledges only the generation
 The ledger uses schema v6 at its actual selected directory’s `agentic_metrics.json`; moving the directory across configured roots does not change recorded identity. Readers and writers resolve that same location instead of reconstructing it from the ticket. Top-level `completed_at` is the observability snapshot finalization boundary, equal to artifact `updated_at`; it does not assert source-session termination or ticket merge. Source invocation completion timestamps remain unchanged. Each owner has its own source-read checkpoint; there is no simultaneous source-read guarantee. Source failures preserve accepted facts and visibly degrade coverage.
 
 Publication uses shared generation.summary policy and the configured operational state home for private journals/backups and locks. A transient adjacent pending indicator follows moved/copied ledgers so another machine can report incomplete publication without private recovery state. Missing recovery data never authorizes accepting a mixed set or clearing the indicator. New writes have no legacy-journal adapter. Durable local capture diagnostics remain separate; unrelated historical files are preserved.
+
+Shared YAML requires an explicit boolean `generation.summary.capture_observation`, including when summary publication is disabled. Full setup writes `false` when no value is supplied. Add `capture_observation: false` under `generation.summary` in an existing configuration that omits it. Set it to `true` to include the capture observation in automatically published summaries. The next successful automatic summary publication with the option off removes the old observation from the generated block and preserves the metrics tables and authored text. Use `capture diagnostics` to inspect reconciliation and publication details regardless of the summary setting.
 
 ### Explicit installation consistency and completion scope
 

@@ -38,7 +38,7 @@ Sort recognized numeric suffixes naturally; equal numeric values use the full re
 
 ## Shared policy
 
-All listed containers/booleans must be explicit where required. Missing/null/wrong-type values fail; zero/false/empty containers are accepted only with the meanings below. Setup explains and obtains approval before writing values, preserving valid choices. Generation/live/source settings are validated when used, so source-free reads do not demand unused controls.
+All listed containers/booleans must be explicit where required. Missing/null/wrong-type values fail. Zero, false and empty containers are accepted with the meanings below. Setup explains and obtains approval before writing values, preserving valid choices. Except for the required capture observation setting, generation, live and source policy is required when consumed.
 
 | Setting | Meaning and validity |
 | --- | --- |
@@ -54,6 +54,7 @@ All listed containers/booleans must be explicit where required. Missing/null/wro
 | `generation.feedback.provisional_threshold_seconds` | Nonnegative integer for manual checkpoint feedback; zero disables human stderr diagnostics. |
 | `generation.summary.enabled` | Explicit boolean for shared manual/capture summary policy. |
 | `generation.summary.filename` | Required safe basename when configured writing is enabled; reject ledger collisions. |
+| `generation.summary.capture_observation` | Required boolean in shared YAML even when summaries are disabled. Setup writes `false` when omitted from the candidate. Add `false` to existing configurations that omit the key. Set to `true` to include capture observations in automatic summaries. |
 | `role_mappings` | Explicit mapping; `{}` means no aliases. Nonblank string names/values; presentation/aggregation only, without changing source identity. |
 | `role_order` | Explicit string list; `[]` orders observed roles alphabetically. Listed observed roles first, unlisted observed roles alphabetically; no invented rows. |
 

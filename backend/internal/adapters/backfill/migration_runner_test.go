@@ -273,6 +273,49 @@ func TestMigrationRunner_Backup(t *testing.T) {
 	}
 }
 
+func TestMigrationRunnerSerializesStableLedgerArrayOrder(t *testing.T) {
+	root := migrationTestRoot(t)
+	workspace := filepath.Join(root, "records", "TEST-ORDER")
+	if err := os.MkdirAll(workspace, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(workspace, "agentic_metrics.json")
+	version, ticket, title := 5, "TEST-ORDER", "Migration order"
+	early, late := "2026-01-01T01:00:00+01:00", "2026-01-01T00:02:00Z"
+	legacy := adapters.AgenticFactLedgerDTOFromDomain(domain.AgenticFactLedger{
+		SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title,
+		Sessions: []domain.SessionFact{
+			{ID: "z-owner", Source: domain.SourceCodex, User: "fixture"},
+			{ID: "a-owner", Source: domain.SourceOpenCode, User: "fixture",
+				Invocations: []domain.InvocationFact{{Role: "coder", Model: "late", StartedAt: &late}, {Role: "coder", Model: "early", StartedAt: &early}}},
+		},
+	})
+	original, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	runner := backfill.NewMigrationRunner(nil)
+	report, err := runner.Run(backfill.MigrationOptions{Project: filepath.Join(root, "records"), TargetVersion: domain.CurrentSchemaVersion})
+	if err != nil || report.Migrated != 1 || len(report.Errors) != 0 {
+		t.Fatalf("migration result: %+v, %v", report, err)
+	}
+	published, err := adapters.LoadExistingFactLedger(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sessions := published.PersistedSessions
+	if len(sessions) != 2 || sessions[0].ID != "a-owner" || sessions[1].ID != "z-owner" {
+		t.Fatalf("unexpected migrated owner order: %+v", sessions)
+	}
+	invocations := sessions[0].Invocations
+	if len(invocations) != 2 || invocations[0].Model != "early" || invocations[1].Model != "late" {
+		t.Fatalf("migration did not order invocations by absolute time: %+v", invocations)
+	}
+}
+
 func TestMigrationRunner_CleansCompletedCurrentMetadataWithoutChangingFacts(t *testing.T) {
 	root := migrationTestRoot(t)
 	workspace := filepath.Join(root, "records", "TEST-CLEAN", "iterations", "07")
@@ -281,6 +324,8 @@ func TestMigrationRunner_CleansCompletedCurrentMetadataWithoutChangingFacts(t *t
 	}
 	path := filepath.Join(workspace, "agentic_metrics.json")
 	original := []byte(`{"schema_version":6,"ticket_id":"TEST-CLEAN","ticket_title":"Portable history","updated_at":"2026-01-01T00:00:00Z","migration":{"schema_version":6,"status":"completed","steps_completed":["schema_v6_lean_occurrences"],"steps_pending":[],"notes":"Schema v6 migration dropped ownerless skills=2 task_links=3"},"sessions":[{"id":"remote-owner","source":"codex","user":"remote-user","invocations":[{"role":"coder","model":"fixture","cost_usd":1.25,"cost_evidence":{"state":"observed","known_subtotal_usd":1.25},"started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"compactions":0,"user_iterations":0,"tokens":{"input":10,"output":0,"cache_read":0,"reasoning":0,"peak_context":0}}],"tools":[],"anomalies":[],"skills":[{"name":"kept","caller_role":null,"invoked_at":null}],"delegations":[{"agent_type":null,"invoked_at":null,"child_session_id":"unavailable-child"}]}]}`)
+	// Keep z before a so exact non-migration field comparisons also guard array order.
+	original = bytes.Replace(original, []byte(`"sessions":[{`), []byte(`"sessions":[{"id":"z-owner","source":"opencode","user":"remote-user","invocations":[],"tools":[]},{"id":"a-owner","source":"codex","user":"remote-user","invocations":[],"tools":[]},{`), 1)
 	if err := adapters.ValidateRuntimeFactLedger(original); err != nil {
 		t.Fatalf("current fixture is not runtime-admissible: %v", err)
 	}

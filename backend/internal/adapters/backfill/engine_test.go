@@ -1959,7 +1959,7 @@ func TestRecoverOpenCodeRetainsUnavailableOrphanSiblingTree(t *testing.T) {
 			}
 			// Exercise the source-recovery boundary directly: runtime file validation
 			// independently rejects absent parents, but recovery must also preserve branches.
-			recovered := recoverOpenCodeAt(db, stored, "tester", "CUSTOM-ORPHAN", []string{root}, false, time.Time{}, &sourceReadBudget{sessions: 20, bytes: 1000000}, &domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}, nil)
+			recovered := recoverOpenCodeAt(context.Background(), db, stored, "tester", "CUSTOM-ORPHAN", []string{root}, false, time.Time{}, &sourceReadBudget{sessions: 20, bytes: 1000000}, &domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}, nil)
 			if recovered.complete || !recovered.updated || len(recovered.diagnostics) == 0 {
 				t.Fatalf("missing sibling falsely certified or independent refresh lost: %+v", recovered)
 			}

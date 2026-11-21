@@ -2,6 +2,7 @@ package opencode
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -142,9 +143,9 @@ func extractSessionsWithPolicyAt(db *sql.DB, threadIDs []string, defaultUser str
 	}
 	var started, completed *string
 	if family == schemaFamilyV2 {
-		sessions, started, completed, err = extractSchemaV2SessionsWithCheckpointAt(db, threadIDs, defaultUser, userBySessionID, strict, sink, policy, cutoff, &checkpointEvidence)
+		sessions, started, completed, err = extractSchemaV2SessionsWithCheckpointAt(context.Background(), sourceQueries{db: db}, threadIDs, defaultUser, userBySessionID, strict, sink, policy, cutoff, &checkpointEvidence)
 	} else {
-		sessions, started, completed, err = extractSchemaV1SessionsWithCheckpointAt(db, threadIDs, defaultUser, userBySessionID, strict, sink, policy, cutoff, &checkpointEvidence)
+		sessions, started, completed, err = extractSchemaV1SessionsWithCheckpointAt(context.Background(), sourceQueries{db: db}, threadIDs, defaultUser, userBySessionID, strict, sink, policy, cutoff, &checkpointEvidence)
 	}
 	if err != nil {
 		return nil, nil, nil, err
@@ -161,10 +162,14 @@ func extractSessionsWithPolicyAt(db *sql.DB, threadIDs []string, defaultUser str
 
 // ExtractSteeringTurns calculates human steering turns from message records for given root threads.
 func ExtractSteeringTurns(db *sql.DB, threadIDs []string) (int64, error) {
+	return ExtractSteeringTurnsContext(context.Background(), db, threadIDs)
+}
+
+func ExtractSteeringTurnsContext(ctx context.Context, db *sql.DB, threadIDs []string) (int64, error) {
 	if db == nil {
 		return 0, errors.New("database connection is nil")
 	}
-	family, err := detectSchemaFamily(db)
+	family, err := detectSchemaFamilyContext(ctx, sourceQueries{db: db})
 	if err != nil {
 		return 0, err
 	}
@@ -172,9 +177,9 @@ func ExtractSteeringTurns(db *sql.DB, threadIDs []string) (int64, error) {
 		return 0, nil
 	}
 	if family == schemaFamilyV2 {
-		return countSchemaV2SteeringTurns(db, threadIDs)
+		return countSchemaV2SteeringTurns(ctx, sourceQueries{db: db}, threadIDs)
 	}
-	return countSchemaV1SteeringTurns(db, threadIDs)
+	return countSchemaV1SteeringTurns(ctx, sourceQueries{db: db}, threadIDs)
 }
 
 func (acc sessionModelAccumulator) costEvidence() domain.CostEvidence {
@@ -191,31 +196,39 @@ func (acc sessionModelAccumulator) costEvidence() domain.CostEvidence {
 // ExtractSessionSourceEvents reads one exact owner and returns source-only trace
 // rows. Successful empty extraction is distinct from a missing native session.
 func ExtractSessionSourceEvents(db *sql.DB, id, user string) ([]domain.EventFact, error) {
-	family, err := detectSchemaFamily(db)
+	return ExtractSessionSourceEventsContext(context.Background(), db, id, user)
+}
+
+func ExtractSessionSourceEventsContext(ctx context.Context, db *sql.DB, id, user string) ([]domain.EventFact, error) {
+	family, err := detectSchemaFamilyContext(ctx, sourceQueries{db: db})
 	if err != nil {
 		return nil, err
 	}
+	cutoff := time.Now().UTC()
 	events := []domain.EventFact{}
 	var sessions []domain.SessionFact
 	if family == schemaFamilyV2 {
-		sessions, _, _, err = extractSchemaV2SessionsWithEvents(db, []string{id}, user, nil, true, &events, true)
+		sessions, _, _, err = extractSchemaV2SessionsWithCheckpointAt(ctx, sourceQueries{db: db}, []string{id}, user, nil, true, &events, nil, cutoff, nil, true)
 	} else {
-		sessions, _, _, err = extractSchemaV1SessionsWithEvents(db, []string{id}, user, nil, true, &events, true)
+		sessions, _, _, err = extractSchemaV1SessionsWithCheckpointAt(ctx, sourceQueries{db: db}, []string{id}, user, nil, true, &events, nil, cutoff, nil, true)
+	}
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return events, errors.Join(ctxErr, err)
 	}
 	if err != nil {
 		strictErr := err
 		if len(events) == 0 {
 			var partialErr error
 			if family == schemaFamilyV2 {
-				_, _, _, partialErr = extractSchemaV2SessionsWithEvents(db, []string{id}, user, nil, false, &events, true)
+				_, _, _, partialErr = extractSchemaV2SessionsWithCheckpointAt(ctx, sourceQueries{db: db}, []string{id}, user, nil, false, &events, nil, cutoff, nil, true)
 			} else {
-				_, _, _, partialErr = extractSchemaV1SessionsWithEvents(db, []string{id}, user, nil, false, &events, true)
+				_, _, _, partialErr = extractSchemaV1SessionsWithCheckpointAt(ctx, sourceQueries{db: db}, []string{id}, user, nil, false, &events, nil, cutoff, nil, true)
 			}
 			if partialErr != nil {
 				strictErr = errors.Join(strictErr, partialErr)
 			}
 		}
-		return events, strictErr
+		return events, errors.Join(strictErr, ctx.Err())
 	}
 
 	if len(sessions) != 1 || sessions[0].ID != id {

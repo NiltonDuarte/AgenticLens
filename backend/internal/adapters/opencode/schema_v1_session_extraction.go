@@ -1,6 +1,7 @@
 package opencode
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -58,10 +59,10 @@ func extractSchemaV1SessionsWithPolicy(db *sql.DB, threadIDs []string, defaultUs
 }
 
 func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, cutoff time.Time, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
-	return extractSchemaV1SessionsWithCheckpointAt(db, threadIDs, defaultUser, userBySessionID, strict, eventSink, policy, cutoff, nil, exact...)
+	return extractSchemaV1SessionsWithCheckpointAt(context.Background(), sourceQueries{db: db}, threadIDs, defaultUser, userBySessionID, strict, eventSink, policy, cutoff, nil, exact...)
 }
 
-func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, cutoff time.Time, checkpointSink *[]domain.CheckpointInvocationEvidence, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+func extractSchemaV1SessionsWithCheckpointAt(ctx context.Context, db sourceQueries, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, cutoff time.Time, checkpointSink *[]domain.CheckpointInvocationEvidence, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
 	var checkpointEvidence []domain.CheckpointInvocationEvidence
 
 	incompleteOwners := make(map[string]bool)
@@ -83,7 +84,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 	`, quotedList, parentList)
 
 	var minCreated, maxUpdated sql.NullInt64
-	err = db.QueryRow(qTimes).Scan(&minCreated, &maxUpdated)
+	err = db.queryRow(ctx, qTimes).Scan(&minCreated, &maxUpdated)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: querying session time boundaries: %w", err)
 	}
@@ -106,7 +107,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 		ORDER BY s.time_created ASC
 	`, quotedList, parentList)
 
-	sessRows, err := db.Query(qSess)
+	sessRows, err := db.query(ctx, qSess)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: querying sessions: %w", err)
 	}
@@ -121,7 +122,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 	}
 
 	var sessions []sessRecord
-	for sessRows.Next() {
+	for ctx.Err() == nil && sessRows.Next() {
 		var sid string
 		var pid, agent, model sql.NullString
 		var timeCreated int64
@@ -141,7 +142,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 			timeCreated: timeCreated,
 		})
 	}
-	if err := sessRows.Err(); err != nil {
+	if err := errors.Join(ctx.Err(), sessRows.Err()); err != nil {
 		return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: iterating session rows: %w", err)
 	}
 
@@ -188,7 +189,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 	// Only a later message at or before cutoff can supersede that evidence.
 	runningMessages := map[string]bool{}
 	currentMessages := map[string]bool{}
-	runningRows, runErr := db.Query(fmt.Sprintf(`SELECT DISTINCT p.message_id, NOT EXISTS (SELECT 1 FROM message newer WHERE newer.session_id=m.session_id AND newer.time_created>m.time_created) FROM part p
+	activityQuery := fmt.Sprintf(`SELECT DISTINCT p.message_id, NOT EXISTS (SELECT 1 FROM message newer WHERE newer.session_id=m.session_id AND newer.time_created>m.time_created) FROM part p
       JOIN message m ON m.id=p.message_id AND m.session_id=p.session_id
       WHERE (p.session_id IN (%s) OR p.session_id IN (SELECT id FROM session WHERE parent_id IN (%s)))
       AND json_valid(p.data)
@@ -196,11 +197,12 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
             AND coalesce(json_extract(p.data,'$.state.time.start'),p.time_created)>0
             AND coalesce(json_extract(p.data,'$.state.time.start'),p.time_created)<=?)
         OR (json_extract(p.data,'$.type') IN ('text','reasoning') AND json_type(p.data,'$.time.start')='integer' AND json_extract(p.data,'$.time.start')<=? AND json_type(p.data,'$.time.end') IS NULL))
-      AND NOT EXISTS (SELECT 1 FROM message newer WHERE newer.session_id=m.session_id AND newer.time_created>m.time_created AND newer.time_created<=?)`, quotedList, parentList), cutoff.UnixMilli(), cutoff.UnixMilli(), cutoff.UnixMilli())
+      AND NOT EXISTS (SELECT 1 FROM message newer WHERE newer.session_id=m.session_id AND newer.time_created>m.time_created AND newer.time_created<=?)`, quotedList, parentList)
+	runningRows, runErr := db.queryActivity(ctx, materializeSourceRows(ctx, activityQuery, ""), cutoff.UnixMilli())
 	if runErr != nil {
 		return nil, nil, nil, fmt.Errorf("reading v1 activity evidence: %w", runErr)
 	}
-	for runningRows.Next() {
+	for ctx.Err() == nil && runningRows.Next() {
 		var id string
 		var current bool
 		if err := runningRows.Scan(&id, &current); err != nil {
@@ -210,7 +212,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 		runningMessages[id] = true
 		currentMessages[id] = current
 	}
-	if err := runningRows.Err(); err != nil {
+	if err := errors.Join(ctx.Err(), runningRows.Err()); err != nil {
 		runningRows.Close()
 		return nil, nil, nil, err
 	}
@@ -230,7 +232,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 			WHERE m.session_id = ?
 			ORDER BY m.time_created ASC
 		`
-		msgRows, err := db.Query(qMsgs, s.id)
+		msgRows, err := db.querySession(ctx, materializeSourceRows(ctx, qMsgs, "time_created ASC"), s.id)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: querying messages for session %s: %w", s.id, err)
 		}
@@ -242,7 +244,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 		var sessionUserTurns int64
 		lastUserMessage := ""
 
-		for msgRows.Next() {
+		for ctx.Err() == nil && msgRows.Next() {
 			totalSessionMsgs++
 			var mid string
 			var mCreated, mUpdated int64
@@ -421,7 +423,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 				acc.costMissing++
 			}
 		}
-		if err := msgRows.Err(); err != nil {
+		if err := errors.Join(ctx.Err(), msgRows.Err()); err != nil {
 			return nil, nil, nil, errors.Join(fmt.Errorf("OpenCode schema family v1: iterating messages in session %s: %w", s.id, err), msgRows.Close())
 		}
 		if err := msgRows.Close(); err != nil {
@@ -470,7 +472,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 		ORDER BY p.time_created ASC
 	`, quotedList, parentList)
 
-	partRows, err := db.Query(qParts)
+	partRows, err := db.query(ctx, materializeSourceRows(ctx, qParts, "time_created ASC"))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: querying parts: %w", err)
 	}
@@ -479,7 +481,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 	compMap := make(map[string]int64)
 	toolMap := make(map[toolAccumulatorKey]*toolAccumulator)
 
-	for partRows.Next() {
+	for ctx.Err() == nil && partRows.Next() {
 		var pid, sid, mid sql.NullString
 		var tCreated, tUpdated sql.NullInt64
 		var pData sql.NullString
@@ -679,7 +681,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 			continue
 		}
 	}
-	if err := partRows.Err(); err != nil {
+	if err := errors.Join(ctx.Err(), partRows.Err()); err != nil {
 		return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: iterating part rows: %w", err)
 	}
 
@@ -804,7 +806,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 		completedAtISO = maxCompleted
 	}
 
-	if err := proveSourceChildLinks(db, "session", events); err != nil {
+	if err := proveSourceChildLinks(ctx, db, "session", events); err != nil {
 		return nil, nil, nil, err
 	}
 	projected, err := projectSourceFacts(sessionFacts, events, strict, policy, incompleteOwners)
@@ -818,7 +820,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 }
 
 // countSchemaV1SteeringTurns calculates human steering turns from message records for given root threads.
-func countSchemaV1SteeringTurns(db *sql.DB, threadIDs []string) (int64, error) {
+func countSchemaV1SteeringTurns(ctx context.Context, db sourceQueries, threadIDs []string) (int64, error) {
 
 	quotedList, err := buildQuotedIDList(threadIDs)
 	if err != nil {
@@ -832,14 +834,14 @@ func countSchemaV1SteeringTurns(db *sql.DB, threadIDs []string) (int64, error) {
 		ORDER BY m.time_created ASC
 	`, quotedList)
 
-	rows, err := db.Query(query)
+	rows, err := db.query(ctx, materializeSourceRows(ctx, query, ""))
 	if err != nil {
 		return 0, fmt.Errorf("OpenCode schema family v1: querying steering turns: %w", err)
 	}
 	defer rows.Close()
 
 	var count int64
-	for rows.Next() {
+	for ctx.Err() == nil && rows.Next() {
 		var mData sql.NullString
 		if err := rows.Scan(&mData); err != nil {
 			return 0, fmt.Errorf("OpenCode schema family v1: scanning message data: %w", err)
@@ -857,7 +859,7 @@ func countSchemaV1SteeringTurns(db *sql.DB, threadIDs []string) (int64, error) {
 			count++
 		}
 	}
-	if err := rows.Err(); err != nil {
+	if err := errors.Join(ctx.Err(), rows.Err()); err != nil {
 		return 0, fmt.Errorf("OpenCode schema family v1: iterating message rows: %w", err)
 	}
 

@@ -3,7 +3,6 @@ package backfill
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -43,6 +42,15 @@ func NewEngine() *BackfillEngine {
 
 // Execute runs the backfill and migration workflow across target workspaces.
 func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) {
+	return e.ExecuteContext(context.Background(), opts)
+}
+
+// ExecuteContext returns completed workspace results even when the caller stops
+// an in-progress backfill. Workspace deadlines remain isolated per target.
+func (e *BackfillEngine) ExecuteContext(ctx context.Context, opts BackfillOptions) (*BackfillReport, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	run := *e
 	if opts.SnapshotCutoff.IsZero() {
 		opts.SnapshotCutoff = time.Now().UTC()
@@ -88,6 +96,9 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 
 	report.Warnings = append([]string{}, discoveryDiagnostics...)
 	report.Scanned = len(targetFiles)
+	if err := ctx.Err(); err != nil {
+		return report, err
+	}
 	if len(targetFiles) == 0 {
 		return report, nil
 	}
@@ -111,6 +122,9 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 	classificationCfg := &git.ClassificationConfig{BaseBranch: cfg.CodeMetrics.BaseBranch, Production: cfg.CodeMetrics.Production, Tests: cfg.CodeMetrics.Tests}
 	if opts.RecomputeGit {
 		fresh, err := git.ComputeCodeFactsAtRefInDir(e.projectRoot, opts.CodeRef, classificationCfg)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return report, ctxErr
+		}
 		if err != nil {
 			for _, target := range targetFiles {
 				report.Results = append(report.Results, TicketMigrationResult{TicketID: target.TicketID, WorkspacePath: target.Path, LedgerPath: target.LedgerPath, Error: fmt.Errorf("recomputing Git facts: %w", err)})
@@ -121,6 +135,9 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 		e.freshCode = &fresh
 	}
 
+	if err := ctx.Err(); err != nil {
+		return report, err
+	}
 	// Open only the explicitly selected stores. Unavailable selected paths fail
 	// the requested extraction before any schema or ledger publication.
 	var opencodeDB *opencode.OpenCodeDB
@@ -134,7 +151,7 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 		if err != nil {
 			return nil, err
 		}
-		opencodeDB, err = opencode.OpenDB(opts.DBPath, cfg.Database.BusyTimeoutMs)
+		opencodeDB, err = opencode.OpenDBContext(ctx, opts.DBPath, cfg.Database.BusyTimeoutMs)
 		if err != nil {
 			return nil, fmt.Errorf("opening selected OpenCode source for backfill: %w", err)
 		}
@@ -145,6 +162,9 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 		}()
 	}
 	if opts.RecomputeDB && wantsCodex {
+		if err := ctx.Err(); err != nil {
+			return report, err
+		}
 		opts.CodexHome, err = config.ResolveCodexHome(opts.CodexHome, cfg.Telemetry.Sources.CodexHome)
 		if err != nil {
 			return nil, err
@@ -162,6 +182,9 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 		}
 	}
 
+	if err := ctx.Err(); err != nil {
+		return report, err
+	}
 	gitUser := git.GetGitUserInDir(e.projectRoot)
 
 	// 1.5. If schema migration requested, execute universal schema migration runner first
@@ -178,7 +201,7 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 			Backup:          false,
 			UpdateSummaries: false,
 		}
-		report.SchemaMigration = migRunner.runSelected(targetFiles, discoveryDiagnostics, migOpts, domain.CurrentSchemaVersion, cfg)
+		report.SchemaMigration = migRunner.runSelected(ctx, targetFiles, discoveryDiagnostics, migOpts, domain.CurrentSchemaVersion, cfg)
 		for _, w := range report.SchemaMigration.Errors {
 			report.Warnings = append(report.Warnings, fmt.Sprintf("Schema migration: %s", w))
 		}
@@ -188,9 +211,12 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 
 	// 2. Iterate each discovered workspace with per-ticket error isolation
 	for i, target := range targetFiles {
-		lockCtx, lockCancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		if err := ctx.Err(); err != nil {
+			return report, err
+		}
+		workspaceCtx, cancelWorkspace := context.WithTimeout(ctx, 5*time.Minute)
 		ticketResult := e.processSingleWorkspace(
-			lockCtx, target,
+			workspaceCtx, target,
 			opts,
 			opencodeDB,
 			gitUser,
@@ -199,7 +225,7 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 			cfg,
 		)
 
-		lockCancel()
+		cancelWorkspace()
 		closeWorkspaceSelections(targetFiles[i:i+1], &report.Warnings)
 
 		if ticketResult.Error != nil {
@@ -247,7 +273,7 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 		report.Results = append(report.Results, ticketResult)
 	}
 
-	return report, nil
+	return report, ctx.Err()
 }
 
 func (e *BackfillEngine) processSingleWorkspace(
@@ -266,6 +292,26 @@ func (e *BackfillEngine) processSingleWorkspace(
 		TicketID:      location.TicketID,
 		WorkspacePath: location.Path,
 		LedgerPath:    metricPath,
+	}
+
+	publicationStarted := false
+	defer func() {
+		if err := ctx.Err(); err != nil && !publicationStarted {
+			if !errors.Is(result.Error, err) {
+				result.Error = errors.Join(result.Error, fmt.Errorf("workspace cancelled before publication: %w", err))
+			}
+			result.GitUpdated = false
+			result.DBUpdated = false
+			result.DBFound = false
+			result.Skipped = false
+			result.RefreshIncomplete = opts.RecomputeDB
+			result.NewStatus = result.PreviousStatus
+			result.PendingSteps = nil
+			result.Notes = ""
+		}
+	}()
+	if ctx.Err() != nil {
+		return result
 	}
 
 	// One target is owned at a time, before any baseline read and through the
@@ -302,6 +348,13 @@ func (e *BackfillEngine) processSingleWorkspace(
 	defer func() { result.Error = errors.Join(result.Error, owner.Close()) }()
 	metricPath = capture.PublicationPath(canonicalPath)
 	result.LedgerPath = canonicalPath
+	publish := func(data []byte, table string) error {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("workspace cancelled before publication: %w", err)
+		}
+		publicationStarted = true
+		return publishBackfillArtifacts(metricPath, data, summaryPath, table)
+	}
 	if err := adapters.CheckPublication(metricPath); err != nil {
 		result.Error = err
 		return result
@@ -359,7 +412,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 			derivedLedger := domain.DeriveMetricsLedger(canonical, cfg)
 			tableMD = adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
 		}
-		if err := publishBackfillArtifacts(metricPath, current.CleanupCandidate, summaryPath, tableMD); err != nil {
+		if err := publish(current.CleanupCandidate, tableMD); err != nil {
 			result.Error = err
 		}
 
@@ -495,7 +548,10 @@ func (e *BackfillEngine) processSingleWorkspace(
 		if err == nil && relative != "." && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
 			workspacePaths = append(workspacePaths, filepath.ToSlash(relative))
 		}
-		recovery := recoverOpenCodeAt(db, openCodeSessions, gitUser, ticketID, workspacePaths, opts.AllowFallbacks, opts.SnapshotCutoff, e.budget, e.generationPolicy, protected)
+		recovery := recoverOpenCodeAt(ctx, db, openCodeSessions, gitUser, ticketID, workspacePaths, opts.AllowFallbacks, opts.SnapshotCutoff, e.budget, e.generationPolicy, protected)
+		if ctx.Err() != nil {
+			return result
+		}
 		openCodeSessions = recovery.sessions
 		sourceEvents = domain.MergeSourceEvents(sourceEvents, recovery.source)
 		openCodeComplete = recovery.complete
@@ -507,7 +563,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 				for _, session := range openCodeSessions {
 					ids = append(ids, session.ID)
 				}
-				turns, err := opencode.ExtractSteeringTurns(db, ids)
+				turns, err := opencode.ExtractSteeringTurnsContext(ctx, db, ids)
 				if err != nil {
 					result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("steering count unavailable: %v", err))
 				} else {
@@ -519,17 +575,23 @@ func (e *BackfillEngine) processSingleWorkspace(
 			result.Diagnostics = append(result.Diagnostics, "skills/delegations retained from previous snapshot; OpenCode history incomplete or unverifiable; refreshed session trees may be newer")
 		}
 	}
+	if ctx.Err() != nil {
+		return result
+	}
 	if opts.RecomputeDB && wantsCodex && (len(codexSessions) > 0 || len(factLedger.Sessions) == 0) {
 		protected := make(map[string]bool, len(openCodeSessions)+len(otherSessions))
 		for _, owner := range append(append([]domain.SessionFact{}, openCodeSessions...), otherSessions...) {
 			protected[owner.ID] = true
 		}
-		recovery := e.recoverCodex(codexSessions, opts.CodexHome, gitUser, protected)
+		recovery := e.recoverCodex(ctx, codexSessions, opts.CodexHome, gitUser, protected)
 		codexSessions = recovery.sessions
 		sourceEvents = domain.MergeSourceEvents(sourceEvents, recovery.source)
 		codexComplete = recovery.complete
 		result.DBUpdated = result.DBUpdated || recovery.updated
 		result.Diagnostics = append(result.Diagnostics, recovery.diagnostics...)
+	}
+	if ctx.Err() != nil {
+		return result
 	}
 	selectedComplete := (!wantsOpenCode || openCodeComplete) && (!wantsCodex || codexComplete)
 	// An empty selected harness does not need recovery when a different selected
@@ -655,6 +717,15 @@ func (e *BackfillEngine) processSingleWorkspace(
 		}
 	}
 	dtoToSave := adapters.AgenticFactLedgerDTOFromDomain(persistedLedger)
+	var history adapters.FactLedgerHistory
+	if current != nil {
+		anomaliesEnabled := e.generationPolicy != nil && e.generationPolicy.Anomalies
+		history, err = current.retainStoredFacts(&dtoToSave, persistedLedger, sourceEvents.CompleteSessionIDs, anomaliesEnabled)
+		if err != nil {
+			result.Error = err
+			return result
+		}
+	}
 	if err := dtoToSave.Validate(); err != nil {
 		result.Error = fmt.Errorf("validating updated ledger: %w", err)
 		return result
@@ -662,7 +733,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	if opts.DryRun {
 		return result
 	}
-	data, err := json.Marshal(dtoToSave)
+	data, err := adapters.MarshalFactLedger(dtoToSave, history)
 	if err != nil {
 		result.Error = fmt.Errorf("marshaling updated JSON: %w", err)
 		return result
@@ -678,7 +749,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 		derivedLedger := domain.DeriveMetricsLedger(persistedLedger, cfg)
 		tableMD = adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
 	}
-	if err := publishBackfillArtifacts(metricPath, data, summaryPath, tableMD); err != nil {
+	if err := publish(data, tableMD); err != nil {
 		result.Error = err
 		return result
 	}

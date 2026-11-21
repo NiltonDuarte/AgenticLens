@@ -14,6 +14,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: In Progress; **Blocked by**: None; **Blocks**: v3 stable release, AL-97
   - **File**: [AL-96](to-do/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md)
 
+- **FIX-20**: Stop source reads when callers cancel
+  - **Status**: In Progress; **Blocked by**: None; **Blocks**: None
+  - **File**: [FIX-20](to-do/FIX-20%20stop%20source%20reads%20when%20callers%20cancel.md)
+
 ## Ready
 
 - **AL-94**: Make explicit backfill repeatable and report refresh coverage
@@ -64,10 +68,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **AL2-9**: Evaluate optional ledger signatures
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL2-9](to-do/AL2-9%20evaluate%20optional%20ledger%20signatures.md)
-
-- **FIX-20**: Stop source reads when callers cancel
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [FIX-20](to-do/FIX-20%20stop%20source%20reads%20when%20callers%20cancel.md)
 
 - **REV-7**: Review source read guarantees
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None

@@ -38,6 +38,7 @@ generation:
   summary:
     enabled: true
     filename: METRICS.md
+    capture_observation: false
 database:
   busy_timeout_ms: 0
 live:

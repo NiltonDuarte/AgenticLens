@@ -93,7 +93,7 @@ func validateSharedNodes(nodes map[string]*yaml.Node) error {
 			}
 		}
 	}
-	for _, key := range []string{"ticket.case_insensitive", "generation.metrics.skills", "generation.metrics.delegations", "generation.metrics.anomalies", "generation.summary.enabled"} {
+	for _, key := range []string{"ticket.case_insensitive", "generation.metrics.skills", "generation.metrics.delegations", "generation.metrics.anomalies", "generation.summary.enabled", "generation.summary.capture_observation"} {
 		if n := nodes[key]; n != nil {
 			if err := requireNodeType(n, key, yaml.ScalarNode, "!!bool"); err != nil {
 				return err
