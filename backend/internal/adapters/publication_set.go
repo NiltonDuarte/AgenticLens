@@ -243,6 +243,44 @@ func durableReplace(path string, data []byte) error {
 	}
 	return syncDirectory(filepath.Dir(path))
 }
+
+// restorePublicationArtifact keeps an already-restored file in place while
+// repeating the durability barriers required to finish recovery.
+func restorePublicationArtifact(path string, data []byte) error {
+	info, err := capture.LstatPublicationFile(path)
+	if err != nil || !info.Mode().IsRegular() || info.Size() != int64(len(data)) {
+		return durableReplace(path, data)
+	}
+	f, err := capture.OpenPublicationFile(path, os.O_RDONLY, 0)
+	if err != nil {
+		return durableReplace(path, data)
+	}
+	if publicationArtifactMatches(f, data) {
+		if err := errors.Join(f.Sync(), f.Close()); err != nil {
+			return err
+		}
+		return syncDirectory(filepath.Dir(path))
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return durableReplace(path, data)
+}
+
+func publicationArtifactMatches(file *os.File, data []byte) bool {
+	var buffer [32 << 10]byte
+	for len(data) > 0 {
+		size := min(len(data), len(buffer))
+		chunk := buffer[:size]
+		if _, err := io.ReadFull(file, chunk); err != nil || !bytes.Equal(chunk, data[:size]) {
+			return false
+		}
+		data = data[size:]
+	}
+	_, err := file.Read(buffer[:1])
+	return err == io.EOF
+}
+
 func privateJournalPath(owner *capture.PublicationLock, transaction string) string {
 	digest := sha256.Sum256([]byte(owner.Project()))
 	return filepath.Join(owner.StateHome(), "publication", "journals", hex.EncodeToString(digest[:]), transaction+".json")
@@ -550,7 +588,7 @@ func RecoverPublication(ledger string, authorizedPaths []string) (bool, error) {
 	for _, a := range j.Artifacts {
 		path := filepath.Join(owner.DirectoryPath(), a.Path)
 		if a.Present {
-			if err = durableReplace(path, a.Data); err != nil {
+			if err = restorePublicationArtifact(path, a.Data); err != nil {
 				return true, err
 			}
 		} else {

@@ -1,6 +1,7 @@
 package opencode
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -136,8 +137,11 @@ func projectSourceFacts(sessions []domain.SessionFact, events []domain.EventFact
 // proveSourceChildLinks checks explicit output references against native metadata
 // even when the child was outside this exact owner's extraction. Unknown native
 // IDs remain recorded references; a known different parent contradicts the link.
-func proveSourceChildLinks(db *sql.DB, table string, events []domain.EventFact) error {
+func proveSourceChildLinks(ctx context.Context, db sourceQueries, table string, events []domain.EventFact) error {
 	for i := range events {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		event := &events[i]
 		if event.EventType != domain.EventTypeToolCall || event.ToolName == nil || *event.ToolName != "task" || event.ToolOutput == nil {
 			continue
@@ -147,7 +151,7 @@ func proveSourceChildLinks(db *sql.DB, table string, events []domain.EventFact) 
 			continue
 		}
 		var parent sql.NullString
-		err := db.QueryRow("SELECT parent_id FROM "+table+" WHERE id=?", child).Scan(&parent)
+		err := db.querySessionRow(ctx, "SELECT parent_id FROM "+table+" WHERE id=?", child).Scan(&parent)
 		if errors.Is(err, sql.ErrNoRows) {
 			event.ChildSessionID = child
 			continue

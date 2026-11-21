@@ -1,6 +1,7 @@
 package opencode
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -13,6 +14,10 @@ import (
 // ticket workspace; no conventional root is invented. Ambiguous evidence never
 // selects the newest root or falls through to another strategy.
 func DiscoverRootSessionForRecovery(db *sql.DB, ticketID string, workspacePaths []string, minTimeMs, maxTimeMs int64) (*string, error) {
+	return DiscoverRootSessionForRecoveryContext(context.Background(), db, ticketID, workspacePaths, minTimeMs, maxTimeMs)
+}
+
+func DiscoverRootSessionForRecoveryContext(ctx context.Context, db *sql.DB, ticketID string, workspacePaths []string, minTimeMs, maxTimeMs int64) (*string, error) {
 	if db == nil {
 		return nil, errors.New("database connection is nil")
 	}
@@ -46,12 +51,13 @@ func DiscoverRootSessionForRecovery(db *sql.DB, ticketID string, workspacePaths 
 	if err != nil {
 		return nil, fmt.Errorf("encoding recovery workspace evidence: %w", err)
 	}
-	family, err := detectSchemaFamily(db)
+	family, err := detectSchemaFamilyContext(ctx, sourceQueries{db: db})
 	if err != nil {
 		return nil, err
 	}
 	table, records := resolutionTables(family)
-	query := sessionTreeCTE(table, records) + `
+	prefix := sessionTreeCTE(table, records)
+	candidates := `
 SELECT DISTINCT s.id FROM ` + table + ` s WHERE s.parent_id IS NULL
 AND (?=0 OR s.time_created>=?) AND (?=0 OR s.time_created<=?)
 AND (instr(s.title,?)>0 OR EXISTS (
@@ -59,11 +65,16 @@ AND (instr(s.title,?)>0 OR EXISTS (
  WHERE tree.root_id=s.id AND EXISTS (
   SELECT 1 FROM json_each(?) evidence WHERE instr(records.data,evidence.value)>0
  ))) ORDER BY s.id LIMIT 2`
-	rows, err := db.Query(query, minTimeMs, minTimeMs, maxTimeMs, maxTimeMs, ticketID, string(encodedPatterns))
+	query := prefix + candidates
+	if ctx.Done() != nil {
+		// Resolve both possible roots while the driver can interrupt native work.
+		query = prefix + ", recovery_candidates AS MATERIALIZED (" + candidates + ") SELECT id FROM recovery_candidates ORDER BY id"
+	}
+	rows, err := db.QueryContext(ctx, query, minTimeMs, minTimeMs, maxTimeMs, maxTimeMs, ticketID, string(encodedPatterns))
 	if err != nil {
 		return nil, fmt.Errorf("OpenCode schema family %s: explicit recovery discovery: %w", family, err)
 	}
-	root, err := uniqueRoot(rows)
+	root, err := uniqueRoot(ctx, rows)
 	if errors.Is(err, ErrSessionNotFound) {
 		return nil, nil
 	}

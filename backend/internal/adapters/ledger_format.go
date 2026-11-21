@@ -219,6 +219,17 @@ func renderFormatValue(out *bytes.Buffer, n *formatValue, path string, depth int
 // FormatLedgerJSON applies the installed release's whitespace policy without
 // decoding facts, changing scalar lexemes, or normalizing unknown members.
 func FormatLedgerJSON(data []byte) ([]byte, error) {
+	n, err := parseLedgerFormat(data)
+	if err != nil {
+		return nil, err
+	}
+	var out bytes.Buffer
+	renderFormatValue(&out, n, "", 0, false)
+	out.WriteByte('\n')
+	return out.Bytes(), nil
+}
+
+func parseLedgerFormat(data []byte) (*formatValue, error) {
 	if !json.Valid(data) {
 		return nil, errors.New("invalid ledger JSON")
 	}
@@ -230,8 +241,5 @@ func FormatLedgerJSON(data []byte) ([]byte, error) {
 	if err = validateFormatShape(n); err != nil {
 		return nil, err
 	}
-	var out bytes.Buffer
-	renderFormatValue(&out, n, "", 0, false)
-	out.WriteByte('\n')
-	return out.Bytes(), nil
+	return n, nil
 }

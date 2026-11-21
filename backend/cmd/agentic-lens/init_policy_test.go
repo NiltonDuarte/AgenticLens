@@ -28,14 +28,19 @@ func TestInitApprovedSettingsPair(t *testing.T) {
 			project := t.TempDir()
 			shared := filepath.Join(project, ".agenticlens-config."+suffix)
 			local := filepath.Join(project, ".agenticlens-config.local.yaml")
-			settings, localSettings := cliFixtureSettings(t), cliLocalSettings(t)
+			settings := filepath.Join(t.TempDir(), "settings.yaml")
+			candidate := bytes.Replace(readCaptureFile(t, cliFixtureSettings(t)), []byte("    capture_observation: false\n"), nil, 1)
+			if err := os.WriteFile(settings, candidate, 0600); err != nil {
+				t.Fatal(err)
+			}
+			localSettings := cliLocalSettings(t)
 			args := []string{"init", "--settings", settings, "--local-settings", localSettings, "--workspace-root", "custom records", "--output", shared, "--project-name", "A shared fixture"}
 			run := func(extra ...string) ([]byte, error) {
 				cmd := exec.Command(cliBinaryPath, append(append([]string{}, args...), extra...)...)
 				cmd.Dir = project
 				return cmd.CombinedOutput()
 			}
-			if out, err := run("--dry-run"); err != nil || !bytes.Contains(out, []byte("enabled: false")) {
+			if out, err := run("--dry-run"); err != nil || !bytes.Contains(out, []byte("enabled: false")) || !bytes.Contains(out, []byte("capture_observation: false")) {
 				t.Fatalf("validated dry run: %v %s", err, out)
 			}
 			for _, path := range []string{shared, local} {
@@ -49,6 +54,9 @@ func TestInitApprovedSettingsPair(t *testing.T) {
 			cfg, err := adaptersconfig.Load(project)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if cfg.Generation.Summary.CaptureObservation {
+				t.Fatal("init enabled capture observation by default")
 			}
 			if len(cfg.Workspaces.Roots) != 1 {
 				t.Fatalf("expected one configured root: %+v", cfg.Workspaces.Roots)

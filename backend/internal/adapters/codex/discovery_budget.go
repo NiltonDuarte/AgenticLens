@@ -1,11 +1,13 @@
 package codex
 
 import (
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"golang.org/x/sys/unix"
 )
@@ -29,10 +31,14 @@ type DiscoveryBudget struct {
 }
 
 func (b *DiscoveryBudget) checkDeadline() error {
+	return b.readContext().Err()
+}
+
+func (b *DiscoveryBudget) readContext() context.Context {
 	if b != nil && b.Context != nil {
-		return b.Context.Err()
+		return b.Context
 	}
-	return nil
+	return context.Background()
 }
 
 func (b *DiscoveryBudget) validate() error {
@@ -75,7 +81,7 @@ func (b *DiscoveryBudget) claim(path string) error {
 	return nil
 }
 
-// A budgeted source must be a regular file. Nonblocking open lets the deadline
+// A rollout source must be a regular file. Nonblocking open lets the deadline
 // remain effective when a source path changes before the descriptor is opened.
 func openRolloutSource(path string) (*os.File, os.FileInfo, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY|unix.O_NONBLOCK, 0)
@@ -90,6 +96,44 @@ func openRolloutSource(path string) (*os.File, os.FileInfo, error) {
 		return nil, nil, errors.Join(err, f.Close())
 	}
 	return f, info, nil
+}
+
+// A regular-file read is synchronous. Bound each read and check before and
+// after it, including reads made by gzip before it returns decompressed bytes.
+type rolloutContextReader struct {
+	ctx    context.Context
+	reader io.Reader
+}
+
+func (r rolloutContextReader) Read(body []byte) (int, error) {
+	if err := r.ctx.Err(); err != nil {
+		return 0, err
+	}
+	const maxReadBytes = 64 * 1024
+	n, err := r.reader.Read(body[:min(len(body), maxReadBytes)])
+	if cancelled := r.ctx.Err(); cancelled != nil {
+		return n, cancelled
+	}
+	return n, err
+}
+
+func openRolloutReader(ctx context.Context, path string) (io.Reader, int64, func() error, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, 0, nil, err
+	}
+	file, info, err := openRolloutSource(path)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+	reader := rolloutContextReader{ctx: ctx, reader: file}
+	if !strings.HasSuffix(path, ".gz") {
+		return reader, info.Size(), file.Close, nil
+	}
+	compressed, err := gzip.NewReader(reader)
+	if err != nil {
+		return nil, 0, nil, errors.Join(fmt.Errorf("opening compressed Codex rollout: %w", err), file.Close())
+	}
+	return compressed, -1, func() error { return errors.Join(compressed.Close(), file.Close()) }, nil
 }
 
 type discoveryBudgetReader struct {

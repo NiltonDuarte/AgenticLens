@@ -49,12 +49,12 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 	if err != nil {
 		return nil, err
 	}
-	report := r.runSelected(targetFiles, discoveryDiagnostics, opts, targetVer, cfg)
+	report := r.runSelected(context.Background(), targetFiles, discoveryDiagnostics, opts, targetVer, cfg)
 	closeWorkspaceSelections(targetFiles, &report.Errors)
 	return report, nil
 }
 
-func (r *MigrationRunner) runSelected(targets []adapters.WorkspaceLocation, discoveryDiagnostics []string, opts MigrationOptions, targetVer int, cfg domain.ProjectConfig) *SchemaMigrationReport {
+func (r *MigrationRunner) runSelected(ctx context.Context, targets []adapters.WorkspaceLocation, discoveryDiagnostics []string, opts MigrationOptions, targetVer int, cfg domain.ProjectConfig) *SchemaMigrationReport {
 	report := &SchemaMigrationReport{
 		Scanned: len(targets),
 		Errors:  append([]string{}, discoveryDiagnostics...),
@@ -62,10 +62,13 @@ func (r *MigrationRunner) runSelected(targets []adapters.WorkspaceLocation, disc
 	}
 
 	for _, target := range targets {
+		if ctx.Err() != nil {
+			break
+		}
 		// Release each target before the next acquisition; no batch lock order
 		// can conflict with format's sorted canonical ownership.
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		res, issues := r.migrateWorkspace(ctx, target, opts, targetVer, cfg)
+		workspaceCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		res, issues := r.migrateWorkspace(workspaceCtx, target, opts, targetVer, cfg)
 		cancel()
 		report.Errors = append(report.Errors, issues...)
 		report.Results = append(report.Results, res)
@@ -229,7 +232,7 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, location adapter
 	if cleanupCurrent {
 		data = current.CleanupCandidate
 	} else {
-		data, err = json.Marshal(dto)
+		data, err = adapters.MarshalFactLedger(dto, adapters.FactLedgerHistory{})
 	}
 	if err != nil {
 		res.Status = "error"
@@ -265,7 +268,7 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, location adapter
 		derivedLedger := domain.DeriveMetricsLedger(migrated, cfg)
 		tableMD = adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
 	}
-	if err := publishBackfillArtifacts(metricPath, data, summaryPath, tableMD); err != nil {
+	if err := publishBackfillArtifacts(metricPath, data, summaryPath, tableMD, true); err != nil {
 		res.Status = "error"
 		res.Error = err
 		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, err))

@@ -1,18 +1,18 @@
 package codex
 
 import (
-	"agenticlens/internal/adapters/filesystem"
 	"bufio"
-	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	"agenticlens/internal/adapters/filesystem"
 )
 
 const maxDiscoveryLineBytes = 8 * 1024 * 1024
@@ -44,6 +44,10 @@ type rolloutCandidate struct {
 // rollout records only to inspect session metadata and compare the requested
 // nonce/ticket text; it does not retain or return transcript content.
 func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
+	ctx := options.Budget.readContext()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	home := options.CodexHome
 	if strings.TrimSpace(home) == "" {
 		return nil, errors.New("Codex home is required: supply an explicit source store")
@@ -51,13 +55,16 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 	if err := options.Budget.validate(); err != nil {
 		return nil, err
 	}
-	paths, err := listRolloutPathsWithBudget(home, options.Budget)
+	paths, err := listRolloutPaths(ctx, home, options.Budget)
 	if err != nil {
 		return nil, err
 	}
 	candidates := make([]rolloutCandidate, 0, len(paths))
 	for _, path := range paths {
-		candidate, inspectErr := inspectRolloutWithBudget(path, options.Nonce, options.Budget)
+		candidate, inspectErr := inspectRollout(ctx, path, options.Nonce, options.Budget)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		if inspectErr != nil {
 			if errors.Is(inspectErr, ErrDiscoveryBudget) {
 				return nil, inspectErr
@@ -79,7 +86,7 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 	// Check every relationship asserted by a copy before reducing ancestry to
 	// one parent per owner. Otherwise a conflicting copy could route a selected
 	// child into a different family and escape the ambiguity check.
-	if err := rejectAmbiguousFamily(candidates, options); err != nil {
+	if err := rejectAmbiguousFamily(ctx, candidates, options); err != nil {
 		return nil, err
 	}
 
@@ -121,6 +128,9 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 
 	selected := make([]rolloutCandidate, 0)
 	for _, candidate := range candidates {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		if candidate.threadID == selectedID || isDescendant(candidates, candidate.threadID, selectedID) {
 			if candidate.inspectionErr != nil {
 				return nil, fmt.Errorf("incomplete Codex discovery for selected owner %s at %s: %w", candidate.threadID, candidate.path, candidate.inspectionErr)
@@ -144,17 +154,23 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 	for _, candidate := range selected {
 		result = append(result, candidate.path)
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
 // rejectAmbiguousFamily follows all observed relationships, without selecting
 // an authoritative copy. Ambiguity in an unrelated family does not block reads.
-func rejectAmbiguousFamily(candidates []rolloutCandidate, options DiscoveryOptions) error {
+func rejectAmbiguousFamily(ctx context.Context, candidates []rolloutCandidate, options DiscoveryOptions) error {
 	members := make(map[string]bool)
 	counts := make(map[string]int)
 	relations := make(map[string][]string)
 	pending := make([]string, 0)
 	for _, candidate := range candidates {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		counts[candidate.threadID]++
 		if candidate.parentID != "" {
 			relations[candidate.threadID] = append(relations[candidate.threadID], candidate.parentID)
@@ -166,6 +182,9 @@ func rejectAmbiguousFamily(candidates []rolloutCandidate, options DiscoveryOptio
 		}
 	}
 	for len(pending) > 0 {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		id := pending[len(pending)-1]
 		pending = pending[:len(pending)-1]
 		if members[id] {
@@ -175,6 +194,9 @@ func rejectAmbiguousFamily(candidates []rolloutCandidate, options DiscoveryOptio
 		pending = append(pending, relations[id]...)
 	}
 	for _, candidate := range candidates {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if members[candidate.threadID] && counts[candidate.threadID] > 1 {
 			return fmt.Errorf("incomplete Codex discovery: owner %s has ambiguous rollout paths", candidate.threadID)
 		}
@@ -193,32 +215,100 @@ func containsThread(candidates []rolloutCandidate, threadID string) bool {
 
 // ParseRolloutPath opens and parses an uncompressed or gzip-compressed Codex rollout.
 func ParseRolloutPath(path string) (Transcript, error) {
-	return ParseRolloutPathAt(path, time.Now().UTC())
+	return ParseRolloutPathContext(context.Background(), path)
 }
 
-func ParseRolloutPathAt(path string, cutoff time.Time) (transcript Transcript, err error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return Transcript{}, err
+func ParseRolloutPathAt(path string, cutoff time.Time) (Transcript, error) {
+	return ParseRolloutPathAtContext(context.Background(), path, cutoff)
+}
+
+// ParseRolloutPathContext reads and parses one rollout with the caller's context.
+// On cancellation it may return owner metadata and observed events for a
+// partial trace. A result accompanied by an error is never a snapshot.
+func ParseRolloutPathContext(ctx context.Context, path string) (Transcript, error) {
+	return ParseRolloutPathAtContext(ctx, path, time.Now().UTC())
+}
+
+// ParseRolloutPathAtContext parses a rollout through the selected activity cutoff.
+func ParseRolloutPathAtContext(ctx context.Context, path string, cutoff time.Time) (Transcript, error) {
+	transcript, _, err := parseRolloutPathContext(ctx, path, cutoff, nil)
+	return transcript, err
+}
+
+// ParseRolloutPathWithinBudgetContext bounds decompressed bytes and reports the
+// amount consumed even when the read is cancelled or otherwise incomplete.
+func ParseRolloutPathWithinBudgetContext(ctx context.Context, path string, cutoff time.Time, maxBytes int64) (Transcript, int64, error) {
+	if err := ctx.Err(); err != nil {
+		return Transcript{}, 0, err
 	}
-	defer func() { err = errors.Join(err, file.Close()) }()
-	var reader io.Reader = file
-	if strings.HasSuffix(path, ".gz") {
-		compressed, gzipErr := gzip.NewReader(file)
-		if gzipErr != nil {
-			return Transcript{}, fmt.Errorf("opening compressed Codex rollout: %w", gzipErr)
+	if maxBytes <= 0 {
+		return Transcript{}, 0, ErrDiscoveryBudget
+	}
+	return parseRolloutPathContext(ctx, path, cutoff, &DiscoveryBudget{Context: ctx, MaxSourceBytes: maxBytes})
+}
+
+func parseRolloutPathContext(ctx context.Context, path string, cutoff time.Time, budget *DiscoveryBudget) (transcript Transcript, consumed int64, err error) {
+	reader, size, closeReader, err := openRolloutReader(ctx, path)
+	if err != nil {
+		return Transcript{}, 0, err
+	}
+	defer func() { err = errors.Join(err, closeReader()) }()
+	var limited *discoveryBudgetReader
+	if budget != nil {
+		limited = &discoveryBudgetReader{reader: reader, budget: budget, remainingSize: size}
+		reader = limited
+	}
+	transcript, err = ParseRolloutAtContext(ctx, reader, cutoff)
+	if budget != nil {
+		consumed = budget.SourceBytesRead
+		if consumed == budget.MaxSourceBytes && !limited.eof && limited.remainingSize != 0 {
+			err = ErrDiscoveryBudget
 		}
-		defer func() { err = errors.Join(err, compressed.Close()) }()
-		reader = compressed
 	}
-	transcript, err = ParseRolloutAt(reader, cutoff)
+	if cancelled := ctx.Err(); cancelled != nil {
+		err = cancelled
+	}
 	if err != nil {
-		return Transcript{}, fmt.Errorf("parsing Codex rollout %s: %w", path, err)
+		var prefix Transcript
+		if budget == nil && (errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) {
+			prefix = transcript.ownedTracePrefix()
+		}
+		return prefix, consumed, fmt.Errorf("parsing Codex rollout %s: %w", path, err)
 	}
-	return transcript, nil
+	return transcript, consumed, nil
 }
 
-func listRolloutPathsWithBudget(home string, budget *DiscoveryBudget) ([]string, error) {
+func (transcript Transcript) ownedTracePrefix() Transcript {
+	ownerID := transcript.sessionIDOrThread()
+	if ownerID == "" {
+		return Transcript{}
+	}
+	prefix := Transcript{
+		ThreadID: transcript.ThreadID, SessionID: transcript.SessionID,
+		ParentThread: transcript.ParentThread, AgentPath: transcript.AgentPath,
+		Warnings: []string{"interrupted Codex rollout"},
+	}
+	calls := make(map[string]struct{})
+	for _, event := range transcript.Events {
+		if event.SessionID == ownerID {
+			prefix.Events = append(prefix.Events, event)
+			if event.CallID != "" {
+				calls[event.CallID] = struct{}{}
+			}
+		}
+	}
+	for _, delegation := range transcript.Delegations {
+		if _, observed := calls[delegation.Provenance.CallID]; observed {
+			prefix.Delegations = append(prefix.Delegations, delegation)
+		}
+	}
+	return prefix
+}
+
+func listRolloutPaths(ctx context.Context, home string, budget *DiscoveryBudget) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(home) == "" {
 		return nil, errors.New("Codex home is required: supply --codex-home or telemetry.sources.codex.home in the selected local YAML")
 	}
@@ -233,6 +323,9 @@ func listRolloutPathsWithBudget(home string, budget *DiscoveryBudget) ([]string,
 
 	var paths []string
 	for _, directory := range []string{"sessions", "archived_sessions"} {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		root := filepath.Join(home, directory)
 		if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
 			continue
@@ -240,7 +333,7 @@ func listRolloutPathsWithBudget(home string, budget *DiscoveryBudget) ([]string,
 			return nil, fmt.Errorf("accessing Codex %s directory: %w", directory, err)
 		}
 		err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
-			if err := budget.checkDeadline(); err != nil {
+			if err := ctx.Err(); err != nil {
 				return err
 			}
 			if walkErr != nil {
@@ -261,6 +354,9 @@ func listRolloutPathsWithBudget(home string, budget *DiscoveryBudget) ([]string,
 			return nil, fmt.Errorf("scanning Codex %s directory: %w", directory, err)
 		}
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("no rollout files found under %s/sessions or %s/archived_sessions", home, home)
 	}
@@ -268,34 +364,28 @@ func listRolloutPathsWithBudget(home string, budget *DiscoveryBudget) ([]string,
 	return paths, nil
 }
 
-func inspectRolloutWithBudget(path, nonce string, budget *DiscoveryBudget) (candidate rolloutCandidate, err error) {
+func inspectRollout(ctx context.Context, path, nonce string, budget *DiscoveryBudget) (candidate rolloutCandidate, err error) {
+	if err := ctx.Err(); err != nil {
+		return candidate, err
+	}
 	if err := budget.claim(path); err != nil {
 		return candidate, err
 	}
-	file, info, err := openRolloutSource(path)
+	reader, sourceSize, closeReader, err := openRolloutReader(ctx, path)
 	if err != nil {
 		return rolloutCandidate{}, err
 	}
-	defer func() { err = errors.Join(err, file.Close()) }()
-
-	sourceSize := info.Size()
-	var reader io.Reader = file
-	if strings.HasSuffix(path, ".gz") {
-		sourceSize = -1
-		compressed, gzipErr := gzip.NewReader(file)
-		if gzipErr != nil {
-			return rolloutCandidate{}, gzipErr
-		}
-		defer func() { err = errors.Join(err, compressed.Close()) }()
-		reader = compressed
-	}
+	defer func() { err = errors.Join(err, closeReader()) }()
 	if budget != nil {
 		reader = &discoveryBudgetReader{reader: reader, budget: budget, remainingSize: sourceSize}
 	}
 	candidate = rolloutCandidate{path: path}
-	scanner := bufio.NewScanner(reader)
+	scanner := bufio.NewScanner(rolloutContextReader{ctx: ctx, reader: reader})
 	scanner.Buffer(make([]byte, 64*1024), maxDiscoveryLineBytes)
 	for scanner.Scan() {
+		if err := ctx.Err(); err != nil {
+			return candidate, err
+		}
 		line := scanner.Text()
 		if nonce != "" && strings.Contains(line, nonce) {
 			candidate.nonceMatch = true
@@ -316,6 +406,9 @@ func inspectRolloutWithBudget(path, nonce string, budget *DiscoveryBudget) (cand
 		if nonce == "" {
 			break
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		return candidate, err
 	}
 	if err := scanner.Err(); err != nil {
 		return candidate, err
@@ -393,21 +486,33 @@ func isDescendant(candidates []rolloutCandidate, threadID, rootID string) bool {
 // DiscoverExactRolloutPath selects one owner rather than its complete native
 // family. Family discovery remains separate so children validate their own cwd.
 func DiscoverExactRolloutPath(home, sessionID string) (string, error) {
-	return DiscoverExactRolloutPathWithBudget(home, sessionID, nil)
+	return DiscoverExactRolloutPathContext(context.Background(), home, sessionID)
 }
 
 func DiscoverExactRolloutPathWithBudget(home, sessionID string, budget *DiscoveryBudget) (string, error) {
+	return discoverExactRolloutPath(budget.readContext(), home, sessionID, budget)
+}
+
+// DiscoverExactRolloutPathContext resolves a single unambiguous native owner.
+func DiscoverExactRolloutPathContext(ctx context.Context, home, sessionID string) (string, error) {
+	return discoverExactRolloutPath(ctx, home, sessionID, nil)
+}
+
+func discoverExactRolloutPath(ctx context.Context, home, sessionID string, budget *DiscoveryBudget) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if strings.TrimSpace(sessionID) == "" {
 		return "", errors.New("exact Codex session ID is required")
 	}
-	paths, err := listRolloutPathsWithBudget(home, budget)
+	paths, err := listRolloutPaths(ctx, home, budget)
 	if err != nil {
 		return "", err
 	}
 	selected := ""
 	for _, path := range paths {
-		candidate, e := inspectRolloutWithBudget(path, "", budget)
-		if err := budget.checkDeadline(); err != nil {
+		candidate, e := inspectRollout(ctx, path, "", budget)
+		if err := ctx.Err(); err != nil {
 			return "", err
 		}
 		if e != nil {
@@ -426,6 +531,9 @@ func DiscoverExactRolloutPathWithBudget(home, sessionID string, budget *Discover
 			return "", fmt.Errorf("exact Codex owner %s has ambiguous rollout paths", sessionID)
 		}
 		selected = path
+	}
+	if err := ctx.Err(); err != nil {
+		return "", err
 	}
 	if selected == "" {
 		return "", fmt.Errorf("exact Codex owner %s unavailable: %w", sessionID, ErrOwnerUnavailable)

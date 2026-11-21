@@ -317,20 +317,37 @@ func NormalizeHistorySessionForPublication(owner SessionFactDTO, schemaVersion i
 
 // SaveFactLedgerPreservingHistory compacts current owners and serializes
 // previously authorized immutable historical DTOs through the same canonical
-// validation and writer. Supported lean facts, summaries, order and nullable
-// values in retained rows never pass through source persistence transforms.
+// validation and writer. Retained rows keep their nested sequence, including
+// nullable values and supported summaries.
 func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []SessionFactDTO) error {
+	data, err := PrepareFactLedgerPublication(ledger, history)
+	if err != nil {
+		return err
+	}
+	path = capture.PublicationPath(path)
+	parentDir := filepath.Dir(path)
+	if _, err := capture.StatPublicationFile(parentDir); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
+	}
+	if err := capture.WritePublicationFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write fact ledger to %s: %w", path, err)
+	}
+	return nil
+}
 
+// PrepareFactLedgerPublication validates and formats the final wire facts,
+// including the retained owners, before the caller replaces any artifact.
+func PrepareFactLedgerPublication(ledger domain.AgenticFactLedger, history []SessionFactDTO) ([]byte, error) {
 	if ledger.TicketID == nil || strings.TrimSpace(*ledger.TicketID) == "" {
-		return fmt.Errorf("cannot save fact ledger: TicketID is required and cannot be empty")
+		return nil, fmt.Errorf("cannot save fact ledger: TicketID is required and cannot be empty")
 	}
 	if ledger.TicketTitle == nil || strings.TrimSpace(*ledger.TicketTitle) == "" {
-		return fmt.Errorf("cannot save fact ledger: TicketTitle is required and cannot be empty")
+		return nil, fmt.Errorf("cannot save fact ledger: TicketTitle is required and cannot be empty")
 	}
 	historical := make(map[string]SessionFactDTO, len(history))
 	for _, owner := range history {
 		if _, exists := historical[owner.ID]; exists {
-			return fmt.Errorf("duplicate retained history owner %s", owner.ID)
+			return nil, fmt.Errorf("duplicate retained history owner %s", owner.ID)
 		}
 		historical[owner.ID] = owner
 	}
@@ -344,23 +361,23 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 			continue
 		}
 		if matched[owner.ID] {
-			return fmt.Errorf("duplicate publication history owner %s", owner.ID)
+			return nil, fmt.Errorf("duplicate publication history owner %s", owner.ID)
 		}
 		if !reflect.DeepEqual(prior.ToDomain(), owner) {
-			return fmt.Errorf("retained history owner %s changed before serialization", owner.ID)
+			return nil, fmt.Errorf("retained history owner %s changed before serialization", owner.ID)
 		}
 		matched[owner.ID] = true
 	}
 	if len(matched) != len(history) {
-		return errors.New("retained history owner missing from publication")
+		return nil, errors.New("retained history owner missing from publication")
 	}
 	allSummaries, err := domain.PersistAnomalySummaries(ledger)
 	if err != nil {
-		return fmt.Errorf("cannot derive resulting ledger summaries: %w", err)
+		return nil, fmt.Errorf("cannot derive resulting ledger summaries: %w", err)
 	}
 	ledger, err = domain.PersistAnomalySummaries(current)
 	if err != nil {
-		return fmt.Errorf("cannot prepare anomaly summaries: %w", err)
+		return nil, fmt.Errorf("cannot prepare anomaly summaries: %w", err)
 	}
 	// Aggregate summaries cover refreshed and retained native owners together.
 	// The retained owner DTOs below remain independent immutable source records.
@@ -371,36 +388,26 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 	for _, owner := range history {
 		cloned, err := NormalizeHistorySessionForPublication(owner, domain.CurrentSchemaVersion)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		dto.Sessions = append(dto.Sessions, cloned)
 	}
 	if err := dto.Validate(); err != nil {
-		return fmt.Errorf("cannot save fact ledger: %w", err)
+		return nil, fmt.Errorf("cannot save fact ledger: %w", err)
 	}
 	if err := dto.ValidatePersistedEvidence(); err != nil {
-		return fmt.Errorf("cannot save fact ledger: %w", err)
+		return nil, fmt.Errorf("cannot save fact ledger: %w", err)
 	}
 
-	path = capture.PublicationPath(path)
-	parentDir := filepath.Dir(path)
-	if _, err := capture.StatPublicationFile(parentDir); err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
-	}
-
-	data, err := json.Marshal(dto)
+	data, err := MarshalFactLedger(dto, FactLedgerHistory{SessionIDs: matched})
 	if err != nil {
-		return fmt.Errorf("failed to marshal fact ledger: %w", err)
+		return nil, fmt.Errorf("failed to marshal fact ledger: %w", err)
 	}
 	data, err = FormatLedgerJSON(data)
 	if err != nil {
-		return fmt.Errorf("formatting ledger: %w", err)
+		return nil, fmt.Errorf("formatting ledger: %w", err)
 	}
-
-	if err := capture.WritePublicationFile(path, data, 0644); err != nil {
-		return fmt.Errorf("failed to write fact ledger to %s: %w", path, err)
-	}
-	return nil
+	return data, nil
 }
 
 // SaveMetricsLedger publishes an explicit computed snapshot in an existing,

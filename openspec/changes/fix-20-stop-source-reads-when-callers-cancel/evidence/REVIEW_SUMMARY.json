@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 5,
+      "issue": "A cancelled Codex parse lost already decoded, owner-attributed historical events.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"},
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Fixed. Historical coverage stays partial and retains valid events after exact owner checks."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 5,
+      "issue": "Interrupted Codex spawn events could bypass child-parent contradiction checks.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Fixed. Interrupted events participate in native relationship resolution against the transcripts already read."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 8,
+      "issue": "A later native SQLite step could continue after cancellation while the live cache lock remained held.",
+      "reporters": [
+        {"persona": "reviewer-architecture", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Fixed in source queries. Expensive source evaluation takes place in the driver's interruptible initial query step."
+    },
+    {
+      "finding_id": "ARCH-02",
+      "severity": 5,
+      "issue": "An older tree could evict an accepted trace from a more recent listing.",
+      "reporters": [
+        {"persona": "reviewer-architecture", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Fixed. Tree cache admission checks listing sequence and source revision under the cache lock."
+    },
+    {
+      "finding_id": "ARCH-03",
+      "severity": 3,
+      "issue": "SQLite materialization can add temporary storage and sorting for large indexed traces.",
+      "reporters": [
+        {"persona": "reviewer-architecture", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Accepted cost for scoped source interruption. A synthetic fixture demonstrated the trade-off. Live adapter ownership retains potential follow-up measurement if observed in production."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 5,
+      "issue": "Historical cancellation tests checked waiting for a connection and could miss a query already running in SQLite.",
+      "reporters": [
+        {"persona": "reviewer-tests", "model": "gpt-6-luna", "reasoning_effort": "medium", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Fixed. A native in-flight HTTP fixture checks interruption, retained evidence and an independent retry."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 5,
+      "issue": "Backfill tests did not detect lost OpenCode deadlines or deletion of the last publication guard.",
+      "reporters": [
+        {"persona": "reviewer-tests", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Fixed. Native deadline and late publication tests prove byte preservation and fail on isolated guard mutations."
+    },
+    {
+      "finding_id": "TEST-03",
+      "severity": 4,
+      "issue": "Live listing and exact snapshot tests could miss completed native work followed by a discarded result.",
+      "reporters": [
+        {"persona": "reviewer-tests", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Fixed. The native completion oracles fail when context is detached in disposable mutations."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 5,
+      "issue": "Partial backfill discarded stored anomaly evidence when retained records passed through the domain projection.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed. Current-schema backfill restores validated unchanged wire evidence for retained sessions and the retained ticket snapshot."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 3,
+      "issue": "Backfill alphabetized surviving migration steps whenever it evaluated status.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed. Surviving steps keep their sequence and new steps are appended in workflow order."
+    },
+    {
+      "finding_id": "DATA-03",
+      "severity": 4,
+      "issue": "A proposed mixed-coverage case would lose unchanged ticket anomaly evidence if a partial analysis replaced individual ticket summaries.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6-luna", "reasoning_effort": "medium", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Refuted for the supported backfill path. Partial coverage leaves the entire ticket snapshot intact. Complete coverage replaces the aggregate and its evidence together."
+    },
+    {
+      "finding_id": "DATA-04",
+      "severity": 5,
+      "issue": "Backfill dropped stored group evidence when a parent refreshed but its child source remained unavailable.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed. An unchanged group summary retains ordered references until backfill recovers the complete group."
+    },
+    {
+      "finding_id": "DATA-05",
+      "severity": 5,
+      "issue": "A current-schema pending migration can remain incomplete after successful OpenCode recovery.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Outside the ordering scope. Backfill already classifies pending status as completed before step evaluation. A separate migration-state change owns the correction."
+    },
+    {
+      "finding_id": "DATA-06",
+      "severity": 4,
+      "issue": "A change in the local Git user alone caused a timestamp update in an otherwise equivalent backfill.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Fixed. The comparison uses the accepted attempt author and time. A changed ledger records the current attempt metadata."
+    },
+    {
+      "finding_id": "DATA-07",
+      "severity": 4,
+      "issue": "Summary failure recovery replaced an unchanged ledger with a new inode and modification time.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Fixed. Recovery keeps a matching regular file in place and repeats the durability barriers. The CLI regression checks exact bytes, inode, time and journal cleanup."
+    }
+  ]
+}
