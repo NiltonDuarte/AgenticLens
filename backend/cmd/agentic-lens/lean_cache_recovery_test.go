@@ -21,6 +21,12 @@ func TestRegisteredGenerateRecoversRetiredCacheAndPreservesUnavailableCurrentOwn
 	for _, mode := range []string{"unchanged complete source", "missing native source", "malformed native source"} {
 		t.Run(mode, func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
+			configPath := filepath.Join(f.project, ".agenticlens-config.yaml")
+			config := string(readCaptureFile(t, configPath))
+			config = strings.Replace(config, "  summary:\n", "  summary:\n    capture_observation: true\n", 1)
+			if err := os.WriteFile(configPath, []byte(config), 0600); err != nil {
+				t.Fatal(err)
+			}
 			path := f.write(t, 17)
 			source := append(readCaptureFile(t, path), []byte(`{"timestamp":"2026-01-01T00:00:03Z","type":"response_item","payload":{"type":"function_call","call_id":"native-call","name":"load_skill","arguments":"{\"name\":\"native-skill\"}"}}`+"\n")...)
 			if err := os.WriteFile(path, source, 0600); err != nil {
