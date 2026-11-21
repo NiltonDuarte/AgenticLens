@@ -13,6 +13,8 @@ generation:
 # Exact shared release authority. Install explicitly; dispatch never downloads.
 agenticlens:
   version: v3.0.0-rc.156+9308ac7
+  binary_dir: bin
+  pending_dir: .agenticlens/pending/
 # Human-readable name of the project.
 project_name: AgenticLens
 # Skill versions applied as project defaults to ticket tags during generation.

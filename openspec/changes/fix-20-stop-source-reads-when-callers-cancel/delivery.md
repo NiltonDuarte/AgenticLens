@@ -35,7 +35,7 @@ The final nonce-based generation rejected the root Codex rollout because record 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 63
-- **Active Agent Duration:** 13h 41m (recorded duration including 38331s provisional)
+- **Active Agent Duration:** 14h 24m (recorded duration including 40919s provisional)
 - **Context Window Health:** ELEVATED — Root agent peak 191.3k tokens (43% of 450k healthy ceiling, 0 compactions) | Subagents peak 338.6k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 2.3 avg turns/run (peak: 5 turns) | Planner 1.0, Coder 2.3, Tester 3.0
@@ -72,23 +72,23 @@ The final nonce-based generation rejected the root Codex rollout because record 
 | **gpt-6.2-sol** | 19 | 2,141,051 | 200,708 | 124,963,712 | 98.3% | Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations) |
 | **Total** | **30** | **2,803,999** | **237,736** | **132,650,240** | **97.9%** | **Unavailable (0 observed, 0 partial, 30 unavailable / 30 invocations)** |
 
-Capture observation finalized: 2026-11-21T10:16:59.803521027Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 3; retained older facts: 27; pending: 26; failed: 1; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 30; reserved bytes: 536870912. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1fb74-11fd-7f01-8db2-a744d804ef08: current; last successful source read 2026-11-21T10:16:59.344785877Z; accepted source checkpoint 2026-11-21T00:24:12.128Z.
-Owner codex/01a1fb81-6242-7281-8e7e-d85d1827b939: pending; last successful source read 2026-11-21T10:14:53.644626597Z; accepted source checkpoint 2026-11-21T00:32:10.446Z.
-Owner codex/01a1fb8c-ca4a-7c12-a904-d25cdbcff659: pending; last successful source read 2026-11-21T10:14:54.3065387Z; accepted source checkpoint 2026-11-21T00:58:16.842Z.
-Owner codex/01a1fb8d-fe92-76e0-86aa-5f2d5036cea4: pending; last successful source read 2026-11-21T10:15:11.58410526Z; accepted source checkpoint 2026-11-21T00:43:44.69Z.
-Owner codex/01a1fb9e-5adc-7152-9275-85740179281e: pending; last successful source read 2026-11-21T10:15:12.339097249Z; accepted source checkpoint 2026-11-21T01:01:12.072Z.
-Owner codex/01a1fb8c-e2fb-76a3-914e-310dd9374d12: pending; last successful source read 2026-11-21T10:15:13.026943509Z; accepted source checkpoint 2026-11-21T00:42:19.848Z.
-Owner codex/01a1fb94-ca62-78e2-ad49-93da432a6368: pending; last successful source read 2026-11-21T10:15:13.765825578Z; accepted source checkpoint 2026-11-21T00:51:38.753Z.
-Owner codex/01a1fb70-ce81-7a92-ba46-b1ce3ea7f5f4: pending; last successful source read 2026-11-21T10:15:31.104147046Z; accepted source checkpoint 2026-11-21T00:14:12.55Z.
-Owner codex/01a1fb84-907f-7510-98f9-722d8688237b: pending; last successful source read 2026-11-21T10:15:31.745161612Z; accepted source checkpoint 2026-11-21T00:38:53.39Z.
-Owner codex/01a1fb63-4432-7eb2-a6cb-7cfa79c495b8: pending; last successful source read 2026-11-21T10:15:32.436942944Z; accepted source checkpoint 2026-11-21T01:00:10.68Z.
-Owner codex/01a1fb63-1995-7ee3-a42b-a3d502928956: pending; last successful source read 2026-11-21T10:15:33.099077799Z; accepted source checkpoint 2026-11-21T00:40:44.531Z.
-Owner codex/01a1fb74-b75f-72a3-ba3d-e4879d8b2791: pending; last successful source read 2026-11-21T10:15:50.31351209Z; accepted source checkpoint 2026-11-21T00:16:00.324Z.
-Owner codex/01a1fb70-f9fe-7423-80f5-c4f208684e3b: pending; last successful source read 2026-11-21T10:15:50.947850815Z; accepted source checkpoint 2026-11-21T00:13:54.953Z.
-Owner codex/01a1fb63-2af9-7832-8d29-c5ae35508ac5: pending; last successful source read 2026-11-21T10:15:51.648924565Z; accepted source checkpoint 2026-11-21T00:41:02.753Z.
-Owner codex/01a1fb8f-4a23-7ff3-863b-17c00f321f58: pending; last successful source read 2026-11-21T10:15:52.270690679Z; accepted source checkpoint 2026-11-21T00:57:18.751Z.
-Owner codex/01a1fb96-87f4-7162-ad90-f9dc7f3fcda0: pending; last successful source read 2026-11-21T10:16:09.63463235Z; accepted source checkpoint 2026-11-21T00:53:50.752Z.
+Capture observation finalized: 2026-11-21T11:00:11.130689327Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 3; retained older facts: 27; pending: 26; failed: 1; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 30; reserved bytes: 536870912. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1fb74-11fd-7f01-8db2-a744d804ef08: current; last successful source read 2026-11-21T11:00:10.539352313Z; accepted source checkpoint 2026-11-21T00:24:12.128Z.
+Owner codex/01a1fb81-6242-7281-8e7e-d85d1827b939: pending; last successful source read 2026-11-21T10:58:12.708803063Z; accepted source checkpoint 2026-11-21T00:32:10.446Z.
+Owner codex/01a1fb8c-ca4a-7c12-a904-d25cdbcff659: pending; last successful source read 2026-11-21T10:58:13.465851056Z; accepted source checkpoint 2026-11-21T00:58:16.842Z.
+Owner codex/01a1fb8d-fe92-76e0-86aa-5f2d5036cea4: pending; last successful source read 2026-11-21T10:58:31.282692145Z; accepted source checkpoint 2026-11-21T00:43:44.69Z.
+Owner codex/01a1fb9e-5adc-7152-9275-85740179281e: pending; last successful source read 2026-11-21T10:58:32.038380914Z; accepted source checkpoint 2026-11-21T01:01:12.072Z.
+Owner codex/01a1fb8c-e2fb-76a3-914e-310dd9374d12: pending; last successful source read 2026-11-21T10:58:32.788124233Z; accepted source checkpoint 2026-11-21T00:42:19.848Z.
+Owner codex/01a1fb94-ca62-78e2-ad49-93da432a6368: pending; last successful source read 2026-11-21T10:58:33.749835569Z; accepted source checkpoint 2026-11-21T00:51:38.753Z.
+Owner codex/01a1fb70-ce81-7a92-ba46-b1ce3ea7f5f4: pending; last successful source read 2026-11-21T10:58:51.381286613Z; accepted source checkpoint 2026-11-21T00:14:12.55Z.
+Owner codex/01a1fb84-907f-7510-98f9-722d8688237b: pending; last successful source read 2026-11-21T10:58:52.07670392Z; accepted source checkpoint 2026-11-21T00:38:53.39Z.
+Owner codex/01a1fb63-4432-7eb2-a6cb-7cfa79c495b8: pending; last successful source read 2026-11-21T10:58:52.831542702Z; accepted source checkpoint 2026-11-21T01:00:10.68Z.
+Owner codex/01a1fb63-1995-7ee3-a42b-a3d502928956: pending; last successful source read 2026-11-21T10:58:53.57414837Z; accepted source checkpoint 2026-11-21T00:40:44.531Z.
+Owner codex/01a1fb74-b75f-72a3-ba3d-e4879d8b2791: pending; last successful source read 2026-11-21T10:59:11.661106497Z; accepted source checkpoint 2026-11-21T00:16:00.324Z.
+Owner codex/01a1fb70-f9fe-7423-80f5-c4f208684e3b: pending; last successful source read 2026-11-21T10:59:12.563583801Z; accepted source checkpoint 2026-11-21T00:13:54.953Z.
+Owner codex/01a1fb63-2af9-7832-8d29-c5ae35508ac5: pending; last successful source read 2026-11-21T10:59:13.399874834Z; accepted source checkpoint 2026-11-21T00:41:02.753Z.
+Owner codex/01a1fb8f-4a23-7ff3-863b-17c00f321f58: pending; last successful source read 2026-11-21T10:59:14.108312378Z; accepted source checkpoint 2026-11-21T00:57:18.751Z.
+Owner codex/01a1fb96-87f4-7162-ad90-f9dc7f3fcda0: pending; last successful source read 2026-11-21T10:59:17.405581006Z; accepted source checkpoint 2026-11-21T00:53:50.752Z.
 Additional owner freshness details remain in local capture diagnostics.
 
 Retained recorded history: 27 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
