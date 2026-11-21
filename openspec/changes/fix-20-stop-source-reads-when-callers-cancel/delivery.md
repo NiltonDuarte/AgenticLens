@@ -58,15 +58,15 @@ The integrated `make` passed on `d7e64263` against `origin/main` at `83f6f6c1`, 
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 81
-- **Active Agent Duration:** 19h 24m (recorded duration including 54647s provisional)
+- **Software Development Life Cycle Iterations:** 83
+- **Active Agent Duration:** 20h 14m (recorded duration including 57588s provisional)
 - **Context Window Health:** ELEVATED — Root agent peak 191.3k tokens (43% of 450k healthy ceiling, 2 compactions) | Subagents peak 447.2k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 2.1 avg turns/run (peak: 5 turns) | Planner 1.0, Coder 2.1, Tester 2.4
 - **Test-to-Production Code Ratio:** 1.5:1 (+1,848 test lines / +1,248 prod lines)
 - **Code Delivered:** +3,096 / -444 lines across 56 code files (excluding docs)
-- **Reasoning Effort:** 95,828 reasoning tokens (22.0% of generated output)
-- **Tool Health & Self-Correction:** 1,297 tool calls (94 self-corrections, 92.8% success rate)
+- **Reasoning Effort:** 96,343 reasoning tokens (22.0% of generated output)
+- **Tool Health & Self-Correction:** 1,305 tool calls (95 self-corrections, 92.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 11 execution anomalies detected (3 CRITICAL, 8 WARNING).
@@ -92,15 +92,15 @@ The integrated `make` passed on `d7e64263` against `origin/main` at `83f6f6c1`, 
 | **planner** | 2 | 379,011 | 5,109 | 2,958,080 | 88.6% | 192.8k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **coder** | 7 | 1,026,914 | 92,988 | 74,272,128 | 98.6% | 447.2k | ELEVATED | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
 | **tester** | 5 | 538,277 | 92,604 | 78,579,328 | 99.3% | 441.3k | ELEVATED | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **Unknown** | 32 | 2,557,030 | 148,824 | 42,663,680 | 94.3% | 191.3k | HEALTHY | Unavailable (0 observed, 0 partial, 32 unavailable / 32 invocations) |
-| **Total** | **46** | **4,501,232** | **339,525** | **198,473,216** | **97.8%** | **447.2k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 46 unavailable / 46 invocations)** |
+| **Unknown** | 33 | 2,596,176 | 151,105 | 42,989,056 | 94.3% | 191.3k | HEALTHY | Unavailable (0 observed, 0 partial, 33 unavailable / 33 invocations) |
+| **Total** | **47** | **4,540,378** | **341,806** | **198,798,592** | **97.8%** | **447.2k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 47 unavailable / 47 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 15 | 852,103 | 47,518 | 8,758,528 | 91.1% | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **gpt-6-luna** | 16 | 891,249 | 49,799 | 9,083,904 | 91.1% | Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations) |
 | **gpt-6.2-sol** | 31 | 3,649,129 | 292,007 | 189,714,688 | 98.1% | Unavailable (0 observed, 0 partial, 31 unavailable / 31 invocations) |
-| **Total** | **46** | **4,501,232** | **339,525** | **198,473,216** | **97.8%** | **Unavailable (0 observed, 0 partial, 46 unavailable / 46 invocations)** |
+| **Total** | **47** | **4,540,378** | **341,806** | **198,798,592** | **97.8%** | **Unavailable (0 observed, 0 partial, 47 unavailable / 47 invocations)** |
 
-Retained recorded history: 42 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
+Retained recorded history: 43 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
 <!-- agentic-lens:metrics:end -->
