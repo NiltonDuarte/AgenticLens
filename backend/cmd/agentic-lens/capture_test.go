@@ -478,7 +478,8 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics
 	project := t.TempDir()
 	initCLIGitFixture(t, project)
 	configuration := "agenticlens:\n  version: v9.8.7\n  pending_dir: " + captureFixturePendingDir + "\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: CaptureFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: custom records\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
-	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(configuration), 0600); err != nil {
+	configPath := filepath.Join(project, ".agenticlens-config.yaml")
+	if err := os.WriteFile(configPath, []byte(configuration), 0600); err != nil {
 		t.Fatal(err)
 	}
 	state, store := filepath.Join(project, "state with spaces"), t.TempDir()
@@ -545,7 +546,7 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics
 	if err := os.WriteFile(summary, []byte("# Capture fixture\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	generate := func() domain.AgenticFactLedger {
+	generate := func(wantObservation bool) domain.AgenticFactLedger {
 		t.Helper()
 		cmd := exec.Command(cliBinaryPath, "generate", "--capture-auto", "--source", "codex", "--capture-dir", state, "--ticket-id", "TEST-100", "--ticket-title", "Explicit independent roots", "--ticket-type", "feat", "--json-output", output, "--append", summary)
 		cmd.Dir = project
@@ -565,8 +566,17 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics
 				}
 			}
 		}
-		if bytes.Contains(summaryBytes, []byte("capture_report.json")) || !bytes.Contains(summaryBytes, []byte("Capture observation finalized:")) {
-			t.Fatalf("summary lacks current capture coverage or links retired report: %s", summaryBytes)
+		wantReports := 0
+		if wantObservation {
+			wantReports = 1
+		}
+		if got := bytes.Count(summaryBytes, []byte("Capture observation finalized:")); got != wantReports {
+			t.Fatalf("summary contains %d capture observations, want %d: %s", got, wantReports, summaryBytes)
+		}
+		if bytes.Contains(summaryBytes, []byte("capture_report.json")) ||
+			!bytes.Contains(summaryBytes, []byte("# Capture fixture\n")) ||
+			!bytes.Contains(summaryBytes, []byte("### Agentic Execution Metrics\n")) {
+			t.Fatalf("publication changed authored content, omitted metrics, or linked the retired report: %s", summaryBytes)
 		}
 		if _, err := os.Stat(filepath.Join(project, "capture_report.json")); !os.IsNotExist(err) {
 			t.Fatalf("summary-only publication created report: %v", err)
@@ -585,20 +595,35 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics
 		assertCapturePublishedOwners(t, captureDiagnostics(t, project, state), output, summary, ledger.Sessions)
 		return ledger
 	}
-	first := generate()
-	if second := generate(); !reflect.DeepEqual(first.Sessions, second.Sessions) {
+	setObservation := func(value string) {
+		t.Helper()
+		configured := strings.Replace(configuration, "  summary:\n", "  summary:\n    capture_observation: "+value+"\n", 1)
+		if err := os.WriteFile(configPath, []byte(configured), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	first := generate(false)
+	setObservation("true")
+	if second := generate(true); !reflect.DeepEqual(first.Sessions, second.Sessions) {
 		t.Fatal("repeated capture generation duplicated cumulative facts")
 	}
 	if err := os.Remove(filepath.Join(store, "sessions", "independent-two.jsonl")); err != nil {
 		t.Fatal(err)
 	}
-	if missing := generate(); !reflect.DeepEqual(first.Sessions, missing.Sessions) {
+	if missing := generate(true); !reflect.DeepEqual(first.Sessions, missing.Sessions) {
 		t.Fatal("unavailable registered source hid accepted facts")
 	}
 	for _, want := range []string{"retained older facts: 1", "failed: 1"} {
 		if !bytes.Contains(readCaptureFile(t, summary), []byte(want)) {
 			t.Fatalf("summary hid unavailable-source coverage %q", want)
 		}
+	}
+	setObservation("false")
+	if disabled := generate(false); !reflect.DeepEqual(first.Sessions, disabled.Sessions) {
+		t.Fatal("disabling the observation changed the accepted session facts")
+	}
+	if bytes.Contains(readCaptureFile(t, summary), []byte("Owner codex/independent-two:")) {
+		t.Fatal("disabled summary retained a stale observation detail")
 	}
 	failedSource := false
 	for _, d := range captureDiagnostics(t, project, state) {

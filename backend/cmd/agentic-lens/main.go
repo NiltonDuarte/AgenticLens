@@ -947,7 +947,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 	}
 	metricsLedger := domain.DeriveMetricsLedger(domain.ProjectGenerationFacts(factLedger, generationPolicy), projCfg)
 	tableMD := adapters.FormatMarkdownMetricsTableWithPolicy(metricsLedger, generationPolicy, projCfg.RoleOrder)
-	if captureResult != nil {
+	if captureResult != nil && projCfg.Generation.Summary.CaptureObservation {
 		tableMD += capture.CoverageSummary(*captureResult)
 	}
 	tableMD += historySummary(baseline)

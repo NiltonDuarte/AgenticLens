@@ -54,6 +54,7 @@ All listed containers/booleans must be explicit where required. Missing/null/wro
 | `generation.feedback.provisional_threshold_seconds` | Nonnegative integer for manual checkpoint feedback; zero disables human stderr diagnostics. |
 | `generation.summary.enabled` | Explicit boolean for shared manual/capture summary policy. |
 | `generation.summary.filename` | Required safe basename when configured writing is enabled; reject ledger collisions. |
+| `generation.summary.capture_observation` | Optional boolean, default `false`. Set to `true` to include capture observations in automatic summaries. |
 | `role_mappings` | Explicit mapping; `{}` means no aliases. Nonblank string names/values; presentation/aggregation only, without changing source identity. |
 | `role_order` | Explicit string list; `[]` orders observed roles alphabetically. Listed observed roles first, unlisted observed roles alphabetically; no invented rows. |
 

@@ -53,3 +53,26 @@ func TestSharedSummaryRequiresOnlyEnabledDestination(t *testing.T) {
 		t.Fatalf("disabled summary required filename: %v", err)
 	}
 }
+
+func TestSharedSummaryCaptureObservationRequiresBooleanWhenPresent(t *testing.T) {
+	const key = "generation.summary.capture_observation"
+	base := strings.Replace(fixtureSharedBody(t), "  summary:\n", "  summary:\n    capture_observation: false\n", 1)
+	for _, value := range []string{"<missing>", "false", "true", "'true'", "null", "0", "[]", "{}"} {
+		t.Run(value, func(t *testing.T) {
+			cfg, err := loadBody(t, replaceSetting(t, base, key, value))
+			switch value {
+			case "<missing>", "false", "true":
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got, want := cfg.Generation.Summary.CaptureObservation, value == "true"; got != want {
+					t.Fatalf("capture observation = %t, want %t", got, want)
+				}
+			default:
+				if err == nil || !strings.Contains(err.Error(), key) {
+					t.Fatalf("wanted an error naming %s for %s, got %v", key, value, err)
+				}
+			}
+		})
+	}
+}

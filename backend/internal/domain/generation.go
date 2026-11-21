@@ -126,6 +126,7 @@ type GenerationFeedbackConfig struct {
 
 // GenerationSummaryConfig is shared by manual and automatic publication.
 type GenerationSummaryConfig struct {
-	Enabled  bool   `json:"enabled" yaml:"enabled"`
-	Filename string `json:"filename" yaml:"filename"`
+	Enabled            bool   `json:"enabled" yaml:"enabled"`
+	Filename           string `json:"filename" yaml:"filename"`
+	CaptureObservation bool   `json:"capture_observation,omitempty" yaml:"capture_observation,omitempty"`
 }

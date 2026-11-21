@@ -22,3 +22,5 @@ The existing timeout policy, source selection and supported schema families rema
 ## Impact
 
 Live clients can recover after an interrupted read without accepting a cancelled snapshot. Historical clients retain usable evidence with explicit coverage. Backfill preserves recorded owner facts and ordinary partial-refresh behavior on source failures.
+
+The user also requested optional capture observation in generated Markdown. Add an opt-in setting for the diagnostic block while preserving the metrics tables, ledger and local capture diagnostics.

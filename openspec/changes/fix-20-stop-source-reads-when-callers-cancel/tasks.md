@@ -20,3 +20,9 @@ Use the [design](design.md) for scope and approval, and the [live and historical
 ## Workflow follow-up
 
 Archive after verified delivery and reconcile the roadmap separately.
+
+## Optional capture observation
+
+- [ ] Gate the capture observation block with the shared opt-in and document it.
+- [ ] Verify default omission, opt-in and replacement of the previously generated block.
+- [ ] Review and verify the follow-up, then update the FIX-20 PR.
