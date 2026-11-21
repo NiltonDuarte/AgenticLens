@@ -47,7 +47,7 @@ The active protected callback worker retains an older engine and can write its l
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 71
-- **Active Agent Duration:** 16h 58m (recorded duration including 47686s provisional)
+- **Active Agent Duration:** 17h 54m (recorded duration including 51066s provisional)
 - **Context Window Health:** ELEVATED — Root agent peak 191.3k tokens (43% of 450k healthy ceiling, 2 compactions) | Subagents peak 447.2k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.9 avg turns/run (peak: 5 turns) | Planner 1.0, Coder 2.0, Tester 2.0
@@ -88,6 +88,25 @@ The active protected callback worker retains an older engine and can write its l
 | **gpt-6-luna** | 13 | 756,748 | 41,458 | 8,235,136 | 91.6% | Unavailable (0 observed, 0 partial, 13 unavailable / 13 invocations) |
 | **gpt-6.2-sol** | 25 | 2,997,710 | 236,659 | 160,898,944 | 98.2% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
 | **Total** | **38** | **3,754,458** | **278,117** | **169,134,080** | **97.8%** | **Unavailable (0 observed, 0 partial, 38 unavailable / 38 invocations)** |
+
+Capture observation finalized: 2026-11-21T13:49:49.416150936Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 4; retained older facts: 34; pending: 34; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 38; reserved bytes: 536870912. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1fb74-11fd-7f01-8db2-a744d804ef08: current; last successful source read 2026-11-21T13:49:46.315541203Z; accepted source checkpoint 2026-11-21T00:24:12.128Z.
+Owner codex/01a1fdec-7936-7911-a3a8-9353d8da03c5: current; last successful source read 2026-11-21T13:49:47.243531852Z; accepted source checkpoint 2026-11-21T12:12:38.15Z.
+Owner codex/01a1fb81-6242-7281-8e7e-d85d1827b939: current; last successful source read 2026-11-21T13:49:48.155478124Z; accepted source checkpoint 2026-11-21T00:32:10.446Z.
+Owner codex/01a1fb8c-ca4a-7c12-a904-d25cdbcff659: current; last successful source read 2026-11-21T13:49:48.861567813Z; accepted source checkpoint 2026-11-21T00:58:16.842Z.
+Owner codex/01a1fb8d-fe92-76e0-86aa-5f2d5036cea4: pending; last successful source read 2026-11-21T13:46:45.650570499Z; accepted source checkpoint 2026-11-21T00:43:44.69Z.
+Owner codex/01a1fb9e-5adc-7152-9275-85740179281e: pending; last successful source read 2026-11-21T13:46:46.394780716Z; accepted source checkpoint 2026-11-21T01:01:12.072Z.
+Owner codex/01a1fb8c-e2fb-76a3-914e-310dd9374d12: pending; last successful source read 2026-11-21T13:47:04.136050751Z; accepted source checkpoint 2026-11-21T00:42:19.848Z.
+Owner codex/01a1fb94-ca62-78e2-ad49-93da432a6368: pending; last successful source read 2026-11-21T13:47:04.860578346Z; accepted source checkpoint 2026-11-21T00:51:38.753Z.
+Owner codex/01a1fb70-ce81-7a92-ba46-b1ce3ea7f5f4: pending; last successful source read 2026-11-21T13:47:05.698852821Z; accepted source checkpoint 2026-11-21T00:14:12.55Z.
+Owner codex/01a1fb84-907f-7510-98f9-722d8688237b: pending; last successful source read 2026-11-21T13:47:06.433380233Z; accepted source checkpoint 2026-11-21T00:38:53.39Z.
+Owner codex/01a1fb63-4432-7eb2-a6cb-7cfa79c495b8: pending; last successful source read 2026-11-21T13:47:24.168199615Z; accepted source checkpoint 2026-11-21T01:00:10.68Z.
+Owner codex/01a1fb63-1995-7ee3-a42b-a3d502928956: pending; last successful source read 2026-11-21T13:47:24.99124735Z; accepted source checkpoint 2026-11-21T00:40:44.531Z.
+Owner codex/01a1fb74-b75f-72a3-ba3d-e4879d8b2791: pending; last successful source read 2026-11-21T13:47:25.713044768Z; accepted source checkpoint 2026-11-21T00:16:00.324Z.
+Owner codex/01a1fb70-f9fe-7423-80f5-c4f208684e3b: pending; last successful source read 2026-11-21T13:47:26.444668515Z; accepted source checkpoint 2026-11-21T00:13:54.953Z.
+Owner codex/01a1fb63-2af9-7832-8d29-c5ae35508ac5: pending; last successful source read 2026-11-21T13:47:44.118822042Z; accepted source checkpoint 2026-11-21T00:41:02.753Z.
+Owner codex/01a1fb8f-4a23-7ff3-863b-17c00f321f58: pending; last successful source read 2026-11-21T13:47:44.847175926Z; accepted source checkpoint 2026-11-21T00:57:18.751Z.
+Additional owner freshness details remain in local capture diagnostics.
 
 Retained recorded history: 34 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
 <!-- agentic-lens:metrics:end -->
