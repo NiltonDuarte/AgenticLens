@@ -24,7 +24,7 @@ func TestGenerationFeedbackRequiresExplicitNonnegativeValue(t *testing.T) {
 	}
 }
 
-func TestSharedSummaryRequiresOnlyEnabledDestination(t *testing.T) {
+func TestSharedSummaryRequiresDestinationOnlyWhenEnabled(t *testing.T) {
 	base := fixtureSharedBody(t)
 	for _, value := range []string{"<missing>", "null", "'false'", "0"} {
 		cfg, err := loadBody(t, replaceSetting(t, base, "generation.summary.enabled", value))
@@ -54,14 +54,14 @@ func TestSharedSummaryRequiresOnlyEnabledDestination(t *testing.T) {
 	}
 }
 
-func TestSharedSummaryCaptureObservationRequiresBooleanWhenPresent(t *testing.T) {
+func TestSharedSummaryCaptureObservationRequiresExplicitBoolean(t *testing.T) {
 	const key = "generation.summary.capture_observation"
-	base := strings.Replace(fixtureSharedBody(t), "  summary:\n", "  summary:\n    capture_observation: false\n", 1)
+	base := fixtureSharedBody(t)
 	for _, value := range []string{"<missing>", "false", "true", "'true'", "null", "0", "[]", "{}"} {
 		t.Run(value, func(t *testing.T) {
 			cfg, err := loadBody(t, replaceSetting(t, base, key, value))
 			switch value {
-			case "<missing>", "false", "true":
+			case "false", "true":
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -75,4 +75,11 @@ func TestSharedSummaryCaptureObservationRequiresBooleanWhenPresent(t *testing.T)
 			}
 		})
 	}
+	t.Run("missing with publication disabled", func(t *testing.T) {
+		body := replaceSetting(t, base, "generation.summary.enabled", "false")
+		body = replaceSetting(t, body, key, "<missing>")
+		if _, err := loadBody(t, body); err == nil || !strings.Contains(err.Error(), key) {
+			t.Fatalf("wanted an error naming %s for disabled publication, got %v", key, err)
+		}
+	})
 }

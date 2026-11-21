@@ -259,6 +259,10 @@ func validateLoadedConfig(cfg domain.ProjectConfig, path string) (domain.Project
 	if err := ValidateConfig(cfg); err != nil {
 		return domain.ProjectConfig{}, fmt.Errorf("validating configuration %s: %w", path, err)
 	}
+	// Setup candidates may omit this setting because the writer emits false by default.
+	if err := cfg.RequireSettings("generation.summary.capture_observation"); err != nil {
+		return domain.ProjectConfig{}, err
+	}
 	return cfg, nil
 }
 

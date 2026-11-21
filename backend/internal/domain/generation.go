@@ -128,5 +128,5 @@ type GenerationFeedbackConfig struct {
 type GenerationSummaryConfig struct {
 	Enabled            bool   `json:"enabled" yaml:"enabled"`
 	Filename           string `json:"filename" yaml:"filename"`
-	CaptureObservation bool   `json:"capture_observation,omitempty" yaml:"capture_observation,omitempty"`
+	CaptureObservation bool   `json:"capture_observation,omitempty" yaml:"capture_observation"`
 }

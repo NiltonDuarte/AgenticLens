@@ -111,7 +111,7 @@ class Project:
             },
             "generation": {
                 "metrics": {"skills": True, "delegations": True, "anomalies": False},
-                "summary": {"enabled": True, "filename": "delivery.md"},
+                "summary": {"enabled": True, "filename": "delivery.md", "capture_observation": False},
                 "feedback": {"provisional_threshold_seconds": 0},
             },
             "code_metrics": {

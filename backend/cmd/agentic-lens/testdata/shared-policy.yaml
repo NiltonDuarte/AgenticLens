@@ -43,6 +43,7 @@ generation:
   summary:
     enabled: false
     filename: SUMMARY.md
+    capture_observation: false
 database:
   busy_timeout_ms: 0
 live:

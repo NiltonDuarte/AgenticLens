@@ -50,6 +50,38 @@ func TestGenerateConfigYAMLExplicitValuesRoundTrip(t *testing.T) {
 	}
 }
 
+func TestGenerateConfigYAMLWritesCaptureObservationExplicitly(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		want bool
+	}{
+		{name: "default", want: false},
+		{name: "opt-in", want: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := testProjectConfig()
+			if tc.want {
+				cfg.Generation.Summary.CaptureObservation = true
+			}
+			rendered, err := config.GenerateConfigYAML(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			path := writeConfig(t, t.TempDir(), "chosen.yml", string(rendered))
+			got, err := config.LoadFromFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := got.RequireSettings("generation.summary.capture_observation"); err != nil {
+				t.Fatal(err)
+			}
+			if got.Generation.Summary.CaptureObservation != tc.want {
+				t.Fatalf("capture observation = %t, want %t", got.Generation.Summary.CaptureObservation, tc.want)
+			}
+		})
+	}
+}
+
 func TestGenerateConfigYAMLRequiredAndInvalidChoices(t *testing.T) {
 	cases := []struct {
 		name  string

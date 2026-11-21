@@ -456,8 +456,9 @@ func TestCaptureCLIOpenCodePluginOwnershipAndMissingHandler(t *testing.T) {
 }
 
 func TestCaptureCLIRequestExposesUnassignedTicketToPlugin(t *testing.T) {
-	project := newCaptureGenerationFixture(t).project
-	out, err := captureCLI(t, project, "", "request", "--source", "opencode", "--store", filepath.Join(project, "source.db"), "--state-dir", filepath.Join(project, "state"), "--session-id", "runtime-session")
+	fixture := newCaptureGenerationFixture(t)
+	serializeCaptureFixtureWorkers(t, fixture)
+	out, err := captureCLI(t, fixture.project, "", "request", "--source", "opencode", "--store", filepath.Join(fixture.project, "source.db"), "--state-dir", fixture.state, "--session-id", "runtime-session")
 	if err != nil {
 		t.Fatalf("request: %v %s", err, out)
 	}
@@ -477,7 +478,7 @@ func TestCaptureCLIRequestExposesUnassignedTicketToPlugin(t *testing.T) {
 func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics(t *testing.T) {
 	project := t.TempDir()
 	initCLIGitFixture(t, project)
-	configuration := "agenticlens:\n  version: v9.8.7\n  pending_dir: " + captureFixturePendingDir + "\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: CaptureFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: custom records\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	configuration := "agenticlens:\n  version: v9.8.7\n  pending_dir: " + captureFixturePendingDir + "\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\n    capture_observation: false\nrole_order: []\nrole_mappings: {}\nproject_name: CaptureFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: custom records\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	configPath := filepath.Join(project, ".agenticlens-config.yaml")
 	if err := os.WriteFile(configPath, []byte(configuration), 0600); err != nil {
 		t.Fatal(err)
@@ -597,7 +598,7 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics
 	}
 	setObservation := func(value string) {
 		t.Helper()
-		configured := strings.Replace(configuration, "  summary:\n", "  summary:\n    capture_observation: "+value+"\n", 1)
+		configured := strings.Replace(configuration, "capture_observation: false", "capture_observation: "+value, 1)
 		if err := os.WriteFile(configPath, []byte(configured), 0600); err != nil {
 			t.Fatal(err)
 		}

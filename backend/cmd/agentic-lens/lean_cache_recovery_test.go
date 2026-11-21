@@ -23,7 +23,7 @@ func TestRegisteredGenerateRecoversRetiredCacheAndPreservesUnavailableCurrentOwn
 			f := newCaptureGenerationFixture(t)
 			configPath := filepath.Join(f.project, ".agenticlens-config.yaml")
 			config := string(readCaptureFile(t, configPath))
-			config = strings.Replace(config, "  summary:\n", "  summary:\n    capture_observation: true\n", 1)
+			config = strings.Replace(config, "capture_observation: false", "capture_observation: true", 1)
 			if err := os.WriteFile(configPath, []byte(config), 0600); err != nil {
 				t.Fatal(err)
 			}

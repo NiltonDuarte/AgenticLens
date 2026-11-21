@@ -107,7 +107,7 @@ func TestLoadExplicitYAMLValuesAndSourceFreePolicy(t *testing.T) {
 		})
 	}
 	body := fixtureSharedBody(t)
-	for _, key := range []string{"database", "live", "anomaly_thresholds", "generation"} {
+	for _, key := range []string{"database", "live", "anomaly_thresholds", "generation.metrics", "generation.feedback", "generation.summary.enabled", "generation.summary.filename"} {
 		body = replaceSetting(t, body, key, "<missing>")
 	}
 	cfg, err := loadBody(t, body)
