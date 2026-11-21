@@ -851,25 +851,35 @@ func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFac
 	if _, err := capture.StatPublicationFile(filepath.Dir(target)); err != nil {
 		return fmt.Errorf("workspace moved or unavailable; resolve and retry: %w", err)
 	}
+	data, err := adapters.PrepareFactLedgerPublication(ledger, history)
+	if err != nil {
+		return err
+	}
+	accepted, err := capture.ReadPublicationFile(target)
+	if err == nil {
+		equal, compareErr := adapters.LedgerFactsEqual(accepted, data)
+		if compareErr != nil {
+			return compareErr
+		}
+		if equal {
+			return nil
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("reading accepted ledger: %w", err)
+	}
+
 	file, err := capture.CreatePublicationTemp(filepath.Dir(target), ".agenticlens-ledger-")
 	if err != nil {
 		return err
 	}
 	temp := file.Name()
-	if err = file.Close(); err != nil {
-		return err
-	}
 	defer func() {
 		if removeErr := capture.RemovePublicationFile(temp); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
 			fmt.Fprintln(os.Stderr, "Generation staging cleanup:", removeErr)
 		}
 	}()
-	if err = adapters.SaveFactLedgerPreservingHistory(temp, ledger, history); err != nil {
-		return err
-	}
-	file, err = capture.OpenPublicationFile(temp, os.O_RDWR, 0)
-	if err != nil {
-		return err
+	if _, err = file.Write(data); err != nil {
+		return errors.Join(err, file.Close())
 	}
 	if err = file.Sync(); err != nil {
 		return errors.Join(err, file.Close())

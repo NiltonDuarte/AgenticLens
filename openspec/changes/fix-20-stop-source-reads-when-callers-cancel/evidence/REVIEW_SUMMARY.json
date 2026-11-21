@@ -118,6 +118,24 @@
         {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "observed"}
       ],
       "disposition": "Outside the ordering scope. Backfill already classifies pending status as completed before step evaluation. A separate migration-state change owns the correction."
+    },
+    {
+      "finding_id": "DATA-06",
+      "severity": 4,
+      "issue": "A change in the local Git user alone caused a timestamp update in an otherwise equivalent backfill.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Fixed. The comparison uses the accepted attempt author and time. A changed ledger records the current attempt metadata."
+    },
+    {
+      "finding_id": "DATA-07",
+      "severity": 4,
+      "issue": "Summary failure recovery replaced an unchanged ledger with a new inode and modification time.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.2-sol", "reasoning_effort": "high", "identity_basis": "acknowledged"}
+      ],
+      "disposition": "Fixed. Recovery keeps a matching regular file in place and repeats the durability barriers. The CLI regression checks exact bytes, inode, time and journal cleanup."
     }
   ]
 }

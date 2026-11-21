@@ -268,7 +268,7 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, location adapter
 		derivedLedger := domain.DeriveMetricsLedger(migrated, cfg)
 		tableMD = adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
 	}
-	if err := publishBackfillArtifacts(metricPath, data, summaryPath, tableMD); err != nil {
+	if err := publishBackfillArtifacts(metricPath, data, summaryPath, tableMD, true); err != nil {
 		res.Status = "error"
 		res.Error = err
 		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, err))

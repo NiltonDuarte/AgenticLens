@@ -1,6 +1,7 @@
 package backfill
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -270,6 +271,7 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 					ledger.Migration = &domain.MigrationInfo{SchemaVersion: version, Status: domain.MigrationStatusCompleted, StepsCompleted: []string{domain.MigrationStepSourceBackfill}, StepsPending: []string{}}
 				}
 				workspace := createTestWorkspace(t, root, ticket, ledger)
+				baseline, baselineBytes := readRecoveryLedger(t, workspace)
 				dbPath := filepath.Join(root, "source.db")
 				if available {
 					setupMockOpenCodeDB(t, dbPath, "inv-existing", ticket)
@@ -284,7 +286,11 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 					t.Fatalf("explicit refresh failed/skipped: %+v", report.Results)
 				}
 				updated, data := readRecoveryLedger(t, workspace)
-				if !strings.Contains(string(data), `"tokens": {"input":`) {
+				if !metadata && !available {
+					if !bytes.Equal(data, baselineBytes) || !reflect.DeepEqual(updated.Sessions, baseline.Sessions) {
+						t.Fatalf("an unavailable source with unchanged facts must leave the raw ledger and recorded owners intact: %+v", updated.Sessions)
+					}
+				} else if !bytes.Contains(data, []byte(`"tokens": {"input":`)) {
 					t.Fatalf("backfill writer expanded compact token record: %s", data)
 				}
 				if updated.Migration != nil {

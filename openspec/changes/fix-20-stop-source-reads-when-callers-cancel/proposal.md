@@ -27,3 +27,5 @@ Live clients can recover after an interrupted read without accepting a cancelled
 The user also requested optional capture observation in generated Markdown. Add an opt-in setting for the diagnostic block while preserving the metrics tables, ledger and local capture diagnostics.
 
 Use stable array ordering when publishing the raw metrics ledger so that changing which sessions are refreshed does not move otherwise unchanged records.
+
+Preserve the ledger timestamps and file contents when a publication produces the same recorded facts.

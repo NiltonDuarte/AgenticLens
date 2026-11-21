@@ -40,9 +40,11 @@ behavior, baseline/candidate revision, design/tasks pointers and relevant
 entry points or findings. State that the checkout is shared. Use the supported
 harness tools; do not copy technical policy into delegation prompts.
 
-Pass the canonical ticket ID and title to each separately launched same-ticket
-contributor and have them answer their own harness binding request. Keep each run
-in the parent's working records and verify the returned binding using the
+Pass the canonical ticket ID, title, conventional type and existing change directory
+to each separately launched same-ticket contributor, including retries and review
+re-checks. Ask each contributor to answer its own harness binding request when it
+appears and return its native session ID and the binding result. Keep each run in
+the parent's working records and verify the returned binding using the
 [independent session procedure](../agentic-lens-operator/references/cli.md#independent-session-binding-and-ledger-coverage).
 
 Expect changed artifacts/paths, results with tested revision and commands,

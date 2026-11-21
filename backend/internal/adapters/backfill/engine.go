@@ -348,12 +348,12 @@ func (e *BackfillEngine) processSingleWorkspace(
 	defer func() { result.Error = errors.Join(result.Error, owner.Close()) }()
 	metricPath = capture.PublicationPath(canonicalPath)
 	result.LedgerPath = canonicalPath
-	publish := func(data []byte, table string) error {
+	publish := func(data []byte, table string, replaceLedger bool) error {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("workspace cancelled before publication: %w", err)
 		}
-		publicationStarted = true
-		return publishBackfillArtifacts(metricPath, data, summaryPath, table)
+		publicationStarted = replaceLedger || summaryPath != ""
+		return publishBackfillArtifacts(metricPath, data, summaryPath, table, replaceLedger)
 	}
 	if err := adapters.CheckPublication(metricPath); err != nil {
 		result.Error = err
@@ -412,7 +412,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 			derivedLedger := domain.DeriveMetricsLedger(canonical, cfg)
 			tableMD = adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
 		}
-		if err := publish(current.CleanupCandidate, tableMD); err != nil {
+		if err := publish(current.CleanupCandidate, tableMD, true); err != nil {
 			result.Error = err
 		}
 
@@ -733,14 +733,9 @@ func (e *BackfillEngine) processSingleWorkspace(
 	if opts.DryRun {
 		return result
 	}
-	data, err := adapters.MarshalFactLedger(dtoToSave, history)
+	data, replaceLedger, err := prepareBackfillLedger(dtoToSave, history, current, content)
 	if err != nil {
-		result.Error = fmt.Errorf("marshaling updated JSON: %w", err)
-		return result
-	}
-	data, err = adapters.FormatLedgerJSON(data)
-	if err != nil {
-		result.Error = fmt.Errorf("formatting updated ledger: %w", err)
+		result.Error = err
 		return result
 	}
 
@@ -749,7 +744,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 		derivedLedger := domain.DeriveMetricsLedger(persistedLedger, cfg)
 		tableMD = adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
 	}
-	if err := publish(data, tableMD); err != nil {
+	if err := publish(data, tableMD, replaceLedger); err != nil {
 		result.Error = err
 		return result
 	}

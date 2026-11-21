@@ -17,3 +17,15 @@ Raw metrics ledger writers SHALL order sessions by ID regardless of refresh stat
 #### Scenario: Metadata-only cleanup or formatting
 - **WHEN** a supported ledger is formatted or rewritten solely to remove retired metadata
 - **THEN** the existing array sequence is preserved
+
+### Requirement: Stable timestamps for equivalent ledger facts
+
+Ledger publication SHALL preserve the existing file and its root `updated_at` and `completed_at` values when the candidate contains equivalent persisted facts.
+
+#### Scenario: An automatic capture pass finds the same facts
+- **WHEN** automatic capture produces the same recorded facts, including session-level dates and evidence
+- **THEN** the ledger remains byte-for-byte unchanged and capture can acknowledge the pass
+
+#### Scenario: A persisted fact changes
+- **WHEN** generation produces a different recorded fact
+- **THEN** it publishes the changed ledger with the new publication timestamps

@@ -32,3 +32,7 @@ Archive after verified delivery and reconcile the roadmap separately.
 
 - [x] Apply one stable ordering policy to serialized raw facts across generation, source backfill and schema migration. Preserve timeline order, repeated occurrences and recorded evidence.
 - [x] Verify exact array order across alternating successful refresh subsets and cover nested arrays, retained history and migration.
+
+## Ledger timestamps
+
+- [x] Preserve the ledger on publications with equivalent recorded facts and verify that genuine changes advance publication timestamps.

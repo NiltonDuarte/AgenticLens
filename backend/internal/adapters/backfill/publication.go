@@ -103,11 +103,49 @@ func backfillPublicationPaths(metricPath string, summary bool, cfg domain.Projec
 	return ledger, destination, nil
 }
 
+func prepareBackfillLedger(candidate adapters.AgenticFactLedgerDTO, history adapters.FactLedgerHistory, current *currentLedgerPreparation, accepted []byte) ([]byte, bool, error) {
+	comparison := candidate
+	restoreMigrationAttempt := false
+	// Record the time and author of the attempt only when facts are published.
+	if current != nil && current.Ledger.Migration != nil && candidate.Migration != nil {
+		migration := *candidate.Migration
+		prior := current.Ledger.Migration
+		restoreMigrationAttempt = migration.LastMigratedAt != prior.LastMigratedAt || migration.LastMigratedBy != prior.LastMigratedBy
+		migration.LastMigratedAt = prior.LastMigratedAt
+		migration.LastMigratedBy = prior.LastMigratedBy
+		comparison.Migration = &migration
+	}
+	data, err := adapters.MarshalFactLedger(comparison, history)
+	if err != nil {
+		return nil, false, fmt.Errorf("marshaling updated JSON: %w", err)
+	}
+	if current != nil {
+		equal, err := adapters.LedgerFactsEqual(accepted, data)
+		if err != nil || equal {
+			return nil, false, err
+		}
+	}
+	if restoreMigrationAttempt {
+		data, err = adapters.MarshalFactLedger(candidate, history)
+		if err != nil {
+			return nil, false, fmt.Errorf("marshaling updated JSON: %w", err)
+		}
+	}
+	data, err = adapters.FormatLedgerJSON(data)
+	if err != nil {
+		return nil, false, fmt.Errorf("formatting updated ledger: %w", err)
+	}
+	return data, true, nil
+}
+
 // Reuse the existing publication protocol for a ledger plus configured summary.
 // A failed second write restores the exact prior authorized members; recovery
 // failures retain the journal rather than conceal a partially published set.
-func publishBackfillArtifacts(metricPath string, data []byte, summaryPath, table string) (err error) {
+func publishBackfillArtifacts(metricPath string, data []byte, summaryPath, table string, replaceLedger bool) (err error) {
 	if summaryPath == "" {
+		if !replaceLedger {
+			return nil
+		}
 		return publishBackfillLedger(metricPath, data)
 	}
 	paths := []string{metricPath, summaryPath}
@@ -120,8 +158,10 @@ func publishBackfillArtifacts(metricPath string, data []byte, summaryPath, table
 			err = errors.Join(err, recoveryErr)
 		}
 	}()
-	if err := publishBackfillLedger(metricPath, data); err != nil {
-		return err
+	if replaceLedger {
+		if err := publishBackfillLedger(metricPath, data); err != nil {
+			return err
+		}
 	}
 	if err := adapters.UpdateSummaryFile(summaryPath, table); err != nil {
 		return fmt.Errorf("updating configured summary %s: %w", summaryPath, err)
