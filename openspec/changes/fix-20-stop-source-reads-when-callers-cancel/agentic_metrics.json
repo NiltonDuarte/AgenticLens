@@ -9,8 +9,8 @@
   "ticket_title": "Stop source reads when callers cancel",
   "ticket_type": "fix",
   "started_at": "2026-11-20T23:03:28.457Z",
-  "completed_at": "2026-11-21T14:24:20.241951+00:00",
-  "updated_at": "2026-11-21T14:24:20.241951+00:00",
+  "completed_at": "2026-11-21T14:58:41.309731+00:00",
+  "updated_at": "2026-11-21T14:58:41.309731+00:00",
   "code": {
     "lines_added": 3096,
     "lines_deleted": 444,
@@ -190,12 +190,12 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 52389,
+          "provisional_seconds": 53819,
           "role": "coder",
           "model": "gpt-6.2-sol",
           "started_at": "2026-11-20T23:51:04.891Z",
           "completed_at": null,
-          "active_duration_seconds": 52389,
+          "active_duration_seconds": 53819,
           "turns": 1,
           "tokens": {"input": 53724, "output": 4016, "cache_read": 2859776, "reasoning": 1463, "peak_context": 215423},
           "cost_usd": null,

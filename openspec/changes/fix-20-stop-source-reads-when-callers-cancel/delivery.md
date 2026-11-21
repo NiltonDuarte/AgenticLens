@@ -59,7 +59,7 @@ The integrated `make` passed on `d7e64263` against `origin/main` at `83f6f6c1`, 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 81
-- **Active Agent Duration:** 19h 0m (recorded duration including 53217s provisional)
+- **Active Agent Duration:** 19h 24m (recorded duration including 54647s provisional)
 - **Context Window Health:** ELEVATED — Root agent peak 191.3k tokens (43% of 450k healthy ceiling, 2 compactions) | Subagents peak 447.2k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 2.1 avg turns/run (peak: 5 turns) | Planner 1.0, Coder 2.1, Tester 2.4
