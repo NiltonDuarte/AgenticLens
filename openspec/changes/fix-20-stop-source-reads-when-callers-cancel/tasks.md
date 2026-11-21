@@ -12,9 +12,10 @@ Use the [design](design.md) for scope and approval, and the [live and historical
 
 ## Integration and delivery
 
-- [ ] Run affected native and public-entry-point checks. Record controlled conditions, revision, outcomes and limits without extrapolating latency.
+- [x] Run affected native and public-entry-point checks. Record controlled conditions, revision, outcomes and limits without extrapolating latency.
 - [x] Obtain independent review of context propagation, resource lifetime, cache and publication consistency. Resolve findings and reverify affected paths.
-- [ ] Integrate main, run the required build and verification, then complete delivery evidence, telemetry and PR handoff.
+- [x] Integrate main and run the required build and verification.
+- [x] Prepare delivery evidence and PR context. Verify the accepted ledger and record the final extraction limit.
 
 ## Workflow follow-up
 
