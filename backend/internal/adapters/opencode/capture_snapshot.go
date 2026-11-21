@@ -30,15 +30,40 @@ func CaptureSessionSnapshotWithPolicyAt(ctx context.Context, db *sql.DB, id, use
 	if _, err = sanitizeSessionID(id); err != nil {
 		return
 	}
-	db.SetMaxOpenConns(1)
-	if _, err = db.ExecContext(ctx, `BEGIN`); err != nil {
+	// Holding the connection through transaction cleanup also waits for the
+	// automatic rollback if the context wins the race with our defer.
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return
+	}
+	var events []domain.EventFact
+	var checkpointEvidence []domain.CheckpointInvocationEvidence
+	defer func() {
+		err = errors.Join(ctx.Err(), err, conn.Close())
+		if err != nil {
+			sessions = nil
+			return
+		}
+		if len(source) > 0 {
+			fresh := domain.SourceEvents{Events: events, CheckpointEvidence: checkpointEvidence}
+			for _, owner := range sessions {
+				fresh.CompleteSessionIDs = append(fresh.CompleteSessionIDs, owner.ID)
+			}
+			*source[0] = domain.MergeSourceEvents(*source[0], fresh)
+		}
+	}()
+	tx, err := conn.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
 		return
 	}
 	defer func() {
-		_, rollbackErr := db.ExecContext(context.Background(), `ROLLBACK`)
-		err = errors.Join(err, rollbackErr)
+		rollbackErr := tx.Rollback()
+		if !errors.Is(rollbackErr, sql.ErrTxDone) {
+			err = errors.Join(err, rollbackErr)
+		}
 	}()
-	family, e := detectSchemaFamily(db)
+	queries := sourceQueries{tx: tx}
+	family, e := detectSchemaFamilyContext(ctx, queries)
 	if e != nil {
 		err = e
 		return
@@ -48,7 +73,7 @@ func CaptureSessionSnapshotWithPolicyAt(ctx context.Context, db *sql.DB, id, use
 		table = "session_v2"
 	}
 	var timestamp int64
-	err = db.QueryRowContext(ctx, `SELECT time_updated FROM `+table+` WHERE id=?`, id).Scan(&timestamp)
+	err = tx.QueryRowContext(ctx, `SELECT time_updated FROM `+table+` WHERE id=?`, id).Scan(&timestamp)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = nil
 		return
@@ -57,14 +82,14 @@ func CaptureSessionSnapshotWithPolicyAt(ctx context.Context, db *sql.DB, id, use
 		return
 	}
 	updated = formatEpochMilli(timestamp)
-	queries := []string{`SELECT coalesce(sum(length(data)+length(id)+64),0) FROM message WHERE session_id=?`, `SELECT coalesce(sum(length(data)+length(id)+64),0) FROM part WHERE session_id=?`}
+	sizeQueries := []string{`SELECT coalesce(sum(length(data)+length(id)+64),0) FROM message WHERE session_id=?`, `SELECT coalesce(sum(length(data)+length(id)+64),0) FROM part WHERE session_id=?`}
 	if family == schemaFamilyV2 {
-		queries = []string{`SELECT coalesce(sum(length(data)+length(id)+64),0) FROM session_message WHERE session_id=?`}
+		sizeQueries = []string{`SELECT coalesce(sum(length(data)+length(id)+64),0) FROM session_message WHERE session_id=?`}
 	}
 	bytes = 256
-	for _, query := range queries {
+	for _, query := range sizeQueries {
 		var size int64
-		if err = db.QueryRowContext(ctx, query, id).Scan(&size); err != nil {
+		if err = tx.QueryRowContext(ctx, query, id).Scan(&size); err != nil {
 			return
 		}
 		bytes += size
@@ -73,23 +98,14 @@ func CaptureSessionSnapshotWithPolicyAt(ctx context.Context, db *sql.DB, id, use
 		err = fmt.Errorf("%w: session source snapshot requires %d bytes", ErrCaptureBudget, bytes)
 		return
 	}
-	var events []domain.EventFact
-	var checkpointEvidence []domain.CheckpointInvocationEvidence
 	var sink *[]domain.EventFact
 	if len(source) > 0 {
 		sink = &events
 	}
 	if family == schemaFamilyV2 {
-		sessions, _, _, err = extractSchemaV2SessionsWithCheckpointAt(db, []string{id}, user, nil, true, sink, policy, cutoff, &checkpointEvidence, true)
+		sessions, _, _, err = extractSchemaV2SessionsWithCheckpointAt(ctx, queries, []string{id}, user, nil, true, sink, policy, cutoff, &checkpointEvidence, true)
 	} else {
-		sessions, _, _, err = extractSchemaV1SessionsWithCheckpointAt(db, []string{id}, user, nil, true, sink, policy, cutoff, &checkpointEvidence, true)
-	}
-	if err == nil && len(source) > 0 {
-		fresh := domain.SourceEvents{Events: events, CheckpointEvidence: checkpointEvidence}
-		for _, owner := range sessions {
-			fresh.CompleteSessionIDs = append(fresh.CompleteSessionIDs, owner.ID)
-		}
-		*source[0] = domain.MergeSourceEvents(*source[0], fresh)
+		sessions, _, _, err = extractSchemaV1SessionsWithCheckpointAt(ctx, queries, []string{id}, user, nil, true, sink, policy, cutoff, &checkpointEvidence, true)
 	}
 	return
 }
@@ -109,7 +125,7 @@ func CaptureChildPage(ctx context.Context, db *sql.DB, parent, after string, lim
 	if limit < 1 {
 		return nil, false, errors.New("child discovery limit must be positive")
 	}
-	family, err := detectSchemaFamily(db)
+	family, err := detectSchemaFamilyContext(ctx, sourceQueries{db: db})
 	if err != nil {
 		return nil, false, err
 	}
@@ -149,7 +165,7 @@ func CaptureProjectDirectory(ctx context.Context, db *sql.DB, id string) (string
 
 // CaptureSessionContext reads only exact native routing and ancestry metadata.
 func CaptureSessionContext(ctx context.Context, db *sql.DB, id string) (string, string, error) {
-	family, err := detectSchemaFamily(db)
+	family, err := detectSchemaFamilyContext(ctx, sourceQueries{db: db})
 	if err != nil {
 		return "", "", err
 	}
@@ -157,7 +173,7 @@ func CaptureSessionContext(ctx context.Context, db *sql.DB, id string) (string, 
 	if family == schemaFamilyV2 {
 		table = "session_v2"
 	}
-	columns, err := tableColumns(db)
+	columns, err := tableColumns(ctx, sourceQueries{db: db})
 	if err != nil {
 		return "", "", err
 	}
@@ -171,7 +187,7 @@ func CaptureSessionContext(ctx context.Context, db *sql.DB, id string) (string, 
 
 // CaptureSourceFingerprint probes cumulative source revision without decoding bodies.
 func CaptureSourceFingerprint(ctx context.Context, db *sql.DB, id string) (string, error) {
-	family, err := detectSchemaFamily(db)
+	family, err := detectSchemaFamilyContext(ctx, sourceQueries{db: db})
 	if err != nil {
 		return "", err
 	}

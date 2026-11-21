@@ -1,7 +1,9 @@
 package opencode
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -19,30 +21,30 @@ var requiredColumns = map[schemaFamily]map[string][]string{
 	schemaFamilyV2: {"session_v2": {"id", "parent_id", "agent", "model", "title", "time_created", "time_updated"}, "session_message": {"id", "session_id", "type", "seq", "time_created", "time_updated", "data"}},
 }
 
-func tableColumns(db *sql.DB) (map[string]map[string]bool, error) {
-	rows, err := db.Query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+func tableColumns(ctx context.Context, db sourceQueries) (map[string]map[string]bool, error) {
+	rows, err := db.query(ctx, "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
 	if err != nil {
 		return nil, fmt.Errorf("reading SQLite table inventory: %w", err)
 	}
 	defer rows.Close()
 	out := make(map[string]map[string]bool)
-	for rows.Next() {
+	for ctx.Err() == nil && rows.Next() {
 		var table string
 		if err := rows.Scan(&table); err != nil {
 			return nil, fmt.Errorf("reading SQLite table name: %w", err)
 		}
 		out[table] = make(map[string]bool)
 	}
-	if err := rows.Err(); err != nil {
+	if err := errors.Join(ctx.Err(), rows.Err()); err != nil {
 		return nil, fmt.Errorf("iterating SQLite table inventory: %w", err)
 	}
 	for table := range out {
 		// Table names come from sqlite_master and are quoted as identifiers.
-		rows, err := db.Query("PRAGMA table_info(\"" + strings.ReplaceAll(table, "\"", "\"\"") + "\")")
+		rows, err := db.query(ctx, "PRAGMA table_info(\""+strings.ReplaceAll(table, "\"", "\"\"")+"\")")
 		if err != nil {
 			return nil, fmt.Errorf("reading columns for table %s: %w", table, err)
 		}
-		for rows.Next() {
+		for ctx.Err() == nil && rows.Next() {
 			var cid, notnull, pk int
 			var name, typ string
 			var def sql.NullString
@@ -52,7 +54,7 @@ func tableColumns(db *sql.DB) (map[string]map[string]bool, error) {
 			}
 			out[table][name] = true
 		}
-		if err := rows.Err(); err != nil {
+		if err := errors.Join(ctx.Err(), rows.Err()); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("iterating columns for table %s: %w", table, err)
 		}
@@ -70,7 +72,7 @@ func (e UnsupportedLayoutError) Error() string { return string(e) }
 // CheckLiveSchema validates the v1 query surface. Historical extraction additionally
 // requires native message and part update timestamps.
 func CheckLiveSchema(db *sql.DB) error {
-	family, err := classifySchemaFamily(db, true)
+	family, err := classifySchemaFamily(context.Background(), sourceQueries{db: db}, true)
 	if err != nil {
 		return err
 	}
@@ -81,11 +83,15 @@ func CheckLiveSchema(db *sql.DB) error {
 }
 
 func detectSchemaFamily(db *sql.DB) (schemaFamily, error) {
-	return classifySchemaFamily(db, false)
+	return detectSchemaFamilyContext(context.Background(), sourceQueries{db: db})
 }
 
-func classifySchemaFamily(db *sql.DB, liveQueries bool) (schemaFamily, error) {
-	all, err := tableColumns(db)
+func detectSchemaFamilyContext(ctx context.Context, db sourceQueries) (schemaFamily, error) {
+	return classifySchemaFamily(ctx, db, false)
+}
+
+func classifySchemaFamily(ctx context.Context, db sourceQueries, liveQueries bool) (schemaFamily, error) {
+	all, err := tableColumns(ctx, db)
 	if err != nil {
 		return "", err
 	}
@@ -139,7 +145,7 @@ func classifySchemaFamily(db *sql.DB, liveQueries bool) (schemaFamily, error) {
 		}
 		if auxiliaryComplete {
 			var populated bool
-			if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM session_message LIMIT 1)`).Scan(&populated); err != nil {
+			if err := db.queryRow(ctx, `SELECT EXISTS(SELECT 1 FROM session_message LIMIT 1)`).Scan(&populated); err != nil {
 				return "", fmt.Errorf("checking native v1 auxiliary session_message table: %w", err)
 			}
 			if !populated {

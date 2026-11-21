@@ -1227,9 +1227,11 @@ func runBackfill(args []string) {
 	}
 
 	engine := backfill.NewEngine()
-	report, err := engine.Execute(opts)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Backfill failed: %v\n", err)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	report, backfillErr := engine.ExecuteContext(ctx, opts)
+	stop()
+	if backfillErr != nil && report == nil {
+		fmt.Fprintf(os.Stderr, "Backfill failed: %v\n", backfillErr)
 		os.Exit(1)
 	}
 
@@ -1260,7 +1262,7 @@ func runBackfill(args []string) {
 	fmt.Printf("Force Migration:             %t\n", opts.Force)
 	fmt.Println("--------------------------------------------------------------------------------")
 
-	if len(report.Results) == 0 {
+	if len(report.Results) == 0 && backfillErr == nil {
 		fmt.Println("No readable matching ticket ledgers found to backfill.")
 		if len(report.Warnings) == 0 {
 			return
@@ -1281,6 +1283,8 @@ func runBackfill(args []string) {
 			dbStr = "updated"
 		} else if res.DBFound {
 			dbStr = "found"
+		} else if res.RefreshIncomplete && (errors.Is(res.Error, context.Canceled) || errors.Is(res.Error, context.DeadlineExceeded)) {
+			dbStr = "interrupted"
 		} else if opts.RecomputeDB {
 			dbStr = "missing"
 		}
@@ -1340,6 +1344,10 @@ func runBackfill(args []string) {
 		}
 	}
 	fmt.Println("================================================================================")
+	if backfillErr != nil {
+		fmt.Fprintf(os.Stderr, "Backfill stopped: %v\n", backfillErr)
+		os.Exit(1)
+	}
 }
 
 func runMigrate(args []string) {

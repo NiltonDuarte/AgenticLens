@@ -1,12 +1,8 @@
 package backfill
 
 import (
-	"compress/gzip"
+	"context"
 	"errors"
-	"fmt"
-	"io"
-	"os"
-	"strings"
 	"time"
 
 	"agenticlens/internal/adapters/codex"
@@ -28,48 +24,28 @@ func (b *sourceReadBudget) beginOwner() error {
 	return nil
 }
 
-func (b *sourceReadBudget) parseCodex(path string, cutoff time.Time) (transcript codex.Transcript, err error) {
+func (b *sourceReadBudget) parseCodex(ctx context.Context, path string, cutoff time.Time) (codex.Transcript, error) {
+	if err := ctx.Err(); err != nil {
+		return codex.Transcript{}, err
+	}
 	if b == nil || b.bytes < 1 {
-		return transcript, errSourceBudget
+		return codex.Transcript{}, errSourceBudget
 	}
 	if !b.codexSeen[path] {
 		if err := b.beginOwner(); err != nil {
-			return transcript, err
+			return codex.Transcript{}, err
 		}
 		if b.codexSeen == nil {
 			b.codexSeen = make(map[string]bool)
 		}
 		b.codexSeen[path] = true
 	}
-	file, err := os.Open(path)
-	if err != nil {
-		return transcript, err
-	}
-	defer func() { err = errors.Join(err, file.Close()) }()
-	info, err := file.Stat()
-	if err != nil {
-		return transcript, err
-	}
-	if !info.Mode().IsRegular() {
-		return transcript, fmt.Errorf("source rollout %q is not a regular file", path)
-	}
-	compressedSource := strings.HasSuffix(path, ".gz")
-	var reader io.Reader = file
-	if compressedSource {
-		compressed, err := gzip.NewReader(file)
-		if err != nil {
-			return transcript, err
-		}
-		defer func() { err = errors.Join(err, compressed.Close()) }()
-		reader = compressed
-	}
-	observed := &sourceEOFReader{reader: reader}
-	limit := &io.LimitedReader{R: observed, N: b.bytes}
-	remaining := b.bytes
-	transcript, err = codex.ParseRolloutAt(limit, cutoff)
-	consumed := remaining - limit.N
+	transcript, consumed, err := codex.ParseRolloutPathWithinBudgetContext(ctx, path, cutoff, b.bytes)
 	b.bytes -= consumed
-	if limit.N == 0 && !observed.eof && (compressedSource || info.Size() > remaining) {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return codex.Transcript{}, errors.Join(ctxErr, err)
+	}
+	if errors.Is(err, codex.ErrDiscoveryBudget) {
 		return codex.Transcript{}, errSourceBudget
 	}
 	return transcript, err
@@ -81,15 +57,4 @@ func (b *sourceReadBudget) discoveryLimit() int {
 		limit++
 	}
 	return limit
-}
-
-type sourceEOFReader struct {
-	reader io.Reader
-	eof    bool
-}
-
-func (r *sourceEOFReader) Read(body []byte) (int, error) {
-	n, err := r.reader.Read(body)
-	r.eof = errors.Is(err, io.EOF)
-	return n, err
 }

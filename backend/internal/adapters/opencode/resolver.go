@@ -1,6 +1,7 @@
 package opencode
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -36,7 +37,7 @@ func ResolveActiveRootSession(db *sql.DB, nonce, ticketID, explicitSessionID str
 		if err != nil {
 			return nil, fmt.Errorf("OpenCode schema family %s: validating --session-id: %w", family, err)
 		}
-		explicitRoot, err = uniqueRoot(rows)
+		explicitRoot, err = uniqueRoot(context.Background(), rows)
 		if err != nil {
 			return nil, fmt.Errorf("--session-id %q must identify exactly one existing root: %w", id, err)
 		}
@@ -51,7 +52,7 @@ WHERE instr(records.data,?)>0 ORDER BY tree.root_id LIMIT 2`
 	if err != nil {
 		return nil, fmt.Errorf("OpenCode schema family %s: resolving literal --nonce: %w", family, err)
 	}
-	nonceRoot, err := uniqueRoot(rows)
+	nonceRoot, err := uniqueRoot(context.Background(), rows)
 	if err != nil {
 		return nil, fmt.Errorf("--nonce must identify exactly one root in the selected OpenCode source: %w", err)
 	}
@@ -64,10 +65,14 @@ WHERE instr(records.data,?)>0 ORDER BY tree.root_id LIMIT 2`
 // SessionTable validates the selected store's complete supported layout before
 // callers perform exact-owner metadata discovery.
 func SessionTable(db *sql.DB) (string, error) {
+	return SessionTableContext(context.Background(), db)
+}
+
+func SessionTableContext(ctx context.Context, db *sql.DB) (string, error) {
 	if db == nil {
 		return "", errors.New("database connection is nil")
 	}
-	family, err := detectSchemaFamily(db)
+	family, err := detectSchemaFamilyContext(ctx, sourceQueries{db: db})
 	if err != nil {
 		return "", err
 	}
@@ -92,10 +97,10 @@ func sessionTreeCTE(table, records string) string {
 `
 }
 
-func uniqueRoot(rows *sql.Rows) (root *string, err error) {
+func uniqueRoot(ctx context.Context, rows *sql.Rows) (root *string, err error) {
 	defer func() { err = errors.Join(err, rows.Close()) }()
 	ids := make([]string, 0, 2)
-	for rows.Next() {
+	for ctx.Err() == nil && rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
 			return nil, err
@@ -106,7 +111,7 @@ func uniqueRoot(rows *sql.Rows) (root *string, err error) {
 		}
 		ids = append(ids, id)
 	}
-	if err := rows.Err(); err != nil {
+	if err := errors.Join(ctx.Err(), rows.Err()); err != nil {
 		return nil, err
 	}
 	if len(ids) == 0 {

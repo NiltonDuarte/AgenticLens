@@ -1,5 +1,7 @@
 # FIX-20: Stop source reads when callers cancel
 
+[OpenSpec change](../../../openspec/changes/fix-20-stop-source-reads-when-callers-cancel/proposal.md)
+
 ## Goal
 
 Cancelling a request or backfill operation stops its in-flight native work promptly and releases resources without discarding accepted facts.

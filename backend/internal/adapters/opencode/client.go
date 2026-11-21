@@ -1,6 +1,7 @@
 package opencode
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -22,6 +23,14 @@ type OpenCodeDB struct {
 // Resolve symlinks before lexical normalization so symlink/.. traversal retains
 // its filesystem meaning. No missing or invalid path selects another store.
 func OpenDB(dbPath string, busyTimeoutMs int) (*OpenCodeDB, error) {
+	return OpenDBContext(context.Background(), dbPath, busyTimeoutMs)
+}
+
+// OpenDBContext applies the caller's cancellation to source initialization.
+func OpenDBContext(ctx context.Context, dbPath string, busyTimeoutMs int) (*OpenCodeDB, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(dbPath) == "" {
 		return nil, errors.New("OpenCode database path is required: supply --db-path or telemetry.sources.opencode.database_path in the selected local configuration")
 	}
@@ -43,6 +52,9 @@ func OpenDB(dbPath string, busyTimeoutMs int) (*OpenCodeDB, error) {
 	if !info.Mode().IsRegular() {
 		return nil, fmt.Errorf("selected OpenCode database path %q must identify a regular file", dbPath)
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	uri := url.URL{Scheme: "file", Path: filepath.ToSlash(resolved)}
 	query := url.Values{"mode": {"ro"}, "_pragma": {"query_only(1)", "busy_timeout(" + strconv.Itoa(busyTimeoutMs) + ")"}}
 	uri.RawQuery = query.Encode()
@@ -50,8 +62,11 @@ func OpenDB(dbPath string, busyTimeoutMs int) (*OpenCodeDB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening selected OpenCode database %q: %w", dbPath, err)
 	}
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		return nil, errors.Join(fmt.Errorf("opening selected OpenCode database %q: %w", dbPath, err), db.Close())
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(err, db.Close())
 	}
 	return &OpenCodeDB{db: db}, nil
 }

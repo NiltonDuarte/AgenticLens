@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 
 	"agenticlens/internal/adapters/opencode"
 )
@@ -47,7 +46,7 @@ type SQLiteHook struct {
 	db            *sql.DB
 	dbPath        string
 	busyTimeoutMs int
-	revisionMu    sync.Mutex
+	revisionMu    readLock
 	revisionConn  *sql.Conn
 	revisionEpoch uint64
 }
@@ -61,7 +60,7 @@ func OpenReadOnlyHook(dbPath string, busyTimeoutMs int) (*SQLiteHook, error) {
 	db := client.DB()
 	db.SetMaxOpenConns(5)
 	db.SetMaxIdleConns(2)
-	return &SQLiteHook{db: db, dbPath: dbPath, busyTimeoutMs: busyTimeoutMs}, nil
+	return &SQLiteHook{db: db, dbPath: dbPath, busyTimeoutMs: busyTimeoutMs, revisionMu: make(readLock, 1)}, nil
 }
 
 // DB returns the underlying database handle for test introspection.
@@ -77,11 +76,13 @@ type SourceRevision struct {
 }
 
 func (h *SQLiteHook) SourceRevision(ctx context.Context) (SourceRevision, error) {
-	h.revisionMu.Lock()
-	defer h.revisionMu.Unlock()
 	if h.db == nil {
 		return SourceRevision{}, errors.New("database handle is nil")
 	}
+	if err := h.revisionMu.LockContext(ctx); err != nil {
+		return SourceRevision{}, err
+	}
+	defer h.revisionMu.Unlock()
 	if h.revisionConn == nil {
 		conn, err := h.db.Conn(ctx)
 		if err != nil {
@@ -92,15 +93,21 @@ func (h *SQLiteHook) SourceRevision(ctx context.Context) (SourceRevision, error)
 	}
 	var version int64
 	if err := h.revisionConn.QueryRowContext(ctx, "PRAGMA data_version").Scan(&version); err != nil {
+		if cancelled := ctx.Err(); cancelled != nil {
+			return SourceRevision{}, cancelled
+		}
 		closeErr := h.revisionConn.Close()
 		h.revisionConn = nil
 		return SourceRevision{}, fmt.Errorf("reading source revision: %w", errors.Join(err, closeErr))
 	}
-	return SourceRevision{Connection: h.revisionEpoch, Version: version}, nil
+	return SourceRevision{Connection: h.revisionEpoch, Version: version}, ctx.Err()
 }
 
 // Close closes the observer before its underlying SQLite connection pool.
 func (h *SQLiteHook) Close() error {
+	if h.db == nil {
+		return nil
+	}
 	h.revisionMu.Lock()
 	defer h.revisionMu.Unlock()
 	var observerErr error
@@ -108,29 +115,34 @@ func (h *SQLiteHook) Close() error {
 		observerErr = h.revisionConn.Close()
 		h.revisionConn = nil
 	}
-	if h.db != nil {
-		return errors.Join(observerErr, h.db.Close())
-	}
-	return observerErr
+	return errors.Join(observerErr, h.db.Close())
 }
 
 // SessionExists checks if a session with the given ID exists in the database.
 func (h *SQLiteHook) SessionExists(sessionID string) (bool, error) {
+	return h.sessionExists(context.Background(), sessionID)
+}
+
+func (h *SQLiteHook) sessionExists(ctx context.Context, sessionID string) (bool, error) {
 	if h.db == nil {
 		return false, errors.New("database handle is nil")
 	}
 
 	var count int
-	err := h.db.QueryRow("SELECT COUNT(1) FROM session WHERE id = ?", sessionID).Scan(&count)
+	err := h.db.QueryRowContext(ctx, "SELECT COUNT(1) FROM session WHERE id = ?", sessionID).Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("checking session existence for %s: %w", sessionID, err)
 	}
-	return count > 0, nil
+	return count > 0, ctx.Err()
 }
 
 // FetchActiveSessions retrieves active sessions updated within the threshold window,
 // along with any direct parents or children.
 func (h *SQLiteHook) FetchActiveSessions(activeThresholdSeconds int64, nowMs int64) ([]RawSessionRecord, error) {
+	return h.fetchActiveSessions(context.Background(), activeThresholdSeconds, nowMs)
+}
+
+func (h *SQLiteHook) fetchActiveSessions(ctx context.Context, activeThresholdSeconds int64, nowMs int64) ([]RawSessionRecord, error) {
 	if activeThresholdSeconds <= 0 || nowMs <= 0 {
 		return nil, errors.New("active session lookup requires a positive explicit activity window and current timestamp")
 	}
@@ -138,29 +150,27 @@ func (h *SQLiteHook) FetchActiveSessions(activeThresholdSeconds int64, nowMs int
 		return nil, errors.New("database handle is nil")
 	}
 
-	var rows *sql.Rows
-	var err error
-
-	if activeThresholdSeconds > 0 && nowMs > 0 {
-		cutoffMs := nowMs - (activeThresholdSeconds * 1000)
-		query := `
+	cutoffMs := nowMs - (activeThresholdSeconds * 1000)
+	query := `
+		WITH active_sessions AS MATERIALIZED (
 			SELECT id, parent_id, agent, model, title, time_created, time_updated
 			FROM session
 			WHERE time_updated >= ? OR time_created >= ?
 			   OR id IN (SELECT parent_id FROM session WHERE (time_updated >= ? OR time_created >= ?) AND parent_id IS NOT NULL)
 			   OR parent_id IN (SELECT id FROM session WHERE (time_updated >= ? OR time_created >= ?))
-			ORDER BY time_created ASC
-		`
-		rows, err = h.db.Query(query, cutoffMs, cutoffMs, cutoffMs, cutoffMs, cutoffMs, cutoffMs)
-	}
-
+		)
+		SELECT id, parent_id, agent, model, title, time_created, time_updated
+		FROM active_sessions
+		ORDER BY time_created ASC
+	`
+	rows, err := h.db.QueryContext(ctx, query, cutoffMs, cutoffMs, cutoffMs, cutoffMs, cutoffMs, cutoffMs)
 	if err != nil {
 		return nil, fmt.Errorf("querying active sessions: %w", err)
 	}
 	defer rows.Close()
 
 	var records []RawSessionRecord
-	for rows.Next() {
+	for ctx.Err() == nil && rows.Next() {
 		var id string
 		var parentID, agent, model, title sql.NullString
 		var timeCreated, timeUpdated sql.NullInt64
@@ -190,41 +200,60 @@ func (h *SQLiteHook) FetchActiveSessions(activeThresholdSeconds int64, nowMs int
 		return nil, fmt.Errorf("iterating active session rows: %w", err)
 	}
 
-	return records, nil
+	return records, ctx.Err()
 }
 
 // FetchSessionTrace extracts messages and parts for the given session ordered by time_created ascending.
 func (h *SQLiteHook) FetchSessionTrace(sessionID string) ([]RawMessageRecord, []RawPartRecord, error) {
+	return h.fetchSessionTrace(context.Background(), sessionID)
+}
+
+func (h *SQLiteHook) fetchSessionTrace(ctx context.Context, sessionID string) ([]RawMessageRecord, []RawPartRecord, error) {
 	if h.db == nil {
 		return nil, nil, errors.New("database handle is nil")
 	}
 
 	msgTimeCol := "0 AS time_updated"
-	if tableHasColumn(h.db, "message", "time_updated") {
+	hasMsgTime, err := tableHasColumn(ctx, h.db, "message", "time_updated")
+	if err != nil {
+		return nil, nil, fmt.Errorf("inspecting message schema: %w", err)
+	}
+	if hasMsgTime {
 		msgTimeCol = "m.time_updated"
 	}
 
 	partTimeCol := "0 AS time_updated"
-	if tableHasColumn(h.db, "part", "time_updated") {
+	hasPartTime, err := tableHasColumn(ctx, h.db, "part", "time_updated")
+	if err != nil {
+		return nil, nil, fmt.Errorf("inspecting part schema: %w", err)
+	}
+	if hasPartTime {
 		partTimeCol = "p.time_updated"
 	}
 
 	// 1. Query messages
+	// The driver interrupts the first SQLite step of QueryContext, while
+	// later Rows.Next calls cannot interrupt a native step already running.
+	// Materialize source work in that first step and retain the output order.
 	qMsgs := fmt.Sprintf(`
-		SELECT m.id, m.session_id, m.time_created, %s, m.data
-		FROM message m
-		WHERE m.session_id = ?
-		ORDER BY m.time_created ASC
+		WITH source_messages AS MATERIALIZED (
+			SELECT m.id, m.session_id, m.time_created, %s, m.data
+			FROM message m
+			WHERE m.session_id = ?
+		)
+		SELECT id, session_id, time_created, time_updated, data
+		FROM source_messages
+		ORDER BY time_created ASC
 	`, msgTimeCol)
 
-	msgRows, err := h.db.Query(qMsgs, sessionID)
+	msgRows, err := h.db.QueryContext(ctx, qMsgs, sessionID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("querying messages for session %s: %w", sessionID, err)
 	}
 	defer msgRows.Close()
 
 	var messages []RawMessageRecord
-	for msgRows.Next() {
+	for ctx.Err() == nil && msgRows.Next() {
 		var id, sID string
 		var tCreated, tUpdated sql.NullInt64
 		var data sql.NullString
@@ -244,23 +273,30 @@ func (h *SQLiteHook) FetchSessionTrace(sessionID string) ([]RawMessageRecord, []
 	if err := msgRows.Err(); err != nil {
 		return nil, nil, fmt.Errorf("iterating message rows for session %s: %w", sessionID, err)
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, nil, err
+	}
 
 	// 2. Query parts
 	qParts := fmt.Sprintf(`
-		SELECT p.id, p.session_id, p.message_id, p.time_created, %s, p.data
-		FROM part p
-		WHERE p.session_id = ?
-		ORDER BY p.time_created ASC
+		WITH source_parts AS MATERIALIZED (
+			SELECT p.id, p.session_id, p.message_id, p.time_created, %s, p.data
+			FROM part p
+			WHERE p.session_id = ?
+		)
+		SELECT id, session_id, message_id, time_created, time_updated, data
+		FROM source_parts
+		ORDER BY time_created ASC
 	`, partTimeCol)
 
-	partRows, err := h.db.Query(qParts, sessionID)
+	partRows, err := h.db.QueryContext(ctx, qParts, sessionID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("querying parts for session %s: %w", sessionID, err)
 	}
 	defer partRows.Close()
 
 	var parts []RawPartRecord
-	for partRows.Next() {
+	for ctx.Err() == nil && partRows.Next() {
 		var id, sID string
 		var mID sql.NullString
 		var tCreated, tUpdated sql.NullInt64
@@ -283,7 +319,7 @@ func (h *SQLiteHook) FetchSessionTrace(sessionID string) ([]RawMessageRecord, []
 		return nil, nil, fmt.Errorf("iterating part rows for session %s: %w", sessionID, err)
 	}
 
-	return messages, parts, nil
+	return messages, parts, ctx.Err()
 }
 
 // FetchSessionTraceMulti extracts chronological messages and parts across multiple session IDs.
@@ -332,6 +368,10 @@ func (h *SQLiteHook) FetchSessionTraceMulti(sessionIDs []string) ([]RawMessageRe
 
 // ResolveChildSessionIDs queries child sub-session IDs where parent_id matches any of parentSessionIDs.
 func (h *SQLiteHook) ResolveChildSessionIDs(parentSessionIDs []string) ([]string, error) {
+	return h.resolveChildSessionIDs(context.Background(), parentSessionIDs)
+}
+
+func (h *SQLiteHook) resolveChildSessionIDs(ctx context.Context, parentSessionIDs []string) ([]string, error) {
 	if h.db == nil {
 		return nil, errors.New("database handle is nil")
 	}
@@ -354,12 +394,17 @@ func (h *SQLiteHook) ResolveChildSessionIDs(parentSessionIDs []string) ([]string
 	childSeen := make(map[string]bool)
 
 	for _, pID := range cleanIDs {
-		rows, err := h.db.Query("SELECT id FROM session WHERE parent_id = ? ORDER BY time_created ASC", pID)
+		rows, err := h.db.QueryContext(ctx, `
+			WITH child_sessions AS MATERIALIZED (
+				SELECT id, time_created FROM session WHERE parent_id = ?
+			)
+			SELECT id FROM child_sessions ORDER BY time_created ASC
+		`, pID)
 		if err != nil {
 			return nil, fmt.Errorf("querying child sessions for parent %s: %w", pID, err)
 		}
 
-		for rows.Next() {
+		for ctx.Err() == nil && rows.Next() {
 			var cid string
 			if err := rows.Scan(&cid); err != nil {
 				rows.Close()
@@ -375,29 +420,31 @@ func (h *SQLiteHook) ResolveChildSessionIDs(parentSessionIDs []string) ([]string
 			rows.Close()
 			return nil, fmt.Errorf("iterating child session rows: %w", err)
 		}
-		rows.Close()
+		if err := rows.Close(); err != nil {
+			return nil, fmt.Errorf("closing child session rows: %w", err)
+		}
 	}
 
-	return childIDs, nil
+	return childIDs, ctx.Err()
 }
 
-func tableHasColumn(db *sql.DB, tableName, columnName string) bool {
-	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%s)", tableName))
+func tableHasColumn(ctx context.Context, db *sql.DB, tableName, columnName string) (bool, error) {
+	rows, err := db.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", tableName))
 	if err != nil {
-		return false
+		return false, err
 	}
 	defer rows.Close()
 
-	for rows.Next() {
+	for ctx.Err() == nil && rows.Next() {
 		var cid int
 		var name, ctype string
 		var notnull, pk int
 		var dflt sql.NullString
 		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err == nil {
 			if strings.EqualFold(name, columnName) {
-				return true
+				return true, ctx.Err()
 			}
 		}
 	}
-	return false
+	return false, errors.Join(ctx.Err(), rows.Err())
 }

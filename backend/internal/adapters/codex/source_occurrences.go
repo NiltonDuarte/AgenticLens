@@ -1,6 +1,7 @@
 package codex
 
 import (
+	"context"
 	"regexp"
 
 	"agenticlens/internal/domain"
@@ -70,11 +71,14 @@ func sessionIDs(sessions []domain.SessionFact) []string {
 }
 
 // resolveSourceChildren consumes native metadata before projecting lean facts.
-func resolveSourceChildren(transcripts []Transcript) []Transcript {
+func resolveSourceChildren(ctx context.Context, transcripts []Transcript) ([]Transcript, error) {
 	result := append([]Transcript{}, transcripts...)
 	byID := make(map[string]Transcript)
 	children := make(map[string][]string)
 	for _, child := range result {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		byID[child.sessionIDOrThread()] = child
 		if child.ParentThread != "" && child.AgentPath != "" {
 			key := child.ParentThread + "\x00" + child.AgentPath
@@ -82,10 +86,16 @@ func resolveSourceChildren(transcripts []Transcript) []Transcript {
 		}
 	}
 	for ti := range result {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		owner := &result[ti]
 		owner.Delegations = append([]sourceDelegationOccurrence{}, owner.Delegations...)
 		owner.Events = append([]domain.EventFact{}, owner.Events...)
 		for i := range owner.Delegations {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
 			link := &owner.Delegations[i]
 			if link.ChildSession == "" && link.ChildAgentID != "" {
 				if child, ok := byID[link.ChildAgentID]; ok && child.ParentThread == owner.sessionIDOrThread() {
@@ -112,5 +122,5 @@ func resolveSourceChildren(transcripts []Transcript) []Transcript {
 			}
 		}
 	}
-	return result
+	return result, nil
 }

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -2432,22 +2433,22 @@ func TestLiveTraceLegacyRevisionRecoveryAndBoundedOnDemandCache(t *testing.T) {
 	}
 	canceled, cancel := context.WithCancel(ctx)
 	cancel()
-	if _, err := service.GetSessionTrace(canceled, "one"); err == nil {
-		t.Fatal("canceled revision lookup returned cached success")
+	if _, err := service.GetSessionTrace(canceled, "one"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("already cancelled lookup returned %v", err)
 	}
 	after, err := hook.SourceRevision(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if before.Connection == after.Connection {
-		t.Fatal("observer replacement did not change connection identity")
+	if before != after {
+		t.Fatalf("already cancelled lookup changed the source observer: %v -> %v", before, after)
 	}
 	recovered, err := service.GetSessionTrace(ctx, "one")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if &changed.Messages[0] == &recovered.Messages[0] || recovered.FailedToolCalls != 1 {
-		t.Fatal("uncertain source generation reused old cache or lost source facts")
+	if &changed.Messages[0] != &recovered.Messages[0] || recovered.FailedToolCalls != 1 {
+		t.Fatal("already cancelled lookup discarded valid cached evidence")
 	}
 }
 

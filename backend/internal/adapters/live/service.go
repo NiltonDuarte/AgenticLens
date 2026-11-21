@@ -65,9 +65,11 @@ type LiveService struct {
 	lastTreeJSON    []byte
 	lastTreeMu      sync.Mutex
 	lastTraces      map[string]*domain.LiveTraceView
-	traceMu         sync.Mutex
+	traceMu         readLock
 	traceRevision   SourceRevision
 	traceCache      map[string]*traceSnapshot
+	treeReadOrder   uint64
+	treeCacheOrder  uint64
 	discovered      map[string]struct{}
 	selectedLookup  string
 	lastTraceMu     sync.Mutex
@@ -95,6 +97,7 @@ func NewLiveServiceWithCodexHome(hook *SQLiteHook, cfg domain.ProjectConfig, cod
 		subscribers:   make(map[chan LiveEvent]struct{}),
 		stopCh:        make(chan struct{}),
 		lastTraces:    make(map[string]*domain.LiveTraceView),
+		traceMu:       make(readLock, 1),
 		traceCache:    make(map[string]*traceSnapshot),
 		discovered:    make(map[string]struct{}),
 		seenAnomalies: make(map[string]bool),
@@ -207,6 +210,9 @@ func (s *LiveService) Start(ctx context.Context) error {
 
 func (s *LiveService) pollAndBroadcast(ctx context.Context) {
 	tree, reads, err := s.readSessionTree(ctx)
+	if ctx.Err() != nil {
+		return
+	}
 	if err != nil {
 		if reads == nil {
 			s.broadcast(SourceDiagnosticEvent(err, ""))
@@ -327,6 +333,9 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 // readSessionTree returns a complete tree or an error. When session discovery
 // succeeded, individual trace reads remain available to the stream on either path.
 func (s *LiveService) readSessionTree(ctx context.Context) (domain.LiveSessionTree, []sessionTraceRead, error) {
+	if err := ctx.Err(); err != nil {
+		return domain.LiveSessionTree{}, nil, err
+	}
 	if err := s.CheckAvailability(); err != nil {
 		return domain.LiveSessionTree{}, nil, err
 	}
@@ -337,32 +346,28 @@ func (s *LiveService) readSessionTree(ctx context.Context) (domain.LiveSessionTr
 	activeThresholdSec := int64(s.cfg.Live.ActiveThresholdSeconds)
 	nowMs := time.Now().UnixMilli()
 
-	records, err := s.hook.FetchActiveSessions(activeThresholdSec, nowMs)
+	records, cache, err := s.readActiveSessions(ctx, activeThresholdSec, nowMs)
 	if err != nil {
+		if cancelled := ctx.Err(); cancelled != nil {
+			return domain.LiveSessionTree{}, nil, cancelled
+		}
 		s.retryTreeOnNextPoll()
 		return domain.LiveSessionTree{}, nil, fmt.Errorf("fetching active sessions: %w", err)
 	}
 
-	s.traceMu.Lock()
-	s.discovered = make(map[string]struct{}, len(records))
-	for _, rec := range records {
-		s.discovered[rec.ID] = struct{}{}
-	}
-	for id := range s.traceCache {
-		if _, exists := s.discovered[id]; !exists && id != s.selectedLookup {
-			delete(s.traceCache, id)
-		}
-	}
-	s.traceMu.Unlock()
-
 	stallThresholdSec := int64(s.cfg.AnomalyThresholds.StallThresholdSeconds)
 
 	var traceErrors []error
+	cache.discovered = make(map[string]struct{}, len(records))
 	reads := make([]sessionTraceRead, 0, len(records))
 	nodes := make([]*domain.LiveSessionNode, 0, len(records))
 	for _, rec := range records {
-		snapshot, err := s.sessionTraceSnapshot(ctx, rec.ID)
+		cache.discovered[rec.ID] = struct{}{}
+		snapshot, err := s.readTraceSnapshot(ctx, rec.ID, &cache)
 		if err != nil {
+			if cancelled := ctx.Err(); cancelled != nil {
+				return domain.LiveSessionTree{}, reads, cancelled
+			}
 			err = fmt.Errorf("reading trace for session %s: %w", rec.ID, err)
 			traceErrors = append(traceErrors, err)
 			reads = append(reads, sessionTraceRead{id: rec.ID, err: err})
@@ -419,7 +424,13 @@ func (s *LiveService) readSessionTree(ctx context.Context) (domain.LiveSessionTr
 		nodes = append(nodes, node)
 	}
 
+	if err := ctx.Err(); err != nil {
+		return domain.LiveSessionTree{}, reads, err
+	}
 	if len(traceErrors) > 0 {
+		if err := s.acceptTreeCache(ctx, cache); err != nil {
+			return domain.LiveSessionTree{}, reads, err
+		}
 		s.retryTreeOnNextPoll()
 		return domain.LiveSessionTree{}, reads, errors.Join(traceErrors...)
 	}
@@ -432,6 +443,9 @@ func (s *LiveService) readSessionTree(ctx context.Context) (domain.LiveSessionTr
 		allActiveAnomalies = append(allActiveAnomalies, n.Anomalies...)
 	}
 	domain.SortLiveAnomalies(allActiveAnomalies)
+	if err := s.acceptTreeCache(ctx, cache); err != nil {
+		return domain.LiveSessionTree{}, reads, err
+	}
 
 	return domain.LiveSessionTree{
 		RootSessions:        roots,
@@ -439,6 +453,79 @@ func (s *LiveService) readSessionTree(ctx context.Context) (domain.LiveSessionTr
 		TotalActiveSessions: totalActive,
 		ActiveAnomalies:     allActiveAnomalies,
 	}, reads, nil
+}
+
+func (s *LiveService) readActiveSessions(ctx context.Context, activeThresholdSec, nowMs int64) ([]RawSessionRecord, treeCacheUpdate, error) {
+	if err := s.traceMu.LockContext(ctx); err != nil {
+		return nil, treeCacheUpdate{}, err
+	}
+	defer s.traceMu.Unlock()
+	before, beforeErr := s.hook.SourceRevision(ctx)
+	if err := ctx.Err(); err != nil {
+		return nil, treeCacheUpdate{}, err
+	}
+	records, err := s.hook.fetchActiveSessions(ctx, activeThresholdSec, nowMs)
+	if err != nil {
+		return nil, treeCacheUpdate{}, err
+	}
+	after, afterErr := s.hook.SourceRevision(ctx)
+	if err := ctx.Err(); err != nil {
+		return nil, treeCacheUpdate{}, err
+	}
+	s.treeReadOrder++
+	update := treeCacheUpdate{readOrder: s.treeReadOrder}
+	if beforeErr == nil && afterErr == nil && before == after {
+		update.listingRevision = after
+	}
+	return records, update, nil
+}
+
+// A tree read stages membership and stable trace misses. A later cancelled
+// trace leaves earlier shared cache entries untouched.
+type treeCacheUpdate struct {
+	discovered      map[string]struct{}
+	entries         map[string]*traceSnapshot
+	revision        SourceRevision
+	listingRevision SourceRevision
+	readOrder       uint64
+}
+
+func (s *LiveService) acceptTreeCache(ctx context.Context, update treeCacheUpdate) error {
+	if err := s.traceMu.LockContext(ctx); err != nil {
+		return err
+	}
+	defer s.traceMu.Unlock()
+	if update.readOrder <= s.treeCacheOrder || update.listingRevision == (SourceRevision{}) {
+		return ctx.Err()
+	}
+	// The active listing controls eviction, including when it has no trace
+	// misses. A commit during this tree read invalidates that membership.
+	observed, revisionErr := s.hook.SourceRevision(ctx)
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if revisionErr != nil || observed != update.listingRevision {
+		return nil
+	}
+	if len(update.entries) > 0 && observed == update.revision {
+		if observed != s.traceRevision {
+			s.traceCache = make(map[string]*traceSnapshot)
+			s.traceRevision = observed
+		}
+		for id, snapshot := range update.entries {
+			if s.traceCache[id] == nil {
+				s.traceCache[id] = snapshot
+			}
+		}
+	}
+	s.treeCacheOrder = update.readOrder
+	s.discovered = update.discovered
+	for id := range s.traceCache {
+		if _, exists := update.discovered[id]; !exists && id != s.selectedLookup {
+			delete(s.traceCache, id)
+		}
+	}
+	return nil
 }
 
 // The next complete poll must reach subscribers even if its data matches the
@@ -467,53 +554,85 @@ type traceSnapshot struct {
 }
 
 func (s *LiveService) sessionTraceSnapshot(ctx context.Context, sessionID string) (*traceSnapshot, error) {
+	return s.readTraceSnapshot(ctx, sessionID, nil)
+}
+
+func (s *LiveService) readTraceSnapshot(ctx context.Context, sessionID string, tree *treeCacheUpdate) (*traceSnapshot, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if err := validateSessionID(sessionID); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidSessionID, err.Error())
 	}
 	if err := s.CheckAvailability(); err != nil {
 		return nil, err
 	}
-	s.traceMu.Lock()
+	if err := s.traceMu.LockContext(ctx); err != nil {
+		return nil, err
+	}
 	defer s.traceMu.Unlock()
 	revision, err := s.hook.SourceRevision(ctx)
 	if err != nil {
-		s.traceRevision = SourceRevision{}
+		if tree == nil && ctx.Err() == nil {
+			s.traceRevision = SourceRevision{}
+		}
 		return nil, err
 	}
-	if revision != s.traceRevision {
-		s.traceCache = make(map[string]*traceSnapshot)
-		s.traceRevision = revision
-	}
-	if _, visible := s.discovered[sessionID]; !visible {
-		if s.selectedLookup != sessionID {
-			if _, discovered := s.discovered[s.selectedLookup]; !discovered {
-				delete(s.traceCache, s.selectedLookup)
-			}
-			s.selectedLookup = sessionID
+	if revision == s.traceRevision {
+		if cached := s.traceCache[sessionID]; cached != nil {
+			return cached, ctx.Err()
 		}
 	}
-	if cached := s.traceCache[sessionID]; cached != nil {
-		return cached, nil
-	}
 	trace, err := s.readSessionTrace(ctx, sessionID)
+	if cancelled := ctx.Err(); cancelled != nil {
+		return nil, cancelled
+	}
 	if err != nil {
 		return nil, err
 	}
 	after, err := s.hook.SourceRevision(ctx)
 	if err != nil {
-		s.traceRevision = SourceRevision{}
+		if tree == nil && ctx.Err() == nil {
+			s.traceRevision = SourceRevision{}
+		}
 		return nil, err
 	}
-	if after == revision {
-		s.traceCache[sessionID] = &trace
-	} else {
-		s.traceRevision = SourceRevision{}
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
+	if after != revision {
+		if tree == nil {
+			s.traceRevision = SourceRevision{}
+		}
+		return &trace, nil
+	}
+	if tree != nil {
+		if tree.entries == nil {
+			tree.entries = make(map[string]*traceSnapshot)
+		}
+		if revision != tree.revision {
+			clear(tree.entries)
+			tree.revision = revision
+		}
+		tree.entries[sessionID] = &trace
+		return &trace, nil
+	}
+	if revision != s.traceRevision {
+		s.traceCache = make(map[string]*traceSnapshot)
+		s.traceRevision = revision
+	}
+	if _, visible := s.discovered[sessionID]; !visible && s.selectedLookup != sessionID {
+		if _, discovered := s.discovered[s.selectedLookup]; !discovered {
+			delete(s.traceCache, s.selectedLookup)
+		}
+		s.selectedLookup = sessionID
+	}
+	s.traceCache[sessionID] = &trace
 	return &trace, nil
 }
 
 func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (traceSnapshot, error) {
-	exists, err := s.hook.SessionExists(sessionID)
+	exists, err := s.hook.sessionExists(ctx, sessionID)
 	if err != nil {
 		return traceSnapshot{}, fmt.Errorf("verifying session existence: %w", err)
 	}
@@ -521,11 +640,14 @@ func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (t
 		return traceSnapshot{}, fmt.Errorf("%w: %s", ErrSessionNotFound, sessionID)
 	}
 
-	rawMsgs, rawParts, err := s.hook.FetchSessionTrace(sessionID)
+	rawMsgs, rawParts, err := s.hook.fetchSessionTrace(ctx, sessionID)
 	if err != nil {
 		return traceSnapshot{}, fmt.Errorf("fetching session trace for %s: %w", sessionID, err)
 	}
-	childIDs, childErr := s.hook.ResolveChildSessionIDs([]string{sessionID})
+	childIDs, childErr := s.hook.resolveChildSessionIDs(ctx, []string{sessionID})
+	if err := ctx.Err(); err != nil {
+		return traceSnapshot{}, err
+	}
 	knownChildren := make(map[string]struct{}, len(childIDs))
 	if childErr == nil {
 		for _, childID := range childIDs {
@@ -536,6 +658,9 @@ func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (t
 	// Group parts by message ID
 	partsByMsg := make(map[string][]RawPartRecord)
 	for _, p := range rawParts {
+		if err := ctx.Err(); err != nil {
+			return traceSnapshot{}, err
+		}
 		partsByMsg[p.MessageID] = append(partsByMsg[p.MessageID], p)
 	}
 
@@ -545,6 +670,9 @@ func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (t
 	consecutiveErrors := 0
 
 	for _, rm := range rawMsgs {
+		if err := ctx.Err(); err != nil {
+			return traceSnapshot{}, err
+		}
 		role := domain.AgentRole("assistant")
 		var contentStr string
 		var reasoningStr *string
@@ -596,6 +724,9 @@ func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (t
 		parts := make([]domain.LivePartFact, 0, len(partRecords))
 
 		for _, rp := range partRecords {
+			if err := ctx.Err(); err != nil {
+				return traceSnapshot{}, err
+			}
 			partFact := parsePartRecord(rp, &consecutiveErrors)
 			if partFact.SubagentType != "" {
 				if childID := explicitOutputSessionID(partFact.OutputSnippet); childID != "" {
@@ -671,7 +802,7 @@ func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (t
 		trace.Anomalies = []domain.LiveAnomalyAlert{}
 	}
 
-	return traceSnapshot{Trace: trace, Persona: assistantPersonaEvidence(rawMsgs)}, nil
+	return traceSnapshot{Trace: trace, Persona: assistantPersonaEvidence(rawMsgs)}, ctx.Err()
 }
 
 func assistantPersonaEvidence(messages []RawMessageRecord) domain.PersonaEvidence {
@@ -891,13 +1022,15 @@ func formatEpochMilli(ms int64) string {
 // are never mutated or used to synthesize trace events.
 func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID string, ledger domain.AgenticMetricsLedger) (domain.WorkspaceEventsResponse, error) {
 	response := domain.WorkspaceEventsResponse{TicketID: ticketID, Events: []domain.EventFact{}, Anomalies: ledger.Facts.AnomalyFacts(), Availability: domain.TraceUnavailable, DataSource: domain.DataSourceUnavailable, Coverage: domain.TraceCoverage{RequiredSessionIDs: []string{}, CompleteSessionIDs: []string{}, Diagnostics: []string{}}}
-	var transcripts []codex.Transcript
-	openCodeObserved, codexObserved := false, false
 	for _, owner := range ledger.Facts.Sessions {
 		response.Coverage.RequiredSessionIDs = append(response.Coverage.RequiredSessionIDs, owner.ID)
-		if err := ctx.Err(); err != nil {
-			response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": "+err.Error())
-			continue
+	}
+	var transcripts []codex.Transcript
+	openCodeObserved, codexObserved := false, false
+owners:
+	for _, owner := range ledger.Facts.Sessions {
+		if ctx.Err() != nil {
+			break
 		}
 		switch owner.Source {
 		case domain.SourceOpenCode:
@@ -905,23 +1038,29 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": OpenCode source unavailable")
 				continue
 			}
-			events, err := opencode.ExtractSessionSourceEvents(s.hook.DB(), owner.ID, owner.User)
-			if err == nil || len(events) > 0 {
+			events, err := opencode.ExtractSessionSourceEventsContext(ctx, s.hook.DB(), owner.ID, owner.User)
+			response.Events = append(response.Events, events...)
+			if len(events) > 0 {
 				openCodeObserved = true
+			}
+			if ctx.Err() != nil {
+				break owners
 			}
 			if err != nil {
 				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": "+err.Error())
-				response.Events = append(response.Events, events...)
 				continue
 			}
-			response.Events = append(response.Events, events...)
+			openCodeObserved = true
 			response.Coverage.CompleteSessionIDs = append(response.Coverage.CompleteSessionIDs, owner.ID)
 		case domain.SourceCodex:
 			if s == nil || strings.TrimSpace(s.codexHome) == "" {
 				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": Codex source unavailable")
 				continue
 			}
-			path, err := codex.DiscoverExactRolloutPath(s.codexHome, owner.ID)
+			path, err := codex.DiscoverExactRolloutPathContext(ctx, s.codexHome, owner.ID)
+			if ctx.Err() != nil {
+				break owners
+			}
 			if err != nil {
 				diagnostic := err.Error()
 				if errors.Is(err, codex.ErrOwnerUnavailable) {
@@ -930,8 +1069,12 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": "+diagnostic)
 				continue
 			}
-			transcript, parseErr := codex.ParseRolloutPath(path)
-			if parseErr != nil {
+			transcript, parseErr := codex.ParseRolloutPathContext(ctx, path)
+			interrupted := ctx.Err() != nil
+			if interrupted && len(transcript.Events) == 0 {
+				break owners
+			}
+			if parseErr != nil && !interrupted {
 				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": "+parseErr.Error())
 				continue
 			}
@@ -951,6 +1094,9 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 			if len(transcript.Warnings) == 0 || len(transcript.Events) > 0 {
 				codexObserved = true
 			}
+			if interrupted {
+				break owners
+			}
 			if len(transcript.Warnings) == 0 {
 				response.Coverage.CompleteSessionIDs = append(response.Coverage.CompleteSessionIDs, owner.ID)
 			} else {
@@ -961,12 +1107,17 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		}
 	}
 	if len(transcripts) > 0 {
+		// Finish the in-memory projection of already read owners even when a
+		// later source read was interrupted. This does not open more sources.
 		combined, err := codex.CombineTranscripts(transcripts)
 		if err != nil {
 			response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, err.Error())
 		} else {
 			response.Events = append(response.Events, combined.Events...)
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, "reading native source coverage: "+err.Error())
 	}
 	if len(response.Coverage.RequiredSessionIDs) > 0 && len(response.Coverage.CompleteSessionIDs) == len(response.Coverage.RequiredSessionIDs) && len(response.Coverage.Diagnostics) == 0 {
 		response.Availability = domain.TraceComplete
