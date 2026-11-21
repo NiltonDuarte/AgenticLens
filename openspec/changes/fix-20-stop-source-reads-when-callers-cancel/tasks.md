@@ -23,6 +23,6 @@ Archive after verified delivery and reconcile the roadmap separately.
 
 ## Optional capture observation
 
-- [ ] Gate the capture observation block with the shared opt-in and document it.
-- [ ] Verify default omission, opt-in and replacement of the previously generated block.
-- [ ] Review and verify the follow-up, then update the FIX-20 PR.
+- [x] Gate the capture observation block with the shared opt-in and document it.
+- [x] Verify default omission, opt-in and replacement of the previously generated block.
+- [x] Review the follow-up, run integrated verification and prepare the FIX-20 PR update.
