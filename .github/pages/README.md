@@ -40,8 +40,10 @@ updates do not replace one another in the pending queue. The provider cancels
 additional runs when that queue is full; rerun a canceled publication. This branch has no expiration; per-run build artifacts expire
 after seven days and recovery artifacts after ninety days.
 
-Before deploying, the publisher commits `.pending-publication.json` with the
-run ID and recovery artifact name. After Pages succeeds it commits the published
+The publisher uploads the Pages artifact and checks that it can read it from
+the same run. If either step fails, start a fresh publication. After the check
+and before invoking deployment, the publisher commits
+`.pending-publication.json` with the run ID and recovery artifact name. After Pages succeeds it commits the published
 site and removes the pending marker. If deployment or final retention fails,
 subsequent publication fails closed rather than overwriting previews with an
 older snapshot. Do not delete the state branch to bypass this check.
