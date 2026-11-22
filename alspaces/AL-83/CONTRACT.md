@@ -1,6 +1,6 @@
 # AL-83: Public project presentation
 
-Approved scope. The user’s “$agentic-lens-dev continue” instruction on 2026-11-10, responding to the presented contract and plan, authorizes implementation. The [ticket](../plan/to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md) supplies acceptance, with product direction in [PO-23](../PO-23/SPEC.md).
+Approved scope. The user’s “$agentic-lens-dev continue” instruction on 2026-11-10, responding to the presented contract and plan, authorizes implementation. The [ticket](../plan/done/AL-83%20present%20agenticlens%20on%20github%20pages.md) supplies acceptance, with product direction in [PO-23](../PO-23/SPEC.md).
 
 Developers and engineering leads should understand AgenticLens and reach trustworthy setup instructions from the English presentation at `https://niltonduarte.github.io/AgenticLens/`. Extend the existing native Jekyll presentation scaffold and Pages workflow; retain `/AgenticLens/roadmap/`, ticket routes, fragments and supporting-source links. The README links to the presentation.
 

@@ -160,10 +160,6 @@ jobs:
           path: ${{ runner.temp }}/portal-publication
           include-hidden-files: true
           retention-days: 90
-      - name: Record publication transaction before deploying
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 .github/pages/preview.py begin-state --directory "$RUNNER_TEMP/portal-state"
       - name: Prepare public artifact without private publication metadata
         run: |
           cp -R "$RUNNER_TEMP/portal-publication" "$RUNNER_TEMP/portal-public"
@@ -171,6 +167,16 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ runner.temp }}/portal-public
+      # An upload can finish before the artifact service makes it readable.
+      - name: Confirm Pages artifact is readable
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/portal-pages-check
+      - name: Record publication transaction before deploying
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/pages/preview.py begin-state --directory "$RUNNER_TEMP/portal-state"
       - name: Deploy ticket pages
         id: deploy
         uses: actions/deploy-pages@v4
