@@ -6,10 +6,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## In Progress
 
-- **AL-83**: Present AgenticLens on GitHub Pages
-  - **Status**: In Progress; implementation verified, awaiting publication; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-83](to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md)
-
 - **AL-96**: Verify automatic ticket metrics capture end to end for v3
   - **Status**: In Progress; **Blocked by**: None; **Blocks**: v3 stable release, AL-97
   - **File**: [AL-96](to-do/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md)

@@ -22,3 +22,7 @@ Today the README and technical documents contain the necessary pieces, but newco
 ## Implementation notes
 
 Keep the public presentation separate from the embedded dashboard and its runtime/build contract. No new backend capability, hosted demo, analytics service, custom domain or documentation migration is required. Choose the static-site tooling during development; use the research as guidance rather than a copied design.
+
+## Delivery
+
+The [public presentation](https://niltonduarte.github.io/AgenticLens/) and its roadmap were verified after the [successful main deployment](https://github.com/NiltonDuarte/AgenticLens/actions/runs/45056156736). See the [AL-83 implementation and verification](../../AL-83/SUMMARY.md) and the [GEN-28 publication recovery](../../../openspec/changes/gen-28-restore-pages-publication-and-close-al-83/delivery.md).
