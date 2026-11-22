@@ -4,17 +4,11 @@ Active tickets live in `to-do/`; completed specifications move to `done/` and le
 
 Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946` on 2026-11-08. Historical evidence and previously accepted product decisions remain authoritative within their stated limits. Existing IDs and accepted ticket groupings are preserved across earlier batches.
 
-## In Progress
-
-- **AL-96**: Verify automatic ticket metrics capture end to end for v3
-  - **Status**: In Progress; **Blocked by**: None; **Blocks**: v3 stable release, AL-97
-  - **File**: [AL-96](to-do/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md)
-
-- **FIX-20**: Stop source reads when callers cancel
-  - **Status**: In Progress; **Blocked by**: None; **Blocks**: None
-  - **File**: [FIX-20](to-do/FIX-20%20stop%20source%20reads%20when%20callers%20cancel.md)
-
 ## Ready
+
+- **AL-97**: Warn about staged pending capture snapshots
+  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-97](to-do/AL-97%20warn%20about%20staged%20pending%20capture%20snapshots.md)
 
 - **AL-94**: Make explicit backfill repeatable and report refresh coverage
   - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-95
@@ -70,10 +64,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **File**: [REV-7](to-do/REV-7%20review%20source%20read%20guarantees.md)
 
 ## Blocked
-
-- **AL-97**: Warn about staged pending capture snapshots
-  - **Status**: Blocked; **Blocked by**: AL-96; **Blocks**: None
-  - **File**: [AL-97](to-do/AL-97%20warn%20about%20staged%20pending%20capture%20snapshots.md)
 
 - **AL-95**: Preview source-backed defaults and decide on rollout
   - **Status**: Blocked; **Blocked by**: AL-94; **Blocks**: None

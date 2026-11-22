@@ -2,7 +2,7 @@
 
 ## Roadmap ticket
 
-[FIX-20](../../../alspaces/plan/to-do/FIX-20%20stop%20source%20reads%20when%20callers%20cancel.md)
+[FIX-20](../../../alspaces/plan/done/FIX-20%20stop%20source%20reads%20when%20callers%20cancel.md)
 
 ## Why
 

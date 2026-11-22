@@ -2,7 +2,7 @@
 
 ## Roadmap ticket
 
-[AL-96 — Verify automatic ticket metrics capture end to end for v3](../../../alspaces/plan/to-do/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md)
+[AL-96 — Verify automatic ticket metrics capture end to end for v3](../../../alspaces/plan/done/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md)
 
 ## Why
 
