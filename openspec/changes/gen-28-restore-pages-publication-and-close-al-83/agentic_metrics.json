@@ -1,0 +1,55 @@
+{
+  "tags": {
+    "agentic-lens-dev": "0.1.1",
+    "agentic-lens-po": "0.1.1",
+    "agentic-lens-review": "0.1.1"
+  },
+  "schema_version": 6,
+  "ticket_id": "GEN-28",
+  "ticket_title": "Restore Pages publication and close AL-83",
+  "ticket_type": "chore",
+  "started_at": "2026-11-22T18:34:31.741Z",
+  "completed_at": "2026-11-22T18:52:53.443102+00:00",
+  "updated_at": "2026-11-22T18:52:53.443102+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 2
+  },
+  "sessions": [
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a20489-d5a2-7582-8d03-d3153a081fa7",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "provisional_seconds": 1085,
+          "role": "",
+          "model": "gpt-6.2-sol",
+          "started_at": "2026-11-22T18:34:32.860Z",
+          "completed_at": null,
+          "active_duration_seconds": 1085,
+          "turns": 1,
+          "tokens": {"input": 198451, "output": 25965, "cache_read": 6194816, "reasoning": 10089, "peak_context": 112483},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 2
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 78, "errors": 4},
+        {"name": "wait", "calls": 9, "errors": 0}
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}
