@@ -1,6 +1,6 @@
 ## Purpose
 
-Publish and refresh ticket metrics from native session lifecycle events, including capture before ticket binding and the first ledger at an explicitly indicated destination. [Roadmap ticket](../../../../../alspaces/plan/to-do/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md)
+Publish and refresh ticket metrics from native session lifecycle events, including capture before ticket binding and the first ledger at an explicitly indicated destination. [Roadmap ticket](../../../../../alspaces/plan/done/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md)
 
 ## ADDED Requirements
 

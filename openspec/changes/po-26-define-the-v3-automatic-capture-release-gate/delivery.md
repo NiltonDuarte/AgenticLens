@@ -2,7 +2,7 @@
 
 ## Outcome
 
-Added [AL-96](../../../alspaces/plan/to-do/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md) to the [roadmap](../../../alspaces/plan/TICKETS.md) as Ready and blocking the v3 stable release. The test begins with an empty destination, exercises supported native capture integrations, and compares the published session tree against the harness source. Capture defects found by the test must be fixed and the corrected release candidate must pass.
+Added [AL-96](../../../alspaces/plan/done/AL-96%20verify%20automatic%20ticket%20metrics%20capture%20end%20to%20end%20for%20v3.md) to the [roadmap](../../../alspaces/plan/TICKETS.md) as Ready and blocking the v3 stable release. The test begins with an empty destination, exercises supported native capture integrations, and compares the published session tree against the harness source. Capture defects found by the test must be fixed and the corrected release candidate must pass.
 
 ## Verification and limits
 
