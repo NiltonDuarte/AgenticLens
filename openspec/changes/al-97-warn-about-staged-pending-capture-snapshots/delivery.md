@@ -10,6 +10,8 @@ The implementation candidate is `2e7465d5` over `db4477fa`. Integration commit `
 
 The integrated command `GOFLAGS='-p=1 -timeout=35m' GOMAXPROCS=4 VITEST_MAX_FORKS=2 VITEST_MIN_FORKS=1 make -j2` passed at `371a9bc1`. It ran the CLI and adapter suites with the race detector, 231 frontend unit tests, 819 frontend integration tests, installation and distribution checks, vet, typecheck, lint, and the multi-platform build. The first broad run had capture-fixture failures and two Go package timeouts. Serializing Go packages and extending the package deadline enabled the full integrated pass. Strict OpenSpec validation and `git diff --check` also passed.
 
+The `publish` check on `5ef7638f` uploaded the Pages artifact successfully but attempted to read it before the run artifact index exposed it. The workflow now waits up to 60 seconds for the current run's artifact metadata before downloading and deploying it. The workflow YAML and shell syntax parse, and the ticket-pages preview tests pass; the hosted rerun is pending.
+
 ## Review
 
 Behavior and architecture review on GPT-6.2 Sol (high) found that an incomplete staged scan could hide the existing health warning. Data review on the same profile identified working-copy path, Git object store, and discard evidence edge cases. Architecture review also found the SQLite byte-limit issue. Test review on that profile identified the missing limit oracles and worker-dependent fixture. The corrective checks reproduced each changed behavior. GPT-6 Luna (medium) reviewed the same four focuses and independently reproduced the corrected linked-worktree behavior after one unavailable-hook result. The final test-only adjustment was checked with both targeted mutations. No blocking review finding remains. See the [compact findings](evidence/REVIEW_SUMMARY.json).
@@ -26,15 +28,15 @@ The hook uses Git's effective commit index, including path-limited commits, and 
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 79
-- **Active Agent Duration:** 3h 25m (recorded duration including 1815s provisional)
+- **Software Development Life Cycle Iterations:** 80
+- **Active Agent Duration:** 3h 31m (recorded duration including 257s provisional)
 - **Context Window Health:** ELEVATED — Root agent peak 317.7k tokens (71% of 450k healthy ceiling, 1 compactions) | Subagents peak 254.7k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 2.3 avg turns/run (peak: 4 turns) | Planner 1.0, Coder 4.0, Tester 2.0
 - **Test-to-Production Code Ratio:** 1.0:1 (+588 test lines / +605 prod lines)
 - **Code Delivered:** +1,193 / -33 lines across 14 code files (excluding docs)
-- **Reasoning Effort:** 87,968 reasoning tokens (24.1% of generated output)
-- **Tool Health & Self-Correction:** 912 tool calls (64 self-corrections, 93.0% success rate)
+- **Reasoning Effort:** 101,492 reasoning tokens (25.6% of generated output)
+- **Tool Health & Self-Correction:** 933 tool calls (65 self-corrections, 93.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 4 execution anomalies detected (1 CRITICAL, 3 WARNING).
@@ -53,15 +55,15 @@ The hook uses Git's effective commit index, including path-limited commits, and 
 | **planner** | 1 | 140,360 | 2,629 | 1,145,600 | 89.1% | 138.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **coder** | 1 | 176,853 | 40,727 | 19,895,808 | 99.1% | 254.7k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **tester** | 1 | 164,561 | 37,864 | 20,795,136 | 99.2% | 241.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 23 | 2,567,115 | 195,645 | 97,899,264 | 97.4% | 317.7k | ELEVATED | Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations) |
-| **Total** | **26** | **3,048,889** | **276,865** | **139,735,808** | **97.9%** | **317.7k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
+| **Unknown** | 23 | 2,607,044 | 213,734 | 100,409,728 | 97.5% | 317.7k | ELEVATED | Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations) |
+| **Total** | **26** | **3,088,818** | **294,954** | **142,246,272** | **97.9%** | **317.7k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 12 | 671,496 | 61,424 | 12,628,352 | 95.0% | Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations) |
+| **gpt-6-luna** | 12 | 711,425 | 79,513 | 15,138,816 | 95.5% | Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations) |
 | **gpt-6.2-sol** | 14 | 2,377,393 | 215,441 | 127,107,456 | 98.2% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
-| **Total** | **26** | **3,048,889** | **276,865** | **139,735,808** | **97.9%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
+| **Total** | **26** | **3,088,818** | **294,954** | **142,246,272** | **97.9%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
 Retained recorded history: 21 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
 <!-- agentic-lens:metrics:end -->

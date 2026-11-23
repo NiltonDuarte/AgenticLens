@@ -9,8 +9,8 @@
   "ticket_title": "Warn about staged pending capture snapshots",
   "ticket_type": "feat",
   "started_at": "2026-11-23T00:46:32.461Z",
-  "completed_at": "2026-11-23T23:39:38.122143+00:00",
-  "updated_at": "2026-11-23T23:39:38.122143+00:00",
+  "completed_at": "2026-11-23T23:47:47.215809+00:00",
+  "updated_at": "2026-11-23T23:47:47.215809+00:00",
   "code": {
     "lines_added": 1193,
     "lines_deleted": 33,
@@ -19,7 +19,7 @@
     "prod_lines_added": 605,
     "prod_lines_deleted": 33,
     "files_changed": 14,
-    "sdlc_iterations": 79
+    "sdlc_iterations": 80
   },
   "sessions": [
     {
@@ -70,12 +70,11 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 1815,
           "role": "",
           "model": "gpt-6.2-sol",
           "started_at": "2026-11-23T00:46:33.043Z",
-          "completed_at": null,
-          "active_duration_seconds": 6288,
+          "completed_at": "2026-11-23T23:41:12.697Z",
+          "active_duration_seconds": 6398,
           "turns": 20,
           "tokens": {"input": 1007211, "output": 73735, "cache_read": 72300928, "reasoning": 15773, "peak_context": 317738},
           "cost_usd": null,
@@ -84,21 +83,22 @@
           "user_iterations": 0
         },
         {
+          "provisional_seconds": 257,
           "role": "",
           "model": "gpt-6-luna",
           "started_at": "2026-11-23T23:10:01.488Z",
-          "completed_at": "2026-11-23T23:39:26.734Z",
-          "active_duration_seconds": 0,
-          "turns": 1,
-          "tokens": {"input": 120443, "output": 22042, "cache_read": 8148608, "reasoning": 9482, "peak_context": 100805},
+          "completed_at": null,
+          "active_duration_seconds": 257,
+          "turns": 2,
+          "tokens": {"input": 160372, "output": 40131, "cache_read": 10659072, "reasoning": 23006, "peak_context": 136887},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 1,
-          "user_iterations": 37
+          "user_iterations": 38
         }
       ],
       "tools": [
-        {"name": "command", "calls": 247, "errors": 16},
+        {"name": "command", "calls": 268, "errors": 17},
         {"name": "delegate_task", "calls": 25, "errors": 0},
         {"name": "followup_task", "calls": 4, "errors": 0},
         {"name": "send_message", "calls": 14, "errors": 0},
