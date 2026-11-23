@@ -141,12 +141,12 @@ func prepareBackfillLedger(candidate adapters.AgenticFactLedgerDTO, history adap
 // Reuse the existing publication protocol for a ledger plus configured summary.
 // A failed second write restores the exact prior authorized members; recovery
 // failures retain the journal rather than conceal a partially published set.
-func publishBackfillArtifacts(metricPath string, data []byte, summaryPath, table string, replaceLedger bool) (err error) {
+func publishBackfillArtifacts(metricPath string, data []byte, summaryPath string, summary []byte, replaceLedger bool) (err error) {
+	if !replaceLedger && summary == nil {
+		return nil
+	}
 	if summaryPath == "" {
-		if !replaceLedger {
-			return nil
-		}
-		return publishBackfillLedger(metricPath, data)
+		return adapters.ReplaceOwnedPublicationFile(metricPath, data)
 	}
 	paths := []string{metricPath, summaryPath}
 	if err := adapters.BeginPublication(metricPath, paths); err != nil {
@@ -159,12 +159,14 @@ func publishBackfillArtifacts(metricPath string, data []byte, summaryPath, table
 		}
 	}()
 	if replaceLedger {
-		if err := publishBackfillLedger(metricPath, data); err != nil {
+		if err := adapters.ReplaceOwnedPublicationFile(metricPath, data); err != nil {
 			return err
 		}
 	}
-	if err := adapters.UpdateSummaryFile(summaryPath, table); err != nil {
-		return fmt.Errorf("updating configured summary %s: %w", summaryPath, err)
+	if summary != nil {
+		if err := adapters.WriteSummaryContents(summaryPath, summary); err != nil {
+			return err
+		}
 	}
 	return adapters.CommitPublication(metricPath, paths)
 }

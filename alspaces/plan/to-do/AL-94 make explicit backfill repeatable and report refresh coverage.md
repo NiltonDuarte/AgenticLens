@@ -1,5 +1,7 @@
 # AL-94: Make explicit backfill repeatable and report refresh coverage
 
+[OpenSpec proposal](../../../openspec/changes/al-94-make-explicit-backfill-repeatable-and-report-refresh-coverage/proposal.md)
+
 ## Goal
 
 Operators can repeat an exact-source refresh, repair a requested summary, and tell which recorded owners still need a retry.

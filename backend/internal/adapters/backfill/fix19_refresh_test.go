@@ -76,6 +76,20 @@ func TestFIX19BackfillRetainsAmbiguousAndUnavailableOwnersWhileRefreshingHealthy
 				if len(report.Results) != 1 || !report.Results[0].RefreshIncomplete || !strings.Contains(strings.Join(report.Results[0].Diagnostics, " "), "ambiguous") {
 					t.Fatalf("ambiguity lost: %+v", report.Results)
 				}
+				coverage := report.Results[0].Coverage
+				if len(coverage) != 1 || coverage[0].Harness != domain.SourceCodex || coverage[0].Recorded != 3 || coverage[0].Retained != 2 {
+					t.Fatalf("source ambiguity or unrelated harness miscounted: %+v", coverage)
+				}
+				byID := make(map[string]OwnerRefreshCoverage)
+				for _, owner := range coverage[0].Owners {
+					byID[owner.SessionID] = owner
+				}
+				if owner := byID["root"]; owner.Status != OwnerRetained || !strings.Contains(owner.Reason, "ambiguous") {
+					t.Errorf("ambiguous owner's reason was lost: %+v", owner)
+				}
+				if owner := byID["missing"]; owner.Status != OwnerRetained || !(strings.Contains(owner.Reason, "unavailable") || strings.Contains(owner.Reason, "not found")) {
+					t.Errorf("unavailable owner's reason was lost: %+v", owner)
+				}
 				after, err := adapters.LoadExistingFactLedger(ledgerPath)
 				if err != nil {
 					t.Fatal(err)

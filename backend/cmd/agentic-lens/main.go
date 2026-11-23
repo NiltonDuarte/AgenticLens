@@ -1283,8 +1283,10 @@ func runBackfill(args []string) {
 			dbStr = "updated"
 		} else if res.DBFound {
 			dbStr = "found"
-		} else if res.RefreshIncomplete && (errors.Is(res.Error, context.Canceled) || errors.Is(res.Error, context.DeadlineExceeded)) {
+		} else if opts.RecomputeDB && (errors.Is(res.Error, context.Canceled) || errors.Is(res.Error, context.DeadlineExceeded)) {
 			dbStr = "interrupted"
+		} else if opts.RecomputeDB && res.Publication == backfill.PublicationBlocked {
+			dbStr = "blocked"
 		} else if opts.RecomputeDB {
 			dbStr = "missing"
 		}
@@ -1310,12 +1312,25 @@ func runBackfill(args []string) {
 			notes,
 		)
 		fmt.Printf("  Ledger: %s\n", res.LedgerPath)
+		fmt.Printf("  Publication: %s | Ledger written: %t | Summary written: %t\n", res.Publication, res.LedgerWritten, res.SummaryWritten)
+		printBackfillOwnerCoverage(res)
 	}
 
 	fmt.Println("--------------------------------------------------------------------------------")
 	fmt.Printf("Summary: Scanned: %d | Updated: %d | Skipped: %d | Completed: %d | Partial: %d\n",
 		report.Scanned, report.Updated, report.Skipped, report.Completed, report.Partial)
-	fmt.Printf("Refresh diagnostics: Incomplete: %d | Retained skill/task snapshots: %d (session trees may be newer)\n", report.RefreshIncomplete, report.CollectionsRetained)
+	fmt.Printf("Refresh diagnostics: Incomplete: %d | Tickets with retained skill/task snapshots: %d (session trees may be newer)\n", report.RefreshIncomplete, report.CollectionsRetained)
+	for _, coverage := range report.Coverage {
+		fmt.Printf("%s refresh totals", coverage.Harness)
+		if coverage.UnknownOwnerInventories > 0 {
+			fmt.Printf(" (known owners only, %d ticket inventories unknown)", coverage.UnknownOwnerInventories)
+		}
+		printBackfillRefreshCounts(coverage.RefreshCounts)
+	}
+	fmt.Printf("Publication: Ledgers written: %d | Summaries written: %d\n", report.LedgersWritten, report.SummariesWritten)
+	if len(report.BlockedWork) > 0 {
+		fmt.Printf("Blocked requested work: %s\n", strings.Join(report.BlockedWork, ", "))
+	}
 
 	if report.SchemaMigration != nil {
 		fmt.Println("--------------------------------------------------------------------------------")
@@ -1345,6 +1360,10 @@ func runBackfill(args []string) {
 	}
 	fmt.Println("================================================================================")
 	if backfillErr != nil {
+		if report.StorePreflightFailed {
+			fmt.Fprintf(os.Stderr, "Backfill failed: %v\n", backfillErr)
+			os.Exit(1)
+		}
 		fmt.Fprintf(os.Stderr, "Backfill stopped: %v\n", backfillErr)
 		os.Exit(1)
 	}

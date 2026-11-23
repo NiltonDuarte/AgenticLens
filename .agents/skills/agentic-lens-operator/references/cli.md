@@ -185,27 +185,32 @@ agentic-lens backfill --source opencode|codex|both [options]
 - `--ticket-id ID`: restrict work to one workspace. Recommended for targeted recovery.
 - `--codex-home PATH`: local Codex rollout directory; otherwise the selected-local Codex home; missing/invalid selection fails.
 - `--db-path PATH`: local OpenCode SQLite DB; otherwise the selected-local OpenCode path; missing/invalid selection fails.
-- `--recompute-db`: re-query OpenCode session data and tool facts from the local database. Run on the machine that has the original sessions. Pair with `--source opencode` or `both`.
+- `--recompute-db`: verify exact recorded sessions from the selected harness even for completed ledgers. Run on the machine that has the original source records.
 - `--recompute-git`: recompute code facts and iterations from Git history. Requires both `--code-ref REF` and `--ticket-id ID`.
 - `--code-ref REF`: Git ref compared against configured base; required with `--recompute-git`.
 - `--migrate-schema`: upgrade ledger schema during backfill. This is an alternative combined workflow to running schema migration separately.
 - `--dry-run`: preview without persisting changes.
-- `--update-summaries`: request updates using the shared configured summary filename; validate the effective destination before publication.
+- `--update-summaries`: create or repair the configured summary independently of ledger changes. Equivalent rendered content keeps its modification time and authored text stays intact.
 - `--force`: rerun requested work even when apparently complete; never enables heuristic session discovery.
 - `--allow-fallbacks`: explicit opt-in heuristic backfill recovery using literal title/configured-workspace evidence. Report heuristics and incomplete exact recovery; never choose ambiguous roots, overwrite known owners or replace another harness.
 
 For pending `source_backfill`, use the source-bearing developer's machine, the correct harness, and the appropriate local source path. If no original source is available or the source cannot be found, leave the ledger partial and coordinate with the named session owner; do not manually clear migration state.
+
+Refresh coverage shows which recorded owners changed, were verified unchanged, or retained their previous facts. Discovered owners are counted separately. Verified changes from a dry run or rejected publication are reported as uncommitted. A completed migration can still have missing owners or retained skill/task snapshots. For missing source evidence or a batch budget limit, use the affected `--ticket-id`, the same harness and `--recompute-db`. The retry starts a fresh batch using the same configured session and byte limits. Use `--workspace` when more than one ledger has the same ticket ID.
+
+`Updated` counts successfully processed tickets. The separate publication counts show actual ledger and summary writes. With both harnesses selected, a missing required store blocks the run before publication, and the report identifies the unavailable and blocked work.
 
 Examples:
 
 ```bash
 agentic-lens backfill --source opencode --ticket-id PAY-42 --recompute-db --dry-run
 agentic-lens backfill --source opencode --ticket-id PAY-42 --recompute-db --update-summaries
+agentic-lens backfill --source codex --ticket-id PAY-42 --update-summaries
 agentic-lens backfill --source codex --codex-home ~/.codex --ticket-id PAY-42 --dry-run
 agentic-lens backfill --source both --ticket-id PAY-42 --migrate-schema --dry-run
 ```
 
-The non-dry-run forms modify metrics JSON and may update summaries. The `--dry-run` preview does not complete migration. Completed migration metadata is removed after its audit is copied to the command report and printed with the ledger path. Pending/partial state remains resumable. Backfill creates no backups; retain ledger originals in Git or another backup before execution. For a schema upgrade with rollback copies, run `migrate --backup` first.
+The `--dry-run` preview does not complete migration. Completed migration metadata is removed after its audit is copied to the command report and printed with the ledger path. Pending/partial state remains resumable. Backfill creates no backups; retain ledger originals in Git or another backup before execution. For a schema upgrade with rollback copies, run `migrate --backup` first.
 
 ## `migrate`
 

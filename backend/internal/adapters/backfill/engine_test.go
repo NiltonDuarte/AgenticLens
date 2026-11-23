@@ -285,6 +285,15 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 				if len(report.Results) != 1 || report.Results[0].Error != nil || report.Results[0].Skipped {
 					t.Fatalf("explicit refresh failed/skipped: %+v", report.Results)
 				}
+				result := report.Results[0]
+				coverage := result.Coverage
+				if result.NewStatus != string(domain.MigrationStatusCompleted) || len(coverage) != 1 || coverage[0].Recorded != 1 || len(coverage[0].Owners) != 1 {
+					t.Fatalf("explicit refresh lost migration status or owner coverage: %+v", result)
+				}
+				owner := coverage[0].Owners[0]
+				if owner.SessionID != "inv-existing" {
+					t.Fatalf("unexpected exact owner: %+v", owner)
+				}
 				updated, data := readRecoveryLedger(t, workspace)
 				if !metadata && !available {
 					if !bytes.Equal(data, baselineBytes) || !reflect.DeepEqual(updated.Sessions, baseline.Sessions) {
@@ -303,9 +312,15 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 					if !report.Results[0].DBUpdated || updated.Sessions[0].Invocations[0].Tokens.Input != 1000 {
 						t.Fatalf("full cumulative snapshot not refreshed: %+v", updated.Sessions)
 					}
+					if coverage[0].Status != HarnessComplete || coverage[0].Refreshed != 1 || owner.Status != OwnerRefreshed {
+						t.Errorf("available owner not counted as refreshed: %+v", coverage)
+					}
 				} else {
 					if !report.Results[0].RefreshIncomplete || len(report.Results[0].Diagnostics) == 0 || updated.Sessions[0].Invocations[0].Model != "stale" {
 						t.Fatalf("optional failure not preserved/reported: %+v", report.Results)
+					}
+					if coverage[0].Status != HarnessIncomplete || coverage[0].Retained != 1 || owner.Status != OwnerRetained || !strings.Contains(owner.Reason, "unavailable") {
+						t.Errorf("all-unavailable refresh should report retained facts beside completed migration: %+v", coverage)
 					}
 				}
 				routine, err := NewEngine().Execute(BackfillOptions{Project: root, TicketID: ticket, Source: "opencode", DBPath: dbPath})
@@ -315,6 +330,15 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 				_, after := readRecoveryLedger(t, workspace)
 				if string(after) != string(data) {
 					t.Fatal("routine skip rewrote ledger")
+				}
+				if !metadata && available {
+					forced, err := NewEngine().Execute(BackfillOptions{Project: root, TicketID: ticket, Source: "opencode", Force: true})
+					if err != nil || forced == nil || len(forced.Results) != 1 || forced.Results[0].Error != nil || forced.Updated != 1 || forced.Skipped != 0 {
+						t.Fatalf("Force must still process completed stored facts without source admission: %+v, %v", forced, err)
+					}
+					if forced.Results[0].DBUpdated || len(forced.Results[0].Coverage) != 0 || forced.LedgersWritten != 0 {
+						t.Errorf("Force performed an unrequested source refresh or equivalent write: %+v", forced)
+					}
 				}
 			})
 		}
@@ -417,18 +441,19 @@ func TestBackfillEngine_MigrationThenSourceBackfillMakesLedgerReady(t *testing.T
 
 	dbPath := filepath.Join(tempDir, "opencode.db")
 	setupMockOpenCodeDB(t, dbPath, "source-session", ticketID)
-	report, err := NewEngine().Execute(BackfillOptions{
+	opts := BackfillOptions{
 		Project:        tempDir,
 		TicketID:       ticketID,
 		RecomputeDB:    true,
 		DBPath:         dbPath,
 		Source:         "opencode",
 		AllowFallbacks: true,
-	})
+	}
+	report, err := NewEngine().Execute(opts)
 	if err != nil {
 		t.Fatalf("source-backed backfill failed: %v", err)
 	}
-	if report.Completed != 1 {
+	if report.Completed != 1 || report.LedgersWritten != 1 {
 		t.Fatalf("expected source-backed backfill to complete migration, got %+v", report.Results)
 	}
 	ready, err := os.ReadFile(metricPath)
@@ -438,6 +463,12 @@ func TestBackfillEngine_MigrationThenSourceBackfillMakesLedgerReady(t *testing.T
 	if err := adapters.ValidateRuntimeFactLedger(ready); err != nil {
 		t.Fatalf("source-backed result should be runtime-ingestible: %v", err)
 	}
+	stamp := markRefreshFile(t, metricPath)
+	repeat, err := NewEngine().Execute(opts)
+	if err != nil || repeat == nil || repeat.Completed != 1 || repeat.LedgersWritten != 0 || repeat.RefreshIncomplete != 0 {
+		t.Fatalf("equivalent refresh after migration completion should verify without replacing: %+v, %v", repeat, err)
+	}
+	assertRefreshFile(t, metricPath, ready, stamp)
 }
 
 func TestBackfillEngine_SourceBackfillFailuresRemainPendingAndRuntimeIneligible(t *testing.T) {
@@ -1608,12 +1639,12 @@ func readRecoveryLedger(t *testing.T, workspace string) (adapters.AgenticFactLed
 
 func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 	for _, tc := range []struct {
-		name                                                                                             string
-		missingRoot, missingChild, malformed, emptyOwners, emptyObservations, dryRun, blockWrite, cyclic bool
+		name                                                                                                string
+		missingRoot, missingChild, malformed, emptyOwners, emptyObservations, dryRun, rejectSummary, cyclic bool
 	}{
 		{name: "complete"}, {name: "confirmed empty", emptyObservations: true}, {name: "missing root", missingRoot: true},
 		{name: "missing child", missingChild: true}, {name: "late malformed part", malformed: true}, {name: "unknown owners", emptyOwners: true},
-		{name: "dry run incomplete", missingRoot: true, dryRun: true}, {name: "temporary write failure", blockWrite: true}, {name: "unrooted cycle", cyclic: true},
+		{name: "dry run incomplete", missingRoot: true, dryRun: true}, {name: "malformed summary rejects changed candidate", rejectSummary: true}, {name: "unrooted cycle", cyclic: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := newBackfillProject(t)
@@ -1672,12 +1703,16 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if tc.blockWrite {
-				if err := os.Mkdir(filepath.Join(workspace, "agentic_metrics.json.tmp"), 0755); err != nil {
+			var ledgerStamp, summaryStamp time.Time
+			if tc.rejectSummary {
+				summaryBefore = []byte("<!-- agentic-lens:metrics:start -->\n<!-- agentic-lens:metrics:start -->\n")
+				if err := os.WriteFile(summaryPath, summaryBefore, 0600); err != nil {
 					t.Fatal(err)
 				}
+				ledgerStamp = markRefreshFile(t, filepath.Join(workspace, "agentic_metrics.json"))
+				summaryStamp = markRefreshFile(t, summaryPath)
 			}
-			opts := BackfillOptions{Project: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath, DryRun: tc.dryRun, UpdateSummaries: tc.dryRun}
+			opts := BackfillOptions{Project: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath, DryRun: tc.dryRun, UpdateSummaries: tc.dryRun || tc.rejectSummary}
 			report, err := NewEngine().Execute(opts)
 			if err != nil {
 				t.Fatal(err)
@@ -1687,9 +1722,15 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 			}
 			res := report.Results[0]
 			updated, after := readRecoveryLedger(t, workspace)
-			if tc.blockWrite {
-				if res.Error == nil || string(before) != string(after) {
-					t.Fatalf("failed write published candidate or hid error: %+v", res)
+			if tc.rejectSummary {
+				if res.Error == nil || !strings.Contains(res.Error.Error(), "ambiguous generated metrics") || string(res.Publication) != "failed" {
+					t.Fatalf("expected the summary parser to reject the candidate: %+v", res)
+				}
+				assertRefreshFile(t, filepath.Join(workspace, "agentic_metrics.json"), before, ledgerStamp)
+				assertRefreshFile(t, summaryPath, summaryBefore, summaryStamp)
+				assertExplicitWrites(t, report, false, false)
+				if len(res.Coverage) != 1 || res.Coverage[0].Refreshed != 0 || res.Coverage[0].Proposed != 2 || len(report.Coverage) != 1 || report.Coverage[0].Refreshed != 0 || report.Coverage[0].Proposed != 2 {
+					t.Fatalf("two verified candidates must not be reported as committed after summary rejection: %+v", report)
 				}
 				return
 			}
@@ -1697,7 +1738,8 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 				t.Fatalf("unexpected per-ticket failure: %v", res.Error)
 			}
 			incomplete := tc.missingRoot || tc.missingChild || tc.malformed || tc.emptyOwners || tc.cyclic
-			if res.RefreshIncomplete != incomplete || res.CollectionsRetained != incomplete || report.CollectionsRetained != boolInt(incomplete) || report.RefreshIncomplete != boolInt(incomplete) {
+			retained := tc.missingRoot || tc.missingChild || tc.malformed
+			if res.RefreshIncomplete != incomplete || res.CollectionsRetained != retained || report.CollectionsRetained != boolInt(retained) || report.RefreshIncomplete != boolInt(incomplete) {
 				t.Fatalf("command and ticket recovery disagree: %+v / %+v", report, res)
 			}
 			if incomplete && (!strings.Contains(res.Notes, "previous snapshot") || len(res.Diagnostics) == 0 || len(report.Warnings) == 0) {
@@ -1909,6 +1951,19 @@ func TestBackfillEngine_SchemaV2RecoversKnownGrandchildren(t *testing.T) {
 			if err != nil || report.Results[0].Error != nil {
 				t.Fatalf("refresh failed: %+v %v", report, err)
 			}
+			coverage := report.Results[0].Coverage
+			if len(coverage) != 1 || coverage[0].Recorded != 3 || len(coverage[0].Owners) != 3 {
+				t.Fatalf("expected coverage for the exact V2 tree: %+v", coverage)
+			}
+			for _, owner := range coverage[0].Owners {
+				if malformed && owner.SessionID == "v2-grandchild" {
+					if owner.Status != OwnerRetained || owner.Reason == "" || owner.Skills != CollectionUnavailable || owner.Tasks != CollectionUnavailable {
+						t.Errorf("malformed V2 owner must report unavailable collections: %+v", owner)
+					}
+				} else if owner.Status != OwnerRefreshed || owner.Skills != CollectionEmpty || owner.Tasks != CollectionEmpty {
+					t.Errorf("readable V2 owner must report verified empty collections: %+v", owner)
+				}
+			}
 			updated, _ := readRecoveryLedger(t, workspace)
 			if len(updated.Sessions) != 3 {
 				t.Fatalf("grandchild lost/duplicated: %+v", updated.Sessions)
@@ -1920,7 +1975,7 @@ func TestBackfillEngine_SchemaV2RecoversKnownGrandchildren(t *testing.T) {
 						rootPreserved = len(session.Invocations) == 1 && session.Invocations[0].Tokens.Input == 17
 					}
 				}
-				if !report.Results[0].RefreshIncomplete || !report.Results[0].CollectionsRetained || !rootPreserved || len(updated.ToDomain().SkillFacts()) != 0 {
+				if !report.Results[0].RefreshIncomplete || report.Results[0].CollectionsRetained || !rootPreserved || len(updated.ToDomain().SkillFacts()) != 0 {
 					t.Fatalf("malformed descendant prevented complete parent refresh or lost unavailable owner: %+v %+v", report.Results, updated)
 				}
 			} else {

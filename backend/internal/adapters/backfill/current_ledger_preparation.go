@@ -22,6 +22,51 @@ type currentLedgerPreparation struct {
 	CleanupCandidate      []byte
 }
 
+func readBackfillBaseline(content []byte) (int, *currentLedgerPreparation, domain.AgenticFactLedger, error) {
+	converter := migration.NewEngine(nil)
+	version, err := converter.DetectVersion(content)
+	if err != nil {
+		return 0, nil, domain.AgenticFactLedger{}, fmt.Errorf("detecting ledger schema: %w", err)
+	}
+	if version == domain.CurrentSchemaVersion {
+		prepared, err := prepareCurrentLedger(content)
+		if err != nil {
+			return 0, nil, domain.AgenticFactLedger{}, fmt.Errorf("validating current ledger before backfill: %w", err)
+		}
+		return version, &prepared, prepared.Ledger, nil
+	}
+	ledger, err := converter.Migrate(content, domain.CurrentSchemaVersion)
+	if err != nil {
+		return 0, nil, domain.AgenticFactLedger{}, fmt.Errorf("normalizing ledger before backfill: %w", err)
+	}
+	return version, nil, ledger, nil
+}
+
+func migrationStatus(ledger domain.AgenticFactLedger) string {
+	if ledger.Migration != nil && ledger.Migration.Status != "" {
+		return string(ledger.Migration.Status)
+	}
+	if ledger.SchemaVersion != nil && *ledger.SchemaVersion == domain.CurrentSchemaVersion {
+		return string(domain.MigrationStatusCompleted)
+	}
+	return "unversioned"
+}
+
+func sessionsByHarness(sessions []domain.SessionFact) (openCode, codex, other []domain.SessionFact) {
+	for _, session := range sessions {
+		switch session.Source {
+		case domain.SourceCodex:
+			codex = append(codex, session)
+		case "", domain.SourceOpenCode:
+			session.Source = domain.SourceOpenCode
+			openCode = append(openCode, session)
+		default:
+			other = append(other, session)
+		}
+	}
+	return openCode, codex, other
+}
+
 // retainStoredFacts restores wire facts that survived the source recovery and
 // policy evaluation. The domain projection does not keep stored evidence refs.
 func (current currentLedgerPreparation) retainStoredFacts(candidate *adapters.AgenticFactLedgerDTO, ledger domain.AgenticFactLedger, refreshedIDs []string, anomaliesEnabled bool) (adapters.FactLedgerHistory, error) {

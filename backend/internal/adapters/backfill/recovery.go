@@ -21,6 +21,18 @@ type sourceRecovery struct {
 	complete    bool
 	updated     bool
 	diagnostics []string
+	reads       map[string]OwnerRefreshCoverage
+	failures    map[string]error
+	failure     error
+}
+
+func newSourceRecovery(stored []domain.SessionFact) sourceRecovery {
+	return sourceRecovery{
+		sessions: append([]domain.SessionFact(nil), stored...),
+		complete: len(stored) > 0,
+		reads:    make(map[string]OwnerRefreshCoverage),
+		failures: make(map[string]error),
+	}
 }
 
 func storedTreeRoots(sessions []domain.SessionFact) []domain.SessionFact {
@@ -38,9 +50,12 @@ func storedTreeRoots(sessions []domain.SessionFact) []domain.SessionFact {
 }
 
 func (e *BackfillEngine) recoverCodex(ctx context.Context, stored []domain.SessionFact, home, user string, protected map[string]bool) sourceRecovery {
-	out := sourceRecovery{sessions: append([]domain.SessionFact(nil), stored...), complete: len(stored) > 0}
+	out := newSourceRecovery(stored)
 	roots := append(storedTreeRoots(stored), stored...)
-	covered := make(map[string]bool)
+	previous := make(map[string]domain.SessionFact, len(stored))
+	for _, owner := range stored {
+		previous[owner.ID] = owner
+	}
 	if len(roots) == 0 {
 		out.complete = false
 		out.diagnostics = append(out.diagnostics, "Codex owner tree unavailable or ambiguous")
@@ -50,26 +65,23 @@ func (e *BackfillEngine) recoverCodex(ctx context.Context, stored []domain.Sessi
 			out.complete = false
 			return out
 		}
-		if covered[root.ID] {
+		if _, covered := out.reads[root.ID]; covered {
 			continue
 		}
 		var source domain.SourceEvents
-		fresh, diagnostics, err := e.readCodexOwners(ctx, root.ID, home, &source)
-		if len(diagnostics) > 0 {
+		previousDiagnostics := len(out.diagnostics)
+		fresh, err := e.readCodexOwners(ctx, root.ID, home, &source, &out)
+		if len(out.diagnostics) > previousDiagnostics {
 			out.complete = false
-			out.diagnostics = append(out.diagnostics, diagnostics...)
 		}
 
 		if err != nil {
 			out.complete = false
+			out.failures[root.ID] = err
 			out.diagnostics = append(out.diagnostics, fmt.Sprintf("Codex tree %s retained: %v", root.ID, err))
 			continue
 		}
 		accepted := []domain.SessionFact{}
-		previous := make(map[string]domain.SessionFact)
-		for _, owner := range stored {
-			previous[owner.ID] = owner
-		}
 		for _, owner := range fresh {
 			if protected[owner.ID] {
 				out.complete = false
@@ -78,6 +90,7 @@ func (e *BackfillEngine) recoverCodex(ctx context.Context, stored []domain.Sessi
 			}
 			if old, known := previous[owner.ID]; known && ((old.ParentID == nil) != (owner.ParentID == nil) || old.ParentID != nil && owner.ParentID != nil && *old.ParentID != *owner.ParentID) {
 				out.complete = false
+				out.failures[owner.ID] = errors.New("source parent linkage changed")
 				out.diagnostics = append(out.diagnostics, fmt.Sprintf("Codex owner %s retained: source parent linkage changed", owner.ID))
 				continue
 			}
@@ -90,6 +103,7 @@ func (e *BackfillEngine) recoverCodex(ctx context.Context, stored []domain.Sessi
 		acceptedIDs := make(map[string]bool, len(fresh))
 		for _, owner := range fresh {
 			acceptedIDs[owner.ID] = true
+			out.accept(owner, previous[owner.ID])
 		}
 		acceptedSource := domain.SourceEvents{}
 		for _, id := range source.CompleteSessionIDs {
@@ -105,13 +119,10 @@ func (e *BackfillEngine) recoverCodex(ctx context.Context, stored []domain.Sessi
 		out.source = domain.MergeSourceEvents(out.source, acceptedSource)
 		resolveCodexSessionUsers(fresh, stored, user)
 		replaceRecoveredOwners(&out.sessions, fresh)
-		for _, session := range fresh {
-			covered[session.ID] = true
-		}
 		out.updated = true
 	}
 	for _, old := range stored {
-		if !covered[old.ID] {
+		if _, covered := out.reads[old.ID]; !covered {
 			out.complete = false
 			out.diagnostics = append(out.diagnostics, fmt.Sprintf("Codex stored session %s not recovered", old.ID))
 		}
@@ -119,13 +130,12 @@ func (e *BackfillEngine) recoverCodex(ctx context.Context, stored []domain.Sessi
 	return out
 }
 
-func (e *BackfillEngine) readCodexOwners(ctx context.Context, root, home string, source ...*domain.SourceEvents) ([]domain.SessionFact, []string, error) {
-	diagnostics := []string{}
+func (e *BackfillEngine) readCodexOwners(ctx context.Context, root, home string, source *domain.SourceEvents, recovery *sourceRecovery) ([]domain.SessionFact, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, diagnostics, err
+		return nil, err
 	}
 	if e.budget == nil || e.budget.bytes < 1 || (e.budget.sessions < 1 && len(e.budget.codexSeen) == 0) {
-		return nil, diagnostics, errSourceBudget
+		return nil, errSourceBudget
 	}
 	if e.budget.codexSeen == nil {
 		e.budget.codexSeen = make(map[string]bool)
@@ -136,33 +146,43 @@ func (e *BackfillEngine) readCodexOwners(ctx context.Context, root, home string,
 	e.budget.sessions -= budget.SessionsRead - seen
 	e.budget.bytes -= budget.SourceBytesRead
 	if err != nil {
-		return nil, diagnostics, fmt.Errorf("discovering source: %w", err)
+		if errors.Is(err, codex.ErrDiscoveryBudget) {
+			return nil, errSourceBudget
+		}
+		return nil, fmt.Errorf("discovering source: %w", err)
 	}
 	if len(paths) == 0 {
-		return nil, diagnostics, fmt.Errorf("source rollout unavailable")
+		return nil, errOwnerUnavailable
 	}
 	transcripts := make([]codex.Transcript, 0, len(paths))
+	var parseFailure error
 	for _, p := range paths {
 		t, err := e.budget.parseCodex(ctx, p, e.snapshotCutoff)
 		if ctxErr := ctx.Err(); ctxErr != nil {
-			return nil, diagnostics, errors.Join(ctxErr, err)
+			return nil, errors.Join(ctxErr, err)
 		}
 		if err != nil {
-			diagnostics = append(diagnostics, fmt.Sprintf("Codex source owner retained after parse failure: %v", err))
+			recovery.diagnostics = append(recovery.diagnostics, fmt.Sprintf("Codex source owner retained after parse failure: %v", err))
+			parseFailure = err
+			if errors.Is(err, errSourceBudget) {
+				recovery.failure = err
+			}
 			continue
 		}
 		if len(t.Warnings) > 0 {
-			diagnostics = append(diagnostics, fmt.Sprintf("Codex owner %s is incomplete; previous snapshot retained: %s", t.ThreadID, strings.Join(t.Warnings, "; ")))
+			parseFailure = fmt.Errorf("incomplete Codex source: %s", strings.Join(t.Warnings, "; "))
+			recovery.failures[t.ThreadID] = parseFailure
+			recovery.diagnostics = append(recovery.diagnostics, fmt.Sprintf("Codex owner %s is incomplete; previous snapshot retained: %s", t.ThreadID, strings.Join(t.Warnings, "; ")))
 			continue
 		}
 		transcripts = append(transcripts, t)
 	}
 	if len(transcripts) == 0 {
-		return nil, diagnostics, fmt.Errorf("no complete Codex owners available")
+		return nil, fmt.Errorf("no complete Codex owners available: %w", parseFailure)
 	}
 	combined, err := codex.CombineTranscriptsWithPolicyContext(ctx, transcripts)
 	if err != nil {
-		return nil, diagnostics, fmt.Errorf("grouping source: %w", err)
+		return nil, fmt.Errorf("grouping source: %w", err)
 	}
 	var policies []domain.GenerationPolicy
 	if e.generationPolicy != nil {
@@ -170,16 +190,14 @@ func (e *BackfillEngine) readCodexOwners(ctx context.Context, root, home string,
 	}
 	fresh, err := combined.SessionFacts(policies...)
 	if err := errors.Join(ctx.Err(), err); err != nil {
-		return nil, diagnostics, fmt.Errorf("extracting source: %w", err)
+		return nil, fmt.Errorf("extracting source: %w", err)
 	}
-	if len(source) > 0 {
-		events := domain.SourceEvents{Events: combined.Events}
-		for _, owner := range fresh {
-			events.CompleteSessionIDs = append(events.CompleteSessionIDs, owner.ID)
-		}
-		*source[0] = domain.MergeSourceEvents(*source[0], events)
+	events := domain.SourceEvents{Events: combined.Events}
+	for _, owner := range fresh {
+		events.CompleteSessionIDs = append(events.CompleteSessionIDs, owner.ID)
 	}
-	return fresh, diagnostics, nil
+	*source = domain.MergeSourceEvents(*source, events)
+	return fresh, nil
 }
 
 func discoverOpenCodeTreeIDs(ctx context.Context, db *sql.DB, table, root string, limit int) (ids []string, resultErr error) {
@@ -201,7 +219,7 @@ func discoverOpenCodeTreeIDs(ctx context.Context, db *sql.DB, table, root string
 		return nil, fmt.Errorf("iterating source descendants: %w", err)
 	}
 	if len(ids) == 0 {
-		return nil, fmt.Errorf("source tree unavailable")
+		return nil, errOwnerUnavailable
 	}
 	return ids, nil
 }
@@ -218,6 +236,11 @@ func readOpenCodeOwner(ctx context.Context, db *sql.DB, id, user string, cutoff 
 		return nil, err
 	}
 	budget.bytes -= bytes
+	if len(fresh) == 0 && bytes == 0 {
+		// A missing exact ID incurred only a metadata lookup, no owner snapshot.
+		budget.sessions++
+		return nil, errOwnerUnavailable
+	}
 	if len(fresh) != 1 || fresh[0].ID != id {
 		return nil, fmt.Errorf("exact source owner %s unavailable", id)
 	}
@@ -225,15 +248,17 @@ func readOpenCodeOwner(ctx context.Context, db *sql.DB, id, user string, cutoff 
 }
 
 func recoverOpenCodeAt(ctx context.Context, db *sql.DB, stored []domain.SessionFact, user, ticket string, workspacePaths []string, allowFallbacks bool, cutoff time.Time, budget *sourceReadBudget, policy *domain.GenerationPolicy, protected map[string]bool) sourceRecovery {
-	out := sourceRecovery{sessions: append([]domain.SessionFact(nil), stored...), complete: len(stored) > 0}
+	out := newSourceRecovery(stored)
 	if db == nil {
 		out.complete = false
+		out.failure = errors.New("OpenCode source unavailable")
 		out.diagnostics = append(out.diagnostics, "OpenCode source unavailable; stored trees retained")
 		return out
 	}
 	table, err := opencode.SessionTableContext(ctx, db)
 	if err != nil {
 		out.complete = false
+		out.failure = err
 		out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode discovery failed: %v", err))
 		return out
 	}
@@ -241,57 +266,96 @@ func recoverOpenCodeAt(ctx context.Context, db *sql.DB, stored []domain.SessionF
 		out.complete = false
 		out.diagnostics = append(out.diagnostics, "OpenCode owner history unavailable; no exact selected-source owners")
 	}
-	covered := make(map[string]bool)
-	attempted := make(map[string]bool)
-	previous := make(map[string]domain.SessionFact)
+	visited := make(map[string]bool, len(stored))
+	previous := make(map[string]domain.SessionFact, len(stored))
 	for _, owner := range stored {
 		previous[owner.ID] = owner
 	}
-	for _, root := range stored {
+	readOwner := func(id string) {
+		visited[id] = true
+		if protected[id] {
+			out.complete = false
+			out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s conflicts with another recorded harness; history retained", id))
+			return
+		}
+		var source domain.SourceEvents
+		fresh, err := readOpenCodeOwner(ctx, db, id, user, cutoff, budget, policy, &source)
+		if err != nil {
+			out.complete = false
+			out.failures[id] = err
+			out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s previous snapshot retained after incomplete extraction: %v", id, err))
+			return
+		}
+		old, known := previous[id]
+		if known && !sameParent(old.ParentID, fresh[0].ParentID) {
+			out.complete = false
+			out.failures[id] = errors.New("source parent linkage changed")
+			out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s retained: parent linkage changed", id))
+			return
+		}
+		out.source = domain.MergeSourceEvents(out.source, source)
+		out.accept(fresh[0], old)
+		replaceRecoveredOwners(&out.sessions, fresh)
+		out.updated = true
+	}
+
+	// Give exact recorded owners the available snapshot budget before looking
+	// for unrecorded descendants, regardless of their native sort order.
+	for _, owner := range stored {
 		if ctx.Err() != nil {
 			out.complete = false
 			return out
 		}
-		if budget == nil || budget.sessions < 1 || budget.bytes < 1 {
+		readOwner(owner.ID)
+	}
+	if budget == nil {
+		return out
+	}
+	discovered := make(map[string]bool)
+	for _, root := range append(storedTreeRoots(stored), stored...) {
+		if ctx.Err() != nil {
 			out.complete = false
-			out.diagnostics = append(out.diagnostics, errSourceBudget.Error())
-			break
+			return out
 		}
-		ids, discoveryErr := discoverOpenCodeTreeIDs(ctx, db, table, root.ID, budget.discoveryLimit())
+		if discovered[root.ID] {
+			continue
+		}
+		discovered[root.ID] = true
+		limit := budget.discoveryLimit(len(visited))
+		ids, discoveryErr := discoverOpenCodeTreeIDs(ctx, db, table, root.ID, limit)
 		if discoveryErr != nil {
 			out.complete = false
-			out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s retained: %v", root.ID, discoveryErr))
+			out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s descendant discovery failed: %v", root.ID, discoveryErr))
 			continue
 		}
 		for _, id := range ids {
+			if len(ids) < limit {
+				discovered[id] = true
+			}
 			if ctx.Err() != nil {
 				out.complete = false
 				return out
 			}
-			if attempted[id] {
+			if visited[id] {
 				continue
 			}
-			attempted[id] = true
-			var source domain.SourceEvents
-			fresh, readErr := readOpenCodeOwner(ctx, db, id, user, cutoff, budget, policy, &source)
-			if readErr != nil || len(fresh) != 1 || fresh[0].ID != id {
+			if budget.sessions < 1 || budget.bytes < 1 {
 				out.complete = false
-				out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s previous snapshot retained after incomplete extraction: %v", id, readErr))
-				continue
+				out.failure = errSourceBudget
+				break
 			}
-			if old, known := previous[id]; known && ((old.ParentID == nil) != (fresh[0].ParentID == nil) || old.ParentID != nil && fresh[0].ParentID != nil && *old.ParentID != *fresh[0].ParentID) {
-				out.complete = false
-				out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s retained: parent linkage changed", id))
-				continue
-			}
-			out.source = domain.MergeSourceEvents(out.source, source)
-			replaceRecoveredOwners(&out.sessions, fresh)
-			covered[id] = true
-			out.updated = true
+			readOwner(id)
+		}
+		if len(ids) == limit {
+			out.complete = false
+			out.failure = errSourceBudget
 		}
 	}
+	if isSourceBudgetError(out.failure) {
+		out.diagnostics = append(out.diagnostics, errSourceBudget.Error())
+	}
 	for _, old := range stored {
-		if !covered[old.ID] {
+		if _, covered := out.reads[old.ID]; !covered {
 			out.complete = false
 			out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode stored session %s not recovered", old.ID))
 		}
@@ -307,6 +371,7 @@ func recoverOpenCodeAt(ctx context.Context, db *sql.DB, stored []domain.SessionF
 		if err := validateRecoveryDiscoveryBudget(ctx, db, table, budget); err != nil {
 			out.diagnostics = append(out.diagnostics, err.Error())
 			out.complete = false
+			out.failure = err
 			return out
 		}
 		sid, err := opencode.DiscoverRootSessionForRecoveryContext(ctx, db, ticket, workspacePaths, 0, 0)
@@ -316,7 +381,7 @@ func recoverOpenCodeAt(ctx context.Context, db *sql.DB, stored []domain.SessionF
 			return out
 		}
 		if sid != nil {
-			ids, err := discoverOpenCodeTreeIDs(ctx, db, table, *sid, budget.discoveryLimit())
+			ids, err := discoverOpenCodeTreeIDs(ctx, db, table, *sid, budget.discoveryLimit(0))
 			if err != nil {
 				out.diagnostics = append(out.diagnostics, fmt.Sprintf("heuristic source tree unavailable: %v", err))
 				return out
@@ -337,6 +402,7 @@ func recoverOpenCodeAt(ctx context.Context, db *sql.DB, stored []domain.SessionF
 				}
 				out.sessions = append(out.sessions, fresh...)
 				out.source = domain.MergeSourceEvents(out.source, source)
+				out.accept(fresh[0], domain.SessionFact{})
 				out.updated = true
 			}
 			if out.updated {
@@ -349,6 +415,13 @@ func recoverOpenCodeAt(ctx context.Context, db *sql.DB, stored []domain.SessionF
 	}
 
 	return out
+}
+
+func sameParent(prior, fresh *string) bool {
+	if prior == nil || fresh == nil {
+		return prior == fresh
+	}
+	return *prior == *fresh
 }
 
 func validateRecoveryDiscoveryBudget(ctx context.Context, db *sql.DB, table string, budget *sourceReadBudget) error {

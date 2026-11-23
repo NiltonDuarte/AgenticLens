@@ -115,6 +115,152 @@ func TestBackfillCancellationKeepsInterruptedWorkspaceBytesAndEarlierCommit(t *t
 	}
 }
 
+func TestBackfillCancellationInSecondHarnessReportsUncommittedFirstRead(t *testing.T) {
+	options, workspace := combinedSourceReadFixture(t)
+	ledgerPath, summaryPath := filepath.Join(workspace, "agentic_metrics.json"), filepath.Join(workspace, "SUMMARY.md")
+	ledger, summary := readBackfillArtifacts(t, workspace)
+	ledgerStamp, summaryStamp := markRefreshFile(t, ledgerPath), markRefreshFile(t, summaryPath)
+	options.DryRun = true
+	control, err := NewEngine().Execute(options)
+	if err != nil || control == nil || len(control.Results) != 1 || len(control.Results[0].Coverage) != 2 || control.Results[0].Coverage[0].Proposed != 1 {
+		t.Fatalf("control must verify a changed OpenCode owner: %+v, %v", control, err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	engine := NewEngine()
+	var codexBytes int64
+	cancelOnCodexDiscoveryRead(engine, cancel, &codexBytes)
+	options.DryRun = false
+	report, err := engine.ExecuteContext(ctx, options)
+	if !errors.Is(err, context.Canceled) || codexBytes == 0 || report == nil || len(report.Results) != 1 {
+		t.Fatalf("expected cancellation during the actual Codex read after OpenCode: %d bytes, report %+v, error %v", codexBytes, report, err)
+	}
+	result := report.Results[0]
+	if !errors.Is(result.Error, context.Canceled) || result.Publication != PublicationFailed || report.RefreshIncomplete != 1 || len(result.Coverage) != 2 {
+		t.Fatalf("workspace did not report interrupted publication: %+v", report)
+	}
+	openCode, codexCoverage := result.Coverage[0], result.Coverage[1]
+	if openCode.Harness != domain.SourceOpenCode || openCode.Refreshed != 0 || openCode.Proposed != 1 || openCode.Retained != 0 ||
+		len(openCode.Owners) != 1 || openCode.Owners[0].SessionID != "local-open" || openCode.Owners[0].Status != OwnerProposed {
+		t.Errorf("interruption hid the verified but uncommitted OpenCode change: %+v", openCode)
+	}
+	if codexCoverage.Harness != domain.SourceCodex || codexCoverage.Retained != 1 || len(codexCoverage.Owners) != 1 || codexCoverage.Owners[0].SessionID != "local-codex" ||
+		codexCoverage.Owners[0].Status != OwnerRetained || !strings.Contains(codexCoverage.Owners[0].Reason, context.Canceled.Error()) {
+		t.Errorf("interrupted Codex owner did not preserve its accepted facts and reason: %+v", codexCoverage)
+	}
+	assertExplicitWrites(t, report, false, false)
+	assertRefreshFile(t, ledgerPath, ledger, ledgerStamp)
+	assertRefreshFile(t, summaryPath, summary, summaryStamp)
+}
+
+func TestBackfillReportsVerifiedReadsWhenAnomalyPolicyPreventsComparison(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		interrupted bool
+	}{
+		{name: "both sources read"},
+		{name: "interrupted during Codex discovery", interrupted: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			options, workspace := combinedSourceReadFixture(t)
+			setRefreshFixturePolicy(t, options.Project, "  error_rate_min_calls: 7\n", "")
+			ledgerPath, summaryPath := filepath.Join(workspace, "agentic_metrics.json"), filepath.Join(workspace, "SUMMARY.md")
+			ledger, summary := readBackfillArtifacts(t, workspace)
+			ledgerStamp, summaryStamp := markRefreshFile(t, ledgerPath), markRefreshFile(t, summaryPath)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			engine := NewEngine()
+			var codexBytes int64
+			if tc.interrupted {
+				cancelOnCodexDiscoveryRead(engine, cancel, &codexBytes)
+			}
+			report, err := engine.ExecuteContext(ctx, options)
+			if tc.interrupted {
+				if !errors.Is(err, context.Canceled) || codexBytes == 0 {
+					t.Fatalf("expected native Codex cancellation after bytes read: bytes=%d error=%v", codexBytes, err)
+				}
+			} else if err != nil {
+				t.Fatalf("late policy rejection should be a per-ticket failure: %v", err)
+			}
+			if report == nil || len(report.Results) != 1 || len(report.Coverage) != 2 {
+				t.Fatalf("late policy rejection must retain the two selected harness reports: %+v", report)
+			}
+			result := report.Results[0]
+			if result.Error == nil || !strings.Contains(result.Error.Error(), "error_rate_min_calls") || result.Publication != PublicationFailed || len(result.Coverage) != 2 {
+				t.Fatalf("expected anomaly policy rejection after source reads: %+v", result)
+			}
+			if tc.interrupted && !errors.Is(result.Error, context.Canceled) {
+				t.Errorf("policy failure obscured the workspace cancellation: %v", result.Error)
+			}
+			assertVerifiedUncomparedOwner(t, result.Coverage[0], domain.SourceOpenCode, "local-open")
+			if report.Coverage[0].Harness != domain.SourceOpenCode || report.Coverage[0].RefreshCounts != result.Coverage[0].RefreshCounts {
+				t.Errorf("batch counts lost OpenCode verification: %+v", report.Coverage)
+			}
+			if tc.interrupted {
+				codexCoverage := result.Coverage[1]
+				if codexCoverage.Harness != domain.SourceCodex || codexCoverage.RefreshCounts != (RefreshCounts{Recorded: 1, Retained: 1}) ||
+					len(codexCoverage.Owners) != 1 || codexCoverage.Owners[0].SessionID != "local-codex" || codexCoverage.Owners[0].Status != OwnerRetained ||
+					!strings.Contains(codexCoverage.Owners[0].Reason, context.Canceled.Error()) {
+					t.Errorf("interrupted Codex owner must still report retained facts: %+v", codexCoverage)
+				}
+			} else {
+				assertVerifiedUncomparedOwner(t, result.Coverage[1], domain.SourceCodex, "local-codex")
+			}
+			assertExplicitWrites(t, report, false, false)
+			assertRefreshFile(t, ledgerPath, ledger, ledgerStamp)
+			assertRefreshFile(t, summaryPath, summary, summaryStamp)
+		})
+	}
+}
+
+func assertVerifiedUncomparedOwner(t *testing.T, coverage HarnessRefreshCoverage, harness domain.SourceHarness, id string) {
+	t.Helper()
+	if coverage.Harness != harness || coverage.RefreshCounts != (RefreshCounts{Recorded: 1, VerifiedUncompared: 1}) || len(coverage.Owners) != 1 {
+		t.Fatalf("expected one verified owner with an unavailable comparison in %s: %+v", harness, coverage)
+	}
+	owner := coverage.Owners[0]
+	if owner.SessionID != id || owner.Status != OwnerVerifiedUncompared || owner.Skills != CollectionEmpty || owner.Tasks != CollectionEmpty {
+		t.Errorf("expected the native read to retain its verified empty collections: %+v", owner)
+	}
+}
+
+func combinedSourceReadFixture(t *testing.T) (BackfillOptions, string) {
+	t.Helper()
+	project := newBackfillProject(t)
+	ticket, version := "TEST-CANCEL-SECOND-HARNESS", domain.CurrentSchemaVersion
+	workspace := createTestWorkspace(t, project, ticket, domain.AgenticFactLedger{
+		SchemaVersion: &version, TicketID: &ticket,
+		Sessions: []domain.SessionFact{
+			{ID: "local-open", Source: domain.SourceOpenCode, Tools: []domain.SessionToolFact{{Name: "historical", Calls: 1}}},
+			{ID: "local-codex", Source: domain.SourceCodex},
+		},
+	})
+	dbPath := filepath.Join(project, "source.db")
+	setupMockOpenCodeDB(t, dbPath, "local-open", ticket)
+	writeBackfillRollout(t, filepath.Join(project, "sessions"), "local-codex", "", "coder", "native-model", map[string]int{"fresh": 2}, "")
+	return BackfillOptions{Project: project, TicketID: ticket, Source: "both", DBPath: dbPath, CodexHome: project,
+		RecomputeDB: true, UpdateSummaries: true, SnapshotCutoff: time.Now().Add(time.Second)}, workspace
+}
+
+func cancelOnCodexDiscoveryRead(engine *BackfillEngine, cancel context.CancelFunc, bytesRead *int64) {
+	engine.discoverCodexRollouts = func(opts codex.DiscoveryOptions) ([]string, error) {
+		budget := opts.Budget
+		if budget == nil || budget.Context == nil {
+			return nil, errors.New("native discovery lacks its source budget or context")
+		}
+		before := budget.SourceBytesRead
+		budget.Context = discoveryReadContext{Context: budget.Context, afterRead: func() {
+			*bytesRead = budget.SourceBytesRead - before
+			if *bytesRead > 0 {
+				cancel()
+			}
+		}}
+		return codex.DiscoverRolloutPaths(opts)
+	}
+}
+
 func readBackfillArtifacts(t *testing.T, dir string) (ledger, summary []byte) {
 	t.Helper()
 	ledger, err := os.ReadFile(filepath.Join(dir, "agentic_metrics.json"))

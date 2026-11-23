@@ -3,9 +3,11 @@ package backfill
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 
 	"agenticlens/internal/adapters/codex"
+	"agenticlens/internal/adapters/opencode"
 )
 
 var errSourceBudget = errors.New("configured source recovery budget reached; retained owners remain incomplete")
@@ -51,10 +53,15 @@ func (b *sourceReadBudget) parseCodex(ctx context.Context, path string, cutoff t
 	return transcript, err
 }
 
-func (b *sourceReadBudget) discoveryLimit() int {
-	limit := b.sessions
-	if limit < int(^uint(0)>>1) {
-		limit++
+// Include previously visited IDs in the bounded metadata page, along with one
+// extra row to detect that the remaining snapshot budget cannot cover the tree.
+func (b *sourceReadBudget) discoveryLimit(visited int) int {
+	if b.sessions >= math.MaxInt-visited {
+		return math.MaxInt
 	}
-	return limit
+	return b.sessions + visited + 1
+}
+
+func isSourceBudgetError(err error) bool {
+	return errors.Is(err, errSourceBudget) || errors.Is(err, codex.ErrDiscoveryBudget) || errors.Is(err, opencode.ErrCaptureBudget)
 }
