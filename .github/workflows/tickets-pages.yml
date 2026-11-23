@@ -115,6 +115,7 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write
+      actions: read
       pages: write
       id-token: write
     environment:
@@ -167,7 +168,21 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ runner.temp }}/portal-public
-      # An upload can finish before the artifact service makes it readable.
+      # The Pages artifact can take a few seconds to appear in the run artifact index.
+      - name: Wait for Pages artifact indexing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 20); do
+            if gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" \
+              --jq '[.artifacts[] | select(.name == "github-pages" and (.expired | not))] | length > 0' \
+              2>/dev/null | grep -qx true; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Pages artifact did not appear in the run artifact index within 60 seconds" >&2
+          exit 1
       - name: Confirm Pages artifact is readable
         uses: actions/download-artifact@v4
         with:
