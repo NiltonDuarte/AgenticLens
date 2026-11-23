@@ -14,10 +14,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-95
   - **File**: [AL-94](to-do/AL-94%20make%20explicit%20backfill%20repeatable%20and%20report%20refresh%20coverage.md)
 
-- **AL-71**: Keep dashboard requests and live data reliable
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-71](to-do/AL-71%20keep%20dashboard%20requests%20and%20live%20data%20reliable.md)
-
 - **AL-72**: Make dashboard interactions accurate and accessible
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-72](to-do/AL-72%20make%20dashboard%20interactions%20accurate%20and%20accessible.md)
@@ -62,6 +58,12 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **REV-7**: Review source read guarantees
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [REV-7](to-do/REV-7%20review%20source%20read%20guarantees.md)
+
+## In Progress
+
+- **AL-71**: Keep dashboard requests and live data reliable
+  - **Status**: In Progress; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-71](to-do/AL-71%20keep%20dashboard%20requests%20and%20live%20data%20reliable.md)
 
 ## Blocked
 

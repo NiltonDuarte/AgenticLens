@@ -1,9 +1,26 @@
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, act, within } from '../test/render';
 import { MetricProgression } from './MetricProgression';
 import * as apiClient from '../api/client';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
+import workspaceWire from '../test/fixtures/progression-workspaces-wire.json';
+import type { AgenticMetricsLedger } from '../domain/types';
+
+function deferredLedgers() {
+  let resolve!: (result: apiClient.ApiResponse<readonly AgenticMetricsLedger[]>) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<apiClient.ApiResponse<readonly AgenticMetricsLedger[]>>((ok, fail) => {
+    resolve = ok;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+
+function kpiValue(title: string): Element | null | undefined {
+  return screen.getByText(title).closest('.kpi-card')?.querySelector('.kpi-value');
+}
 async function selectTagKey(user: ReturnType<typeof userEvent.setup>, key: string): Promise<void> {
   if (!screen.queryByRole('dialog', { name: 'Ticket tag filters' })) {
     await user.click(screen.getByRole('button', { name: 'Ticket tags filter' }));
@@ -14,6 +31,121 @@ async function selectTagKey(user: ReturnType<typeof userEvent.setup>, key: strin
 describe('MetricProgression View Component', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
+    });
+    it.each([
+        ['success', 'before'],
+        ['failure', 'before'],
+        ['success', 'after'],
+        ['failure', 'after'],
+    ] as const)('ignores obsolete %s settling %s the current filter response', async (outcome, order) => {
+        const older = deferredLedgers();
+        const newer = deferredLedgers();
+        const base = mockAgenticMetricsLedgers['AL-1']!;
+        const selected = { ...base, facts: { ...base.facts, tags: { team: 'current' } } };
+        const obsolete = { ...base, facts: { ...base.facts, tags: { team: 'obsolete' } } };
+        const request = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
+            .mockReturnValueOnce(older.promise)
+            .mockReturnValueOnce(newer.promise);
+        render(<MetricProgression />);
+        fireEvent.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Feature' }));
+        expect(request).toHaveBeenCalledTimes(2);
+
+        const settleOlder = () => act(async () => {
+            if (outcome === 'success') {
+                older.resolve({ data: [obsolete], diagnostics: [{ ticket_id: 'AL-OLD', message: 'Obsolete diagnostic' }] });
+            } else {
+                older.reject(new Error('Obsolete error'));
+            }
+        });
+        if (order === 'before') {
+            await settleOlder();
+            expect(screen.getByText(/aggregating longitudinal telemetry progression/i)).toBeInTheDocument();
+            expect(screen.queryByText('Total Invocations')).not.toBeInTheDocument();
+        }
+        await act(async () => newer.resolve({
+            data: [selected], diagnostics: [{ ticket_id: 'AL-NEW', message: 'Current diagnostic' }],
+        }));
+        if (order === 'after') await settleOlder();
+        expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveTextContent('AL-NEW: Current diagnostic');
+        expect(screen.getByRole('status')).not.toHaveTextContent('Obsolete diagnostic');
+        expect(screen.queryByText('Obsolete error')).not.toBeInTheDocument();
+        await selectTagKey(userEvent.setup(), 'team');
+        expect(screen.getByRole('checkbox', { name: 'Value: current' })).toBeInTheDocument();
+        expect(screen.queryByRole('checkbox', { name: 'Value: obsolete' })).not.toBeInTheDocument();
+    });
+
+    it('retries the same selection after its failure and ignores the previous mount request', async () => {
+        const initialMount = deferredLedgers();
+        const activeMount = deferredLedgers();
+        const retry = deferredLedgers();
+        const request = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
+            .mockReturnValueOnce(initialMount.promise)
+            .mockReturnValueOnce(activeMount.promise)
+            .mockReturnValueOnce(retry.promise);
+        render(<StrictMode><MetricProgression /></StrictMode>);
+        expect(request).toHaveBeenCalledTimes(2);
+        await act(async () => activeMount.reject(new Error('Current read failed')));
+        expect(screen.getByText('Current read failed')).toBeInTheDocument();
+        await act(async () => initialMount.reject(new Error('Disposed mount read failed')));
+        expect(screen.getByText('Current read failed')).toBeInTheDocument();
+        expect(screen.queryByText('Disposed mount read failed')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Retry Connection' }));
+        expect(request.mock.calls).toEqual([['all'], ['all'], ['all']]);
+        expect(screen.getByText(/aggregating longitudinal telemetry progression/i)).toBeInTheDocument();
+        await act(async () => retry.resolve({ data: [mockAgenticMetricsLedgers['AL-1']!] }));
+        expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+    });
+
+    it('keeps old preset results for an all-matching filter and moves the range only when the anchor leaves', async () => {
+        // The Go handler contract test verifies these exact requests and response rows.
+        const allRows = Object.values(workspaceWire);
+        const responses = new Map<string, readonly unknown[]>([
+            ['/api/workspaces', allRows],
+            ['/api/workspaces?prefix=AL', allRows],
+            ['/api/workspaces?ticket_type=feature&prefix=AL', [workspaceWire['AL-41']]],
+            ['/api/workspaces?window=7d&prefix=AL', []],
+        ]);
+        const fetcher = vi.fn(async (url: string) => {
+            const rows = responses.get(url);
+            if (!rows) throw new Error(`Unexpected workspace URL: ${url}`);
+            return new Response(JSON.stringify(rows), { headers: { 'Content-Type': 'application/json' } });
+        });
+        vi.stubGlobal('fetch', fetcher);
+        try {
+            const { container } = render(<MetricProgression />);
+            await screen.findByText('Total Invocations');
+            fireEvent.click(screen.getByRole('button', { name: '7 Days' }));
+            const assertWindow = (start: string, end: string, buckets: string[], count: string, net: string) => {
+                expect([...container.querySelectorAll('time')].map((el) => el.getAttribute('datetime'))).toEqual([start, end]);
+                const chart = screen.getByText('Financial Spend & Cumulative Trajectory ($ USD)').closest('.trend-card')!;
+                const ticks = [...chart.querySelectorAll('.chart-axis-tick')].map((el) => el.parentElement?.textContent);
+                expect(ticks).toEqual(buckets);
+                expect(kpiValue('Total Invocations')).toHaveTextContent(new RegExp(`^${count}$`));
+                expect(kpiValue('Net Code Delivered')).toHaveTextContent(net);
+            };
+            assertWindow('2000-02-08', '2000-02-15', ['2000-02-15'], '1', '+100');
+
+            fireEvent.click(screen.getByRole('combobox', { name: 'Prefix selector' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'AL' }));
+            await waitFor(() => expect(fetcher).toHaveBeenLastCalledWith('/api/workspaces?prefix=AL'));
+            await act(async () => { await fetcher.mock.results[1]!.value; });
+            assertWindow('2000-02-08', '2000-02-15', ['2000-02-15'], '1', '+100');
+
+            fireEvent.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Feature' }));
+            await waitFor(() => expect(fetcher).toHaveBeenLastCalledWith('/api/workspaces?ticket_type=feature&prefix=AL'));
+            await waitFor(() => assertWindow('2000-01-01', '2000-01-08', ['2000-01-01', '2000-01-08'], '2', '+100'));
+
+            fireEvent.click(screen.getByRole('button', { name: 'Custom' }));
+            fireEvent.change(screen.getByLabelText('End Date and Time'), { target: { value: '2000-01-01T00:00' } });
+            expect(kpiValue('Total Invocations')).toHaveTextContent(/^2$/);
+            expect(kpiValue('Net Code Delivered')).toHaveTextContent('+0');
+            expect(fetcher).toHaveBeenCalledTimes(3);
+        } finally {
+            vi.unstubAllGlobals();
+        }
     });
     it('reconciles tag choices after filtered refetches without losing outside-cohort values', async () => {
         const user = userEvent.setup();

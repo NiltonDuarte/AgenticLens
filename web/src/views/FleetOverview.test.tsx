@@ -18,6 +18,47 @@ describe('FleetOverview View Component', () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: [] });
   });
 
+  it.each(['before', 'after'] as const)('ignores a superseded Fleet pair that settles %s the current pair', async (order) => {
+    type Summary = Awaited<ReturnType<typeof apiClient.fetchFleetSummary>>;
+    type Workspaces = Awaited<ReturnType<typeof apiClient.fetchWorkspaces>>;
+    let completeOldSummary!: (value: Summary) => void;
+    let completeOldWorkspaces!: (value: Workspaces) => void;
+    let completeNewWorkspaces!: (value: Workspaces) => void;
+    const oldSummary = new Promise<Summary>((resolve) => { completeOldSummary = resolve; });
+    const oldWorkspaces = new Promise<Workspaces>((resolve) => { completeOldWorkspaces = resolve; });
+    const newWorkspaces = new Promise<Workspaces>((resolve) => { completeNewWorkspaces = resolve; });
+    const fleet = vi.spyOn(apiClient, 'fetchFleetSummary')
+      .mockReturnValueOnce(oldSummary)
+      .mockResolvedValueOnce({ data: { ...mockFleetSummary, total_invocations: 77 } });
+    const workspaces = vi.spyOn(apiClient, 'fetchWorkspaces')
+      .mockReturnValueOnce(oldWorkspaces)
+      .mockReturnValueOnce(newWorkspaces);
+    const row = mockTicketComparisonRows[0]!;
+    render(<FleetOverview />);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Data' }));
+    expect(fleet.mock.calls).toEqual([['all', undefined, undefined], ['all', undefined, undefined]]);
+    expect(workspaces).toHaveBeenCalledTimes(2);
+    const settleOlder = () => act(async () => {
+      completeOldSummary({ data: { ...mockFleetSummary, total_invocations: 99 } });
+      completeOldWorkspaces({ data: [{ ...row, ticket_id: 'AL-91' }],
+        diagnostics: [{ ticket_id: 'AL-91', message: 'Obsolete pair diagnostic' }] });
+    });
+    if (order === 'before') await settleOlder();
+    expect(screen.getByText('Loading telemetry metrics...')).toBeInTheDocument();
+    expect(screen.queryByText('Invocations')).not.toBeInTheDocument();
+    await act(async () => completeNewWorkspaces({
+      data: [{ ...row, ticket_id: 'AL-92' }],
+      diagnostics: [{ ticket_id: 'AL-92', message: 'Current pair diagnostic' }],
+    }));
+    if (order === 'after') await settleOlder();
+    expect(screen.getByText('Invocations').closest('.kpi-card')?.querySelector('.kpi-value')).toHaveTextContent(/^77$/);
+    const directory = screen.getByRole('region', { name: 'Ticket Directory' });
+    expect(within(directory).getByText('AL-92')).toBeInTheDocument();
+    expect(within(directory).queryByText('AL-91')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('AL-92: Current pair diagnostic');
+    expect(screen.getByRole('status')).not.toHaveTextContent('Obsolete pair diagnostic');
+  });
+
   it('sends ticket tag cohorts to both fleet requests and restores results from empty filters', async () => {
     const user = userEvent.setup();
     const base = mockAgenticMetricsLedgers['AL-1']!;

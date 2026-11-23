@@ -1,12 +1,12 @@
 import { TagFilters } from '../components/TagFilters';
-import { tagChoices, filterLedgersByTags, reconcileTagCatalog, type TagFilter } from '../domain/tags';
+import { tagChoices, filterLedgersByTags, type TagFilter } from '../domain/tags';
 import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { completeCost, costSummaryForAmount, mergeCostSummaries } from '../domain/cost';
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import type { AgenticMetricsLedger, TimeGranularity, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
-import { fetchWorkspaceLedgers } from '../api/client';
+import React, { useEffect, useState, useMemo } from 'react';
+import type { TimeGranularity, TimeWindowPreset } from '../domain/types';
+import { useWorkspaceLedgers } from '../hooks/useWorkspaceLedgers';
 import { WorkspaceLoadWarning } from '../components/WorkspaceLoadWarning';
-import { aggregateMetricsOverTime } from '../domain/progression';
+import { aggregateMetricsOverTime, progressionWindow } from '../domain/progression';
 import {
   combineDistinctPrefixes,
   extractTicketPrefix,
@@ -45,10 +45,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
 }) => {
   const projectConfig = useProjectConfig();
   const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig), [projectConfig]);
-  const [tagCatalog, setTagCatalog] = useState<readonly AgenticMetricsLedger[]>([]);
   const [tagFilters, setTagFilters] = useState<readonly TagFilter[]>([]);
-  const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
-  const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
   const [selectedTicketTypes, setSelectedTicketTypes] = useState<readonly string[]>(['all']);
   const [selectedPrefixes, setSelectedPrefixes] = useState<readonly string[]>(['all']);
@@ -56,46 +53,11 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
   const [preset, setPreset] = useState<TimeWindowPreset>('all');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const hasLoadedRef = useRef(false);
-
-  const loadLedgers = useCallback(async () => {
-    if (!hasLoadedRef.current) {
-      setLoading(true);
-    }
-    setError(null);
-    try {
-      const typesParam =
-        selectedTicketTypes.length === 0 ||
-        (selectedTicketTypes.length === 1 && selectedTicketTypes[0] === 'all')
-          ? undefined
-          : selectedTicketTypes;
-      const prefixesParam =
-        selectedPrefixes.length === 0 ||
-        (selectedPrefixes.length === 1 && selectedPrefixes[0] === 'all')
-          ? undefined
-          : selectedPrefixes.map((prefix) => prefix.slice('prefix:'.length));
-
-      const res =
-        typesParam || prefixesParam
-          ? await fetchWorkspaceLedgers(preset, undefined, undefined, typesParam, prefixesParam)
-          : await fetchWorkspaceLedgers('all');
-      setLedgers(res.data);
-      setTagCatalog((previous) => typesParam || prefixesParam ? reconcileTagCatalog(previous, res.data) : res.data);
-      setDiagnostics(res.diagnostics ?? []);
-      hasLoadedRef.current = true;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch telemetry ledgers';
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedTicketTypes, selectedPrefixes, preset]);
-
-  useEffect(() => {
-    loadLedgers();
-  }, [loadLedgers]);
+  const { ledgers, tagCatalog, diagnostics, loading, error, loadLedgers } = useWorkspaceLedgers(
+    selectedTicketTypes,
+    selectedPrefixes,
+    'Failed to fetch telemetry ledgers',
+  );
 
   // Keep track of distinct workspace prefixes discovered across ledgers
   useEffect(() => {
@@ -126,62 +88,10 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
     return filterLedgersByTags(list, tagFilters);
   }, [tagFilters, ledgers, selectedTicketTypes, selectedPrefixes, projectConfig]);
 
-  // Compute date boundaries based on preset and filtered ledger dates
-  const { startDate, endDate } = useMemo(() => {
-    if (preset === 'all' || filteredLedgers.length === 0) {
-      return { startDate: null, endDate: null };
-    }
-
-    if (preset === 'custom') {
-      const s = customStart.trim() || null;
-      const e = customEnd.trim() || null;
-      return { startDate: s, endDate: e };
-    }
-
-    // Find the latest timestamp across ledgers as the reference anchor
-    let latestMs = 0;
-    for (const l of filteredLedgers) {
-      const ts = l.completed_at ?? l.started_at ?? l.updated_at;
-      const ms = ts ? Date.parse(ts) : NaN;
-      if (!Number.isNaN(ms) && ms > latestMs) {
-        latestMs = ms;
-      }
-    }
-
-    if (latestMs === 0) {
-      return { startDate: null, endDate: null };
-    }
-
-    const refDate = new Date(latestMs);
-
-    if (preset === '1d') {
-      const startMs = refDate.getTime() - 24 * 3600_000;
-      return {
-        startDate: new Date(startMs).toISOString(),
-        endDate: refDate.toISOString(),
-      };
-    }
-
-    const endStr = refDate.toISOString().slice(0, 10);
-
-    let days = 7;
-    if (preset === '30d') days = 30;
-    if (preset === '90d') days = 90;
-
-    const startMs = refDate.getTime() - days * 86_400_000;
-    const startStr = new Date(startMs).toISOString().slice(0, 10);
-
-    return { startDate: startStr, endDate: endStr };
-  }, [preset, filteredLedgers, customStart, customEnd]);
-
-  const isCustomRangeInverted = useMemo(() => {
-    if (preset !== 'custom' || !customStart || !customEnd) {
-      return false;
-    }
-    const s = Date.parse(customStart);
-    const e = Date.parse(customEnd);
-    return !Number.isNaN(s) && !Number.isNaN(e) && s > e;
-  }, [preset, customStart, customEnd]);
+  const { startDate, endDate, isInverted } = useMemo(
+    () => progressionWindow(filteredLedgers, preset, customStart, customEnd),
+    [filteredLedgers, preset, customStart, customEnd],
+  );
 
   // Compute progression buckets using pure domain algorithm
   const buckets = useMemo(() => {
@@ -374,7 +284,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
               aria-label="End Date and Time"
             />
           </label>
-          {isCustomRangeInverted && (
+          {isInverted && (
             <span className="datetime-warning">
               Start datetime cannot be after End datetime.
             </span>
@@ -382,8 +292,12 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
         </div>
       )}
 
+      {preset !== 'custom' && startDate && endDate && !error && (
+        <p>Window: <time dateTime={startDate}>{startDate}</time> to <time dateTime={endDate}>{endDate}</time> (UTC)</p>
+      )}
+
       <WorkspaceLoadWarning diagnostics={diagnostics} />
-      {loading && !hasLoadedRef.current ? (
+      {loading ? (
         <div className="loading-container">
           <div className="loading-spinner" />
           <span className="loading-text">Aggregating longitudinal telemetry progression...</span>

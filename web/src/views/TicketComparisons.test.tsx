@@ -1,6 +1,6 @@
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '../test/render';
+import { render, screen, waitFor, fireEvent, within, act } from '../test/render';
 import { TicketComparisons } from './TicketComparisons';
 import type { SkillFact } from '../domain/types';
 import * as apiClient from '../api/client';
@@ -16,6 +16,40 @@ async function selectTagKey(user: ReturnType<typeof userEvent.setup>, key: strin
 describe('TicketComparisons View Component', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('keeps the rows, tags and diagnostics of the newest filter settlement', async () => {
+    const base = mockAgenticMetricsLedgers['AL-1']!;
+    const tagged = (id: string, team: string) => ({
+      ...base, ticket_id: id, facts: { ...base.facts, tags: { team } },
+    });
+    type Result = Awaited<ReturnType<typeof apiClient.fetchWorkspaceLedgers>>;
+    let settleOlder!: (value: Result) => void;
+    const older = new Promise<Result>((resolve) => { settleOlder = resolve; });
+    const request = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
+      .mockResolvedValueOnce({ data: [tagged('AL-1', 'initial')] })
+      .mockReturnValueOnce(older)
+      .mockResolvedValueOnce({
+        data: [tagged('AL-22', 'current')],
+        diagnostics: [{ ticket_id: 'AL-NEW', message: 'Current diagnostic' }],
+      });
+    render(<TicketComparisons />);
+    await screen.findByRole('button', { name: /AL-1:/ });
+    fireEvent.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Feature' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all Ticket Type' }));
+    expect(request).toHaveBeenCalledTimes(3);
+    await screen.findByRole('button', { name: /AL-22:/ });
+    await act(async () => settleOlder({
+      data: [tagged('AL-11', 'obsolete')],
+      diagnostics: [{ ticket_id: 'AL-OLD', message: 'Obsolete diagnostic' }],
+    }));
+    expect(screen.getByRole('button', { name: /AL-22:/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /AL-11:/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('AL-NEW: Current diagnostic');
+    await selectTagKey(userEvent.setup(), 'team');
+    expect(screen.getByRole('checkbox', { name: 'Value: current' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Value: obsolete' })).not.toBeInTheDocument();
   });
 
   it('reconciles newly recorded tags after a filtered refetch while retaining outside-cohort choices', async () => {

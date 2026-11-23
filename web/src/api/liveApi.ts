@@ -1,6 +1,8 @@
 import type {
   LiveAnomalyAlert,
   LiveAnomalyRule,
+  LiveMessageFact,
+  LivePartFact,
   LiveSessionNode,
   LiveSessionTree,
   LiveTraceView,
@@ -32,6 +34,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || isString(value);
+}
+
+function isOptionalNullableString(value: unknown): value is string | null | undefined {
+  return value === null || value === undefined || isString(value);
+}
+
+function isCount(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
 function isLiveAnomalyRule(value: unknown): value is LiveAnomalyRule {
   return value === 'ConsecutiveToolErrors' || value === 'ToolHighFailureRate' ||
     value === 'ContextCeilingApproach' || value === 'TokenVelocityRunaway' || value === 'ToolThrashing';
@@ -44,15 +62,12 @@ export function parseLiveAnomalyAlert(data: unknown): LiveAnomalyAlert {
     typeof data.message !== 'string' || typeof data.trigger_event !== 'string' || typeof data.timestamp !== 'string') {
     throw new Error('Invalid live anomaly alert');
   }
-  if (data.count !== undefined && data.count !== null &&
-    (typeof data.count !== 'number' || !Number.isSafeInteger(data.count) || data.count < 0)) {
+  const { count, tool_name: toolName, part_id: partId } = data;
+  if (count !== undefined && count !== null && !isCount(count)) {
     throw new Error('Invalid live anomaly count');
   }
-  for (const key of ['tool_name', 'part_id'] as const) {
-    if (data[key] !== undefined && data[key] !== null && typeof data[key] !== 'string') {
-      throw new Error(`Invalid live anomaly ${key}`);
-    }
-  }
+  if (!isOptionalNullableString(toolName)) throw new Error('Invalid live anomaly tool_name');
+  if (!isOptionalNullableString(partId)) throw new Error('Invalid live anomaly part_id');
   return {
     session_id: data.session_id,
     rule_name: data.rule_name,
@@ -60,9 +75,9 @@ export function parseLiveAnomalyAlert(data: unknown): LiveAnomalyAlert {
     message: data.message,
     trigger_event: data.trigger_event,
     timestamp: data.timestamp,
-    ...(data.count !== undefined ? { count: data.count as number | null } : {}),
-    ...(data.tool_name !== undefined ? { tool_name: data.tool_name as string | null } : {}),
-    ...(data.part_id !== undefined ? { part_id: data.part_id as string | null } : {}),
+    ...(count !== undefined ? { count } : {}),
+    ...(toolName !== undefined ? { tool_name: toolName } : {}),
+    ...(partId !== undefined ? { part_id: partId } : {}),
   };
 }
 
@@ -87,13 +102,11 @@ function parseTraceDiagnostics(data: unknown): readonly LiveTraceDiagnostic[] | 
 
 function isLiveSessionNode(data: unknown): data is LiveSessionNode {
   if (!isRecord(data) || !['id', 'agent', 'role', 'model', 'title', 'time_created', 'time_updated', 'status']
-    .every((key) => typeof data[key] === 'string') ||
+    .every((key) => isString(data[key])) ||
     typeof data.ticket_confidence !== 'number' || !Number.isFinite(data.ticket_confidence) ||
     !Array.isArray(data.sub_sessions) || !data.sub_sessions.every(isLiveSessionNode) ||
     !Array.isArray(data.anomalies)) return false;
-  for (const key of ['parent_id', 'guessed_ticket_id']) {
-    if (data[key] !== undefined && data[key] !== null && typeof data[key] !== 'string') return false;
-  }
+  if (!isOptionalNullableString(data.parent_id) || !isOptionalNullableString(data.guessed_ticket_id)) return false;
   data.anomalies.forEach(parseLiveAnomalyAlert);
   return true;
 }
@@ -101,8 +114,7 @@ function isLiveSessionNode(data: unknown): data is LiveSessionNode {
 /** A successful current API response is measured data; malformed input is unavailable. */
 export function parseLiveSessionTree(data: unknown): LiveSessionTree {
   if (!isRecord(data) || !Array.isArray(data.root_sessions) || !data.root_sessions.every(isLiveSessionNode) ||
-    typeof data.last_refreshed_at !== 'string' || typeof data.total_active_sessions !== 'number' ||
-    !Number.isSafeInteger(data.total_active_sessions) || data.total_active_sessions < 0 ||
+    typeof data.last_refreshed_at !== 'string' || !isCount(data.total_active_sessions) ||
     !Array.isArray(data.active_anomalies)) throw new Error('Invalid live session tree');
   return {
     root_sessions: data.root_sessions,
@@ -112,33 +124,67 @@ export function parseLiveSessionTree(data: unknown): LiveSessionTree {
   };
 }
 
-export function parseLiveTraceView(data: unknown, fallbackSessionId: string): LiveTraceView {
-  if (data && typeof data === 'object') {
-    const obj = data as Partial<LiveTraceView>;
-    const relationships = parseRelationships(obj.relationships);
-    const diagnostics = parseTraceDiagnostics(obj.diagnostics);
-    return {
-      session_id: typeof obj.session_id === 'string' && obj.session_id.length > 0
-        ? obj.session_id
-        : fallbackSessionId,
-      messages: Array.isArray(obj.messages) ? obj.messages : [],
-      total_tool_calls: typeof obj.total_tool_calls === 'number' ? obj.total_tool_calls : 0,
-      failed_tool_calls: typeof obj.failed_tool_calls === 'number' ? obj.failed_tool_calls : 0,
-      recent_errors: Array.isArray(obj.recent_errors) ? obj.recent_errors : [],
-      anomalies: Array.isArray(obj.anomalies) ? obj.anomalies.map(parseLiveAnomalyAlert) : [],
-      ...(relationships !== undefined ? { relationships } : {}),
-      ...(diagnostics !== undefined ? { diagnostics } : {}),
-    };
-  }
+function isLivePart(value: unknown): value is LivePartFact {
+  if (!isRecord(value)) return false;
+  const { severity } = value;
+  return ['id', 'type', 'status', 'input_snippet', 'output_snippet'].every((key) => isString(value[key])) &&
+    typeof value.is_error === 'boolean' &&
+    ['skill_name', 'child_session_id', 'subagent_type']
+      .every((key) => isOptionalString(value[key])) &&
+    isOptionalNullableString(value.tool_name) && isOptionalNullableString(value.error_message) &&
+    (severity === 'none' || severity === 'low' || severity === 'medium' || severity === 'high');
+}
 
+function isLiveMessage(value: unknown): value is LiveMessageFact {
+  return isRecord(value) &&
+    ['id', 'role', 'content', 'timestamp'].every((key) => isString(value[key])) &&
+    ['context_tokens', 'input_tokens', 'output_tokens', 'cache_read_tokens', 'reasoning_tokens', 'total_tokens']
+      .every((key) => isCount(value[key])) &&
+    isOptionalNullableString(value.reasoning_content) &&
+    Array.isArray(value.parts) && value.parts.every(isLivePart);
+}
+
+export function parseLiveTraceView(data: unknown): LiveTraceView {
+  if (!isRecord(data) || !isString(data.session_id) || data.session_id.trim() === '' ||
+    !Array.isArray(data.messages) || !isCount(data.total_tool_calls) || !isCount(data.failed_tool_calls) ||
+    !Array.isArray(data.anomalies)) {
+    throw new Error('Invalid live trace');
+  }
+  if (!data.messages.every(isLiveMessage)) throw new Error('Invalid live trace message or part');
+  // The native producer emits null for an empty recent-errors slice.
+  const recentErrors = data.recent_errors === null ? [] : data.recent_errors;
+  if (!Array.isArray(recentErrors) || !recentErrors.every(isLivePart)) {
+    throw new Error('Invalid live trace recent errors');
+  }
+  const relationships = parseRelationships(data.relationships);
+  const diagnostics = parseTraceDiagnostics(data.diagnostics);
   return {
-    session_id: fallbackSessionId,
-    messages: [],
-    total_tool_calls: 0,
-    failed_tool_calls: 0,
-    recent_errors: [],
-    anomalies: [],
+    session_id: data.session_id,
+    messages: data.messages,
+    total_tool_calls: data.total_tool_calls,
+    failed_tool_calls: data.failed_tool_calls,
+    recent_errors: recentErrors,
+    anomalies: data.anomalies.map(parseLiveAnomalyAlert),
+    ...(relationships !== undefined ? { relationships } : {}),
+    ...(diagnostics !== undefined ? { diagnostics } : {}),
   };
+}
+
+export class LivePayloadError extends Error {
+  constructor(readonly scope: 'tree' | 'trace', cause: unknown, readonly sessionId?: string) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+  }
+}
+
+function parseStreamTrace(raw: string): LiveTraceView {
+  let payload: unknown;
+  try {
+    payload = JSON.parse(raw);
+    return parseLiveTraceView(payload);
+  } catch (cause: unknown) {
+    const id = isRecord(payload) ? payload.session_id : undefined;
+    throw new LivePayloadError('trace', cause, isString(id) && id.trim() ? id : undefined);
+  }
 }
 
 // A server response can describe an unsupported or failing source even when
@@ -170,8 +216,12 @@ export async function fetchLiveSessionTree(): Promise<LiveSessionTree> {
     if (!res.ok) {
       throw await liveResponseError(res, 'Failed to fetch live sessions');
     }
-    const data: unknown = await res.json();
-    return parseLiveSessionTree(data);
+    try {
+      const data: unknown = await res.json();
+      return parseLiveSessionTree(data);
+    } catch (cause: unknown) {
+      throw new LivePayloadError('tree', cause);
+    }
   } catch (err: unknown) {
     if (err instanceof Error) {
       throw err;
@@ -189,7 +239,9 @@ export async function fetchLiveTrace(sessionId: string): Promise<LiveTraceView> 
       throw await liveResponseError(res, `Failed to fetch live trace for session ${cleanId}`);
     }
     const data: unknown = await res.json();
-    return parseLiveTraceView(data, cleanId);
+    const trace = parseLiveTraceView(data);
+    if (trace.session_id !== cleanId) throw new Error('Trace response session does not match selection');
+    return trace;
   } catch (err: unknown) {
     if (err instanceof Error) {
       throw err;
@@ -225,11 +277,16 @@ export function subscribeToLiveStream(
   let isClosed = false;
   let eventSource: EventSource | null = null;
   let pollingTimer: ReturnType<typeof setInterval> | null = null;
+  let pollInFlight = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let sseConsecutiveErrors = 0;
   let pollingConsecutiveErrors = 0;
   let reconnectDelayMs = 1000;
   let sseDirectlyFailed = false;
+
+  const reportError = (cause: unknown) => {
+    if (!isClosed) callbacks.onError?.(cause instanceof Error ? cause : new Error(String(cause)));
+  };
 
   const teardown = () => {
     isClosed = true;
@@ -248,7 +305,7 @@ export function subscribeToLiveStream(
   };
 
   const startFallbackPolling = () => {
-    if (isClosed) return;
+    if (isClosed || pollingTimer !== null) return;
     if (eventSource !== null) {
       eventSource.close();
       eventSource = null;
@@ -260,68 +317,64 @@ export function subscribeToLiveStream(
 
     if (pollIntervalMs === undefined || !Number.isSafeInteger(pollIntervalMs) || pollIntervalMs <= 0 || pollIntervalMs > 2_147_483_647) {
       callbacks.onStatusChange?.('error');
-      callbacks.onError?.(new Error('live.poll_interval_ms must be explicitly configured as an integer from 1 through 2147483647 milliseconds for dashboard polling. Complete setup in the selected shared YAML configuration.'));
+      reportError(new Error('live.poll_interval_ms must be explicitly configured as an integer from 1 through 2147483647 milliseconds for dashboard polling. Complete setup in the selected shared YAML configuration.'));
       return;
     }
     callbacks.onStatusChange?.('fallback-polling');
+    if (isClosed) return;
 
     const poll = async () => {
-      if (isClosed) return;
+      if (isClosed || pollInFlight) return;
+      pollInFlight = true;
       const request = reads.begin();
       try {
         const tree = await fetchLiveSessionTree();
         if (!isClosed && reads.acceptTree(request)) {
           pollingConsecutiveErrors = 0;
           callbacks.onStatusChange?.('fallback-polling');
-          if (isClosed) return;
+          if (isClosed || reads.treeRevision !== request) return;
           try {
             callbacks.onSessionTree(tree);
           } catch (callbackErr: unknown) {
-            const error =
-              callbackErr instanceof Error
-                ? callbackErr
-                : new Error(String(callbackErr));
-            callbacks.onError?.(error);
+            reportError(callbackErr);
           }
         }
       } catch (err: unknown) {
         if (!isClosed && reads.acceptTree(request)) {
           pollingConsecutiveErrors++;
-          const error = err instanceof Error ? err : new Error(String(err));
-          callbacks.onError?.(error);
-          if (sseDirectlyFailed || pollingConsecutiveErrors >= 2) {
+          reportError(err);
+          if (!isClosed && reads.treeRevision === request && (sseDirectlyFailed || pollingConsecutiveErrors >= 2)) {
             callbacks.onStatusChange?.('error');
           }
         }
+      } finally {
+        pollInFlight = false;
       }
     };
 
+    pollingTimer = setInterval(() => {
+      void poll();
+    }, pollIntervalMs);
     void poll();
-    if (pollingTimer === null) {
-      pollingTimer = setInterval(() => {
-        void poll();
-      }, pollIntervalMs);
-    }
   };
 
   const connectSSE = () => {
     if (isClosed) return;
     if (typeof EventSource === 'undefined') {
       sseDirectlyFailed = true;
-      const error = new Error('EventSource is not supported in this environment');
-      callbacks.onError?.(error);
+      reportError(new Error('EventSource is not supported in this environment'));
       startFallbackPolling();
       return;
     }
 
     callbacks.onStatusChange?.('connecting');
+    if (isClosed) return;
 
     try {
       eventSource = new EventSource('/api/live/stream');
     } catch (err: unknown) {
       sseDirectlyFailed = true;
-      const error = err instanceof Error ? err : new Error(String(err));
-      callbacks.onError?.(error);
+      reportError(err);
       startFallbackPolling();
       return;
     }
@@ -338,14 +391,19 @@ export function subscribeToLiveStream(
 
     eventSource.addEventListener('session_tree', (event: MessageEvent<string>) => {
       if (source !== eventSource || isClosed) return;
+      let tree: LiveSessionTree;
       try {
         const parsed: unknown = JSON.parse(event.data);
-        const tree = parseLiveSessionTree(parsed);
-        reads.acceptTree(reads.begin());
+        tree = parseLiveSessionTree(parsed);
+      } catch (err: unknown) {
+        reportError(new LivePayloadError('tree', err));
+        return;
+      }
+      reads.acceptTree(reads.begin());
+      try {
         callbacks.onSessionTree(tree);
       } catch (err: unknown) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        callbacks.onError?.(error);
+        reportError(err);
       }
     });
 
@@ -363,7 +421,7 @@ export function subscribeToLiveStream(
           ...(typeof data.session_id === 'string' ? { session_id: data.session_id } : {}),
         });
       } catch (err: unknown) {
-        callbacks.onError?.(err instanceof Error ? err : new Error(String(err)));
+        reportError(err);
       }
     });
 
@@ -371,35 +429,30 @@ export function subscribeToLiveStream(
       if (source !== eventSource || isClosed) return;
       try {
         const data: unknown = JSON.parse(event.data);
-        callbacks.onAnomalyAlert?.(parseLiveAnomalyAlert(data));
+        const alert = parseLiveAnomalyAlert(data);
+        callbacks.onAnomalyAlert?.(alert);
       } catch (err: unknown) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        callbacks.onError?.(error);
+        reportError(err);
       }
     });
 
     eventSource.addEventListener('trace_update', (event: MessageEvent<string>) => {
       if (source !== eventSource || isClosed) return;
       try {
-        const data: unknown = JSON.parse(event.data);
-        const sessionId = isRecord(data) && typeof data.session_id === 'string' ? data.session_id : '';
-        callbacks.onTraceUpdate?.(parseLiveTraceView(data, sessionId));
+        const trace = parseStreamTrace(event.data);
+        callbacks.onTraceUpdate?.(trace);
       } catch (err: unknown) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        callbacks.onError?.(error);
+        reportError(err);
       }
     });
 
     eventSource.onerror = () => {
       if (source !== eventSource || isClosed) return;
       sseConsecutiveErrors++;
-      const error = new Error('SSE connection error');
-      callbacks.onError?.(error);
-
-      if (eventSource !== null) {
-        eventSource.close();
-        eventSource = null;
-      }
+      source.close();
+      eventSource = null;
+      reportError(new Error('SSE connection error'));
+      if (isClosed) return;
 
       if (sseConsecutiveErrors >= 3) {
         startFallbackPolling();
@@ -407,10 +460,10 @@ export function subscribeToLiveStream(
       }
 
       callbacks.onStatusChange?.('connecting');
+      if (isClosed) return;
       reconnectTimer = setTimeout(() => {
-        if (!isClosed) {
-          connectSSE();
-        }
+        reconnectTimer = null;
+        connectSSE();
       }, reconnectDelayMs);
       reconnectDelayMs = Math.min(reconnectDelayMs * 2, 16000);
     };

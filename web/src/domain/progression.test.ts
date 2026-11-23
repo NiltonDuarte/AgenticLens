@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { parseIsoDateToUtc, getBucketKey, aggregateMetricsOverTime, } from './progression';
+import { parseIsoDateToUtc, getBucketKey, aggregateMetricsOverTime, progressionWindow } from './progression';
 import type { AgenticMetricsLedger, InvocationFact } from './types';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 describe('Domain Progression Aggregator', () => {
@@ -54,6 +54,47 @@ describe('Domain Progression Aggregator', () => {
             expect(parseIsoDateToUtc('15-10-2026')).toBeNull();
         });
     });
+    describe('progressionWindow', () => {
+        it.each([
+            ['2026-01-04T12:00:00Z', '2026-01-05T12:00:00Z', '2026-01-03T12:00:00.000Z', '2026-01-04T12:00:00.000Z'],
+            [null, '2026-01-05T12:00:00Z', '2026-01-04T12:00:00.000Z', '2026-01-05T12:00:00.000Z'],
+            [null, 'unrecorded', null, null],
+        ] as const)('anchors from usable start %s or update %s after rejecting an invalid completion offset', (started_at, updated_at, startDate, endDate) => {
+            const ledger: AgenticMetricsLedger = {
+                ...mockAgenticMetricsLedgers['AL-1']!,
+                completed_at: '2026-01-08T18:00:00+25:00',
+                started_at,
+                updated_at,
+            };
+            expect(progressionWindow([ledger], '1d', '', '')).toEqual({ startDate, endDate, isInverted: false });
+        });
+
+        it('keeps the fractional UTC anchor and excludes an invocation one millisecond before the 24-hour range', () => {
+            const sample = mockAgenticMetricsLedgers['AL-1']!;
+            const session = sample.facts.sessions[0]!;
+            const invocation = session.invocations[0]!;
+            const ledger: AgenticMetricsLedger = {
+                ...sample,
+                completed_at: '2026-01-08T12:00:00.500',
+                facts: { ...sample.facts, sessions: [{
+                    ...session,
+                    invocations: [
+                        { ...invocation, completed_at: '2026-01-07T12:00:00.499Z' },
+                        { ...invocation, completed_at: '2026-01-07T12:00:00.500Z' },
+                    ],
+                }] },
+            };
+            const window = progressionWindow([ledger], '1d', '', '');
+            expect(window).toEqual({
+                startDate: '2026-01-07T12:00:00.500Z',
+                endDate: '2026-01-08T12:00:00.500Z',
+                isInverted: false,
+            });
+            const buckets = aggregateMetricsOverTime([ledger], 'daily', window.startDate, window.endDate);
+            expect(buckets.find((bucket) => bucket.bucket_date === '2026-01-07')?.invocations).toBe(1);
+        });
+    });
+
     describe('getBucketKey', () => {
         it('returns YYYY-MM-DD for daily granularity', () => {
             const d = new Date(Date.UTC(2026, 9, 15)); // 2026-10-15
