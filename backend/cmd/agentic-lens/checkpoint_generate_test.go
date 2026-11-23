@@ -82,8 +82,15 @@ func TestCheckpointGenerationSuccessAndPublicationFailureBoundaries(t *testing.T
 				t.Fatalf("success left publication incomplete: %v", err)
 			}
 			if mode == "default" {
-				if strings.Count(stderr.String(), "AgenticLens checkpoint:") != 1 || !strings.Contains(stderr.String(), "invoking caller is unverified") || strings.Contains(stderr.String(), "automatic next-turn") {
-					t.Fatalf("false native caller/continuation: %s", stderr.String())
+				line := stderr.String()
+				if strings.Count(line, "AgenticLens checkpoint:") != 1 ||
+					!strings.Contains(line, "source=codex; session=root; invocation=1;") ||
+					!strings.Contains(line, "Source reports open turn open, started at "+timestamp) ||
+					!strings.Contains(line, "(threshold 180s)") ||
+					!strings.Contains(line, "invoking caller is unverified") ||
+					!strings.Contains(line, "run generate outside the completed turn with --source and --session-id") ||
+					strings.Contains(line, "Your verified current") || strings.Contains(line, "automatic next-turn") {
+					t.Fatalf("checkpoint lost owner, interval, or qualified refresh guidance: %s", line)
 				}
 			} else if strings.Contains(stderr.String(), "AgenticLens checkpoint:") {
 				t.Fatalf("disabled/subthreshold feedback: %s", stderr.String())

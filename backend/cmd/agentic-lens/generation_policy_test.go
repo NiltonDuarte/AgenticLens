@@ -682,8 +682,14 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 						t.Fatalf("completion with unavailable child: %v %s %s", err, stdout.String(), stderr.String())
 					}
 					if selection == "explicit" {
-						if strings.Count(stderr.String(), "AgenticLens checkpoint:") != 1 || !strings.Contains(stderr.String(), "session=child;") || !strings.Contains(stderr.String(), "Current native interval evidence is unavailable or unverified") || strings.Contains(stdout.String(), "AgenticLens checkpoint:") {
-							t.Fatalf("retained-only feedback must be F04 for child: stdout=%s stderr=%s", stdout.String(), stderr.String())
+						line := stderr.String()
+						if strings.Count(line, "AgenticLens checkpoint:") != 1 ||
+							!strings.Contains(line, "session=child;") ||
+							!strings.Contains(line, "Current native interval evidence is unavailable or unverified") ||
+							!strings.Contains(line, "Once native completion records are readable") ||
+							!strings.Contains(line, "run generate outside the completed turn with --source and --session-id") ||
+							strings.Contains(line, "Your verified current") || strings.Contains(stdout.String(), "AgenticLens checkpoint:") {
+							t.Fatalf("retained-only feedback must qualify the child's interval and refresh: stdout=%s stderr=%s", stdout.String(), line)
 						}
 					} else if strings.Contains(stdout.String()+stderr.String(), "AgenticLens checkpoint:") {
 						t.Fatalf("automatic retained-history publication emitted manual feedback: stdout=%s stderr=%s", stdout.String(), stderr.String())

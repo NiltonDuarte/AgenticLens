@@ -1,5 +1,7 @@
 # AL-78: Make completion feedback effective across harnesses
 
+[OpenSpec execution change](../../../openspec/changes/al-78-make-completion-feedback-effective-across-harnesses/proposal.md)
+
 ## Goal
 
 Make open-turn feedback lead to a source-proven completion and subsequent metrics refresh on native Codex and OpenCode.

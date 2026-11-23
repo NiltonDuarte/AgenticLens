@@ -15,9 +15,29 @@ TITLE = "Native capture release gate"
 MODEL = "gpt-5.4"
 EDIT = "printf 'def answer():\\n    return 42\\n' > fixture.py"
 VERIFY = "python3 -B -c 'from fixture import answer; assert answer() == 42'"
-STAGES = (r"AL96:(ROOT|UNBOUND|BIND|DESTINATION|RETRY|IMPLEMENT|VERIFY|NESTED|RESUME|UNRELATED|"
+STAGES = (r"AL96:(ROOT|UNBOUND|BIND|DESTINATION|RETRY|IMPLEMENT|VERIFY|NESTED|RESUME|UNRELATED|COMPLETION|"
           r"DISCARD|DURING_DISCARD|RESTORE|DISCARD_BOUND|DURING_DISCARD_BOUND|RESTORE_BOUND)\b")
 CONTROL_REQUEST = r"[0-9a-f]{64}\.(0|[1-9][0-9]*)\.[0-9a-f]{64}"
+MANUAL_TICKET = "TEST-978"
+FINAL_INPUT_TOKENS = 101
+FINAL_OUTPUT_TOKENS = 47
+WAIT_FOR_CHECKPOINT_RELEASE = """\
+from pathlib import Path
+import time
+
+deadline = time.monotonic() + 22
+while not Path('.fixture-release').exists():
+    if time.monotonic() >= deadline:
+        raise SystemExit('Timed out waiting for checkpoint observation')
+    time.sleep(0.1)
+"""
+
+
+def manual_generate(manager, project, source, root):
+    return [str(manager), "--al-offline", "--al-project", str(project), "generate", "--source", source,
+            "--session-id", root, "--ticket-id", MANUAL_TICKET, "--ticket-type", "fix",
+            "--ticket-title", "Manual completion preview", "--json-output",
+            str(Path(project) / "selected" / "manual" / "agentic_metrics.json")]
 
 
 def strings(value):
@@ -36,6 +56,11 @@ class Action:
     step: str
     tool: str = ""
     args: dict | None = None
+
+    def usage(self):
+        if self.step == "completion_reply":
+            return FINAL_INPUT_TOKENS, FINAL_OUTPUT_TOKENS
+        return 23, 11
 
 
 def request_stage(inputs):
@@ -62,6 +87,9 @@ class FixtureModel:
         self.repair_holding = Event()
         self.serial = itertools.count(1)
         self.errors = []
+        self.completion_root = None
+        self.expected_completion_feedback = None
+        self.feedback_in_model_input = Event()
 
     def choose(self, request, codex):
         inputs = request.get("input" if codex else "messages", [])
@@ -109,6 +137,8 @@ class FixtureModel:
 
         if stage == "UNRELATED":
             return shell("read", "cat fixture.py") if "read" not in prior else Action("done")
+        if stage == "COMPLETION":
+            return self.completion_action(inputs, prior, prefix, codex, shell)
         if stage == "IMPLEMENT":
             if "edit" not in prior:
                 return shell("edit", EDIT)
@@ -197,6 +227,49 @@ class FixtureModel:
             return wait("waitverify", "verification")
         check_wait("waitverify")
         return Action("hold")
+
+    def completion_action(self, inputs, prior, prefix, codex, shell):
+        if "checkpoint" in prior:
+            call_id = prefix + "checkpoint"
+            if codex:
+                result = next(item["output"] for item in inputs
+                              if item.get("type") == "function_call_output" and item.get("call_id") == call_id)
+            else:
+                result = next(item["content"] for item in inputs
+                              if item.get("role") == "tool" and item.get("tool_call_id") == call_id)
+            if self.expected_completion_feedback and self.expected_completion_feedback in "\n".join(strings(result)):
+                self.feedback_in_model_input.set()
+            return Action("completion_reply")
+
+        if codex:
+            # exec_command yields at 30 seconds. These completed tool actions
+            # all belong to the same native Codex turn.
+            for index in range(7):
+                step = f"work{index}"
+                if step not in prior:
+                    action = shell(step, "sleep 27")
+                    action.args["yield_time_ms"] = 30000
+                    return action
+
+        source = "codex" if codex else "opencode"
+        generate = shlex.join(manual_generate(self.manager, self.project, source, self.completion_root))
+        command = " && ".join((
+            EDIT, VERIFY, "git commit -qm 'Improve fixture answer' --only -- fixture.py",
+            "python3 -B -c 'import time; print(time.time())' > .fixture-commit-time",
+            f"{generate} > .fixture-generate-stdout 2> .fixture-generate-stderr",
+            "cat .fixture-generate-stderr >&2",
+            "touch .fixture-checkpoint-ready",
+            f"python3 -B -c {shlex.quote(WAIT_FOR_CHECKPOINT_RELEASE)}",
+        ))
+        action = shell("checkpoint", command if codex else f"sleep 182 && {command}")
+        if codex:
+            action.args["yield_time_ms"] = 30000
+        else:
+            # OpenCode v1 associates this long running tool with a single
+            # assistant message. Moving the preview to a later tool would
+            # lose the exact still-open assistant interval.
+            action.args["timeout"] = 220000
+        return action
 
     def native_control(self, body, action, codex):
         root, key, revision, store = self.capture_control
@@ -324,10 +397,12 @@ class Handler(BaseHTTPRequestHandler):
             if action.step in ("hold", "hold_repair"):
                 self.hold(action.step)
         self.emit({"type": "response.output_item.done", "output_index": 0, "item": item})
+        input_tokens, output_tokens = action.usage()
         self.emit({"type": "response.completed", "response": dict(
             response, status="completed", output=[item],
-            usage={"input_tokens": 23, "input_tokens_details": {"cached_tokens": 0},
-                   "output_tokens": 11, "output_tokens_details": {"reasoning_tokens": 0}, "total_tokens": 34},
+            usage={"input_tokens": input_tokens, "input_tokens_details": {"cached_tokens": 0},
+                   "output_tokens": output_tokens, "output_tokens_details": {"reasoning_tokens": 0},
+                   "total_tokens": input_tokens + output_tokens},
         )})
 
     def chat(self, model, action, call_id):
@@ -345,6 +420,8 @@ class Handler(BaseHTTPRequestHandler):
             chunk({"role": "assistant", "content": "Fixture complete."})
             if action.step in ("hold", "hold_repair"):
                 self.hold(action.step)
+        input_tokens, output_tokens = action.usage()
         chunk({}, "tool_calls" if action.tool else "stop",
-              usage={"prompt_tokens": 23, "completion_tokens": 11, "total_tokens": 34})
+              usage={"prompt_tokens": input_tokens, "completion_tokens": output_tokens,
+                     "total_tokens": input_tokens + output_tokens})
         self.wfile.write(b"data: [DONE]\n\n")

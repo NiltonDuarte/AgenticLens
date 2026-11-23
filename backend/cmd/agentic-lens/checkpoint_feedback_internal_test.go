@@ -13,15 +13,16 @@ import (
 func TestCheckpointExactFiveMessageCopiesAndEscaping(t *testing.T) {
 	base := domain.CheckpointFeedback{Source: domain.SourceCodex, SessionID: "owner", InvocationRow: 2, Role: "coder", Model: "model", ProvisionalSeconds: 200, ThresholdSeconds: 180, Interval: domain.CheckpointInterval{SourceOpen: true, Kind: "turn", ID: "native", StartedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}, ElapsedSeconds: 180, CallerSource: domain.SourceCodex, CallerSessionID: "caller"}
 	prefix := "AgenticLens checkpoint: source=codex; session=owner; invocation=2; role=coder; model=model; recorded provisional subtotal=200s"
+	refresh := " After natural completion and source availability, supported automatic capture can refresh the ledger. Otherwise, run generate outside the completed turn with --source and --session-id for the exact extraction root."
 	for _, tc := range []struct {
 		kind domain.CheckpointCase
 		want string
 	}{
-		{domain.CheckpointCurrentCaller, prefix + ". Your verified current turn native, started at 2026-01-01T00:00:00Z, has reached 180s (threshold 180s). At a natural task boundary, complete this turn normally, then refresh telemetry in the next turn. Generating again in this same turn does not close the interval."},
-		{domain.CheckpointOtherCaller, prefix + ". Source reports open turn native, started at 2026-01-01T00:00:00Z, at 180s (threshold 180s). This belongs to another session; verified caller=codex/caller. Let that owner reach a natural completion boundary, then refresh its source. Do not force another agent to complete for telemetry."},
-		{domain.CheckpointUnknownCaller, prefix + ". Source reports open turn native, started at 2026-01-01T00:00:00Z, at 180s (threshold 180s). The invoking caller is unverified; this interval may belong to another agent. Refresh after the owning session completes naturally; no current-caller rollover is established."},
-		{domain.CheckpointUnavailableInterval, prefix + " (threshold 180s). This subtotal may cover multiple open intervals or retained observations. Current native interval evidence is unavailable or unverified; no single long turn or current-caller rollover is established. Preserve these recorded facts and refresh when the owning source is available."},
-		{domain.CheckpointUnsupportedContinuation, "AgenticLens checkpoint: automatic next-turn continuation is unsupported or unverified for codex. This command will not end the turn, schedule another turn or resume itself. After normal turn completion, a user or supported harness action must start the next turn before telemetry is refreshed."},
+		{domain.CheckpointCurrentCaller, prefix + ". Your verified current turn native, started at 2026-01-01T00:00:00Z, has reached 180s (threshold 180s). Once your work is complete, finish this turn normally." + refresh},
+		{domain.CheckpointOtherCaller, prefix + ". Source reports open turn native, started at 2026-01-01T00:00:00Z, at 180s (threshold 180s). This belongs to another session; verified caller=codex/caller." + refresh},
+		{domain.CheckpointUnknownCaller, prefix + ". Source reports open turn native, started at 2026-01-01T00:00:00Z, at 180s (threshold 180s). The invoking caller is unverified; this interval may belong to another agent." + refresh},
+		{domain.CheckpointUnavailableInterval, prefix + " (threshold 180s). This subtotal may cover multiple open intervals or retained observations. Current native interval evidence is unavailable or unverified. The subtotal does not identify a single long turn or the current caller. Preserve the recorded facts. Once native completion records are readable, supported automatic capture can refresh the ledger. Otherwise, run generate outside the completed turn with --source and --session-id for the exact extraction root."},
+		{domain.CheckpointUnsupportedContinuation, "AgenticLens checkpoint: automatic next-turn continuation is unsupported or unverified for codex. Telemetry can be refreshed without starting another turn."},
 	} {
 		t.Run(string(tc.kind), func(t *testing.T) {
 			item := base

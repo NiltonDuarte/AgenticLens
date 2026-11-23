@@ -18,4 +18,20 @@ The fixture adds a table and trigger inside its single private capture database 
 
 Use `--prepared-destination` to reproduce the earlier gate for a historical candidate that required operator preparation.
 
+## Native completion feedback
+
+Run the opt-in AL-78 probe against a checksummed baseline or candidate package:
+
+```sh
+scripts/capture-release-gate.sh --completion-feedback --release-dir dist --candidate <exact-v3-rc-tag>
+```
+
+The two isolated clients run concurrently. Each first accepts the native binding, then runs a long tool workflow, commits a real change, and previews an open interval using the default 180-second threshold. The observer checks stderr and the corresponding tool result in the model request. It then checks the exact native interval, first eligible automatic publication, ticket-detail API response, and an external manual refresh after the native client returns.
+
+Codex retains the ordinary native hook approval. The isolated configuration disables automatic daemon startup and in-app updates to keep the selected client version fixed. Only the disposable completion invocation selects `danger-full-access` so its tool can commit to the fixture's ordinary `.git` directory. `--fixture-parent` can place private scratch directories outside a system temporary directory if required by local client policy. The probe allows up to 30 seconds per capture pass and still checks the elapsed time to settlement separately.
+
+The loopback provider chooses a scripted final reply. The result verifies context delivery and native completion, while agent responses to feedback wording require separate evidence. The recorded release time identifies the fixture coordination between the code commit and its final reply.
+
+The probe retains its private fixture after exit so a detached capture worker can finish its bounded pass. Remove the directory after the fixture workers have gone idle.
+
 A successful run prints the two exact session trees, duration checkpoints and candidate digests as JSON. Failed runs preserve their private scratch directory for diagnosis. `--keep-fixture` retains it after success as well. Keep native transcripts and binding messages in that private directory.

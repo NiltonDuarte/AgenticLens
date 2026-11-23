@@ -1,28 +1,77 @@
 """Exercise the installed integrations and report the packaged release gate."""
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, nullcontext
 import fcntl
+from http.client import HTTPConnection, HTTPException
 import json
 import os
 from pathlib import Path
 import shutil
+import signal
+import socket
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import time
 
 from oracle import (
-    artifact_matches_commit, capture_id, check_birth, check_complete, check_complete_pending, check_held, check_held_pending,
-    check_pending_identity, native_id, provisional, published, snapshot_matches_pending_record, source_owners, tree,
+    artifact_matches_commit, capture_id, check_birth, check_complete, check_complete_pending, check_completed_facts,
+    check_held, check_held_pending,
+    check_pending_identity, json_lines, native_id, provisional, published, snapshot_matches_pending_record,
+    source_owners, tree,
     unix_time,
 )
 from project import Project, require, require_package
-from provider import FixtureModel, TICKET, TITLE
+from provider import FINAL_INPUT_TOKENS, FINAL_OUTPUT_TOKENS, FixtureModel, TICKET, TITLE, manual_generate
 
 FIRST_SECONDS = 60
 SETTLE_SECONDS = 30
 POLL_SECONDS = 0.2
+
+
+class FixtureProcess:
+    def __init__(self, command, **options):
+        # Keep a separately owned group leader until cleanup, even when the
+        # native client exits while one of its descendants is still active.
+        self.anchor = subprocess.Popen(
+            (sys.executable, "-B", "-c", "import sys; sys.stdin.buffer.read()"),
+            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, process_group=0,
+        )
+        try:
+            self.process = subprocess.Popen(command, **options, process_group=self.anchor.pid)
+        except BaseException:
+            self.anchor.stdin.close()
+            self.anchor.wait(timeout=5)
+            raise
+
+    def poll(self):
+        return self.process.poll()
+
+    def wait(self, timeout):
+        return self.process.wait(timeout=timeout)
+
+    def stop(self):
+        def send(sig):
+            try:
+                os.killpg(self.anchor.pid, sig)
+            except ProcessLookupError:
+                pass
+
+        # The group's PID is reserved by our unreaped anchor during both
+        # signals. Do not gate cleanup on the native client's exit status.
+        send(signal.SIGTERM)
+        try:
+            self.process.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            pass
+        finally:
+            send(signal.SIGKILL)
+            self.anchor.stdin.close()
+            self.anchor.wait(timeout=5)
+        self.process.wait(timeout=5)
 
 
 def event_until(deadline, predicate, message, process=None):
@@ -40,23 +89,27 @@ def launch(project, stage, session=None):
     log = project.root / f"{stage.lower()}.jsonl"
     errors = project.root / f"{stage.lower()}.stderr"
     with log.open("w") as stdout, errors.open("w") as stderr:
-        process = subprocess.Popen(project.native_command(stage, session), cwd=project.checkout, env=project.env,
-                                   stdout=stdout, stderr=stderr, stdin=subprocess.DEVNULL)
+        launch_process = FixtureProcess if project.completion_feedback else subprocess.Popen
+        process = launch_process(project.native_command(stage, session), cwd=project.checkout, env=project.env,
+                                 stdout=stdout, stderr=stderr, stdin=subprocess.DEVNULL)
     return process, log
 
 
 def stop(process):
+    if isinstance(process, FixtureProcess):
+        process.stop()
+        return
     if process.poll() is None:
         process.terminate()
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
-            process.wait()
+            process.wait(timeout=5)
 
 
-def wait_success(process, stage):
-    require(process.wait(timeout=45) == 0, f"Native {stage} failed, see fixture logs")
+def wait_success(process, stage, timeout=45):
+    require(process.wait(timeout=timeout) == 0, f"Native {stage} failed, see fixture logs")
 
 
 def status(project):
@@ -117,6 +170,29 @@ def checkpoint_seen(pass_record, root, instant):
 def first_completion_commit(passes, root, instant):
     return next((record for record in passes
                  if record["outcome"] == "committed" and checkpoint_seen(record, root, instant)), None)
+
+
+def first_eligible_completion_publication(rows, root, instant, source_read_end, previous_sequence):
+    reconciliation = None
+    for row in rows:
+        if row.get("ticket_id") != TICKET:
+            continue
+        if row["phase"] == "reconciliation":
+            reconciliation = row
+        elif (row["phase"] == "publication" and row["outcome"] == "committed" and
+              row["sequence"] > previous_sequence and reconciliation is not None):
+            boundary = reconciliation.get("reconciliation", {})
+            started = boundary.get("started_at")
+            if started and unix_time(started) >= source_read_end:
+                return row, reconciliation, "source_visible_before_reconciliation"
+            # The worker can see terminal evidence during the observation
+            # window before our independent poll completes. Check such a
+            # commit, but do not use its self-reported checkpoint to skip a
+            # later commit that was independently known to be eligible.
+            cutoff = boundary.get("cutoff")
+            if cutoff and unix_time(cutoff) >= instant and checkpoint_seen(row, root, instant):
+                return row, reconciliation, "overlapping_native_observation"
+    return None
 
 
 def wait_first_snapshot(project, binding, process):
@@ -755,8 +831,255 @@ def exercise(project, model, evidence):
             stop(process)
 
 
-def run_combination(parent, repository, assets, candidate, source, path, expected_version, evidence, prepared):
-    project = Project(parent / source, source, candidate, path, repository, prepared)
+def launch_completion_reader(project):
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        port = listener.getsockname()[1]
+    with (project.root / "reader.log").open("w") as log:
+        process = FixtureProcess(
+            (project.manager, "--al-offline", "--al-project", project.checkout, "server", "--port", str(port)),
+            cwd=project.checkout, env=project.env, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+        )
+
+    def query():
+        conn = HTTPConnection("127.0.0.1", port, timeout=1)
+        try:
+            conn.request("GET", f"/api/workspaces/{TICKET}")
+            with conn.getresponse() as response:
+                if response.status != 200:
+                    return None
+                return json.load(response)["ledger"]
+        except (OSError, HTTPException):
+            return None
+        finally:
+            conn.close()
+
+    return process, query
+
+
+def final_completion_with_usage(project, root, interval):
+    owner = source_owners(project).get(root)
+    if owner is None or interval not in owner.completed_intervals or owner.open != 0 or owner.turns <= 1:
+        return None
+    expected = (FINAL_INPUT_TOKENS, FINAL_OUTPUT_TOKENS)
+    _, start_ms, end_ms = owner.completed_intervals[interval]
+    if project.source == "codex":
+        final = owner.last_token_count
+        return owner if final and final[:2] == expected and final[2] >= start_ms / 1000 else None
+    # An OpenCode tool reply can finish its assistant message before the
+    # application writes the later final response for the same user turn.
+    last, (_, _, last_end_ms) = max(owner.completed_intervals.items(), key=lambda item: item[1][2])
+    return owner if last_end_ms > end_ms and owner.message_usage.get(last) == expected else None
+
+
+def observe_settled_completion(project, process, query, root, interval, held, release, evidence):
+    api_reads = []
+    native = None
+    publication = None
+
+    def sample_api():
+        started = time.time()
+        response = query()
+        if response is not None:
+            api_reads.append((started, time.time(), response))
+
+    sample_api()
+    source_pending_start = time.time()
+    require(final_completion_with_usage(project, root, interval) is None,
+            "The fixture reached native completion before release")
+    last_native_pending = source_pending_start, time.time()
+    release_at = time.time()
+    evidence["fixture_released_checkpoint_epoch"] = release_at
+    release.touch()
+
+    def observe():
+        nonlocal native, publication, last_native_pending
+        sample_api()
+        if "native_client_return_observed_epoch" not in evidence and process.poll() is not None:
+            evidence["native_client_return_observed_epoch"] = time.time()
+        if native is None:
+            source_read_start = time.time()
+            native = final_completion_with_usage(project, root, interval)
+            source_read_at = time.time()
+            if native is None:
+                last_native_pending = source_read_start, source_read_at
+                return None
+            evidence.update({
+                "interval_end_epoch": native.completed_intervals[interval][2] / 1000,
+                "native_final_completion_epoch": native.latest_completion,
+                "source_last_pending_read_bounds_epoch": last_native_pending,
+                "source_read_bounds_epoch": (source_read_start, source_read_at),
+            })
+        if publication is None:
+            rows = project.diagnostic_history()
+            eligible = first_eligible_completion_publication(
+                rows, root, native.latest_completion, evidence["source_read_bounds_epoch"][1], held["sequence"],
+            )
+            if eligible is None:
+                return None
+            first, reconciliation, basis = eligible
+            require(checkpoint_seen(first, root, native.latest_completion),
+                    "First independently eligible publication retained a stale native completion checkpoint")
+            commits = [row for row in publication_diagnostics(rows) if row["outcome"] == "committed"]
+            require(commits[-1]["sequence"] == first["sequence"],
+                    "Could not tie the current ledger to the first native-completion publication")
+            publication = observe_publication_pair(project, first, rows)
+            if publication is None:
+                return None
+            evidence.update({
+                "first_publication_eligibility": basis,
+                "first_publication_reconciliation_started_epoch": unix_time(reconciliation["reconciliation"]["started_at"]),
+            })
+        snapshot, first, reconciliation = publication
+        ledger, _ = snapshot
+        older = None
+        for query_start, query_at, response in api_reads:
+            response_updated = unix_time(response["updated_at"])
+            updated = unix_time(ledger["updated_at"])
+            if response_updated < updated:
+                older = (query_start, query_at)
+                continue
+            if response_updated != updated:
+                continue
+            rows = response["facts"]["sessions"]
+            require(len(rows) == 1 and rows[0]["id"] == root and rows[0]["source"] == project.source and
+                    rows[0]["invocations"] == ledger["sessions"][0]["invocations"],
+                    "Ticket detail API did not expose the first settled owner's invocation facts")
+            evidence["first_settled_query_bounds_epoch"] = (query_start, query_at)
+            if older:
+                evidence["api_last_unsettled_read_bounds_epoch"] = older
+            return native, snapshot, first, reconciliation
+        return None
+
+    return event_until(time.monotonic() + SETTLE_SECONDS, observe,
+                       "Native final usage or matching API publication did not become observable in time")
+
+
+def exercise_completion_feedback(project, model, evidence):
+    processes = []
+    release = project.checkout / ".fixture-release"
+    try:
+        unrelated_process, unrelated_log = launch(project, "UNRELATED")
+        processes.append(unrelated_process)
+        wait_success(unrelated_process, "unrelated session", timeout=120)
+        unrelated = native_id(unrelated_log)
+        require(unrelated, "Native unrelated session did not expose its ID")
+        project.observe_diagnostic_history()
+        (project.checkout / "selected" / "manual").mkdir()
+        initial_head = project.run("git", "rev-parse", "HEAD")
+        staged = project.run("git", "ls-files", "--stage", "--", "staged-fixture.txt")
+        require(staged, "Fixture did not start with independently staged work")
+        binding, log = launch(project, "BIND")
+        processes.append(binding)
+        root = event_until(time.monotonic() + FIRST_SECONDS, lambda: native_id(log),
+                           "Native fixture binding did not expose a root ID", binding)
+        wait_success(binding, "binding")
+        accepted = event_until(time.monotonic() + FIRST_SECONDS, lambda: verified_binding(project, root),
+                               "Native fixture did not accept binding")
+        # Binding completed normally before this stage. The automatic
+        # worker's first publication may still be outstanding.
+        wait_first_snapshot(project, accepted, None)
+        reader, query = launch_completion_reader(project)
+        processes.append(reader)
+        event_until(time.monotonic() + 10, query, "Packaged ticket detail API did not become queryable", reader)
+        model.completion_root = root
+        process, completion_log = launch(project, "COMPLETION", root)
+        processes.append(process)
+        ready = project.checkout / ".fixture-checkpoint-ready"
+        # The long native work is deliberately over three minutes. Startup,
+        # tool scheduling and the generation pass have their own overhead.
+        event_until(time.monotonic() + 320, ready.exists, "Native checkpoint did not complete", process)
+        commit_time = float((project.checkout / ".fixture-commit-time").read_text())
+        head = project.run("git", "rev-parse", "HEAD")
+        require(project.run("git", "rev-parse", "HEAD^") == initial_head and
+                project.run("git", "diff-tree", "--no-commit-id", "--name-only", "-r", head) == "fixture.py" and
+                project.run("git", "show", "HEAD:fixture.py") == "def answer():\n    return 42",
+                "Native tool did not commit the expected fixture work")
+        require(project.run("git", "ls-files", "--stage", "--", "staged-fixture.txt") == staged,
+                "Native tool altered the unrelated staged work")
+        evidence.update({"git_commit": head, "git_commit_observed_at": commit_time, "session_id": root})
+        require(native_id(completion_log) == root, "Native tool ran in a different source owner")
+        before = source_owners(project)[root]
+        require(len(before.open_intervals) == 1, "Native source did not identify one open checkpoint interval")
+        interval, (_, start_ms, _) = next(iter(before.open_intervals.items()))
+        kind = "turn" if project.source == "codex" else "assistant message"
+        warning = (project.checkout / ".fixture-generate-stderr").read_text()
+        warnings = [line for line in warning.splitlines() if line.startswith("AgenticLens checkpoint:")]
+        exact = [line for line in warnings if f"source={project.source}; session={root};" in line and
+                 f"open {kind} {interval}," in line and "threshold 180s" in line]
+        require(len(exact) == 1 and "invoking caller is unverified" in exact[0],
+                "Preview did not emit the qualified warning for the exact native owner and interval")
+        model.expected_completion_feedback = exact[0]
+        manual = project.checkout / "selected" / "manual" / "agentic_metrics.json"
+        preview = json.loads(manual.read_text())
+        require(provisional(preview).get(root, 0) >= 180, "Manual preview did not preserve the provisional interval")
+        evidence.update({"interval_id": interval, "interval_start_epoch": start_ms / 1000,
+                         "checkpoint_stderr": exact[0], "provisional_seconds_before": provisional(preview)[root]})
+
+        def automatic_preview():
+            rows = project.diagnostic_history()
+            commits = [row for row in publication_diagnostics(rows) if row["outcome"] == "committed"]
+            if not commits:
+                return None
+            pair = observe_publication_pair(project, commits[-1], rows)
+            if pair and unix_time(pair[0][0]["updated_at"]) >= start_ms / 1000 and provisional(pair[0][0]).get(root, 0) > 0:
+                return pair[1]
+            return None
+
+        held = event_until(time.monotonic() + 16, automatic_preview,
+                           "Automatic capture did not publish a provisional snapshot for the open interval", process)
+        native, settled, first, reconciliation = observe_settled_completion(
+            project, process, query, root, interval, held, release, evidence,
+        )
+        ledger, _ = settled
+        wait_success(process, "natural completion after the checkpoint")
+        evidence.setdefault("native_client_return_observed_epoch", time.time())
+        require(model.feedback_in_model_input.is_set(), "Checkpoint warning did not reach the provider tool-result context")
+        events = list(json_lines(completion_log))
+        if project.source == "codex":
+            replies = [event["item"]["text"] for event in events if event["type"] == "item.completed" and
+                       event["item"]["type"] == "agent_message"]
+        else:
+            replies = [event["part"]["text"] for event in events if event["type"] == "text"]
+        require("Fixture complete." in replies, "Native client did not report the provider's final response")
+        evidence.update({"checkpoint_in_provider_tool_result": True, "normal_response_after_tool_result": True})
+        require(not model.errors, f"Fixture provider errors: {model.errors}")
+        owners = {root: native}
+        check_complete(settled, project.source, owners, root, unrelated)
+        assert_complete_coverage(first, reconciliation, owners)
+        turns = sum(inv["turns"] for inv in ledger["sessions"][0]["invocations"])
+        require(turns == native.turns, f"Settled automatic turns {turns} differ from native records {native.turns}")
+        project.run(*manual_generate(project.manager, project.checkout, project.source, root))
+        manual_ledger = json.loads(manual.read_text())
+        # Manual generation must be independently repeatable from outside
+        # the completed turn using the explicitly selected source and owner.
+        check_completed_facts(manual_ledger, project.source, owners, root, unrelated)
+        require(sum(inv["turns"] for inv in manual_ledger["sessions"][0]["invocations"]) == turns,
+                "Manual post-completion generation does not agree with the settled turn count")
+        published_at = unix_time(first["observed_at"])
+        source_read_at = evidence["source_read_bounds_epoch"][1]
+        evidence.update({
+            "first_settled_publication_epoch": published_at,
+            "commit_to_interval_completion_seconds": round(evidence["interval_end_epoch"] - commit_time, 3),
+            "commit_to_native_final_completion_seconds": round(native.latest_completion - commit_time, 3),
+            "native_final_completion_to_source_read_seconds": round(source_read_at - native.latest_completion, 3),
+            "source_read_to_settled_query_seconds": round(evidence["first_settled_query_bounds_epoch"][1] - source_read_at, 3),
+            "poll_interval_seconds": POLL_SECONDS, "settled_turns": turns, "settled_usage": dict(native.usage),
+            "native_final_reply_usage": {"input": FINAL_INPUT_TOKENS, "output": FINAL_OUTPUT_TOKENS},
+            "provisional_seconds_after": provisional(ledger)[root], "external_manual_refresh_verified": True,
+        })
+    except Exception as error:
+        extra = f" Provider diagnostic: {model.errors}." if model.errors else ""
+        raise RuntimeError(f"{error}.{extra} Fixture logs: {project.root}") from error
+    finally:
+        release.touch()
+        for process in processes:
+            stop(process)
+
+
+def run_combination(parent, repository, assets, candidate, source, path, expected_version, evidence, prepared,
+                    completion_feedback):
+    project = Project(parent / source, source, candidate, path, repository, prepared, completion_feedback)
     version = project.run(project.runtime, "--version")
     require(version == expected_version, f"{source} requires {expected_version!r}, found {version!r}")
     evidence.update({"source": source, "harness_version": version})
@@ -767,17 +1090,20 @@ def run_combination(parent, repository, assets, candidate, source, path, expecte
         project.install(assets)
         model.binding_engine = str(project.engine)
         if source == "codex":
-            project.trust_codex_hooks()
+            project.trust_codex_hooks(timeout=45 if completion_feedback else 20)
         if prepared:
             project.prepare()
-        exercise(project, model, evidence)
+        if completion_feedback:
+            exercise_completion_feedback(project, model, evidence)
+        else:
+            exercise(project, model, evidence)
         return {"result": "passed", **evidence}
     finally:
         model.release.set()
         model.repair_release.set()
         server.shutdown()
         server.server_close()
-        if source == "codex":
+        if not completion_feedback and source == "codex":
             project.run(project.runtime, "app-server", "daemon", "stop", timeout=15)
 
 
@@ -789,35 +1115,51 @@ def main():
     parser.add_argument("--codex", default="codex", help="Native Codex executable")
     parser.add_argument("--opencode", default="opencode", help="Native OpenCode executable")
     parser.add_argument("--keep-fixture", action="store_true", help="Keep the private fixture after a successful run")
-    parser.add_argument("--prepared-destination", action="store_true",
-                        help="Reproduce the earlier operator-prepared workflow for a historical candidate")
+    parser.add_argument("--fixture-parent", type=Path,
+                        help="Existing directory for creating the isolated private fixture")
+    scenarios = parser.add_mutually_exclusive_group()
+    scenarios.add_argument("--prepared-destination", action="store_true",
+                           help="Reproduce the earlier operator-prepared workflow for a historical candidate")
+    scenarios.add_argument("--completion-feedback", action="store_true",
+                           help="Check a long native code commit, manual checkpoint, and automatic completion refresh")
     args = parser.parse_args()
     repository = Path(__file__).resolve().parents[4]
     assets = require_package(args.release_dir.resolve(), args.candidate)
-    run_root = Path(tempfile.mkdtemp(prefix="agenticlens-capture-release-gate-")).resolve()
+    run_root = Path(tempfile.mkdtemp(prefix="agenticlens-capture-release-gate-", dir=args.fixture_parent)).resolve()
     results = []
     print(f"Private fixture directory {run_root}", flush=True)
-    for source, command, version in (
-        ("codex", args.codex, "codex-cli 0.170.0"), ("opencode", args.opencode, "1.19.5"),
-    ):
+    clients = (("codex", args.codex, "codex-cli 0.170.0"), ("opencode", args.opencode, "1.19.5"))
+
+    def run_client(client):
+        source, command, version = client
         evidence = {"source": source, "expected_version": version}
         try:
             path = shutil.which(command)
             require(path, f"Missing required {source} executable {command}")
-            results.append(run_combination(run_root, repository, assets, args.candidate, source, path, version, evidence,
-                                           args.prepared_destination))
+            return run_combination(run_root, repository, assets, args.candidate, source, path, version, evidence,
+                                   args.prepared_destination or args.completion_feedback, args.completion_feedback)
         except (OSError, RuntimeError, subprocess.SubprocessError, sqlite3.Error) as error:
             detail = error.stderr if isinstance(error, subprocess.CalledProcessError) else str(error)
-            results.append({"result": "failed", "detail": detail, **evidence})
-        print(json.dumps(results[-1], sort_keys=True), flush=True)
+            return {"result": "failed", "detail": detail, **evidence}
+
+    if args.completion_feedback:
+        with ThreadPoolExecutor(max_workers=len(clients)) as executor:
+            results = list(executor.map(run_client, clients))
+    else:
+        results = [run_client(client) for client in clients]
+    for result in results:
+        print(json.dumps(result, sort_keys=True), flush=True)
     passed = all(result["result"] == "passed" for result in results)
     print(json.dumps({
         "candidate": args.candidate, "archive_sha256": assets[2][1], "manager_sha256": assets[0][1],
         "engine_sha256": assets[1][1], "result": "passed" if passed else "failed",
-        "scenario": "prepared_destination" if args.prepared_destination else "pending_capture",
+        "scenario": "completion_feedback" if args.completion_feedback else
+                    "prepared_destination" if args.prepared_destination else "pending_capture",
         "manual_only_prior_evidence": ["OpenCode 2.2.0 standalone"],
     }, sort_keys=True))
-    if passed and not args.keep_fixture:
+    # Opt-in clients can leave a bounded detached capture pass finishing its
+    # native publication. Keep that private state available until it retires.
+    if passed and not args.keep_fixture and not args.completion_feedback:
         shutil.rmtree(run_root)
     return 0 if passed else 1
 
