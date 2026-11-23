@@ -9,11 +9,11 @@ Claude Code now loads the repository policy, the shared skills and the developme
 - In a live Claude Code 2.1.331 session in this worktree, the six `agentic-lens-*` skills, the six `openspec-*` skills and the `planner`, `coder`, `tester`, `reviewer` and four focused reviewer subagents became available. A headless `claude -p` run reported section 1 of `AGENTS.md` from its context through the `CLAUDE.md` import. That run also reported that `.claude/settings.json` applies only once the workspace is trusted.
 - In OpenCode 1.19.5, `opencode debug skill` listed each shared skill once, with no duplicate or conflict output, after the `.claude/skills/` links were added.
 - `git diff --check` and `scripts/openspec.sh validate gen-30-onboard-claude-code --strict` passed.
-- Integrated `GOMAXPROCS=6 VITEST_MAX_FORKS=2 VITEST_MIN_FORKS=1 make -j2` and `python3 scripts/tests/openspec_workflow_test.py`: in progress at the time of the first push.
+- The integrated `GOMAXPROCS=6 VITEST_MAX_FORKS=2 VITEST_MIN_FORKS=1 make -j2` exited 0, and `python3 scripts/tests/openspec_workflow_test.py` passed its 3 tests. Both ran on the content of `0d4a8b57` over main `db4477fa`, which differs from the commit only in this delivery file and `tasks.md`.
 
 ## Limits
 
-- This session ran in Claude Code, which AgenticLens cannot extract yet, so this change has no `agentic_metrics.json`. No ledger was generated from another harness's session. The Claude Code source adapter is planned separately under GEN-31.
+- This session ran in Claude Code, which AgenticLens cannot extract yet, so this change has no `agentic_metrics.json`. No ledger was generated from another harness's session. GEN-31 ([PR #165](https://github.com/NiltonDuarte/AgenticLens/pull/165)) plans the Claude Code source as AL-98 (extraction) and AL-99 (automatic capture).
 - The setup bundle for adopting repositories still configures only Codex and OpenCode.
 - Branch protection, Windows symlink checkout and subagent model choices were not tested.
 
