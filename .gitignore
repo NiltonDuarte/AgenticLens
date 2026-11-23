@@ -64,3 +64,6 @@ coverage.html
 
 # Pinned development-only OpenSpec dependencies
 tools/openspec/node_modules/
+
+# Claude Code personal settings
+.claude/settings.local.json
