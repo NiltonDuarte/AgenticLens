@@ -5,11 +5,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AL-98 generate ticket metrics from claude code sessions.md | AgenticLens roadmap</title>
-  <link rel="stylesheet" href="/AgenticLens/preview/165/roadmap/style.css">
+  <link rel="stylesheet" href="/AgenticLens/roadmap/style.css">
 </head>
 <body>
   <header><nav aria-label="Main navigation">
-    <a href="/AgenticLens/preview/165/roadmap/">Back to roadmap</a>
+    <a href="/AgenticLens/roadmap/">Back to roadmap</a>
     <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
   </nav></header>
   <main><h1 id="al-98-generate-ticket-metrics-from-claude-code-sessions">AL-98: Generate ticket metrics from Claude Code sessions</h1>
@@ -47,15 +47,15 @@
   <li>
 <strong>Counting usage once.</strong> Each API response contributes its usage exactly once, even when it is split across content blocks, copied into forked or resumed transcripts, or seen again on refresh. Missing usage categories stay unknown rather than zero. Native model and effort values are kept as they are, including requested versus served models.</li>
   <li>
-<strong>Subagents and delegations.</strong> A native subagent becomes a child session only when the source proves its parentage. Its role comes from its native agent type through <code class="language-plaintext highlighter-rouge">role_mappings</code>. Skill and delegation occurrences are owned by the session that recorded them, following the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a3dea70dafae341b1588e956d435467477741980/docs/OWNED_OCCURRENCES.md">owned-occurrence rules</a>. Children that cannot be read, and sessions launched independently, stay explicitly unresolved and never get an inferred parent.</li>
+<strong>Subagents and delegations.</strong> A native subagent becomes a child session only when the source proves its parentage. Its role comes from its native agent type through <code class="language-plaintext highlighter-rouge">role_mappings</code>. Skill and delegation occurrences are owned by the session that recorded them, following the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/9eeabb94c9256a68be40edd3ca1d91d85afe5f0a/docs/OWNED_OCCURRENCES.md">owned-occurrence rules</a>. Children that cannot be read, and sessions launched independently, stay explicitly unresolved and never get an inferred parent.</li>
   <li>
 <strong>Duration.</strong> Duration follows AL-64: completed turns are measured; an open turn counts as provisional time up to the snapshot cutoff and is replaced on refresh. Time between turns is never counted.</li>
   <li>
 <strong>Cost.</strong> Invocation cost is reported as unavailable. The <code class="language-plaintext highlighter-rouge">cost-state</code> estimate is not treated as observed spend (see open questions).</li>
   <li>
-<strong>Shared ledgers stay intact.</strong> Refresh replaces only owners whose sources are complete. It keeps Codex, OpenCode and other-machine sessions, owners whose transcripts are unavailable or were cleaned up, and unchanged repeat runs. The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a3dea70dafae341b1588e956d435467477741980/TECHNICAL_GUIDELINES.md#portable-ledger-contract">portable ledger contract</a> applies.</li>
+<strong>Shared ledgers stay intact.</strong> Refresh replaces only owners whose sources are complete. It keeps Codex, OpenCode and other-machine sessions, owners whose transcripts are unavailable or were cleaned up, and unchanged repeat runs. The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/9eeabb94c9256a68be40edd3ca1d91d85afe5f0a/TECHNICAL_GUIDELINES.md#portable-ledger-contract">portable ledger contract</a> applies.</li>
   <li>
-<strong>Capability matrix.</strong> The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a3dea70dafae341b1588e956d435467477741980/openspec/changes/al-63-verify-source-capabilities-across-harnesses/CAPABILITIES.md">source capability matrix</a> gains a Claude Code entry with the tested version, the evidence behind each claim and any unsupported cells.</li>
+<strong>Capability matrix.</strong> The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/9eeabb94c9256a68be40edd3ca1d91d85afe5f0a/openspec/changes/al-63-verify-source-capabilities-across-harnesses/CAPABILITIES.md">source capability matrix</a> gains a Claude Code entry with the tested version, the evidence behind each claim and any unsupported cells.</li>
   <li>
 <strong>Guidance.</strong> Setup, operator and developer guidance, the AGENTS.md rule 7 command and source references in <code class="language-plaintext highlighter-rouge">docs/OPENSPEC_WORKFLOW.md</code> name the <code class="language-plaintext highlighter-rouge">claude</code> source and its retention caveat.</li>
   <li>
@@ -77,7 +77,7 @@
 
 <p>Coordinate the shared backfill and CLI paths with AL-94 and AL-78.</p>
 
-<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/a3dea70dafae341b1588e956d435467477741980/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a3dea70dafae341b1588e956d435467477741980/docs/REGRESSION_PREVENTION.md">regression boundaries</a> apply.</p>
+<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/9eeabb94c9256a68be40edd3ca1d91d85afe5f0a/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/9eeabb94c9256a68be40edd3ca1d91d85afe5f0a/docs/REGRESSION_PREVENTION.md">regression boundaries</a> apply.</p>
 </main>
   <footer>Published from the repository's ticket Markdown.</footer>
 </body>
