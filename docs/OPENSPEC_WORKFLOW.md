@@ -19,7 +19,7 @@ The supported project customization points are `openspec/config.yaml`, the proje
 
 The setup bundle installer’s explicit `--with-openspec` option installs this pinned tool/schema bundle from the selected exact AgenticLens release (or approved local source), preflighting every target and refusing differing custom files before any installation writes. It does not run npm, enable capture or generate assistant files.
 
-After explicitly approving setup in an adopting repository, use the pinned CLI's `init --tools codex,opencode --no-animation` and install the reviewed schema bundle/configuration. Preserve custom/unrelated instructions and review generated-file conflicts before accepting updates; do not run `--force` to remove them. This repository's generated shared skills support both Codex and OpenCode. No additional AgenticLens source adapters are implied.
+After explicitly approving setup in an adopting repository, use the pinned CLI's `init --tools codex,opencode --no-animation` and install the reviewed schema bundle/configuration. Preserve custom/unrelated instructions and review generated-file conflicts before accepting updates; do not run `--force` to remove them. This repository's generated shared skills support both Codex and OpenCode; Claude Code reaches the same files through the `.claude/skills/` links. No additional AgenticLens source adapters are implied.
 
 For this repository, create selected execution work from the project root:
 
