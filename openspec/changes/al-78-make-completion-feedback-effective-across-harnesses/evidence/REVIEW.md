@@ -1,0 +1,12 @@
+# AL-78 scoped review
+
+The implementation candidate is `2ee112cf` on upstream `db4477fa`. Independent gpt-6.2-sol/high and gpt-6-luna/medium reviewers examined behavior, data preservation, architecture, and test effectiveness. The corrected Go diff passed targeted race checks. Both exact native clients passed the strengthened publication oracle. The final fixture-only change controls cleanup and passed the focused process-group regression. Consolidated delivery is incomplete because integrated `make` failed in the existing OpenCode idle-restore test. That test passed in isolation on both revisions.
+
+| Focus | Finding and disposition |
+| --- | --- |
+| Behavior | gpt-6.2-sol/high found that the recovery documentation referred to nonce selection for an already completed session and omitted the first-publication title. It also found that the unavailable-interval warning omitted the native completion prerequisite. The docs now give the exact-session command, and the warning explains when each refresh path is usable. Both profiles approved the correction. |
+| Data | gpt-6.2-sol/high found that the observer started checking the API after publication and could mark source usage visible without the final response's tokens. The fixture now observes the API throughout the transition and requires usage from the exact final reply. gpt-6-luna/medium requested evidence for unavailable and other-harness owners and unknown costs. Targeted unchanged-data-path checks supplied that evidence. Both profiles approved their follow-up checks. |
+| Architecture | gpt-6.2-sol/high found inherited HTTP proxy behavior, a GNU-only wait command, and incomplete teardown of fixture clients and detached workers. The fixture now connects directly to loopback and uses a Python deadline. Its own client and reader groups have reserved identities through teardown. It retains the private directory while the detached native publisher retires through its normal bounds. Both profiles approved the final cleanup. |
+| Test effectiveness | gpt-6.2-sol/high found that the oracle could skip the first stale eligible reconciliation and overstate precision by using response-end times for unsuccessful reads. The final probe uses independent source eligibility and request bounds. Both profiles approved the corrected oracle with the passing native evidence. |
+
+The default OpenCode release-gate attempts and the intermittent baseline CLI test are described in the [delivery record](../delivery.md#limits).
