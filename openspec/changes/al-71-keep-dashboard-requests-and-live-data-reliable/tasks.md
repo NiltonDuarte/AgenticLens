@@ -18,7 +18,7 @@ Use the [design](design.md) for scope approval and the [dashboard query](specs/d
 
 - [x] **Orchestrator** — Record implementation approval, coordinate independent behavior, data, architecture and test review, and resolve or document every finding against the tested revision.
 - [x] **Orchestrator** — Integrate with main, run the full `make` gate and affected frontend checks, confirm current embedded assets, and verify the standalone engine. Record actual checks, limits and review attribution in delivery.
-- [ ] **Orchestrator** — Publish final source-backed telemetry and the PR with evidence from the integrated candidate.
+- [x] **Orchestrator** — Publish final source-backed telemetry and the PR with evidence from the integrated candidate.
 
 ## Workflow follow-up
 

@@ -30,6 +30,8 @@ Automatic capture reconciliation reported a degraded collection. Exact-session r
 
 The integrated `make -j2` gate passed with 235 frontend unit and 849 frontend integration tests, plus Go race and distribution checks. The integration timeout was adjusted locally for host load. The standalone engine served the current embedded assets and workspace API.
 
+[Pull request #160](https://github.com/NiltonDuarte/AgenticLens/pull/160)
+
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 41
