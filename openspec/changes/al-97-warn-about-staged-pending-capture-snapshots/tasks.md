@@ -10,9 +10,9 @@ Use the [design approval record](design.md#implementation-approval) before codin
 
 ## Integration and delivery
 
-- [ ] **Orchestrator · Native verification.** Run the installed hook path through the stable manager and selected engine. Record the tested revision, check setup ownership and linked-worktree behavior, and retain the relevant capture-health regression results.
-- [ ] **Focused reviewers · Review.** Verify effective index selection, hook ownership, bounded object and registry reads, portable snapshots, and fail-open output. Consolidate and resolve findings against the integrated candidate.
-- [ ] **Orchestrator · Delivery.** Run integrated `make`, record actual evidence and limits, refresh final source-backed telemetry, and prepare the PR handoff.
+- [x] **Orchestrator · Native verification.** Run the installed hook path through the stable manager and selected engine. Record the tested revision, check setup ownership and linked-worktree behavior, and retain the relevant capture-health regression results.
+- [x] **Focused reviewers · Review.** Verify effective index selection, hook ownership, bounded object and registry reads, portable snapshots, and fail-open output. Recheck product corrections and verify both final budget tests against targeted mutations.
+- [x] **Orchestrator · Delivery.** Run integrated `make`, record actual evidence and limits, refresh final source-backed telemetry, and prepare the PR handoff.
 
 ## Workflow follow-up
 

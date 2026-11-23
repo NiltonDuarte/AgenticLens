@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 8,
+      "issue": "The reviewer suspected staged additions were filtered using the old Git mode.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Refuted. Git raw output puts the new mode at field 1, and a real initial commit warned."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 5,
+      "issue": "The current HEAD comparison differs from an amended commit's historical parent.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Documented the staging baseline. Pre-commit exposes the effective index and no amend flag."
+    },
+    {
+      "finding_id": "BEH-03",
+      "severity": 4,
+      "issue": "An incomplete scan with no classified snapshots hid a capture-health warning.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Combined both findings on the bounded advisory line when the staged scan has no classified warning."
+    },
+    {
+      "finding_id": "BEH-04",
+      "severity": 1,
+      "issue": "The manual's amend wording could imply the health advisory was also quiet.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Clarified that the rule concerns snapshot warnings."
+    },
+    {
+      "finding_id": "BEH-05",
+      "severity": 3,
+      "issue": "One run of the linked worktree's invalid-state fixture emitted the wrapper unavailable line.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Repeated isolated runs passed for the parent and reviewer. A single wrapper fallback under contention remains an observed limit."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 5,
+      "issue": "A worktree directory replacement could hide an unchanged staged blob.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Read the configured literal path in the index independently of a replaced working directory."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 5,
+      "issue": "An unreadable private path could prevent staged snapshot classification.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Treat unavailable local state as optional for staged classification."
+    },
+    {
+      "finding_id": "DATA-03",
+      "severity": 4,
+      "issue": "Staged Git inspection lost the commit's alternate object storage context.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Retain the effective commit object settings for both cached diff and blob reads."
+    },
+    {
+      "finding_id": "DATA-04",
+      "severity": 3,
+      "issue": "An unassociated competing store could make an exact discard appear ambiguous.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Require a matching worktree association before a competing registration affects discard."
+    },
+    {
+      "finding_id": "DATA-05",
+      "severity": 5,
+      "issue": "A missing state setting could prevent inspection despite an explicitly enabled advisory.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Read the selected local advisory preference independently of optional state."
+    },
+    {
+      "finding_id": "DATA-06",
+      "severity": 4,
+      "issue": "A malformed registration could be accepted through a partial SQL projection.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Decode bounded registration evidence and leave discard unconfirmed on failure."
+    },
+    {
+      "finding_id": "DATA-07",
+      "severity": 3,
+      "issue": "Lexical cleanup could select an unrelated directory across symlink parent traversal.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Use physical placement for parent-traversal paths in shared and private settings."
+    },
+    {
+      "finding_id": "DATA-08",
+      "severity": 4,
+      "issue": "A parseable registration with no identity could still suppress a staged warning.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Require decoded identity to match indexed source, store and session."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 5,
+      "issue": "SQLite character length could let an oversized text registration bypass the byte cap.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Measure BLOB byte length before returning the record. The hook regression fails with the old query."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 5,
+      "issue": "A broad discard lookup could pass the original fixture.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Test unrelated same-worktree capture and enroll the linked worktree in the same registry."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 4,
+      "issue": "Malformed JSON alone did not test byte and candidate ceilings.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Add deterministic Git size, cancellation and candidate-budget tests."
+    },
+    {
+      "finding_id": "TEST-03",
+      "severity": 4,
+      "issue": "Worker setup could time out before the commit-index oracle.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Use portable snapshots written directly in the fixture, with real installed hooks and capture registers."
+    },
+    {
+      "finding_id": "TEST-04",
+      "severity": 4,
+      "issue": "Malformed sibling snapshots masked count truncation and no assertion protected cumulative bytes.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Use only valid snapshots and assert exact-bound complete and over-bound partial results. Each test failed under its targeted mutation."
+    }
+  ]
+}
