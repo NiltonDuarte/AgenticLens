@@ -12,9 +12,9 @@ Start execution after explicit scope approval is recorded in the [design](design
 
 ## Integration and delivery
 
-- [ ] Orchestrator: Integrate with current main and record the candidate revision, commands, results and limits for affected checks and the full `make` gate.
-- [ ] Reviewers: Independently check publication and recovery, coverage accuracy, CLI compatibility and regression tests. Orchestrator records findings and their dispositions under the change's evidence directory.
-- [ ] Orchestrator: Record verified outcomes and PR context in delivery, then extract and verify final source-backed telemetry before the artifact commit and PR handoff.
+- [x] Orchestrator: Integrate with current main and record the candidate revision, commands, results and limits for affected checks and the full `make` gate.
+- [x] Reviewers: Independently check publication and recovery, coverage accuracy, CLI compatibility and regression tests. Orchestrator records findings and their dispositions under the change's evidence directory.
+- [x] Orchestrator: Record verified outcomes and PR context in delivery, then extract and verify final source-backed telemetry before the artifact commit and PR handoff.
 
 ## Workflow follow-up
 

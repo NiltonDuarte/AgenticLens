@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 5,
+      "issue": "New OpenCode descendants can exhaust the read budget before recorded owners.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Prioritize recorded owners and explain the configured budget on a targeted retry."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 5,
+      "issue": "Retained collections can make harness coverage incomplete while the ticket and batch totals remain complete.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Derive ticket and aggregate counts from the same typed coverage."
+    },
+    {
+      "finding_id": "BEH-03",
+      "severity": 5,
+      "issue": "An explicit summary-only request can skip a completed ledger.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Handle the summary request independently on otherwise skipped completed ledgers."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 6,
+      "issue": "An unsuccessful publication can count changed candidate facts as refreshed.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Retain verified observations and count unpublished changes separately."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 6,
+      "issue": "Fixed ledger staging can consume an unchanged summary with a valid colliding filename.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Create an exclusive staging file under the owned workspace and preserve file mode."
+    },
+    {
+      "finding_id": "DATA-03",
+      "severity": 5,
+      "issue": "A missing selected store can omit recorded-owner coverage.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Inventory the selected accepted ledgers through read-only ownership and report retained owners or unavailable inventory."
+    },
+    {
+      "finding_id": "DATA-04",
+      "severity": 5,
+      "issue": "Failed Git measurement can omit requested source coverage in a combined call.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Report source work blocked by the Git failure while preserving the existing exit behavior."
+    },
+    {
+      "finding_id": "BEH-04",
+      "severity": 5,
+      "issue": "Cancellation during a second source can discard observations from the completed first source.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Report completed first-source observations as verified while preserving accepted files."
+    },
+    {
+      "finding_id": "BEH-05",
+      "severity": 5,
+      "issue": "An invalid Git ref can hide a missing selected store and suppress its failure exit.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Run selected-store preflight before Git measurement."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 5,
+      "issue": "Candidate preparation failure can discard completed native source observations.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Report verified reads and collection outcomes when the persisted comparison is unavailable."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 3,
+      "issue": "The CLI tests can pass with an always-zero summary write count.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Assert one summary write and zero ledger writes in the summary-only CLI repair case."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 2,
+      "issue": "The checked-in CLI tests can pass if both uncommitted count fields are omitted.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Retain the verified isolated CLI probe and mutation evidence. The tester owns the remaining nonblocking automation gap."
+    }
+  ]
+}
