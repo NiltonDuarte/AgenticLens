@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 5,
+      "issue": "External recovery sent operators to a nonce example and omitted the title required for first publication.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Documented the exact-session external recovery command."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 4,
+      "issue": "Unavailable-interval feedback omitted the native completion prerequisite.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Added qualified automatic and external refresh guidance."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 5,
+      "issue": "The consumer observer started after publication and stopped at a potentially stale response.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Observe API reads throughout settlement and match exact published facts."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 5,
+      "issue": "A source read could qualify with stale cumulative usage.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Require usage from the exact final reply for the bound owner."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 4,
+      "issue": "The loopback API request inherited HTTP proxy settings.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Use a direct loopback HTTP connection."
+    },
+    {
+      "finding_id": "ARCH-02",
+      "severity": 4,
+      "issue": "The opt-in fixture depended on GNU timeout on Darwin.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Use a deadline implemented in Python."
+    },
+    {
+      "finding_id": "ARCH-03",
+      "severity": 5,
+      "issue": "Fixture cleanup could leave descendants alive after the client exited.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Reserve the owned process group through cleanup."
+    },
+    {
+      "finding_id": "ARCH-04",
+      "severity": 5,
+      "issue": "Detached worker teardown could miss startup or interrupt a worker while its publisher kept writing.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Retain the private fixture directory for bounded native retirement and leave detached workers to their lifecycle."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 5,
+      "issue": "The timing oracle could skip a stale first independently eligible publication.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Select by independent source-read eligibility and test the stale-first case."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 4,
+      "issue": "Read end times and unsuccessful HTTP responses could overstate timing precision.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Record request bounds and use only successful older reads as observations."
+    }
+  ]
+}

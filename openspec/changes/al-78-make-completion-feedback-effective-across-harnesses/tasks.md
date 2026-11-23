@@ -13,8 +13,8 @@ Start after the [implementation approval](design.md#implementation-approval) is 
 ## Integration and delivery
 
 - [x] The packaged candidate passed the strengthened timing and final-usage checks on both native clients. The [native evidence](evidence/native-feedback.md) compares it with the baseline and records the measurement limits.
-- [x] Independent behavior, data, architecture, and test reviews approved the scoped corrections on both model profiles. Integrated verification remains open.
-- [ ] Orchestrator runs integrated `make` and applicable native checks, records tested revisions, results, and unresolved limitations in `delivery.md`, and completes final telemetry and PR delivery through the repository workflow.
+- [x] Independent behavior, data, architecture, and test reviews approved the scoped corrections on both model profiles.
+- [x] Integrated `make` passed on `0ed420a1`. The delivery record includes the tested revision, native results, review, residual limits, and final telemetry.
 
 ## Workflow follow-up
 

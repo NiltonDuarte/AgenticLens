@@ -9,8 +9,8 @@
   "ticket_title": "Make completion feedback effective across harnesses",
   "ticket_type": "fix",
   "started_at": "2026-11-23T00:48:15.029Z",
-  "completed_at": "2026-11-23T02:14:31.207789+00:00",
-  "updated_at": "2026-11-23T02:14:31.207789+00:00",
+  "completed_at": "2026-11-23T10:56:58.373832+00:00",
+  "updated_at": "2026-11-23T10:56:58.373832+00:00",
   "code": {
     "lines_added": 30,
     "lines_deleted": 14,
@@ -19,7 +19,7 @@
     "prod_lines_added": 7,
     "prod_lines_deleted": 5,
     "files_changed": 4,
-    "sdlc_iterations": 61
+    "sdlc_iterations": 63
   },
   "sessions": [
     {
@@ -38,6 +38,16 @@
           "name": "agentic-lens-dev",
           "caller_role": "user",
           "invoked_at": "2026-11-23T01:11:54.809Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-23T10:46:37.055Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-23T10:46:37.105Z"
         }
       ],
       "delegations": [
@@ -64,6 +74,12 @@
           "description": "feedback_tests",
           "invoked_at": "2026-11-23T01:14:23.179Z",
           "child_session_id": "01a205f7-ebc2-78a2-be07-760e79132dd1"
+        },
+        {
+          "agent_type": "tester",
+          "description": "restore_gate",
+          "invoked_at": "2026-11-23T10:46:57.932Z",
+          "child_session_id": "01a20804-20da-7410-bd16-b814bf76e4f4"
         }
       ],
       "id": "01a205df-fca9-73c0-802d-ba13984c96bd",
@@ -71,27 +87,27 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 3755,
+          "provisional_seconds": 609,
           "role": "",
           "model": "gpt-6.2-sol",
           "started_at": "2026-11-23T00:48:15.481Z",
           "completed_at": null,
-          "active_duration_seconds": 4137,
-          "turns": 5,
-          "tokens": {"input": 379787, "output": 74291, "cache_read": 67350656, "reasoning": 29001, "peak_context": 321723},
+          "active_duration_seconds": 4803,
+          "turns": 6,
+          "tokens": {"input": 734132, "output": 80202, "cache_read": 78056064, "reasoning": 30107, "peak_context": 343973},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
-          "user_iterations": 27
+          "user_iterations": 29
         }
       ],
       "tools": [
-        {"name": "command", "calls": 196, "errors": 11},
+        {"name": "command", "calls": 213, "errors": 11},
         {"name": "delegate_task", "calls": 19, "errors": 0},
         {"name": "followup_task", "calls": 1, "errors": 0},
         {"name": "list_agents", "calls": 1, "errors": 0},
         {"name": "send_message", "calls": 24, "errors": 0},
-        {"name": "spawn_agent", "calls": 4, "errors": 0},
+        {"name": "spawn_agent", "calls": 5, "errors": 0},
         {"name": "wait", "calls": 2, "errors": 0},
         {"name": "wait_agent", "calls": 30, "errors": 0}
       ],
@@ -660,6 +676,36 @@
         {"name": "command", "calls": 4, "errors": 0}
       ],
       "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a20804-20da-7410-bd16-b814bf76e4f4",
+      "parent_id": "01a205df-fca9-73c0-802d-ba13984c96bd",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "tester",
+          "model": "gpt-6.2-sol",
+          "started_at": "2026-11-23T10:46:58.230Z",
+          "completed_at": "2026-11-23T10:49:00.117Z",
+          "active_duration_seconds": 122,
+          "turns": 1,
+          "tokens": {"input": 373894, "output": 3079, "cache_read": 4969216, "reasoning": 567, "peak_context": 370849},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 17, "errors": 0},
+        {"name": "send_message", "calls": 2, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 332240, "threshold": "250000"}}
+      ]
     }
   ],
   "anomalies": []
