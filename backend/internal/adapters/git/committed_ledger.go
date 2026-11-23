@@ -91,6 +91,10 @@ func validObjectID(s string) bool {
 func boundedGit(ctx context.Context, project string, limit int64, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "git", append([]string{"--no-replace-objects", "-C", project}, args...)...)
 	cmd.Env = historyGitEnvironment(os.Environ())
+	return readBoundedGit(cmd, limit)
+}
+
+func readBoundedGit(cmd *exec.Cmd, limit int64) ([]byte, error) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err

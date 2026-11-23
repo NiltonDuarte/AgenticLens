@@ -4,11 +4,13 @@ Active tickets live in `to-do/`; completed specifications move to `done/` and le
 
 Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946` on 2026-11-08. Historical evidence and previously accepted product decisions remain authoritative within their stated limits. Existing IDs and accepted ticket groupings are preserved across earlier batches.
 
-## Ready
+## In Progress
 
 - **AL-97**: Warn about staged pending capture snapshots
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
+  - **Status**: In Progress; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-97](to-do/AL-97%20warn%20about%20staged%20pending%20capture%20snapshots.md)
+
+## Ready
 
 - **AL-94**: Make explicit backfill repeatable and report refresh coverage
   - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-95

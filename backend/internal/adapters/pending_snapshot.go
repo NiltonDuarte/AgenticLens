@@ -148,21 +148,29 @@ func readPendingSnapshot(path string) (PendingSnapshot, []byte, error) {
 	if len(body) > publicationLimit {
 		return PendingSnapshot{}, nil, errors.New("pending snapshot exceeds bounded read")
 	}
+	snapshot, err := decodePendingSnapshot(body, filepath.Base(path))
+	if err != nil {
+		return PendingSnapshot{}, nil, err
+	}
+	return snapshot, body, nil
+}
+
+func decodePendingSnapshot(body []byte, name string) (PendingSnapshot, error) {
 	var snapshot PendingSnapshot
 	decoder := newStrictFactDecoder(body)
 	if err := decoder.Decode(&snapshot); err != nil {
-		return PendingSnapshot{}, nil, err
+		return PendingSnapshot{}, err
 	}
 	if err := requireFactJSONEOF(decoder, "pending snapshot"); err != nil {
-		return PendingSnapshot{}, nil, err
+		return PendingSnapshot{}, err
 	}
 	if err := snapshot.validate(); err != nil {
-		return PendingSnapshot{}, nil, err
+		return PendingSnapshot{}, err
 	}
-	if filepath.Base(path) != snapshot.CaptureID+".json" {
-		return PendingSnapshot{}, nil, errors.New("pending snapshot filename does not match its identity")
+	if name != snapshot.CaptureID+".json" {
+		return PendingSnapshot{}, errors.New("pending snapshot filename does not match its identity")
 	}
-	return snapshot, body, nil
+	return snapshot, nil
 }
 
 type pendingDirectoryAdmission struct {

@@ -370,6 +370,86 @@ func (s *Store) CaptureControl(ctx context.Context, id string) (CaptureControl, 
 	return s.resolveCaptureControl(ctx, nil, id)
 }
 
+// ConfirmStagedDiscard observes only a durable discard in the selected
+// worktree. The staged identity omits the source store, so a competing store
+// associated with this worktree leaves the result unconfirmed. Resolve the
+// disposition and its bounded registration evidence in one read transaction.
+func (s *Store) ConfirmStagedDiscard(ctx context.Context, source domain.SourceHarness, rootSessionID string) (confirmed bool, returnErr error) {
+	if s.project == "" {
+		return false, errors.New("capture discard inspection requires a selected worktree")
+	}
+	const controlQuery = `SELECT requested_at,store FROM capture_controls
+WHERE worktree_id=? AND capture_id=? AND source=? AND session_id=?
+AND state=? AND revision>0 AND trim(store)<>''`
+	const registrationQuery = `SELECT store,CASE WHEN length(CAST(record AS BLOB)) <= ? THEN record END
+FROM registrations WHERE worktree_id=? AND source=? AND session_id=? LIMIT ?`
+	const registrationLimit = 16
+	const registrationBytes = 1 << 20
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			confirmed = false
+			returnErr = errors.Join(returnErr, err)
+		}
+	}()
+	id := StableCaptureID(source, rootSessionID)
+	var at, store string
+	err = tx.QueryRowContext(ctx, controlQuery, s.worktreeID, id, source, rootSessionID, CaptureControlDiscarded).Scan(&at, &store)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if _, err := time.Parse(time.RFC3339Nano, at); err != nil {
+		return false, fmt.Errorf("reading staged capture discard time: %w", err)
+	}
+	// Oversized records return NULL without loading their payload.
+	rows, err := tx.QueryContext(ctx, registrationQuery, registrationBytes, s.worktreeID, source, rootSessionID, registrationLimit+1)
+	if err != nil {
+		return false, fmt.Errorf("read staged capture registrations: %w", err)
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			confirmed = false
+			returnErr = errors.Join(returnErr, err)
+		}
+	}()
+	count := 0
+	for rows.Next() {
+		count++
+		if count > registrationLimit {
+			return false, errors.New("staged capture registration inspection exceeded its row limit")
+		}
+		var rowStore string
+		var record []byte
+		if err := rows.Scan(&rowStore, &record); err != nil {
+			return false, fmt.Errorf("scan staged capture registration: %w", err)
+		}
+		row, err := decode(record)
+		if err != nil {
+			return false, fmt.Errorf("decode staged capture registration: %w", err)
+		}
+		expected := domain.CaptureIdentity{Source: source, Store: rowStore, SessionID: rootSessionID}
+		if row.Identity != expected {
+			return false, errors.New("staged capture registration identity differs from its indexed identity")
+		}
+		if rowStore != store && row.ProjectDirectory == s.project {
+			return false, nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return false, fmt.Errorf("read staged capture registrations: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (s *Store) CaptureControlForRoot(ctx context.Context, root domain.CaptureIdentity) (CaptureControl, error) {
 	control, err := s.CaptureControl(ctx, StableCaptureID(root.Source, root.SessionID))
 	if err != nil {

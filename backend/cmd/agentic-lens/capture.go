@@ -50,7 +50,7 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 	}
 	if len(args) > 0 && args[0] == "check" && err != nil {
 		// This optional health observer must never block its owner's Git operation.
-		if _, writeErr := fmt.Fprintln(output, "AgenticLens capture advisory: capture health unavailable; run capture diagnostics to inspect configuration/state and refresh setup if needed."); writeErr != nil {
+		if _, writeErr := fmt.Fprintln(output, captureAdvisoryPrefix, captureHealthUnavailable); writeErr != nil {
 			fmt.Fprintln(os.Stderr, "capture advisory output unavailable:", writeErr)
 		}
 		return nil
@@ -274,14 +274,47 @@ func captureNativeAction(args []string, input io.Reader, output io.Writer, prote
 		}
 		defer func() { returnErr = errors.Join(returnErr, releaseAdmission()) }()
 	}
-	var policy domain.CaptureConfig
-	if admission != nil {
-		policy, err = admission.ResolveCapture(*state)
-	} else {
-		policy, err = adaptersconfig.ResolveCapture(project, *state)
+	if command == "check" {
+		enabled, err := adaptersconfig.ResolveCommitWarning(project)
+		if err != nil || !enabled {
+			return err
+		}
 	}
-	if err != nil {
-		return err
+	var policy domain.CaptureConfig
+	var policyErr error
+	if admission != nil {
+		policy, policyErr = admission.ResolveCapture(*state)
+	} else {
+		policy, policyErr = adaptersconfig.ResolveCapture(project, *state)
+	}
+	invalidSessionBudget := provided["max-sessions"] && *sessionBudget < 1
+	invalidByteBudget := provided["max-source-bytes"] && *byteBudget < 1
+	validSource := *source == "" || *source == "codex" || *source == "opencode"
+	if command == "check" && !*userLevel && validSource && !invalidSessionBudget && !invalidByteBudget {
+		stateDir := ""
+		if policyErr == nil {
+			stateDir = policy.StateDir
+		}
+		message, warned := checkStagedCapture(ctx, project, stateDir)
+		if warned {
+			_, err := fmt.Fprintln(output, captureAdvisoryPrefix, message)
+			return err
+		}
+		if message != "" {
+			var health bytes.Buffer
+			advisoryOutput := output
+			output = &health
+			defer func() {
+				healthMessage := health.String()
+				if returnErr != nil {
+					healthMessage = captureHealthUnavailable
+				}
+				_, returnErr = fmt.Fprintln(advisoryOutput, captureAdvisoryPrefix, combineCaptureAdvisory(healthMessage, message))
+			}()
+		}
+	}
+	if policyErr != nil {
+		return policyErr
 	}
 	if command == "admit-protected-worktree" {
 		if !policy.Enabled || protectedHome == "" || len(provided) != 1 || !provided["repo"] {
@@ -300,20 +333,10 @@ func captureNativeAction(args []string, input io.Reader, output io.Writer, prote
 		}
 		return nil
 	}
-	// A valid explicit local disable is authoritative before inspecting state
-	// or installation health. Diagnostics for other commands remain visible.
-	if command == "check" {
-		if err := policy.RequireSettings("commit_warning"); err != nil {
-			return err
-		}
-		if !policy.CommitWarning {
-			return nil
-		}
-	}
-	if provided["max-sessions"] && *sessionBudget < 1 {
+	if invalidSessionBudget {
 		return errors.New("--max-sessions must be a positive integer")
 	}
-	if provided["max-source-bytes"] && *byteBudget < 1 {
+	if invalidByteBudget {
 		return errors.New("--max-source-bytes must be a positive integer")
 	}
 	usesBudgets := inspection || command == "reconcile" || command == "worker" || command == "receive" || command == "request" || command == "bind"

@@ -100,6 +100,11 @@ func (s *Store) Diagnostics(ctx context.Context) ([]domain.CaptureDiagnostic, er
 // writes domain facts. Standard SQLite read transactions may maintain ordinary
 // WAL/SHM coordination metadata; no AgenticLens lock/status files are created.
 func OpenReadOnlyProject(directory, project string) (*Store, error) {
+	return OpenReadOnlyProjectContext(context.Background(), directory, project)
+}
+
+// OpenReadOnlyProjectContext applies the caller's deadline to registry admission.
+func OpenReadOnlyProjectContext(ctx context.Context, directory, project string) (*Store, error) {
 	cfg, err := adaptersconfig.Load(project)
 	if err != nil {
 		return nil, err
@@ -108,11 +113,11 @@ func OpenReadOnlyProject(directory, project string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	directory, err = namedProjectState(directory, cfg.ProjectName, project)
+	directory, err = namedProjectStateContext(ctx, directory, cfg.ProjectName, project)
 	if err != nil {
 		return nil, err
 	}
-	store, err := openRegistry(directory, cfg.ProjectName, project, true)
+	store, err := openRegistryContext(ctx, directory, cfg.ProjectName, project, true)
 	if err != nil {
 		return nil, err
 	}
