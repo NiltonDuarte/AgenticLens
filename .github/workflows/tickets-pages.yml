@@ -1,38 +1,27 @@
 name: Ticket roadmap pages
 
+# Pages publishes only the main portal. Pull requests do not trigger this workflow.
 on:
   push:
     branches: [main]
-  # The workflow comes from the trusted base. PR code runs only in the separate,
-  # read-only candidate job, with no secrets, saved credentials or shared caches.
-  pull_request_target:
-    branches: [main]
-    types: [opened, synchronize, reopened, edited, closed]
+  # Manual republication of main and recovery reruns. Dispatch from main.
   workflow_dispatch:
-    inputs:
-      preview_pr:
-        description: 'Open same-repository PR number (empty publishes main and prunes closed previews)'
-        required: false
-        type: string
 
 permissions:
   contents: read
 
 jobs:
   resolve:
-    if: github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     outputs:
       main_revision: ${{ steps.resolve.outputs.main_revision }}
-      preview_number: ${{ steps.resolve.outputs.preview_number }}
-      preview_revision: ${{ steps.resolve.outputs.preview_revision }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Test trusted preview composition
+      - name: Test trusted publication composition
         run: python3 .github/pages/tests/preview_test.py
-      - name: Resolve current main and eligible PR
+      - name: Resolve current main
         id: resolve
         env:
           GH_TOKEN: ${{ github.token }}
@@ -68,45 +57,8 @@ jobs:
           include-hidden-files: true
           retention-days: 7
 
-  candidate:
-    needs: resolve
-    if: needs.resolve.outputs.preview_number != ''
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.resolve.outputs.preview_revision }}
-          persist-credentials: false
-      - name: Set up Ruby without shared caches
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.3'
-      - name: Verify and build the preview
-        env:
-          BUNDLE_GEMFILE: .github/pages/Gemfile
-          REPOSITORY: ${{ github.repository }}
-          REVISION: ${{ needs.resolve.outputs.preview_revision }}
-          PREVIEW_NUMBER: ${{ needs.resolve.outputs.preview_number }}
-          REPOSITORY_NAME: ${{ github.event.repository.name }}
-        run: |
-          bundle config set --local path vendor/bundle
-          bundle install
-          bundle exec ruby .github/pages/tests/site_test.rb
-          bundle exec ruby .github/pages/build.rb --roadmap alspaces/plan --repository "$REPOSITORY" --revision "$REVISION" --base-path "/$REPOSITORY_NAME/preview/$PREVIEW_NUMBER"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: portal-candidate
-          path: dist/tickets-site
-          include-hidden-files: true
-          retention-days: 7
-
   publish:
-    needs: [resolve, production, candidate]
-    if: >-
-      always() && needs.resolve.result == 'success' && needs.production.result == 'success' &&
-      (needs.candidate.result == 'success' || needs.candidate.result == 'skipped')
+    needs: [resolve, production]
     runs-on: ubuntu-latest
     # The lock includes state read, composition, deployment and state retention.
     concurrency:
@@ -118,9 +70,19 @@ jobs:
       pages: write
       id-token: write
     environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'github-pages' || 'github-pages-preview' }}
+      name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      # A re-run attempt uploads a second github-pages artifact, which
+      # deploy-pages refuses after the pending marker is recorded.
+      - name: Refuse re-run attempts
+        env:
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          if [ "$RUN_ATTEMPT" != "1" ]; then
+            echo "::error::Re-runs cannot publish Pages. Dispatch a new run of this workflow from main instead."
+            exit 1
+          fi
       - name: Check out trusted workflow scripts
         uses: actions/checkout@v4
         with:
@@ -129,30 +91,20 @@ jobs:
         with:
           name: portal-production
           path: ${{ runner.temp }}/portal-production
-      - uses: actions/download-artifact@v4
-        if: needs.resolve.outputs.preview_number != ''
-        with:
-          name: portal-candidate
-          path: ${{ runner.temp }}/portal-candidate
       - name: Load durable static publication
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 .github/pages/preview.py load-state --directory "$RUNNER_TEMP/portal-state"
-      - name: Validate current revisions and compose static output
+      - name: Validate current revision and compose static output
         env:
           GH_TOKEN: ${{ github.token }}
           MAIN_REVISION: ${{ needs.resolve.outputs.main_revision }}
-          PREVIEW_NUMBER: ${{ needs.resolve.outputs.preview_number }}
-          PREVIEW_REVISION: ${{ needs.resolve.outputs.preview_revision }}
         run: >-
           python3 .github/pages/preview.py prepare
           --production "$RUNNER_TEMP/portal-production"
           --previous "$RUNNER_TEMP/portal-state/site"
-          --candidate "$RUNNER_TEMP/portal-candidate"
           --output "$RUNNER_TEMP/portal-publication"
           --main-revision "$MAIN_REVISION"
-          --preview-number "$PREVIEW_NUMBER"
-          --preview-revision "$PREVIEW_REVISION"
       - name: Keep recoverable composition before deployment
         uses: actions/upload-artifact@v4
         with:
@@ -167,8 +119,32 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ runner.temp }}/portal-public
-      # An upload can finish before the artifact service makes it readable.
+      # The artifact service can report a finalized upload as missing for a
+      # short time. Read it again after bounded waits before recording the
+      # transaction; every attempt reads the same artifact and uploads nothing.
       - name: Confirm Pages artifact is readable
+        id: readable
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/portal-pages-check
+      - name: Wait before reading the Pages artifact again
+        if: steps.readable.outcome == 'failure'
+        run: sleep 20
+      - name: Confirm Pages artifact is readable (second attempt)
+        id: readable-again
+        if: steps.readable.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/portal-pages-check
+      - name: Wait longer before the final read
+        if: steps.readable-again.outcome == 'failure'
+        run: sleep 60
+      - name: Confirm Pages artifact is readable (final attempt)
+        if: steps.readable-again.outcome == 'failure'
         uses: actions/download-artifact@v4
         with:
           name: github-pages
@@ -184,13 +160,3 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 .github/pages/preview.py save-state --directory "$RUNNER_TEMP/portal-state" --site "$RUNNER_TEMP/portal-publication"
-      - name: Report preview
-        env:
-          PAGE_URL: ${{ steps.deploy.outputs.page_url }}
-          PREVIEW_NUMBER: ${{ needs.resolve.outputs.preview_number }}
-          PREVIEW_REVISION: ${{ needs.resolve.outputs.preview_revision }}
-        run: |
-          if [ -n "$PREVIEW_NUMBER" ]; then
-            echo "Preview: ${PAGE_URL%/}/preview/$PREVIEW_NUMBER/" >> "$GITHUB_STEP_SUMMARY"
-            echo "Revision: $PREVIEW_REVISION" >> "$GITHUB_STEP_SUMMARY"
-          fi

@@ -1,4 +1,4 @@
-"""Exercise static preview composition with self-contained published-site fixtures."""
+"""Exercise static main publication with self-contained published-site fixtures."""
 
 import importlib.util
 import json
@@ -16,17 +16,16 @@ preview = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(preview)
 
 
-class PreviewCompositionTest(unittest.TestCase):
+class PublicationCompositionTest(unittest.TestCase):
     repository = "fixture-owner/FixtureRepo"
     main_revision = "a" * 40
     revision_24 = "b" * 40
     revision_25 = "c" * 40
 
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory(prefix="portal preview ")
+        self.temporary = tempfile.TemporaryDirectory(prefix="portal publication ")
         self.root = Path(self.temporary.name)
         self.production = self.site("production", "production")
-        self.candidate = self.site("candidate", "candidate 24")
         self.output = self.root / "published"
 
     def tearDown(self):
@@ -45,20 +44,10 @@ class PreviewCompositionTest(unittest.TestCase):
         (site / ".tickets-site-output").write_text("Generated ticket website\n")
         return site
 
-    def pull_request(self, number, revision, state="open", repository=None, base="main"):
-        return {"number": number, "state": state, "base": {"ref": base}, "head": {
-            "sha": revision,
-            "repo": {"full_name": repository or self.repository},
-        }}
-
-    def compose(self, *, production=None, previous=None, candidate=None,
-                output=None, pulls=None, number=None, revision=None):
+    def compose(self, *, production=None, previous=None, output=None):
         return preview.compose(
-            production or self.production, previous, candidate,
-            output or self.output, repository=self.repository,
-            main_revision=self.main_revision,
-            pull_requests=[] if pulls is None else pulls,
-            preview_number=number, preview_revision=revision,
+            production or self.production, previous, output or self.output,
+            repository=self.repository, main_revision=self.main_revision,
         )
 
     @staticmethod
@@ -67,131 +56,104 @@ class PreviewCompositionTest(unittest.TestCase):
                 for path in directory.rglob("*") if path.is_file()}
 
     def seed(self):
-        self.compose(candidate=self.candidate,
-                     pulls=[self.pull_request(24, self.revision_24)],
-                     number=24, revision=self.revision_24)
+        self.compose()
         return self.output
 
-    def test_initial_preview_retains_production_and_separate_preview_assets(self):
+    def legacy_publication_with_previews(self):
+        """A retained publication from before previews were retired."""
+        legacy = self.root / "legacy"
+        shutil.copytree(self.production, legacy)
+        for number, revision in (("24", self.revision_24), ("25", self.revision_25)):
+            self.site(f"legacy-preview-{number}", f"preview {number}")
+            shutil.copytree(self.root / f"legacy-preview-{number}", legacy / "preview" / number)
+        (legacy / ".portal-state.json").write_text(json.dumps({
+            "version": 1, "repository": self.repository, "main_revision": "d" * 40,
+            "previews": {"24": {"revision": self.revision_24}, "25": {"revision": self.revision_25}},
+        }))
+        return legacy
+
+    def test_initial_publication_contains_only_production(self):
         before = self.snapshot(self.production)
         self.seed()
         published = self.snapshot(self.output)
+        self.assertEqual(set(before) | {".portal-state.json"}, set(published))
         for name, contents in before.items():
             self.assertEqual(contents, published[name], name)
-        candidate_files = self.snapshot(self.candidate)
-        for name, contents in candidate_files.items():
-            self.assertEqual(contents, published[f"preview/24/{name}"], name)
         state = json.loads((self.output / ".portal-state.json").read_text())
-        self.assertEqual(self.repository, state["repository"])
-        self.assertEqual(self.main_revision, state["main_revision"])
-        self.assertEqual(self.revision_24, state["previews"]["24"]["revision"])
+        self.assertEqual({"version": 1, "repository": self.repository,
+                          "main_revision": self.main_revision, "previews": {}}, state)
         self.assertEqual(before, self.snapshot(self.production), "Composition must not edit its inputs")
 
-    def test_update_preserves_other_preview_and_replaces_old_matching_files(self):
-        first = self.seed()
-        candidate25 = self.site("candidate25", "candidate 25")
-        second = self.root / "second"
-        pulls = [self.pull_request(24, self.revision_24),
-                 self.pull_request(25, self.revision_25)]
-        self.compose(previous=first, candidate=candidate25, output=second,
-                     pulls=pulls, number=25, revision=self.revision_25)
-        preserved25 = self.snapshot(second / "preview" / "25")
-        (self.candidate / "roadmap" / "to-do" / "TASK-Z.html").unlink()
-        (self.candidate / "index.html").write_text("<html>updated candidate 24</html>")
-        next_revision = "d" * 40
-        pulls[0] = self.pull_request(24, next_revision)
-        third = self.root / "third"
-        self.compose(previous=second, candidate=self.candidate, output=third,
-                     pulls=pulls, number=24, revision=next_revision)
-        self.assertEqual(preserved25, self.snapshot(third / "preview" / "25"))
-        self.assertIn("updated candidate 24", (third / "preview" / "24" / "index.html").read_text())
-        self.assertFalse((third / "preview" / "24" / "roadmap" / "to-do" / "TASK-Z.html").exists())
-        self.assertEqual(self.snapshot(self.production)["index.html"], (third / "index.html").read_bytes())
-
-    def test_open_changed_head_retains_last_success_until_close_prunes(self):
-        first = self.seed()
-        second = self.root / "retained"
-        self.compose(previous=first, output=second,
-                     pulls=[self.pull_request(24, "d" * 40)])
-        self.assertEqual(self.snapshot(first / "preview" / "24"),
-                         self.snapshot(second / "preview" / "24"))
-        third = self.root / "closed"
-        self.compose(previous=second, output=third,
-                     pulls=[self.pull_request(24, "d" * 40, state="closed")])
-        self.assertFalse((third / "preview" / "24").exists())
-        state = json.loads((third / ".portal-state.json").read_text())
+    def test_main_publication_drops_retained_previews_and_keeps_production(self):
+        legacy = self.legacy_publication_with_previews()
+        legacy_before = self.snapshot(legacy)
+        (self.production / "index.html").write_text("<html>new main</html>")
+        output = self.root / "after-retirement"
+        self.compose(previous=legacy, output=output)
+        self.assertFalse((output / "preview").exists())
+        state = json.loads((output / ".portal-state.json").read_text())
         self.assertEqual({}, state["previews"])
-        self.assertEqual((self.production / "index.html").read_bytes(), (third / "index.html").read_bytes())
-
-    def test_rejected_candidate_preserves_previous_published_tree(self):
-        self.seed()
-        before = self.snapshot(self.output)
-        cases = [
-            ([self.pull_request(24, "d" * 40)], 24, self.revision_24),
-            ([self.pull_request(24, self.revision_24, state="closed")], 24, self.revision_24),
-            ([self.pull_request(24, self.revision_24, repository="external/fork")], 24, self.revision_24),
-            ([self.pull_request(25, self.revision_24)], 24, self.revision_24),
-            ([self.pull_request(24, self.revision_24)], "../24", self.revision_24),
-        ]
-        for pulls, number, revision in cases:
-            with self.subTest(number=number, pulls=pulls):
-                with self.assertRaises((ValueError, RuntimeError, TypeError)):
-                    self.compose(candidate=self.candidate, pulls=pulls,
-                                 number=number, revision=revision)
-                self.assertEqual(before, self.snapshot(self.output))
-
-    def test_retargeted_open_pr_is_removed_and_cannot_replace_existing_publication(self):
-        self.seed()
-        before = self.snapshot(self.output)
-        retargeted = [self.pull_request(24, self.revision_24, base="release")]
-        with self.assertRaises((ValueError, RuntimeError)):
-            self.compose(candidate=self.candidate, pulls=retargeted,
-                         number=24, revision=self.revision_24)
-        self.assertEqual(before, self.snapshot(self.output))
-        next_output = self.root / "retargeted"
-        self.compose(previous=self.output, output=next_output, pulls=retargeted)
-        self.assertFalse((next_output / "preview" / "24").exists())
-        state = json.loads((next_output / ".portal-state.json").read_text())
-        self.assertEqual({}, state["previews"])
-        self.assertEqual((self.production / "index.html").read_bytes(), (next_output / "index.html").read_bytes())
-
-    def test_candidate_symlink_or_unexpected_payload_is_rejected_before_replacement(self):
-        self.seed()
-        before = self.snapshot(self.output)
-        outside = self.root / "private-ledger.json"
-        outside.write_text("PRIVATE_CAPTURE_MUST_NOT_BE_PUBLISHED")
-        unsafe = self.candidate / "roadmap" / "private.html"
-        unsafe.symlink_to(outside)
-        for target in (unsafe, self.candidate / "agentic_metrics.json"):
-            if target != unsafe:
-                unsafe.unlink()
-                target.write_text(outside.read_text())
-            with self.subTest(target=target.name):
-                with self.assertRaises((ValueError, RuntimeError)):
-                    self.compose(candidate=self.candidate,
-                                 pulls=[self.pull_request(24, self.revision_24)],
-                                 number=24, revision=self.revision_24)
-                self.assertEqual(before, self.snapshot(self.output))
-        self.assertEqual("PRIVATE_CAPTURE_MUST_NOT_BE_PUBLISHED", outside.read_text())
+        self.assertEqual(self.main_revision, state["main_revision"])
+        self.assertEqual("<html>new main</html>", (output / "index.html").read_text())
+        expected = self.snapshot(self.production)
+        published = self.snapshot(output)
+        published.pop(".portal-state.json")
+        self.assertEqual(expected, published)
+        self.assertEqual(legacy_before, self.snapshot(legacy), "Composition must not edit retained state")
+        # The composed state is itself a valid previous publication.
+        self.compose(previous=output, output=self.root / "next")
 
     def test_previous_metadata_cannot_escape_preview_directory_or_change_repository(self):
-        self.seed()
-        state_path = self.output / ".portal-state.json"
+        legacy = self.legacy_publication_with_previews()
+        state_path = legacy / ".portal-state.json"
         original = json.loads(state_path.read_text())
         for changed in (
             {**original, "repository": "other/repository"},
             {**original, "previews": {"../production": {"revision": self.revision_24}}},
             {**original, "previews": {"24": {"revision": "not-a-revision"}}},
+            {**original, "previews": {"24": {"revision": self.revision_24}}},
         ):
             state_path.write_text(json.dumps(changed))
-            before = self.snapshot(self.output)
+            before = self.snapshot(legacy)
             next_output = self.root / "rejected"
             with self.subTest(state=changed):
                 with self.assertRaises((ValueError, RuntimeError)):
-                    self.compose(previous=self.output, output=next_output,
-                                 pulls=[self.pull_request(24, self.revision_24)])
-                self.assertEqual(before, self.snapshot(self.output))
+                    self.compose(previous=legacy, output=next_output)
+                self.assertEqual(before, self.snapshot(legacy))
                 self.assertFalse(next_output.exists())
+
+    def test_unsafe_previous_preview_is_rejected_before_replacement(self):
+        legacy = self.legacy_publication_with_previews()
+        self.seed()
+        before = self.snapshot(self.output)
+        outside = self.root / "private-ledger.json"
+        outside.write_text("PRIVATE_CAPTURE_MUST_NOT_BE_PUBLISHED")
+        (legacy / "preview" / "24" / "roadmap" / "private.html").symlink_to(outside)
+        with self.assertRaises((ValueError, RuntimeError)):
+            self.compose(previous=legacy)
+        self.assertEqual(before, self.snapshot(self.output))
+        self.assertEqual("PRIVATE_CAPTURE_MUST_NOT_BE_PUBLISHED", outside.read_text())
+
+    def test_unexpected_production_payload_is_rejected_before_replacement(self):
+        self.seed()
+        before = self.snapshot(self.output)
+        (self.production / "agentic_metrics.json").write_text("PRIVATE_CAPTURE_MUST_NOT_BE_PUBLISHED")
+        next_output = self.root / "rejected"
+        with self.assertRaises((ValueError, RuntimeError)):
+            self.compose(previous=self.output, output=next_output)
+        self.assertEqual(before, self.snapshot(self.output))
+        self.assertFalse(next_output.exists())
+
+    def test_resolve_refuses_a_ref_other_than_main(self):
+        output = self.root / "github-output"
+        environment = {**os.environ, "GITHUB_REF": "refs/heads/feature",
+                       "GITHUB_REPOSITORY": self.repository, "GITHUB_OUTPUT": str(output),
+                       "GH_TOKEN": "fixture-token-not-a-secret"}
+        result = subprocess.run(["python3", str(MODULE_PATH), "resolve"], env=environment,
+                                capture_output=True, text=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("Pages publishes only from main", result.stderr)
+        self.assertFalse(output.exists())
 
     def test_output_cannot_replace_inputs_unmanaged_files_or_symlink_targets(self):
         unowned = self.root / "unmanaged"

@@ -1,4 +1,8 @@
-"""Compose static PR previews without executing code from a build artifact."""
+"""Compose and retain the static main portal without executing code from a build artifact.
+
+PR previews are no longer published. A retained state may still list previews
+from earlier publications; they are validated and then dropped.
+"""
 from __future__ import annotations
 
 import argparse
@@ -78,55 +82,29 @@ def read_state(previous: Path, repository: str) -> dict:
     return state
 
 
-def compose(production: Path, previous: Path | None, candidate: Path | None, output: Path,
-            *, repository: str, main_revision: str, pull_requests: list[dict],
-            preview_number: int | None = None, preview_revision: str | None = None) -> None:
+def compose(production: Path, previous: Path | None, output: Path,
+            *, repository: str, main_revision: str) -> None:
     require_sha(main_revision)
     if not re.fullmatch(r"[\w.-]+/[\w.-]+", repository):
         raise ValueError("Invalid repository")
     validate_site(production)
-    state = read_state(previous, repository) if previous is not None else {"previews": {}}
-    eligible = {}
-    for pr in pull_requests:
-        number = pr["number"]
-        if type(number) is not int or number <= 0:
-            raise ValueError("Invalid PR number")
-        if (pr["state"] == "open" and pr["base"]["ref"] == "main" and pr["head"]["repo"]
-                and pr["head"]["repo"]["full_name"] == repository):
-            eligible[str(number)] = require_sha(pr["head"]["sha"])
-    if candidate is not None:
-        if type(preview_number) is not int or preview_number <= 0:
-            raise ValueError("Candidate requires a positive preview number")
-        if eligible.get(str(preview_number)) != require_sha(preview_revision):
-            raise ValueError("Stale, closed or unrelated preview candidate")
-        validate_site(candidate)
-    elif preview_number is not None or preview_revision is not None:
-        raise ValueError("Preview identity requires a candidate")
+    if previous is not None:
+        # Validate retained state, including legacy previews, before replacing it.
+        read_state(previous, repository)
     if output.is_symlink() or any(parent.is_symlink() for parent in output.parents):
         raise ValueError("Output must not traverse a symlink")
     if output.exists() and (not output.is_dir() or not (output / STATE).is_file()):
         raise ValueError("Refusing to replace unmanaged output")
-    inputs = [production, previous, candidate]
-    for source in inputs:
+    for source in (production, previous):
         if source is not None and (output.resolve() == source.resolve() or output.resolve() in source.resolve().parents or source.resolve() in output.resolve().parents):
             raise ValueError("Output and inputs must be separate")
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="portal-compose-", dir=output.parent) as temporary:
         staged = Path(temporary) / "site"
         shutil.copytree(production, staged)
-        previews = {}
-        for number, record in state["previews"].items():
-            if number in eligible:
-                shutil.copytree(previous / "preview" / number, staged / "preview" / number)
-                previews[number] = record
-        if candidate is not None:
-            target = staged / "preview" / str(preview_number)
-            if target.exists():
-                shutil.rmtree(target)
-            shutil.copytree(candidate, target)
-            previews[str(preview_number)] = {"revision": preview_revision}
+        # Previews from earlier publications are not carried forward.
         (staged / STATE).write_text(json.dumps({"version": 1, "repository": repository,
-            "main_revision": main_revision, "previews": previews}, indent=2) + "\n")
+            "main_revision": main_revision, "previews": {}}, indent=2) + "\n")
         if output.exists():
             shutil.rmtree(output)
         staged.rename(output)
@@ -140,55 +118,22 @@ def api(path: str) -> object:
         return json.load(response)
 
 
-def open_prs(repository: str) -> list[dict]:
-    result = []
-    page = 1
-    while True:
-        batch = api(f"repos/{repository}/pulls?state=open&base=main&per_page=100&page={page}")
-        result.extend(batch)
-        if len(batch) < 100:
-            return result
-        page += 1
-
-
 def resolve() -> None:
+    if os.environ["GITHUB_REF"] != "refs/heads/main":
+        raise ValueError("Pages publishes only from main; dispatch this workflow from main")
     repository = os.environ["GITHUB_REPOSITORY"]
-    event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
-    event_name = os.environ["GITHUB_EVENT_NAME"]
     main = api(f"repos/{repository}/commits/main")["sha"]
-    number = None
-    revision = ""
-    if event_name == "pull_request_target" and event["action"] != "closed":
-        number = event["number"]
-    elif event_name == "workflow_dispatch":
-        value = event.get("inputs", {}).get("preview_pr", "")
-        if value:
-            if not re.fullmatch(r"[1-9][0-9]*", value):
-                raise ValueError("preview_pr must be a positive PR number")
-            number = int(value)
-        elif os.environ["GITHUB_REF"] != "refs/heads/main":
-            raise ValueError("A feature-ref dispatch requires preview_pr")
-    if number is not None:
-        pr = api(f"repos/{repository}/pulls/{number}")
-        if pr["state"] != "open" or not pr["head"]["repo"] or pr["head"]["repo"]["full_name"] != repository or pr["base"]["ref"] != "main":
-            raise ValueError("Only open same-repository PRs targeting main have previews")
-        revision = require_sha(pr["head"]["sha"])
-        if event_name == "workflow_dispatch" and os.environ["GITHUB_REF"] != "refs/heads/main" and os.environ["GITHUB_SHA"] != revision:
-            raise ValueError("Bootstrap dispatch must use the PR's current head")
     with open(os.environ["GITHUB_OUTPUT"], "a") as output:
-        output.write(f"main_revision={require_sha(main)}\npreview_number={number or ''}\npreview_revision={revision}\n")
+        output.write(f"main_revision={require_sha(main)}\n")
 
 
 def prepare(arguments: argparse.Namespace) -> None:
     repository = os.environ["GITHUB_REPOSITORY"]
     if api(f"repos/{repository}/commits/main")["sha"] != arguments.main_revision:
-        raise ValueError("Main advanced during build; rerun publication")
-    compose(Path(arguments.production), Path(arguments.previous) if Path(arguments.previous).exists() else None,
-        Path(arguments.candidate) if arguments.preview_number else None, Path(arguments.output),
-        repository=repository, main_revision=arguments.main_revision, pull_requests=open_prs(repository),
-        preview_number=int(arguments.preview_number) if arguments.preview_number else None,
-        preview_revision=arguments.preview_revision or None)
-
+        raise ValueError("Main advanced during build; dispatch a new publication from main")
+    previous = Path(arguments.previous)
+    compose(Path(arguments.production), previous if previous.exists() else None, Path(arguments.output),
+        repository=repository, main_revision=arguments.main_revision)
 
 
 def assert_no_pending(directory: Path) -> None:
@@ -259,7 +204,7 @@ def state_repository(command: str, directory: Path, site: Path | None = None) ->
         git("add", "--all", "site", ".pending-publication.json")
         if git("diff", "--cached", "--quiet", check=False).returncode == 0:
             return
-        git("commit", "-m", "chore: retain published portal and PR previews")
+        git("commit", "-m", "chore: retain published portal")
         # Retry transient network failures; an actual concurrent update stays a failure.
         for attempt in range(3):
             result = git("push", "origin", "HEAD:refs/heads/portal-pages-state", check=False)
@@ -277,8 +222,8 @@ if __name__ == "__main__":
         state_parser.add_argument("--directory", required=True)
         state_parser.add_argument("--site")
     preparation = commands.add_parser("prepare")
-    for name in ("production", "previous", "candidate", "output", "main-revision", "preview-number", "preview-revision"):
-        preparation.add_argument("--" + name, required=name not in {"preview-number", "preview-revision"}, default="")
+    for name in ("production", "previous", "output", "main-revision"):
+        preparation.add_argument("--" + name, required=True)
     args = parser.parse_args()
     if args.command == "resolve":
         resolve()
