@@ -9,8 +9,8 @@
   "ticket_title": "Generate ticket metrics from Claude Code sessions",
   "ticket_type": "feat",
   "started_at": "2026-11-23T23:11:18.553Z",
-  "completed_at": "2026-11-24T02:24:30.975623+00:00",
-  "updated_at": "2026-11-24T02:24:30.975623+00:00",
+  "completed_at": "2026-11-24T09:34:31.038796+00:00",
+  "updated_at": "2026-11-24T09:34:31.038796+00:00",
   "code": {
     "lines_added": 6721,
     "lines_deleted": 67,
@@ -19,7 +19,7 @@
     "prod_lines_added": 2527,
     "prod_lines_deleted": 59,
     "files_changed": 40,
-    "sdlc_iterations": 2
+    "sdlc_iterations": 3
   },
   "sessions": [
     {
@@ -511,29 +511,30 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 57,
+          "provisional_seconds": 35,
           "role": "",
           "model": "claude-opus-5-5",
           "started_at": "2026-11-23T23:11:18.553Z",
           "completed_at": null,
-          "active_duration_seconds": 3036,
-          "turns": 38,
-          "tokens": {"input": 326, "output": 108963, "cache_read": 24133989, "reasoning": 15306, "peak_context": 333455},
+          "active_duration_seconds": 3140,
+          "turns": 39,
+          "tokens": {"input": 356, "output": 116884, "cache_read": 27438201, "reasoning": 16894, "peak_context": 342062},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
-          "compactions": 0,
-          "user_iterations": 2
+          "compactions": 1,
+          "user_iterations": 3
         }
       ],
       "tools": [
         {"name": "Agent", "calls": 13, "errors": 0},
         {"name": "AskUserQuestion", "calls": 2, "errors": 0},
-        {"name": "Bash", "calls": 63, "errors": 0},
+        {"name": "Bash", "calls": 75, "errors": 0},
         {"name": "SendMessage", "calls": 27, "errors": 0},
         {"name": "Skill", "calls": 1, "errors": 0},
-        {"name": "ToolSearch", "calls": 2, "errors": 0},
+        {"name": "ToolSearch", "calls": 3, "errors": 0},
         {"name": "Write", "calls": 2, "errors": 0},
         {"name": "mcp__t3-code__delegate_task", "calls": 5, "errors": 1},
+        {"name": "mcp__t3-code__link_pull_request", "calls": 1, "errors": 0},
         {"name": "mcp__t3-code__orchestrator_capabilities", "calls": 3, "errors": 0},
         {"name": "mcp__t3-code__task_cancel", "calls": 4, "errors": 0},
         {"name": "mcp__t3-code__task_status", "calls": 1, "errors": 0}

@@ -57,15 +57,15 @@ Behavior, data integrity, architecture and test effectiveness were each reviewed
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 2
-- **Active Agent Duration:** 5h 28m (recorded duration including 57s provisional)
-- **Context Window Health:** BLOATED — Root agent peak 333.5k tokens (74% of 450k healthy ceiling, 0 compactions) | Subagents peak 499.6k (Tester)
+- **Software Development Life Cycle Iterations:** 3
+- **Active Agent Duration:** 5h 29m (recorded duration including 35s provisional)
+- **Context Window Health:** BLOATED — Root agent peak 342.1k tokens (76% of 450k healthy ceiling, 1 compactions) | Subagents peak 499.6k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 2.8 avg turns/run (peak: 5 turns) | Planner 2.0, Coder 4.0, Tester 2.5, Reviewer-architecture 2.0, Reviewer-behavior 3.0, Reviewer-data 3.0, Reviewer-tests 3.0
 - **Test-to-Production Code Ratio:** 1.7:1 (+4,194 test lines / +2,527 prod lines)
 - **Code Delivered:** +6,721 / -67 lines across 40 code files (excluding docs)
-- **Reasoning Effort:** 420,000 reasoning tokens (24.6% of generated output)
-- **Tool Health & Self-Correction:** 1,370 tool calls (13 self-corrections, 99.1% success rate)
+- **Reasoning Effort:** 421,588 reasoning tokens (24.6% of generated output)
+- **Tool Health & Self-Correction:** 1,384 tool calls (13 self-corrections, 99.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 19 execution anomalies detected (6 CRITICAL, 13 WARNING).
@@ -99,17 +99,17 @@ Behavior, data integrity, architecture and test effectiveness were each reviewed
 | **planner** | 1 | 182 | 87,438 | 17,109,915 | 100.0% | 314.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **coder** | 2 | 488 | 246,687 | 60,336,661 | 100.0% | 477.7k | BLOATED (106%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **tester** | 2 | 538 | 295,163 | 63,342,820 | 100.0% | 499.6k | BLOATED (111%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Unknown** | 1 | 326 | 108,963 | 24,133,989 | 100.0% | 333.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 356 | 116,884 | 27,438,201 | 100.0% | 342.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 2 | 198 | 70,273 | 11,954,527 | 100.0% | 223.6k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-behavior** | 2 | 432 | 160,455 | 38,777,337 | 100.0% | 322.8k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-data** | 2 | 278 | 148,506 | 23,625,541 | 100.0% | 309.7k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-tests** | 2 | 320 | 166,603 | 34,920,087 | 100.0% | 379.0k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Total** | **14** | **2,762** | **1,284,088** | **274,200,877** | **100.0%** | **499.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **Total** | **14** | **2,792** | **1,292,009** | **277,505,089** | **100.0%** | **499.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **claude-opus-5-5** | 10 | 2,058 | 963,048 | 207,164,963 | 100.0% | Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations) |
+| **claude-opus-5-5** | 10 | 2,088 | 970,969 | 210,469,175 | 100.0% | Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations) |
 | **claude-sonnet-5-5** | 4 | 704 | 321,040 | 67,035,914 | 100.0% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **14** | **2,762** | **1,284,088** | **274,200,877** | **100.0%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **Total** | **14** | **2,792** | **1,292,009** | **277,505,089** | **100.0%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 <!-- agentic-lens:metrics:end -->
