@@ -28,7 +28,7 @@ The following are excluded:
 
 The stored `DelegationFact` has no call ID.
 
-**Pure domain rule.** A new function in `backend/internal/domain/child_links.go` takes the accepted sessions, the fresh sessions and the target harness (Codex). It returns the reconciled fresh sessions and a typed report.
+**Pure domain rule.** `domain.RetainAcceptedChildLinks` in `backend/internal/domain/child_links.go` takes the accepted sessions, the fresh sessions and the target harness (Codex). It returns the reconciled fresh sessions and a typed report.
 
 Child parent evidence has three typed states:
 - **confirmed:** the fresh child's `ParentID` is this parent. Without a fresh child, the accepted record's `ParentID` is this parent.
@@ -60,7 +60,7 @@ Owners with nil delegations, owners from other harnesses and owners that were no
   - an earlier retained pair in the same pass.
 - **When the count is added.**
   - The adapter adds its pairs after `pendingChildWork` sets the figure.
-  - The CLI helper adds its pairs through an exported, deduplicating `ReconcileResult` method, and records the updated partial reconciliation through the existing diagnostic writer. Otherwise a machine whose registry never registered the children would show the pass as complete.
+  - The CLI helper adds its pairs through the deduplicating `ReconcileResult.AddRetainedChildLinks`, and records the updated partial reconciliation (from `ReconcileResult.ReconciliationDiagnostic`) through the existing diagnostic writer. Otherwise a machine whose registry never registered the children would show the pass as complete.
 - **What does not change.** `UnresolvedParentLinks` is never changed. A non-zero `PendingChildren` already marks the attempt as partial.
 
 ### Discovery budget
@@ -77,16 +77,18 @@ A sweep of 1,909 headers is estimated at about 120 MiB, and several sweeps happe
   - **Clock evidence.** Rollout directory and file-name times are machine-local; on the user's store, CET and CEST appear. Codex file-name UUIDs are UUIDv7, equal to `session_meta.id`, and their first 48 bits are the exact UTC creation milliseconds.
   - **File rule.** A candidate whose UUIDv7 instant is more than 5 seconds before the parent's instant is skipped without being claimed or read. The 5 seconds cover NTP clock steps only; the smallest observed parent-to-child gap was 6.7 s across 949 relations.
   - **Parent instant.** It comes from the parent's own UUIDv7, or else from its `session_meta` timestamp. Without either, that sweep does not prune.
-  - **Directory rule.** It only reduces listing cost. A local day directory is skipped only when its local day ends more than 14 hours (the maximum UTC offset) before the parent's instant.
-  - **Always read.** Malformed names and non-v7 UUIDs are read as today. The file name is only a pre-filter; identity and parent come from `session_meta`.
-- **Exact-lookup pre-filter.** Exact lookups skip files whose name carries a different UUID. Same-UUID copies are still read, so ambiguity is still detected.
-- **Header cache.** One header reader, with a pass-local cache keyed by physical path, size and mtime, serves child sweeps, owner preflight and exact lookup.
-- **Actual-bytes charging.** Header reads are charged the bytes actually consumed, measured as the current discovery reader does, within the 64 KiB bound.
+  - **Directory rule.** It only reduces listing cost. A local year, month or day directory is skipped only when its local period ends more than 14 hours (the maximum UTC offset) plus the 5-second tolerance before the parent's instant.
+  - **Always read.** Outside a pruned date directory, a child sweep reads malformed names and non-v7 UUIDs as it does today. Names and directories only exclude candidates: inclusion, identity and parent always come from the candidate's own `session_meta`.
+- **Exact-lookup pre-filter.** `codex.DiscoverExactCaptureRolloutPath` skips conventionally named files whose UUID differs from the request, v7 or not. Same-UUID copies are still read, and duplicates are reported with `codex.ErrOwnerAmbiguous`.
+- **Header cache.** One header reader with a pass-local `codex.HeaderCache`, keyed by physical path, size and mtime, serves child sweeps, owner preflight and exact lookup.
+- **Actual-bytes charging.** Header reads are charged the bytes actually consumed, measured as the current discovery reader does, within the 64 KiB bound. A header read starts only when `min(size, 64 KiB)` fits in the remaining allowance, so no read is abandoned partway.
 - **Reserved identification ceiling.**
   - **Rotating rounds.** During the work-class loop in `ReconcileAt`, header identification may use at most a quarter of `max_source_bytes`. That quarter is reserved, so owner extraction in those rounds may use at most three quarters.
   - **Final leftover refresh.** Extraction may use everything that remains of the total, including identification's unused share.
+  - **What counts as identification.** Only child discovery: Codex child sweeps, queued-child header reads, the parent header read for the window, and OpenCode child pages. A known owner's own preflight and exact lookup are charged to extraction, and they cost nothing once the header cache holds them.
   - **No borrowing by identification.** It stops at its ceiling with discovery pending, not failed, and never draws on extraction. Header reads no longer reduce the extraction session count.
-  - **Totals.** The two never exceed `max_source_bytes` combined, and no configuration key is added. Reported `SourceBytes` is their sum.
+  - **Deferred owners.** An owner refused only because of the reservation is marked not attempted. Its session slot is refunded, and the final leftover refresh retries it.
+  - **Totals.** The two never exceed `max_source_bytes` combined, and no configuration key is added. Reported `SourceBytes` is their sum. `SourceAttempts` (the coverage summary's "Source attempts") counts owner reads only, not header reads, so attempts never exceed `max_sessions`.
 
 Manual `generate` and backfill use `DiscoverRolloutPaths` and stay unchanged. That path runs without a pass budget, and a nonce scan reads whole files before the root is known. Pruning there would add risk of losing a member without any correctness benefit. Live hydration keeps the current exact lookup, and the pre-filters are opt-in options that only capture passes.
 
@@ -104,13 +106,21 @@ Manual `generate` and backfill use `DiscoverRolloutPaths` and stay unchanged. Th
 
 **Changes.**
 - **(A) Relocation on exact proof.** Relocation is allowed for unassigned rows under the same checks binding already applies (`verifyBindingSource`): `resolveRegisteredCodexSnapshot`, `validateCodexOwnerMetadata` and `keepsAcceptedCaptureParent`. The row stays unassigned.
-- **(B) Isolation.** An unproven, ambiguous or conflicting outcome records the row's state and diagnostic. It adds the row to a typed, request-local `ReconcileResult` list of isolated sources, with a typed reason (unavailable, ambiguous or conflicting). The worker excludes that list from pass success and from `lastFailure`. Budget outcomes keep their existing retry behavior.
+- **(B) Isolation.** An unproven, ambiguous or conflicting outcome records the row's state and diagnostic. It adds the row to the request-local `ReconcileResult.IsolatedSources` as an `IsolatedSource{Identity, Reason, Detail}`, with a typed reason (unavailable, ambiguous or conflicting). The worker excludes that list from pass success and from `lastFailure`. Budget outcomes keep their existing retry behavior.
+
+### Known limits
+
+- **Contradiction warnings.** Capture never surfaced the "delegation child metadata contradicts native parent" warning, and this change keeps it that way.
+  - A task-name-only result raises no warning, because `resolveSourceChildren` never matches a child whose parent differs.
+  - For an explicit `session_id` result, the warning stays in the owner's source warnings and does not reach capture output.
+  - The guarantee FIX-21 makes is that a contradicted link is cleared.
+- **Renamed rollouts.** An exact lookup would miss a renamed rollout whose file name carries a UUID other than its `session_meta.id`. On the user's real store, the file-name UUID equalled `session_meta.id` in 1909 of 1909 files.
 
 ### Owners
 
 The coder owns these product files:
 - `domain/child_links.go`
-- `capture/reconcile.go`, `capture/archive_projection.go`, `capture/children.go`, `capture/source_database.go` and `capture/source_checkpoint.go` if needed
+- `capture/reconcile.go`, `capture/archive_projection.go`, `capture/children.go`, `capture/source_database.go` and `capture/codex_context.go`
 - `codex/discovery.go` and `codex/discovery_budget.go`
 - `cmd/agentic-lens/capture.go`, `capture_worker.go` and the single call in `main.go`
 
@@ -171,3 +181,18 @@ Budget-accounting assertions that change are updated with a recorded rationale, 
 - **Allowance.** A reserved quarter, released to the final leftover refresh, replaces the draft's fixed split without refunds. Tests add extraction scheduled ahead of discovery, the release of the leftover share, identification stopping at its ceiling as pending, and exact byte totals.
 
 No open decisions remain.
+
+**Implementation refinements.** The coder's implementation report proposed five refinements, and the orchestrator accepted them on 2026-11-24 as within the approved scope. None needs renewed approval.
+1. **Identification covers child discovery only.** A known owner's preflight and exact lookup are charged to extraction. This is what lets known owners still be extracted when identification hits its ceiling.
+2. **`SourceAttempts` excludes header reads.** This keeps attempts at or below `max_sessions`. Header bytes still count in `SourceBytes`. The coverage summary's "Source attempts" figure changes as a result.
+3. **Owners refused by the reservation are deferred.** Each is marked not attempted, its session slot is refunded, and the final leftover refresh retries it.
+4. **Stricter directory rule.** It uses 14 hours plus 5 seconds and also applies to year and month directories. The rule skips less.
+5. **Header read admission.** A header read starts only when `min(size, 64 KiB)` fits in the remaining allowance.
+
+The discovery-budget spec and tasks were aligned with these.
+
+**Spec wording alignment.** On 2026-11-24 the tester reported two places where the spec's wording contradicted the accepted design, and the orchestrator settled both. Neither changes behavior or scope.
+- **Contradiction scenarios.** They now promise that the link is cleared and that existing source-level warning behavior is unchanged. They no longer promise a capture-visible warning, and the limit is recorded under Known limits.
+- **File names.** The requirement "File names never establish identity" became "File names only exclude candidates", plus a separate requirement that unconventional names are read. These permit the exact-lookup and date-directory exclusions, while inclusion still requires the candidate's own `session_meta`. The residual risk from renamed rollouts is recorded under Known limits.
+
+Verification asserts that the link is cleared, not that a warning appears, and covers both permitted exclusions. Verification adds assertions for deferral and retry, the attempts figure, year and month directories at the boundary, and refusal to admit a read.

@@ -407,7 +407,16 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			for _, owner := range unassigned.RefreshedSessions {
 				refreshedUnassigned[owner.ID] = true
 			}
+			// A moved unassigned rollout without exact proof is isolated: it is
+			// retried on the next integration event, not until lifetime expiry.
+			isolatedUnassigned := map[string]bool{}
+			for _, source := range unassigned.IsolatedSources {
+				isolatedUnassigned[capture.IdentityKey(source.Identity)] = true
+			}
 			for _, registration := range unassigned.Registrations {
+				if isolatedUnassigned[capture.IdentityKey(registration.Identity)] {
+					continue
+				}
 				if registration.State == domain.CaptureFailed || (registration.State == domain.CapturePending && !refreshedUnassigned[registration.Identity.SessionID]) {
 					success = false
 					busyOnly = false

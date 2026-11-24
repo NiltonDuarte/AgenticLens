@@ -34,11 +34,11 @@ Request-local transcript events SHALL keep only the child links that the current
 
 ### Requirement: Fresh source evidence decides changed links
 
-A refreshed link SHALL change only when the fresh read resolves the delegation to a different child whose native parent metadata names this parent. When fresh child metadata names a different parent or none, the link SHALL be cleared with the existing contradiction warning, even if it was accepted earlier.
+A refreshed link SHALL change only when the fresh read resolves the delegation to a different child whose native parent metadata names this parent. When fresh child metadata names a different parent or none, the link SHALL be cleared, even if it was accepted earlier. Source-level contradiction warnings SHALL behave as they do today; this change adds no new warning surface.
 
 #### Scenario: Fresh child contradicts the accepted link
 - **WHEN** a pass reads the parent and a linked child whose own metadata now names another parent
-- **THEN** that delegation's link is cleared with the contradiction warning, and the parent's other accepted links follow the retention rule
+- **THEN** that delegation's link is cleared, the parent's other accepted links follow the retention rule, and source-level warning behavior is unchanged
 
 #### Scenario: Fresh read resolves a different valid child
 - **WHEN** the fresh read resolves a delegation to a different child whose metadata names this parent

@@ -1,12 +1,9 @@
 package capture
 
 import (
-	"bufio"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -103,6 +100,9 @@ func (class workClass) cursorKind() string {
 
 type workBudget struct {
 	codexDiscovery    *codex.DiscoveryBudget
+	headers           *codex.HeaderCache
+	split             *budgetSplit
+	deferred          map[string]bool
 	controlRevision   int64
 	restorePriority   *restorePriorities
 	openCodeAttempts  map[string]bool
@@ -112,6 +112,23 @@ type workBudget struct {
 	readBytes         int64
 	attempts          int
 	discoveryPending  bool
+}
+
+// budgetSplit reserves part of a pass's byte allowance for header
+// identification during the rotating work-class rounds. Identification never
+// exceeds its share. Owner extraction is limited to the rest until the split
+// is released for the final leftover refresh, which may then use everything
+// that remains, including identification's unused share.
+type budgetSplit struct {
+	identification int64
+	extraction     int64
+	released       bool
+}
+
+// newBudgetSplit reserves a quarter of the pass allowance for identification.
+func newBudgetSplit(bytes int64) *budgetSplit {
+	identification := bytes / 4
+	return &budgetSplit{identification: identification, extraction: bytes - identification}
 }
 
 func (b *workBudget) charge(bytes int64) {
@@ -125,54 +142,96 @@ func (b *workBudget) charge(bytes int64) {
 	b.readBytes += bytes
 }
 
-// readMetadata reads only the first bounded session_meta line. It cannot consume
-// transcript bodies, and its reservation is charged even on malformed input.
-func readMetadata(ctx context.Context, path string, budget *workBudget) (codex.Transcript, error) {
-	if budget.sessions < 1 || budget.bytes < 1 {
-		return codex.Transcript{}, opencode.ErrCaptureBudget
+// identificationRemaining is what header identification may still read.
+func (b *workBudget) identificationRemaining() int64 {
+	if b.split == nil {
+		return b.bytes
 	}
-	budget.sessions--
-	budget.attempts++
-	initialInfo, err := os.Stat(path)
-	if err != nil {
-		return codex.Transcript{}, err
-	}
-	if !initialInfo.Mode().IsRegular() {
-		return codex.Transcript{}, errors.New("metadata source is not regular")
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return codex.Transcript{}, err
-	}
-	defer file.Close()
-	info, err := file.Stat()
-	if err != nil {
-		return codex.Transcript{}, err
-	}
-	if !info.Mode().IsRegular() {
-		return codex.Transcript{}, errors.New("metadata source is not regular")
-	}
-	reservation := min(info.Size(), int64(MaxPayloadBytes))
-	if reservation > budget.bytes {
-		return codex.Transcript{}, opencode.ErrCaptureBudget
-	}
-	budget.charge(reservation)
-	if err = ctx.Err(); err != nil {
-		return codex.Transcript{}, err
-	}
-	scanner := bufio.NewScanner(io.LimitReader(file, reservation))
-	scanner.Buffer(make([]byte, 4096), MaxPayloadBytes)
-	if !scanner.Scan() {
-		return codex.Transcript{}, errors.Join(errors.New("source metadata unavailable"), scanner.Err())
-	}
-	var header struct {
-		Type string `json:"type"`
-	}
-	if err = json.Unmarshal(scanner.Bytes(), &header); err != nil || header.Type != "session_meta" {
-		return codex.Transcript{}, errors.New("source does not start with session metadata")
-	}
-	return codex.ParseRollout(strings.NewReader(scanner.Text() + "\n"))
+	return max(0, min(b.bytes, b.split.identification))
 }
+
+// extractionRemaining is what owner reads, including their own header
+// preflight and exact lookup, may still read.
+func (b *workBudget) extractionRemaining() int64 {
+	if b.split == nil || b.split.released {
+		return b.bytes
+	}
+	return max(0, min(b.bytes, b.split.extraction))
+}
+
+// extractionReserved reports that the identification reservation, not the
+// pass total, is what limits owner extraction now.
+func (b *workBudget) extractionReserved() bool {
+	return b.split != nil && !b.split.released && b.extractionRemaining() < b.bytes
+}
+
+func (b *workBudget) chargeIdentification(bytes int64) {
+	bytes = max(0, min(bytes, b.identificationRemaining()))
+	if b.split != nil {
+		b.split.identification -= bytes
+	}
+	b.charge(bytes)
+}
+
+func (b *workBudget) chargeExtraction(bytes int64) {
+	bytes = max(0, min(bytes, b.extractionRemaining()))
+	if b.split != nil && !b.split.released {
+		b.split.extraction -= bytes
+	}
+	b.charge(bytes)
+}
+
+// releaseSplit lets the final leftover refresh extract with every remaining
+// byte. Identification stays within its own share.
+func (b *workBudget) releaseSplit() {
+	if b.split != nil {
+		b.split.released = true
+	}
+}
+
+// readHeader reads one rollout header through the pass cache within limit
+// bytes and reports the bytes actually read.
+func (b *workBudget) readHeader(ctx context.Context, path string, limit int64) (codex.HeaderRead, error) {
+	if b.headers == nil {
+		b.headers = codex.NewHeaderCache()
+	}
+	return b.headers.ReadHeader(ctx, path, &codex.DiscoveryBudget{Context: ctx, MaxSourceBytes: max(0, limit)})
+}
+
+// readMetadata identifies a child candidate from its first session_meta
+// record. It is charged the bytes actually read to the identification share.
+// It consumes no owner-extraction session slot and so no source attempt,
+// which counts those slots. A cached header is free.
+func readMetadata(ctx context.Context, path string, budget *workBudget) (codex.RolloutHeader, error) {
+	read, err := budget.readHeader(ctx, path, budget.identificationRemaining())
+	budget.chargeIdentification(read.Bytes)
+	if errors.Is(err, codex.ErrDiscoveryBudget) {
+		return codex.RolloutHeader{}, opencode.ErrCaptureBudget
+	}
+	if err != nil {
+		return codex.RolloutHeader{}, err
+	}
+	if !read.Header.First {
+		return codex.RolloutHeader{}, errors.New("source does not start with session metadata")
+	}
+	return read.Header, nil
+}
+
+// childCreationWindow prunes a parent's child sweep by creation instant. The
+// parent's own UUIDv7 decides; otherwise its session_meta timestamp, read
+// through the pass cache, decides. Without either the sweep is not pruned.
+func childCreationWindow(ctx context.Context, parent domain.CaptureRegistration, budget *workBudget) codex.CreationWindow {
+	window := codex.NewCreationWindow(parent.Identity.SessionID, codex.RolloutHeader{})
+	if window.Prunes() || parent.TranscriptPath == "" {
+		return window
+	}
+	header, err := readMetadata(ctx, parent.TranscriptPath, budget)
+	if err != nil || header.ID != parent.Identity.SessionID {
+		return codex.CreationWindow{}
+	}
+	return codex.NewCreationWindow(parent.Identity.SessionID, header)
+}
+
 func (s *Store) inheritChild(ctx context.Context, parent domain.CaptureRegistration, id, path string) (bool, error) {
 	identity := domain.CaptureIdentity{Source: parent.Identity.Source, Store: parent.Identity.Store, SessionID: id}
 	if err := s.validateOwner(ctx, domain.CaptureRegistration{Identity: identity, TranscriptPath: path}); err != nil {
@@ -304,7 +363,7 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 		}
 		if parent.Identity.Source == domain.SourceOpenCode {
 			// A bounded authoritative parent query discovers children without visiting unrelated roots.
-			if budget.sessions < 1 || budget.bytes < 256 {
+			if budget.sessions < 1 || budget.identificationRemaining() < 256 {
 				budget.discoveryPending = true
 				continue
 			}
@@ -326,13 +385,13 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 			}
 			last := after
 			for _, id := range children {
-				if budget.sessions < 1 || budget.bytes < 256 {
+				if budget.sessions < 1 || budget.identificationRemaining() < 256 {
 					more = true
 					break
 				}
 				budget.sessions--
 				budget.attempts++
-				budget.charge(256)
+				budget.chargeIdentification(256)
 				last = id
 				identity := domain.CaptureIdentity{Source: parent.Identity.Source, Store: parent.Identity.Store, SessionID: id}
 				if existing, ok := known[IdentityKey(identity)]; ok && existing.TicketID == ticket && existing.ParentID == parent.Identity.SessionID {
@@ -374,25 +433,35 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 			if e = errors.Join(rows.Err(), rows.Close()); e != nil {
 				return 0, e
 			}
+			previous := queuedCursor
 			for _, path := range paths {
 				if e = s.saveChildCursor(ctx, "queued", IdentityKey(parent.Identity), path, true); e != nil {
 					return 0, e
 				}
-				transcript, readErr := readMetadata(ctx, path, budget)
+				header, readErr := readMetadata(ctx, path, budget)
+				if errors.Is(readErr, opencode.ErrCaptureBudget) {
+					// Identification reached its share: this path comes first next pass.
+					budget.discoveryPending = true
+					if e = s.saveChildCursor(ctx, "queued", IdentityKey(parent.Identity), previous, true); e != nil {
+						return 0, e
+					}
+					break
+				}
+				previous = path
 				if readErr != nil {
 					continue
 				}
-				if transcript.ThreadID == "" || transcript.ParentThread != parent.Identity.SessionID {
+				if header.ID == "" || header.ParentID != parent.Identity.SessionID {
 					continue
 				}
-				verified, e := s.inheritChild(ctx, parent, transcript.ThreadID, path)
+				verified, e := s.inheritChild(ctx, parent, header.ID, path)
 				if e != nil {
 					return 0, e
 				}
 				if !verified {
 					continue
 				}
-				if e = s.clearExactCodexStart(ctx, parent, transcript.ThreadID); e != nil {
+				if e = s.clearExactCodexStart(ctx, parent, header.ID); e != nil {
 					return 0, e
 				}
 				if _, e = s.db.ExecContext(ctx, `DELETE FROM pending_children WHERE worktree_id=? AND store=? AND path=?`, s.worktreeID, parent.Identity.Store, path); e != nil {
@@ -406,7 +475,7 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 		if e = s.db.QueryRowContext(ctx, `SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID).Scan(&starts); e != nil {
 			return 0, e
 		}
-		if starts == 0 || budget.sessions < 1 || budget.bytes < 1 {
+		if starts == 0 || budget.sessions < 1 || budget.identificationRemaining() < 1 {
 			continue
 		}
 		cursor := ""
@@ -417,8 +486,12 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 		if e == nil && cursor == "" {
 			continue
 		}
+		// A child is created after its parent. Candidates created earlier are
+		// neither claimed nor read; names never establish identity.
+		window := childCreationWindow(ctx, parent, budget)
 		last := ""
 		visited := 0
+		exhausted := false
 		maxEntries := max(16, budget.sessions*16)
 		walkErr := walkCodexCaptureRollouts(parent.Identity.Store, func(path string, entry fs.DirEntry, walkErr error) error {
 			if err := ctx.Err(); err != nil {
@@ -434,33 +507,54 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 				}
 				return nil
 			}
+			if entry.IsDir() && window.SkipsDirectory(parent.Identity.Store, path) {
+				return fs.SkipDir
+			}
+			if !entry.IsDir() && window.SkipsFile(entry.Name()) {
+				return nil
+			}
 			visited++
-			if visited > maxEntries || budget.sessions < 1 || budget.bytes < 1 {
+			if visited > maxEntries {
 				return fs.SkipAll
 			}
+			if budget.identificationRemaining() < 1 {
+				exhausted = true
+				return fs.SkipAll
+			}
+			previous := last
 			last = path
 			if entry.IsDir() || !strings.HasSuffix(path, ".jsonl") {
 				return nil
 			}
-			transcript, e := readMetadata(ctx, path, budget)
+			header, e := readMetadata(ctx, path, budget)
+			if errors.Is(e, opencode.ErrCaptureBudget) {
+				// Resume at this candidate once identification has bytes again.
+				last = previous
+				exhausted = true
+				return fs.SkipAll
+			}
 			if e != nil {
 				return nil
 			}
-			if transcript.ThreadID == "" || transcript.ParentThread != parent.Identity.SessionID {
+			if header.ID == "" || header.ParentID != parent.Identity.SessionID {
 				return nil
 			}
-			verified, e := s.inheritChild(ctx, parent, transcript.ThreadID, path)
+			verified, e := s.inheritChild(ctx, parent, header.ID, path)
 			if e != nil || !verified {
 				return e
 			}
-			return s.clearExactCodexStart(ctx, parent, transcript.ThreadID)
+			return s.clearExactCodexStart(ctx, parent, header.ID)
 		})
 		if walkErr != nil {
 			return 0, walkErr
 		}
 		// A completed sweep remains closed until new evidence or explicit reconciliation.
-		if visited <= maxEntries && budget.sessions > 0 && budget.bytes > 0 {
+		if visited <= maxEntries && !exhausted {
 			last = ""
+		}
+		if exhausted {
+			// Identification reached its share; discovery continues, not failed.
+			budget.discoveryPending = true
 		}
 		if _, e = s.db.ExecContext(ctx, `INSERT INTO discovery_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,parent) DO UPDATE SET path=excluded.path`, s.worktreeID, IdentityKey(parent.Identity), last); e != nil {
 			return 0, e
@@ -559,6 +653,45 @@ func (s *Store) pendingChildWork(ctx context.Context, ticket string, parents []d
 		more = more || unfinished > 0
 	}
 	return pending, more || pending > 0, nil
+}
+
+// pendingChildLinks returns the (parent, child) links already counted as
+// pending child work for the ticket's parents: a queued start whose agent is
+// the child, or a queued child path registered to the child.
+func (s *Store) pendingChildLinks(ctx context.Context, ticket string, registrations []domain.CaptureRegistration) (map[domain.ChildLink]bool, error) {
+	links := map[domain.ChildLink]bool{}
+	byPath := make(map[string]string, len(registrations))
+	for _, row := range registrations {
+		if row.Identity.Source == domain.SourceCodex && row.TranscriptPath != "" {
+			byPath[row.Identity.Store+"\x00"+row.TranscriptPath] = row.Identity.SessionID
+		}
+	}
+	for _, parent := range registrations {
+		if parent.TicketID != ticket || parent.Identity.Source != domain.SourceCodex {
+			continue
+		}
+		rows, err := s.db.QueryContext(ctx, `SELECT agent,'' FROM pending_starts WHERE worktree_id=? AND store=? AND parent=? UNION ALL SELECT '',path FROM pending_children WHERE worktree_id=? AND store=? AND parent=?`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var agent, path string
+			if err := rows.Scan(&agent, &path); err != nil {
+				return nil, errors.Join(err, rows.Close())
+			}
+			child := agent
+			if path != "" {
+				child = byPath[parent.Identity.Store+"\x00"+path]
+			}
+			if child != "" {
+				links[domain.ChildLink{ParentID: parent.Identity.SessionID, ChildSessionID: child}] = true
+			}
+		}
+		if err := errors.Join(rows.Err(), rows.Close()); err != nil {
+			return nil, err
+		}
+	}
+	return links, nil
 }
 
 func (s *Store) childCursor(ctx context.Context, kind, parent string) (string, error) {

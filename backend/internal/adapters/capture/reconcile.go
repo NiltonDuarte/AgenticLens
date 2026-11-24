@@ -36,6 +36,10 @@ func (s *Store) QueueChild(ctx context.Context, store, path, parent string) erro
 
 type ReconcileResult struct {
 	archiveReadGroups     []archiveReadGroup
+	retainedChildLinks    []domain.ChildLink
+	countedChildLinks     map[domain.ChildLink]bool
+	reconciliation        *domain.CaptureDiagnostic
+	IsolatedSources       []IsolatedSource                    `json:"-"`
 	LifecycleRevision     int64                               `json:"-"`
 	RestoresReady         []CaptureControl                    `json:"-"`
 	ProjectRegistrations  []domain.CaptureRegistration        `json:"-"`
@@ -85,7 +89,9 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	if err != nil {
 		return result, err
 	}
-	budget := &workBudget{bytes: byteBudget, sessions: sessionBudget, controlRevision: controlRevision, openCodeAttempts: map[string]bool{}}
+	// Header identification keeps a reserved quarter of the byte allowance
+	// during the rotating rounds; one pass-local cache serves every header read.
+	budget := &workBudget{bytes: byteBudget, sessions: sessionBudget, controlRevision: controlRevision, openCodeAttempts: map[string]bool{}, headers: codex.NewHeaderCache(), split: newBudgetSplit(byteBudget)}
 	refreshed := map[string]bool{}
 	defer func() {
 		result.archiveReadGroups = nil
@@ -124,6 +130,8 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 		if err := s.RecordDiagnostic(diagnosticCtx, diagnostic); err != nil {
 			returnErr = errors.Join(returnErr, fmt.Errorf("persisting reconciliation diagnostics: %w", err))
 		}
+		result.retainedChildLinks = nil
+		result.reconciliation = &diagnostic
 	}()
 	// Alternate ordinary and restore-prioritized rounds. The first eligible
 	// class can use the full session and byte budget. Each round keeps its own
@@ -170,7 +178,10 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 		}
 	}
 	// Discoveries made after the refresh class can use leftover resources
-	// immediately. Each owner is attempted at most once per pass.
+	// immediately, including identification's unused share. Each owner is
+	// attempted at most once per pass, except an owner deferred only by the
+	// identification reservation.
+	budget.releaseSplit()
 	if budget.sessions > 0 && budget.bytes > 0 {
 		updatedOwners, accepted, err := s.refreshTicketOwners(ctx, ticket, user, budget, &result, attempted, archiveProjection, policies...)
 		if err != nil {
@@ -292,7 +303,14 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	if err != nil {
 		return result, err
 	}
+	result.countedChildLinks, err = s.pendingChildLinks(ctx, ticket, registrations)
+	if err != nil {
+		return result, err
+	}
 	result.PendingChildren = pending
+	// Links kept without re-proof are unresolved child evidence, counted once
+	// beside pending child work for the same parent.
+	result.AddRetainedChildLinks(result.retainedChildLinks)
 	result.DiscoveryPending = budget.discoveryPending || discoveryPending
 	owners := map[string]string{}
 	for _, r := range registrations {
@@ -328,6 +346,45 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 		return result, ErrCaptureLifecycleChanged
 	}
 	return result, nil
+}
+
+// AddRetainedChildLinks counts accepted delegation links kept without being
+// re-proved as unresolved child evidence (PendingChildren). A link already
+// counted as pending child work for the same parent, or by an earlier call in
+// this request, is counted once. It returns the number of links added.
+func (result *ReconcileResult) AddRetainedChildLinks(links []domain.ChildLink) int {
+	if result.countedChildLinks == nil {
+		result.countedChildLinks = make(map[domain.ChildLink]bool, len(links))
+	}
+	added := 0
+	for _, link := range links {
+		if link.ParentID == "" || link.ChildSessionID == "" || result.countedChildLinks[link] {
+			continue
+		}
+		result.countedChildLinks[link] = true
+		added++
+	}
+	result.PendingChildren += added
+	return added
+}
+
+// ReconciliationDiagnostic returns this request's recorded reconciliation
+// diagnostic with its current unresolved child evidence. A completed attempt
+// with unresolved child evidence becomes partial. It reports false when the
+// request recorded no reconciliation.
+func (result ReconcileResult) ReconciliationDiagnostic() (domain.CaptureDiagnostic, bool) {
+	if result.reconciliation == nil || result.reconciliation.Reconciliation == nil {
+		return domain.CaptureDiagnostic{}, false
+	}
+	diagnostic := *result.reconciliation
+	reconciliation := *diagnostic.Reconciliation
+	reconciliation.Owners = append([]domain.CaptureRegistration(nil), reconciliation.Owners...)
+	reconciliation.PendingChildren = result.PendingChildren
+	if reconciliation.Attempt == domain.CaptureAttemptCompleted && result.PendingChildren > 0 {
+		reconciliation.Attempt = domain.CaptureAttemptPartial
+	}
+	diagnostic.Reconciliation = &reconciliation
+	return diagnostic, true
 }
 
 // sourceRead never enters registry serialization or diagnostic publication.
@@ -493,10 +550,10 @@ func (s *Store) validateReadOwner(ctx context.Context, r domain.CaptureRegistrat
 	}
 	if r.Identity.Source != domain.SourceCodex {
 		const reservation = 256
-		if budget.bytes < reservation {
+		if budget.extractionRemaining() < reservation {
 			return nil, opencode.ErrCaptureBudget
 		}
-		budget.charge(reservation)
+		budget.chargeExtraction(reservation)
 		return nil, s.validateOwner(ctx, r)
 	}
 
@@ -507,12 +564,17 @@ func (s *Store) validateReadOwner(ctx context.Context, r domain.CaptureRegistrat
 	if !info.Mode().IsRegular() {
 		return nil, errors.New("Codex source is not a regular file")
 	}
-	reservation := min(info.Size(), int64(MaxPayloadBytes), s.configuration.Telemetry.Capture.MaxSourceBytes)
-	if reservation > budget.bytes {
+	// The owner's own header preflight is part of reading that owner. It is
+	// charged the bytes actually read, and a header cached in this pass is free.
+	read, err := budget.readHeader(ctx, r.TranscriptPath, min(budget.extractionRemaining(), s.configuration.Telemetry.Capture.MaxSourceBytes))
+	budget.chargeExtraction(read.Bytes)
+	if errors.Is(err, codex.ErrDiscoveryBudget) {
 		return nil, opencode.ErrCaptureBudget
 	}
-	budget.charge(reservation)
-	metadata, err := codex.ReadSessionContextWithinBudget(r.TranscriptPath, reservation)
+	if err != nil {
+		return nil, err
+	}
+	metadata, err := read.Header.SessionContext()
 	if err != nil {
 		return nil, err
 	}
@@ -528,6 +590,10 @@ func (s *Store) prepareReadOwner(ctx context.Context, r domain.CaptureRegistrati
 	if err != nil {
 		return r, nil, false, err
 	}
+	if relocating && r.TicketID == "" && s.project == "" {
+		// An unassigned row is recovered only with project proof.
+		return r, nil, true, fmt.Errorf("unassigned Codex source relocation requires project proof: %w", codex.ErrOwnerUnavailable)
+	}
 	var metadata *codex.SessionMetadataContext
 	if !relocating {
 		metadata, err = s.validateReadOwner(ctx, r, budget)
@@ -538,6 +604,10 @@ func (s *Store) prepareReadOwner(ctx context.Context, r domain.CaptureRegistrati
 	r.TranscriptPath, err = budget.selectCodexRollout(r, s.configuration, registered, relocating)
 	if err == nil && relocating {
 		metadata, err = s.validateReadOwner(ctx, r, budget)
+		if err != nil && metadata != nil {
+			// The recovered rollout was read but contradicts the registration.
+			err = relocationConflict{err: err}
+		}
 	}
 	return r, metadata, relocating, err
 }
@@ -648,6 +718,13 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			return budget.restorePriority.reads[IdentityKey(left)] > budget.restorePriority.reads[IdentityKey(right)]
 		})
 	}
+	if len(budget.deferred) > 0 {
+		// Owners deferred by the identification reservation come first in the
+		// final leftover refresh, ahead of owners discovered during the pass.
+		sort.SliceStable(indexes, func(i, j int) bool {
+			return budget.deferred[IdentityKey(registrations[indexes[i]].Identity)] && !budget.deferred[IdentityKey(registrations[indexes[j]].Identity)]
+		})
+	}
 
 	if len(policies) == 0 {
 		if err := adaptersconfig.ValidateGenerationPolicy(s.configuration); err != nil {
@@ -695,14 +772,29 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			if parseErr != nil {
 				return nil, nil, parseErr
 			}
-			fresh, revision, updatedAt, extractErr = extractExactAt(ctx, sourceOwner, budget.bytes, user, cutoff, &read, metadata)
+			fresh, revision, updatedAt, extractErr = extractExactAt(ctx, sourceOwner, budget.extractionRemaining(), user, cutoff, &read, metadata)
 			if extractErr == nil && relocating && len(fresh) > 0 && !keepsAcceptedCaptureParent(r, captureParentID(fresh[0])) {
-				extractErr = errors.New("recovered Codex source conflicts with the accepted parent identity")
+				extractErr = relocationConflict{err: errors.New("recovered Codex source conflicts with the accepted parent identity")}
 			}
 		}
-		budget.charge(revision)
+		budget.chargeExtraction(revision)
 		key := IdentityKey(r.Identity)
+		// A moved unassigned rollout that cannot be recovered on exact proof is
+		// isolated: its facts stay, and it neither fails nor stalls the pass.
+		var isolation IsolationReason
+		isolated := false
+		if r.Identity.Source == domain.SourceCodex && r.TicketID == "" && relocating {
+			isolation, isolated = unassignedRelocationIsolation(extractErr)
+		}
+		// An owner refused only because extraction is holding identification's
+		// reserved share is retried by the final leftover refresh.
+		deferred := (errors.Is(extractErr, opencode.ErrCaptureBudget) || errors.Is(extractErr, codex.ErrDiscoveryBudget)) && budget.extractionReserved()
 		updated, updateErr := s.saveCaptureRead(ctx, r, budget.controlRevision, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+			if isolated {
+				current.State = domain.CapturePending
+				current.Detail = fmt.Sprintf("Unassigned Codex source %s after its rollout moved; isolated from this pass and retried on the next integration event or capture reconcile; previous facts preserved: %v", isolation, extractErr)
+				return current, nil
+			}
 			if extractErr != nil {
 				current.State = domain.CaptureFailed
 				current.Detail = "Source snapshot unavailable or invalid; previous facts preserved: " + extractErr.Error()
@@ -758,6 +850,21 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		if relocating {
 			archiveAttempts[key] = true
 		}
+		if isolated && updateErr == nil {
+			result.IsolatedSources = append(result.IsolatedSources, IsolatedSource{Identity: updated.Identity, Reason: isolation, Detail: updated.Detail})
+		}
+		if deferred && updateErr == nil {
+			// The owner was not read; it keeps its session slot and is retried
+			// first by the leftover refresh. The rotation cursor follows the
+			// existing rule, so an owner too large for any pass cannot pin it.
+			delete(attempted, key)
+			budget.sessions++
+			budget.attempts--
+			if budget.deferred == nil {
+				budget.deferred = map[string]bool{}
+			}
+			budget.deferred[key] = true
+		}
 		known[key] = updated
 		if refreshed[key] {
 			if updated.Identity.Source == domain.SourceCodex && fingerprintErr == nil && r.SourceFingerprint != fingerprint {
@@ -807,7 +914,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			if discarded {
 				budget.refreshCursorHeld = true
 			}
-			return s.finishCaptureAnnotations(ctx, ticket, registrations, refreshed, &source, func(ctx context.Context, identity domain.CaptureIdentity, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
+			retained, annotationErr := s.finishCaptureAnnotations(ctx, ticket, registrations, previousSnapshots, refreshed, &source, func(ctx context.Context, identity domain.CaptureIdentity, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
 				if err := identity.Validate(); err != nil {
 					return domain.CaptureRegistration{}, err
 				}
@@ -817,6 +924,10 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 				}
 				return s.changeRegistration(ctx, conn, id, apply)
 			}, policies)
+			if annotationErr == nil {
+				result.retainedChildLinks = append(result.retainedChildLinks, retained...)
+			}
+			return annotationErr
 		})
 		if err != nil {
 			return nil, nil, err
@@ -878,9 +989,12 @@ func keepCurrentCaptureReads(registrations, current []domain.CaptureRegistration
 
 type captureAnnotationWriter func(context.Context, domain.CaptureIdentity, func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error)
 
-func (s *Store) finishCaptureAnnotations(ctx context.Context, ticket string, registrations []domain.CaptureRegistration, refreshed map[string]bool, source *sourceRead, write captureAnnotationWriter, policies []domain.GenerationPolicy) error {
+// finishCaptureAnnotations returns the accepted child links it kept on
+// refreshed owners without re-proving them in this read.
+func (s *Store) finishCaptureAnnotations(ctx context.Context, ticket string, registrations []domain.CaptureRegistration, previous []domain.SessionFact, refreshed map[string]bool, source *sourceRead, write captureAnnotationWriter, policies []domain.GenerationPolicy) ([]domain.ChildLink, error) {
 	// Native child metadata is request-local. Resolve only successfully read
 	// owners before saving the final lean snapshots; budgets bound these reads.
+	var retained []domain.ChildLink
 	if len(source.transcripts) > 0 {
 		seenTranscriptOwners := make(map[string]bool)
 		for _, transcript := range source.transcripts {
@@ -889,19 +1003,24 @@ func (s *Store) finishCaptureAnnotations(ctx context.Context, ticket string, reg
 				id = transcript.SessionID
 			}
 			if seenTranscriptOwners[id] {
-				return fmt.Errorf("session identity collision: %s exists in multiple registered source stores; canonical ledger cannot distinguish these owners", id)
+				return nil, fmt.Errorf("session identity collision: %s exists in multiple registered source stores; canonical ledger cannot distinguish these owners", id)
 			}
 			seenTranscriptOwners[id] = true
 		}
 		combined, combineErr := codex.CombineTranscriptsWithPolicy(source.transcripts, policies...)
 		if combineErr != nil {
-			return combineErr
+			return nil, combineErr
 		}
 		source.events = domain.MergeSourceEvents(source.events, domain.SourceEvents{Events: combined.Events, CheckpointEvidence: combined.CheckpointEvidence, CompleteSessionIDs: transcriptSessionIDs(source.transcripts)})
 		owners, groupErr := combined.SessionFacts(policies...)
 		if groupErr != nil {
-			return groupErr
+			return nil, groupErr
 		}
+		// A bounded pass may refresh a parent without its children. Keep the
+		// accepted links it cannot re-prove; transcript events stay as read.
+		retention := domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: previous, Fresh: owners})
+		owners = retention.Sessions
+		retained = retention.Report.RetainedLinks()
 		byID := make(map[string]domain.SessionFact)
 		for _, owner := range owners {
 			byID[owner.ID] = owner
@@ -923,7 +1042,7 @@ func (s *Store) finishCaptureAnnotations(ctx context.Context, ticket string, reg
 				return current, nil
 			})
 			if changeErr != nil {
-				return changeErr
+				return nil, changeErr
 			}
 			registrations[i] = updated
 		}
@@ -937,12 +1056,12 @@ func (s *Store) finishCaptureAnnotations(ctx context.Context, ticket string, reg
 		}
 	}
 	if source.policy == nil {
-		return errors.New("explicit generation policy is required for capture summaries")
+		return nil, errors.New("explicit generation policy is required for capture summaries")
 	}
 	effectivePolicy := *source.policy
 	summary, summaryErr := domain.PersistSourceAnomalySummariesWithPolicy(domain.AgenticFactLedger{Sessions: all}, source.events, effectivePolicy, s.anomalyThresholds)
 	if summaryErr != nil {
-		return summaryErr
+		return nil, summaryErr
 	}
 	summaries := make(map[string][]domain.Anomaly)
 	for _, owner := range summary.Sessions {
@@ -959,11 +1078,11 @@ func (s *Store) finishCaptureAnnotations(ctx context.Context, ticket string, reg
 			return current, nil
 		})
 		if changeErr != nil {
-			return changeErr
+			return nil, changeErr
 		}
 		registrations[i] = updated
 	}
-	return nil
+	return retained, nil
 }
 
 func transcriptSessionIDs(transcripts []codex.Transcript) []string {

@@ -598,6 +598,10 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			fmt.Fprintln(os.Stderr, "Automatic publication requires a reconciled capture registry")
 			os.Exit(1)
 		}
+		if err := retainCaptureChildLinks(project, *captureDirFlag, activeTicketID, baseline.Current, captureResult); err != nil {
+			fmt.Fprintln(os.Stderr, "Cannot record retained child links:", err)
+			os.Exit(1)
+		}
 		if err := checkExpectedCaptureLifecycle(*captureRevisionFlag, captureResult.LifecycleRevision); err != nil {
 			reportGenerationPublicationBlock(project, *captureDirFlag, activeTicketID, *jsonOutputFlag, *appendFlag, err)
 		}

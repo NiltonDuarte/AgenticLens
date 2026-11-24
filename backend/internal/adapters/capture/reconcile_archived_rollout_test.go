@@ -507,3 +507,145 @@ func archivedFixtureOwner(t *testing.T, result capture.ReconcileResult, id strin
 	t.Fatalf("owner %s not present in reconciliation", id)
 	return domain.CaptureRegistration{}
 }
+
+// FIX-21: an unassigned Codex child whose rollout Codex moved to
+// archived_sessions/ is recovered on the same exact proof that binding uses,
+// or isolated with a typed reason. The row stays unassigned either way.
+func TestReconcileArchivedUnassignedCodexChild(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		reason capture.IsolationReason
+		detail string
+	}{
+		{name: "recovered"},
+		{name: "missing", reason: capture.IsolationUnavailable, detail: "unavailable"},
+		{name: "ambiguous", reason: capture.IsolationAmbiguous, detail: "ambiguous rollout paths"},
+		{name: "foreign project", reason: capture.IsolationConflicting, detail: "conflicts with configured project"},
+		{name: "conflicting parent", reason: capture.IsolationConflicting, detail: "accepted parent identity"},
+		{name: "archive outside store", reason: capture.IsolationConflicting, detail: "escapes its registered store"},
+		// Errors other than not-found still fail the row, as before.
+		{name: "unreadable registered path", detail: "excessive symlink traversal"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			project, err := filepath.EvalSymlinks(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			captureProjectConfig(t, project, "ArchivedUnassignedFixture")
+			s, err := capture.OpenProject(t.TempDir(), project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := s.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			home, active, archive := archivedRolloutFixture(t)
+			path := filepath.Join(active, "child.jsonl")
+			archived := filepath.Join(archive, filepath.Base(path))
+			writeSource := func(path, id, cwd, parent string, tokens int) {
+				t.Helper()
+				body := fmt.Sprintf(`{"type":"session_meta","payload":{"id":%q,"cwd":%q,"parent_thread_id":%q,"timestamp":"2026-01-01T00:00:00Z"}}`+"\n"+
+					`{"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"fixture","turn_id":"turn"}}`+"\n"+
+					`{"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"thread_id":%q,"turn_id":"turn","usage":{"input_tokens":%d}}}`+"\n", id, cwd, parent, id, tokens)
+				if err := os.WriteFile(path, []byte(body), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			writeSource(path, "child", project, "parent", 17)
+			identity := domain.CaptureIdentity{Source: domain.SourceCodex, Store: home, SessionID: "child"}
+			if _, err := s.Register(ctx, identity, path, "SessionStart"); err != nil {
+				t.Fatal(err)
+			}
+			unassignedPass := func() capture.ReconcileResult {
+				t.Helper()
+				result, err := s.Reconcile(ctx, "", "tester", 16, fixtureByteBudget, fixtureGenerationPolicy())
+				if err != nil {
+					t.Fatal(err)
+				}
+				return result
+			}
+			before := archivedFixtureOwner(t, unassignedPass(), "child")
+			if before.TicketID != "" || before.State != domain.CaptureUnassigned || before.ParentID != "parent" || len(before.Snapshot) != 1 {
+				t.Fatalf("fixture must accept an unassigned child of parent: %+v", before)
+			}
+
+			if err := os.Remove(path); err != nil {
+				t.Fatal(err)
+			}
+			switch tc.name {
+			case "recovered":
+				writeSource(archived, "child", project, "parent", 29)
+			case "missing":
+				// A similarly named archive file with another identity is not it.
+				writeSource(archived, "other", project, "parent", 29)
+			case "ambiguous":
+				writeSource(archived, "child", project, "parent", 29)
+				writeSource(filepath.Join(archive, "copy.jsonl"), "child", project, "parent", 37)
+			case "foreign project":
+				writeSource(archived, "child", t.TempDir(), "parent", 29)
+			case "conflicting parent":
+				writeSource(archived, "child", project, "replacement-parent", 29)
+			case "archive outside store":
+				external := t.TempDir()
+				externalPath := filepath.Join(external, filepath.Base(archived))
+				writeSource(externalPath, "child", project, "parent", 29)
+				if err := os.Remove(archive); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(external, archive); err != nil {
+					t.Fatal(err)
+				}
+				// The only proving rollout is reachable from the store through an
+				// alias whose physical file lies outside it.
+				if err := os.Symlink(externalPath, filepath.Join(active, "alias.jsonl")); err != nil {
+					t.Fatal(err)
+				}
+			case "unreadable registered path":
+				if err := os.Symlink(filepath.Base(path), path); err != nil {
+					t.Fatal(err)
+				}
+				writeSource(archived, "child", project, "parent", 29)
+			}
+			result := unassignedPass()
+			got := archivedFixtureOwner(t, result, "child")
+			if got.TicketID != "" || got.ParentID != before.ParentID || got.Binding != before.Binding {
+				t.Fatalf("unassigned pass changed attribution: %+v", got)
+			}
+			var isolated []capture.IsolatedSource
+			for _, source := range result.IsolatedSources {
+				if source.Identity.SessionID == "child" {
+					isolated = append(isolated, source)
+				}
+			}
+			switch {
+			case tc.name == "recovered":
+				if got.State != domain.CaptureUnassigned || got.TranscriptPath != archived || len(isolated) != 0 ||
+					len(got.Snapshot) != 1 || len(got.Snapshot[0].Invocations) != 1 || got.Snapshot[0].Invocations[0].Tokens.Input != 29 {
+					t.Fatalf("archived unassigned child not recovered: %+v isolated=%+v", got, isolated)
+				}
+				if repeated := archivedFixtureOwner(t, unassignedPass(), "child"); !reflect.DeepEqual(repeated.Snapshot, got.Snapshot) || repeated.TranscriptPath != archived {
+					t.Fatal("repeating the recovered pass changed the archived child")
+				}
+				// Its facts stay available for binding, at the recovered path.
+				bound, err := s.Bind(ctx, identity, "TEST-100", got.Request)
+				if err != nil || bound.TranscriptPath != archived || !reflect.DeepEqual(bound.Snapshot, got.Snapshot) {
+					t.Fatalf("recovered child could not be bound with its facts: %+v %v", bound, err)
+				}
+			case tc.reason != "":
+				if len(isolated) != 1 || isolated[0].Reason != tc.reason || !strings.Contains(strings.ToLower(isolated[0].Detail), tc.detail) {
+					t.Fatalf("isolated = %+v, want one %s source naming %q", isolated, tc.reason, tc.detail)
+				}
+				if got.State != domain.CapturePending || got.TranscriptPath != path || !reflect.DeepEqual(got.Snapshot, before.Snapshot) || got.Detail != isolated[0].Detail {
+					t.Fatalf("isolated row did not keep its accepted facts and path: %+v", got)
+				}
+			default:
+				if got.State != domain.CaptureFailed || len(isolated) != 0 || !strings.Contains(strings.ToLower(got.Detail), tc.detail) || !reflect.DeepEqual(got.Snapshot, before.Snapshot) {
+					t.Fatalf("a non-not-found error must still fail with facts kept: %+v isolated=%+v", got, isolated)
+				}
+			}
+		})
+	}
+}
