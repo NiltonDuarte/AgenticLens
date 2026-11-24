@@ -12,13 +12,16 @@ func TestResolveTelemetrySourcesRequiresExplicitSelection(t *testing.T) {
 	for _, tc := range []struct {
 		explicit, configured, want string
 		valid                      bool
-	}{{"codex", "opencode", "codex", true}, {"", "opencode", "opencode", true}, {" OPENCODE ", "codex", "opencode", true}, {"", "", "", false}, {"bad", "codex", "", false}, {"", "bad", "", false}} {
+	}{{"codex", "opencode", "codex", true}, {"", "opencode", "opencode", true}, {" OPENCODE ", "codex", "opencode", true}, {"", "", "", false}, {"bad", "codex", "", false}, {"", "bad", "", false}, {"claude", "codex", "claude", true}, {"", " Claude ", "claude", true}, {"codex", "claude", "codex", true}, {"claude-code", "", "", false}, {"", "all", "", false}} {
 		got, err := config.ResolveSource(tc.explicit, tc.configured)
 		if (err == nil) != tc.valid || got != tc.want {
 			t.Errorf("selection %+v got %q %v", tc, got, err)
 		}
 	}
-	for _, resolve := range []func(string, string) (string, error){config.ResolveOpenCodePath, config.ResolveCodexHome} {
+	if _, err := config.ResolveSource("claude-code", ""); err == nil || !strings.Contains(err.Error(), "opencode, codex or claude") {
+		t.Fatalf("unsupported source must list the supported values: %v", err)
+	}
+	for _, resolve := range []func(string, string) (string, error){config.ResolveOpenCodePath, config.ResolveCodexHome, config.ResolveClaudeHome} {
 		for _, tc := range []struct{ explicit, configured, want string }{{"selected-missing", "usable-configured", "selected-missing"}, {"", "explicit-configured", "explicit-configured"}, {" selected ", "other", "selected"}} {
 			got, err := resolve(tc.explicit, tc.configured)
 			if err != nil || got != tc.want {
@@ -68,8 +71,41 @@ func TestExplicitHomeAndPhysicalConfiguredPaths(t *testing.T) {
 	if err != nil || got != absolute {
 		t.Fatalf("absolute path changed: %q %v", got, err)
 	}
+	if got, err := config.ResolveClaudeHome("~/claude-store", "other"); err != nil || got != filepath.Join(home, "claude-store") {
+		t.Fatalf("explicit Claude Code home %q %v", got, err)
+	}
 	t.Setenv("HOME", "")
 	if _, err := config.ResolveCodexHome("~/chosen", absolute); err == nil || !strings.Contains(err.Error(), "home") {
 		t.Fatalf("unavailable expansion selected alternative: %v", err)
+	}
+	if _, err := config.ResolveClaudeHome("~/chosen", absolute); err == nil || !strings.Contains(err.Error(), "home") {
+		t.Fatalf("unavailable Claude Code expansion selected alternative: %v", err)
+	}
+}
+
+// The Claude Code store comes only from the flag or the selected local key. A
+// usable CLAUDE_CONFIG_DIR or ~/.claude never satisfies a missing selection.
+func TestResolveClaudeHomeHasNoEnvironmentOrDefaultFallback(t *testing.T) {
+	root := t.TempDir()
+	environmentStore := filepath.Join(root, "environment-store")
+	home := filepath.Join(root, "home")
+	for _, dir := range []string{filepath.Join(environmentStore, "projects"), filepath.Join(home, ".claude", "projects")} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("CLAUDE_CONFIG_DIR", environmentStore)
+	t.Setenv("HOME", home)
+	_, err := config.ResolveClaudeHome("", "")
+	if err == nil || !strings.Contains(err.Error(), "--claude-home") || !strings.Contains(err.Error(), "telemetry.sources.claude.home") {
+		t.Fatalf("missing selection must name both choices and invent no store: %v", err)
+	}
+	got, err := config.ResolveClaudeHome("", filepath.Join(root, "configured"))
+	if err != nil || got != filepath.Join(root, "configured") {
+		t.Fatalf("configured store must win over the environment: %q %v", got, err)
+	}
+	got, err = config.ResolveClaudeHome(filepath.Join(root, "flag"), filepath.Join(root, "configured"))
+	if err != nil || got != filepath.Join(root, "flag") {
+		t.Fatalf("flag must win over configuration: %q %v", got, err)
 	}
 }

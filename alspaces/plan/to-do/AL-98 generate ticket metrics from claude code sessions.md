@@ -28,6 +28,8 @@ Today `--source`, `capture install` and `telemetry.default_source` accept only `
 - **Guidance.** Setup, operator and developer guidance, the AGENTS.md rule 7 command and source references in `docs/OPENSPEC_WORKFLOW.md` name the `claude` source and its retention caveat.
 - **Real verification.** Run against an installed Claude Code with a real root session and a native subagent. Record the version, source IDs, the deduplicated totals checked against the records, and the limits. Synthetic fixtures do not count as native evidence.
 
+Note: on 2026-11-24 the user removed keeping effort values and preserving requested versus served models from this ticket's scope. Ledgers record only the served model. See the [change design's steering record](../../../openspec/changes/al-98-generate-ticket-metrics-from-claude-code-sessions/design.md#effort-and-requested-model-removed-from-scope).
+
 Out of scope: automatic capture (AL-99), live trace or observability services, API-equivalent pricing (AL2-6), effort display (AL2-8), and this repository's own Claude Code instructions (GEN-30, related but not a dependency).
 
 ## Implementation notes

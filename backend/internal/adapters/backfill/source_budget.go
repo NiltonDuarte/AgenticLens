@@ -5,15 +5,17 @@ import (
 	"errors"
 	"time"
 
+	"agenticlens/internal/adapters/claude"
 	"agenticlens/internal/adapters/codex"
 )
 
 var errSourceBudget = errors.New("configured source recovery budget reached; retained owners remain incomplete")
 
 type sourceReadBudget struct {
-	sessions  int
-	bytes     int64
-	codexSeen map[string]bool
+	sessions   int
+	bytes      int64
+	codexSeen  map[string]bool
+	claudeSeen map[string]bool
 }
 
 func (b *sourceReadBudget) beginOwner() error {
@@ -49,6 +51,26 @@ func (b *sourceReadBudget) parseCodex(ctx context.Context, path string, cutoff t
 		return codex.Transcript{}, errSourceBudget
 	}
 	return transcript, err
+}
+
+// claudeDiscovery lends the remaining shared allowance to one Claude Code tree
+// read. Paths already read in this operation do not consume another session.
+func (b *sourceReadBudget) claudeDiscovery(ctx context.Context) (*claude.DiscoveryBudget, int, error) {
+	if b == nil || b.bytes < 1 || (b.sessions < 1 && len(b.claudeSeen) == 0) {
+		return nil, 0, errSourceBudget
+	}
+	if b.claudeSeen == nil {
+		b.claudeSeen = make(map[string]bool)
+	}
+	seen := len(b.claudeSeen)
+	return &claude.DiscoveryBudget{Context: ctx, MaxSessions: b.sessions + seen, MaxSourceBytes: b.bytes, SessionsRead: seen, SeenPaths: b.claudeSeen}, seen, nil
+}
+
+// chargeClaude records the sessions and bytes one Claude Code tree read used,
+// including reads that ended in failure.
+func (b *sourceReadBudget) chargeClaude(used *claude.DiscoveryBudget, seen int) {
+	b.sessions -= used.SessionsRead - seen
+	b.bytes -= used.SourceBytesRead
 }
 
 func (b *sourceReadBudget) discoveryLimit() int {

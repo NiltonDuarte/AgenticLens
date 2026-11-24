@@ -14,7 +14,7 @@ Resolve model/effort availability from the active harness catalog. The provider_
 
 Record requested settings separately from settings acknowledged by the dispatch response and, when available, observed in source-session metadata. A model name asserted in prose is not runtime proof. Keep observation/source fields null with an explanation when unavailable; do not infer usage, model identity or cost. A dispatch failure, mismatch or unacknowledged required setting leaves the cell incomplete. An acknowledged dispatch is sufficient to report the configured execution, but must not be relabeled as source-session verification. If later metadata contradicts it, reopen the cell.
 
-AgenticLens cannot yet read Claude Code sessions ([AL-98](../../../../alspaces/plan/to-do/AL-98%20generate%20ticket%20metrics%20from%20claude%20code%20sessions.md)). Until it can, record Claude reviewer observed settings as null with that reason; the strongest `identity_basis` for a Claude reviewer is `acknowledged`, never `observed`.
+With the `claude` source ([AL-98](../../../../alspaces/plan/to-do/AL-98%20generate%20ticket%20metrics%20from%20claude%20code%20sessions.md)), the ticket ledger records each native Claude Code reviewer's agent type, served model and usage. When the ledger shows a reviewer's served model, record that model as observed, so its model `identity_basis` can be `observed`. The ledger does not record reasoning effort, so a Claude reviewer's effort stays `acknowledged`; when one label must cover both, use `acknowledged` and say in `identity_note` that the model was observed in the ledger.
 
 ## Working records owned by the coordinator
 

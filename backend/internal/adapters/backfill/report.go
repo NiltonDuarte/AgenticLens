@@ -12,18 +12,21 @@ type TicketMigrationResult struct {
 	RefreshIncomplete   bool     `json:"refresh_incomplete"`
 	CollectionsRetained bool     `json:"collections_retained"`
 	Diagnostics         []string `json:"diagnostics,omitempty"`
-	TicketID            string   `json:"ticket_id"`
-	WorkspacePath       string   `json:"workspace_path"`
-	LedgerPath          string   `json:"ledger_path"`
-	PreviousStatus      string   `json:"previous_status"`
-	NewStatus           string   `json:"new_status"`
-	GitUpdated          bool     `json:"git_updated"`
-	DBUpdated           bool     `json:"db_updated"`
-	DBFound             bool     `json:"db_found"`
-	Skipped             bool     `json:"skipped"`
-	PendingSteps        []string `json:"pending_steps,omitempty"`
-	Notes               string   `json:"notes,omitempty"`
-	Error               error    `json:"error,omitempty"`
+	// Notices report source facts, such as a smaller complete replacement or a
+	// newly added owner, without marking the refresh incomplete.
+	Notices        []string `json:"notices,omitempty"`
+	TicketID       string   `json:"ticket_id"`
+	WorkspacePath  string   `json:"workspace_path"`
+	LedgerPath     string   `json:"ledger_path"`
+	PreviousStatus string   `json:"previous_status"`
+	NewStatus      string   `json:"new_status"`
+	GitUpdated     bool     `json:"git_updated"`
+	DBUpdated      bool     `json:"db_updated"`
+	DBFound        bool     `json:"db_found"`
+	Skipped        bool     `json:"skipped"`
+	PendingSteps   []string `json:"pending_steps,omitempty"`
+	Notes          string   `json:"notes,omitempty"`
+	Error          error    `json:"error,omitempty"`
 }
 
 // BackfillReport summarizes the aggregate outcome of a backfill run.

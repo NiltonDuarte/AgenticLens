@@ -207,7 +207,7 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 }
 
 func TestGenerateSelectedSourceDoesNotFallback(t *testing.T) {
-	for _, scenario := range []string{"missing-source", "invalid-source", "blank-source", "missing-codex-home", "invalid-codex-home", "blank-codex-home", "missing-db-path", "invalid-db-path", "blank-db-path", "missing-selector"} {
+	for _, scenario := range []string{"missing-source", "invalid-source", "blank-source", "missing-codex-home", "invalid-codex-home", "blank-codex-home", "missing-db-path", "invalid-db-path", "blank-db-path", "missing-selector", "missing-claude-home", "default-claude-without-home", "invalid-claude-home", "blank-claude-home", "file-claude-home"} {
 		t.Run(scenario, func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
 			f.write(t, 17)
@@ -259,6 +259,25 @@ func TestGenerateSelectedSourceDoesNotFallback(t *testing.T) {
 			case "missing-selector":
 				args = append(args[:1], args[3:]...)
 				want = "session-id"
+			case "missing-claude-home":
+				args = append(args, "--source", "claude")
+				want = "telemetry.sources.claude.home"
+			case "default-claude-without-home":
+				local = strings.Replace(local, "  default_source: codex\n", "  default_source: claude\n", 1)
+				want = "telemetry.sources.claude.home"
+			case "invalid-claude-home":
+				args = append(args, "--source", "claude", "--claude-home", filepath.Join(t.TempDir(), "missing-claude-store"))
+				want = "missing-claude-store"
+			case "blank-claude-home":
+				args = append(args, "--source", "claude", "--claude-home", "")
+				want = "--claude-home"
+			case "file-claude-home":
+				file := filepath.Join(t.TempDir(), "claude-store-file")
+				if err := os.WriteFile(file, []byte("synthetic"), 0600); err != nil {
+					t.Fatal(err)
+				}
+				args = append(args, "--source", "claude", "--claude-home", file)
+				want = "must be a directory"
 			}
 			if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
 				t.Fatal(err)
@@ -266,7 +285,20 @@ func TestGenerateSelectedSourceDoesNotFallback(t *testing.T) {
 			cmd := exec.Command(cliBinaryPath, args...)
 			cmd.Dir = f.project
 			// A usable competing environment store must never satisfy omitted policy.
-			cmd.Env = append(os.Environ(), "CODEX_HOME="+f.store)
+			// A usable synthetic Claude Code store holding the selected root is
+			// reachable through CLAUDE_CONFIG_DIR and ~/.claude; neither may be read.
+			competingClaude := t.TempDir()
+			for _, store := range []string{competingClaude, filepath.Join(competingClaude, "home", ".claude")} {
+				transcript := filepath.Join(store, "projects", "-synthetic", "root.jsonl")
+				if err := os.MkdirAll(filepath.Dir(transcript), 0700); err != nil {
+					t.Fatal(err)
+				}
+				record := fmt.Sprintf(`{"type":"user","sessionId":"root","uuid":"u-1","timestamp":"2026-01-01T00:00:00Z","cwd":%q,"message":{"role":"user","content":"synthetic"}}`+"\n"+`{"type":"assistant","sessionId":"root","timestamp":"2026-01-01T00:00:01Z","requestId":"r-1","message":{"id":"m-1","model":"m","stop_reason":"end_turn","usage":{"input_tokens":1,"output_tokens":1,"cache_read_input_tokens":0},"content":[]}}`+"\n", f.project)
+				if err := os.WriteFile(transcript, []byte(record), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			cmd.Env = append(os.Environ(), "CODEX_HOME="+f.store, "CLAUDE_CONFIG_DIR="+competingClaude, "HOME="+filepath.Join(competingClaude, "home"))
 			out, err := cmd.CombinedOutput()
 			if err == nil || !strings.Contains(string(out), want) {
 				t.Fatalf("selected failure %q: %v %s", want, err, out)

@@ -158,6 +158,18 @@ describe('Boundary API Client', () => {
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...payload, ledger: { ...payload.ledger, facts: { ...payload.ledger.facts, sessions: [session] } } }) }));
             await expect(fetchWorkspaceById('AL-1')).rejects.toThrow(/Invalid workspace detail response/);
         });
+        it.each(['opencode', 'codex', 'claude', 'unknown'])('accepts a recorded %s session source verbatim', async (source) => {
+            const session = { ...payload.ledger.facts.sessions[0]!, source };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...payload, ledger: { ...payload.ledger, facts: { ...payload.ledger.facts, sessions: [session] } } }) }));
+            const facts = (await fetchWorkspaceById('AL-1')).data.ledger.facts;
+            expect(facts.sessions[0]?.source).toBe(source);
+            expect(facts.sessions[0]?.delegations).toEqual([delegation]);
+        });
+        it.each([['claude-code'], ['Claude'], ['anthropic'], [''], [null], [7]])('rejects unsupported session source %j', async (source) => {
+            const session = { ...payload.ledger.facts.sessions[0]!, source };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...payload, ledger: { ...payload.ledger, facts: { ...payload.ledger.facts, sessions: [session] } } }) }));
+            await expect(fetchWorkspaceById('AL-1')).rejects.toThrow(/Invalid workspace detail response/);
+        });
         it.each([
             { skills: [{ name: '', caller_role: null, invoked_at: null }] },
             { skills: [{ name: 'skill', invoked_at: null }] },

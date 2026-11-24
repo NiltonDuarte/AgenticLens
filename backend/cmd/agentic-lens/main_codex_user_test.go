@@ -24,7 +24,7 @@ func TestResolveCodexSessionUsersForGeneration(t *testing.T) {
 			fresh := []domain.SessionFact{{ID: "session-1", User: tt.freshUser}}
 			cachedUsers := map[string]string{"session-1": tt.cachedUser}
 
-			resolveCodexSessionUsers(fresh, cachedUsers, tt.gitUser)
+			resolveSessionUsers(fresh, cachedUsers, tt.gitUser)
 
 			if fresh[0].User != tt.want {
 				t.Fatalf("resolved generation user = %q, want %q", fresh[0].User, tt.want)
