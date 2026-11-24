@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "NiltonDuarte/AgenticLens",
-  "main_revision": "6c41095edf4747e250ede15d7b5caac923eb4893",
+  "main_revision": "133100bb04bc39b78b35ae194bd08ce221815d59",
   "previews": {
     "160": {
       "revision": "1dfb0fdf83401a5aa7099de010292a84bd1a51bf"
@@ -14,9 +14,6 @@
     },
     "166": {
       "revision": "3bc2184bb2286f81d3126a082b2bfa7fa48447c0"
-    },
-    "169": {
-      "revision": "c208b8a981c043f28e84770c4059a78d14700549"
     }
   }
 }
