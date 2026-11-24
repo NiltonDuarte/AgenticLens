@@ -36,31 +36,6 @@ func appendRawLine(t *testing.T, path, line string) {
 	}
 }
 
-func withoutKey(r record, key string) record {
-	copied := record{}
-	for k, v := range r {
-		if k != key {
-			copied[k] = v
-		}
-	}
-	return copied
-}
-
-func withMessageField(r record, key string, value any) record {
-	copied := withoutKey(r, "message")
-	message := record{}
-	for k, v := range r["message"].(record) {
-		message[k] = v
-	}
-	if value == nil {
-		delete(message, key)
-	} else {
-		message[key] = value
-	}
-	copied["message"] = message
-	return copied
-}
-
 // Each malformed or partial record must reach its own incomplete branch: the
 // expected reason is asserted, so a fixture that failed earlier for another
 // reason cannot satisfy the test.
@@ -74,25 +49,27 @@ func TestSyntheticMalformedRecordsMakeRootIncompleteThroughTheirOwnBranch(t *tes
 	}{
 		{name: "malformed line", raw: `{"type":"assistant",`, reason: "malformed JSON record"},
 		{name: "untyped record", raw: `{"sessionId":"` + syntheticRoot + `","timestamp":"2026-11-24T10:00:02Z"}`, reason: "record has no type"},
-		{name: "foreign sessionId", record: func() record { r := base; r = withoutKey(r, "sessionId"); r["sessionId"] = "foreign-session"; return r }(), reason: "different sessionId"},
-		{name: "foreign sessionId on ignored record type", record: record{"type": "file-history-snapshot", "sessionId": "foreign-session"}, reason: "different sessionId"},
-		{name: "assistant without timestamp", record: withoutKey(base, "timestamp"), reason: "assistant record has no valid timestamp"},
-		{name: "user without timestamp", record: withoutKey(prompt("2026-11-24T10:00:02Z", "sdk"), "timestamp"), reason: "user record has no valid timestamp"},
-		{name: "assistant without message", record: withoutKey(base, "message"), reason: "assistant record has no readable message"},
-		{name: "user without message", record: withoutKey(prompt("2026-11-24T10:00:02Z", "sdk"), "message"), reason: "user record has no readable message"},
-		{name: "user with unreadable content", record: withMessageField(prompt("2026-11-24T10:00:02Z", "sdk"), "content", 7), reason: "user record has unreadable content"},
-		{name: "response without any identity", record: withMessageField(withoutKey(base, "requestId"), "id", nil), reason: "neither requestId nor message.id"},
-		{name: "unreadable usage", record: withMessageField(base, "usage", "not-an-object"), reason: "unreadable usage"},
-		{name: "null usage", record: withMessageField(base, "usage", json.RawMessage("null")), reason: "lacks usage"},
-		{name: "missing cache-read category", record: withMessageField(base, "usage", record{"input_tokens": 1, "output_tokens": 1}), reason: "lacks input, output or cache-read usage"},
-		{name: "missing output category", record: withMessageField(base, "usage", record{"input_tokens": 1, "cache_read_input_tokens": 1}), reason: "lacks input, output or cache-read usage"},
-		{name: "negative usage", record: withMessageField(base, "usage", usage(-1, 1, 1)), reason: "negative usage"},
-		{name: "negative cache creation", record: withMessageField(base, "usage", record{"input_tokens": 1, "output_tokens": 1, "cache_read_input_tokens": 1, "cache_creation_input_tokens": -5}), reason: "negative usage"},
-		{name: "served model missing", record: withMessageField(base, "model", ""), reason: "has no served model"},
+		{name: "foreign sessionId", record: base.edit(func(r *record) { r.SessionID = "foreign-session" }), reason: "different sessionId"},
+		{name: "foreign sessionId on ignored record type", record: record{Type: "file-history-snapshot", SessionID: "foreign-session"}, reason: "different sessionId"},
+		{name: "assistant without timestamp", record: base.edit(func(r *record) { r.Timestamp = "" }), reason: "assistant record has no valid timestamp"},
+		{name: "user without timestamp", record: prompt("2026-11-24T10:00:02Z", "sdk").edit(func(r *record) { r.Timestamp = "" }), reason: "user record has no valid timestamp"},
+		{name: "assistant without message", record: base.edit(func(r *record) { r.Message = nil }), reason: "assistant record has no readable message"},
+		{name: "user without message", record: prompt("2026-11-24T10:00:02Z", "sdk").edit(func(r *record) { r.Message = nil }), reason: "user record has no readable message"},
+		{name: "user with unreadable content", record: prompt("2026-11-24T10:00:02Z", "sdk").edit(func(r *record) { r.Message.Content = encode(7) }), reason: "user record has unreadable content"},
+		{name: "response without any identity", record: base.edit(func(r *record) { r.RequestID, r.Message.ID = "", "" }), reason: "neither requestId nor message.id"},
+		{name: "unreadable usage", record: base.edit(func(r *record) { r.Message.Usage = encode("not-an-object") }), reason: "unreadable usage"},
+		{name: "null usage", record: base.edit(func(r *record) { r.Message.Usage = json.RawMessage("null") }), reason: "lacks usage"},
+		{name: "missing cache-read category", record: base.edit(func(r *record) { r.Message.Usage = usageFields{Input: n64(1), Output: n64(1)}.encode() }), reason: "lacks input, output or cache-read usage"},
+		{name: "missing output category", record: base.edit(func(r *record) { r.Message.Usage = usageFields{Input: n64(1), CacheRead: n64(1)}.encode() }), reason: "lacks input, output or cache-read usage"},
+		{name: "negative usage", record: base.edit(func(r *record) { r.Message.Usage = usage(-1, 1, 1) }), reason: "negative usage"},
+		{name: "negative cache creation", record: base.edit(func(r *record) {
+			r.Message.Usage = usageFields{Input: n64(1), Output: n64(1), CacheRead: n64(1), CacheCreation: n64(-5)}.encode()
+		}), reason: "negative usage"},
+		{name: "served model missing", record: base.edit(func(r *record) { r.Message.Model = "" }), reason: "has no served model"},
 		{name: "same response from another model", record: assistant("2026-11-24T10:00:02Z", "req-1", "model-b", "end_turn", usage(10, 20, 30)), reason: "conflicting usage or model"},
-		{name: "tool_use without id", record: assistant("2026-11-24T10:00:02Z", "req-2", "model-a", "tool_use", usage(1, 1, 1), record{"type": "tool_use", "name": "Bash", "input": record{}}), reason: "tool_use requires id and name"},
-		{name: "tool_result without tool_use_id", record: record{"type": "user", "timestamp": "2026-11-24T10:00:02Z", "message": record{"role": "user", "content": []record{{"type": "tool_result"}}}}, reason: "tool_result requires tool_use_id"},
-		{name: "successful Skill without a name", record: assistant("2026-11-24T10:00:02Z", "req-2", "model-a", "tool_use", usage(1, 1, 1), toolUseBlock("s-blank", "Skill", record{"args": "x"})), reason: "has no skill name"},
+		{name: "tool_use without id", record: assistant("2026-11-24T10:00:02Z", "req-2", "model-a", "tool_use", usage(1, 1, 1), block{Type: "tool_use", Name: "Bash", Input: &toolInput{}}), reason: "tool_use requires id and name"},
+		{name: "tool_result without tool_use_id", record: record{Type: "user", Timestamp: "2026-11-24T10:00:02Z", Message: &message{Role: "user", Content: encode([]block{{Type: "tool_result"}})}}, reason: "tool_result requires tool_use_id"},
+		{name: "successful Skill without a name", record: assistant("2026-11-24T10:00:02Z", "req-2", "model-a", "tool_use", usage(1, 1, 1), toolUseBlock("s-blank", "Skill", toolInput{Args: "x"})), reason: "has no skill name"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			store := newStore(t)
@@ -100,11 +77,11 @@ func TestSyntheticMalformedRecordsMakeRootIncompleteThroughTheirOwnBranch(t *tes
 				prompt("2026-11-24T10:00:00Z", "sdk"),
 				assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "tool_use", usage(10, 20, 30)),
 			}
-			if tc.record != nil {
+			if tc.raw == "" {
 				records = append(records, tc.record)
 			}
 			if tc.name == "successful Skill without a name" {
-				records = append(records, resultRecord("2026-11-24T10:00:03Z", "s-blank", false, record{"success": true}))
+				records = append(records, resultRecord("2026-11-24T10:00:03Z", "s-blank", false, &resultDetails{Success: boolPtr(true)}))
 			}
 			store.root(syntheticFolder, syntheticRoot, records)
 			if tc.raw != "" {
@@ -126,9 +103,9 @@ func TestSyntheticMalformedRecordsMakeRootIncompleteThroughTheirOwnBranch(t *tes
 func TestSyntheticCostStateAndOtherRecordTypesAreIgnored(t *testing.T) {
 	store := newStore(t)
 	store.root(syntheticFolder, syntheticRoot, []record{
-		{"type": "cost-state", "totalCostUSD": 98.7654, "modelUsage": record{"model-a": record{"costUSD": 98.7654}}},
-		{"type": "file-history-snapshot", "messageId": "m-1"},
-		{"type": "queue-operation", "operation": "enqueue"},
+		{Type: "cost-state", TotalCostUSD: 98.7654, ModelUsage: map[string]cost{"model-a": {CostUSD: 98.7654}}},
+		{Type: "file-history-snapshot", MessageID: "m-1"},
+		{Type: "queue-operation", Operation: "enqueue"},
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:04Z", "req-1", "model-a", "end_turn", usage(3, 4, 5)),
 	})
@@ -163,11 +140,11 @@ func TestSyntheticCostStateAndOtherRecordTypesAreIgnored(t *testing.T) {
 // need no usage object, and still end the turn they belong to.
 func TestSyntheticModelNoticeAddsNoUsageOrRowButEndsTurn(t *testing.T) {
 	store := newStore(t)
-	notice := record{"type": "assistant", "timestamp": "2026-11-24T10:00:20Z", "isApiErrorMessage": true,
-		"message": record{"id": "synthetic-notice-1", "model": "<synthetic>", "role": "assistant", "stop_reason": "stop_sequence", "content": []record{{"type": "text", "text": "synthetic"}}}}
+	notice := record{Type: "assistant", Timestamp: "2026-11-24T10:00:20Z", IsAPIErrorMessage: true,
+		Message: &message{ID: "synthetic-notice-1", Model: "<synthetic>", Role: "assistant", StopReason: "stop_sequence", Content: encode([]block{{Type: "text", Text: "synthetic"}})}}
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
-		assistant("2026-11-24T10:00:05Z", "req-1", "model-a", "tool_use", usage(5, 6, 7), toolUseBlock("t-1", "Bash", record{})),
+		assistant("2026-11-24T10:00:05Z", "req-1", "model-a", "tool_use", usage(5, 6, 7), toolUseBlock("t-1", "Bash", toolInput{})),
 		resultRecord("2026-11-24T10:00:08Z", "t-1", false, nil),
 		notice,
 		// 280 idle seconds after the notice ended the first turn.
@@ -203,7 +180,7 @@ func TestSyntheticModelNoticeOnlyTurnCreatesNoSyntheticRow(t *testing.T) {
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:03Z", "req-1", "model-a", "end_turn", usage(2, 2, 2)),
 		prompt("2026-11-24T10:01:00Z", "sdk"),
-		{"type": "assistant", "timestamp": "2026-11-24T10:01:07Z", "message": record{"id": "n-1", "model": "<synthetic>", "stop_reason": "stop_sequence", "content": []record{}}},
+		{Type: "assistant", Timestamp: "2026-11-24T10:01:07Z", Message: &message{ID: "n-1", Model: "<synthetic>", StopReason: "stop_sequence", Content: encode([]block{})}},
 	})
 	_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, laterCutoff)
 	root := sessionByID(t, extraction.Sessions, syntheticRoot)
@@ -225,12 +202,12 @@ func TestSyntheticModelNoticeOnlyTurnCreatesNoSyntheticRow(t *testing.T) {
 func TestSyntheticRootMetaPromptStartsNoTurnAndNoSteering(t *testing.T) {
 	store := newStore(t)
 	meta := prompt("2026-11-24T10:01:00Z", "")
-	meta["isMeta"] = true
-	meta["origin"] = record{"kind": "coordinator"}
+	meta.IsMeta = true
+	meta.Origin = &origin{Kind: "coordinator"}
 	summary := prompt("2026-11-24T10:02:00Z", "")
-	summary["isCompactSummary"] = true
+	summary.IsCompactSummary = true
 	transcriptOnly := prompt("2026-11-24T10:03:00Z", "")
-	transcriptOnly["isVisibleInTranscriptOnly"] = true
+	transcriptOnly.TranscriptOnly = true
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:10Z", "req-1", "model-a", "end_turn", usage(1, 1, 1)),
@@ -256,13 +233,13 @@ func TestSyntheticResumedSubagentWithOpenTurnDoesNotStartAnotherTurn(t *testing.
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "tool_use", usage(1, 1, 1),
-			toolUseBlock("call-child", "Agent", record{"subagent_type": "coder"})),
-		resultRecord("2026-11-24T10:00:30Z", "call-child", false, record{"agentId": "achild"}),
+			toolUseBlock("call-child", "Agent", toolInput{SubagentType: "coder"})),
+		resultRecord("2026-11-24T10:00:30Z", "call-child", false, &resultDetails{AgentID: "achild"}),
 		assistant("2026-11-24T10:00:31Z", "req-2", "model-a", "end_turn", usage(1, 1, 1)),
 	})
 	resume := prompt("2026-11-24T10:00:10Z", "")
-	resume["isMeta"] = true
-	resume["origin"] = record{"kind": "coordinator"}
+	resume.IsMeta = true
+	resume.Origin = &origin{Kind: "coordinator"}
 	store.subagent(syntheticFolder, syntheticRoot, "achild", "call-child", "coder", []record{
 		prompt("2026-11-24T10:00:02Z", ""),
 		assistant("2026-11-24T10:00:05Z", "req-c1", "model-a", "tool_use", usage(1, 1, 1)),
@@ -287,12 +264,12 @@ func TestSyntheticResumedSubagentOpenTurnIsProvisional(t *testing.T) {
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "end_turn", usage(1, 1, 1),
-			toolUseBlock("call-child", "Agent", record{"subagent_type": "coder"})),
+			toolUseBlock("call-child", "Agent", toolInput{SubagentType: "coder"})),
 	})
 	resume := prompt("2026-11-24T10:20:00Z", "")
-	resume["isMeta"] = true
-	resume["origin"] = record{"kind": "coordinator"}
-	resume["uuid"] = "resume-uuid"
+	resume.IsMeta = true
+	resume.Origin = &origin{Kind: "coordinator"}
+	resume.UUID = "resume-uuid"
 	store.subagent(syntheticFolder, syntheticRoot, "achild", "call-child", "coder", []record{
 		prompt("2026-11-24T10:00:02Z", ""),
 		assistant("2026-11-24T10:00:12Z", "req-c1", "model-a", "end_turn", usage(1, 1, 1)),
@@ -322,7 +299,7 @@ func TestSyntheticSupersededTurnEndsAtLastOwnedRecord(t *testing.T) {
 	store := newStore(t)
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
-		assistant("2026-11-24T10:00:10Z", "req-1", "model-a", "tool_use", usage(1, 1, 1), toolUseBlock("t-1", "Bash", record{})),
+		assistant("2026-11-24T10:00:10Z", "req-1", "model-a", "tool_use", usage(1, 1, 1), toolUseBlock("t-1", "Bash", toolInput{})),
 		resultRecord("2026-11-24T10:00:15Z", "t-1", false, nil),
 		// No terminal record: the next prompt supersedes the turn 45s later.
 		prompt("2026-11-24T10:01:00Z", "sdk"),
@@ -365,12 +342,13 @@ func TestSyntheticCompletionReplacesProvisionalSnapshot(t *testing.T) {
 // peak context only, and thinking tokens become reasoning.
 func TestSyntheticMessageIDFallbackAndTokenMapping(t *testing.T) {
 	store := newStore(t)
-	rich := record{"input_tokens": 10, "output_tokens": 20, "cache_read_input_tokens": 30, "cache_creation_input_tokens": 100, "output_tokens_details": record{"thinking_tokens": 7}}
+	rich := usageFields{Input: n64(10), Output: n64(20), CacheRead: n64(30), CacheCreation: n64(100), Details: &outputDetails{Thinking: 7}}.encode()
 	block := func(ts string, kind string) record {
-		r := withoutKey(assistant(ts, "x", "model-a", "tool_use", rich, record{"type": kind}), "requestId")
-		return withMessageField(r, "id", "msg-shared")
+		return assistant(ts, "x", "model-a", "tool_use", rich, block{Type: kind}).edit(func(r *record) {
+			r.RequestID, r.Message.ID = "", "msg-shared"
+		})
 	}
-	plain := record{"input_tokens": 50, "output_tokens": 1, "cache_read_input_tokens": 0}
+	plain := usageFields{Input: n64(50), Output: n64(1), CacheRead: n64(0)}.encode()
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		block("2026-11-24T10:00:01Z", "thinking"),
@@ -394,20 +372,20 @@ func TestSyntheticMessageIDFallbackAndTokenMapping(t *testing.T) {
 func TestSyntheticForkedHistoryContributesNothing(t *testing.T) {
 	store := newStore(t)
 	forked := func(r record) record {
-		copied := withoutKey(r, "cwd")
-		copied["cwd"] = "/synthetic/source-project"
-		copied["forkedFrom"] = record{"sessionId": "source-session", "messageUuid": "m-1"}
-		copied["sessionId"] = "source-session"
-		return copied
+		return r.edit(func(copied *record) {
+			copied.CWD = "/synthetic/source-project"
+			copied.ForkedFrom = &forkSource{SessionID: "source-session", MessageUUID: "m-1"}
+			copied.SessionID = "source-session"
+		})
 	}
 	store.root(syntheticFolder, syntheticRoot, []record{
 		forked(prompt("2026-11-24T09:00:00Z", "sdk")),
 		forked(assistant("2026-11-24T09:00:01Z", "req-copied", "model-a", "tool_use", usage(500, 500, 500),
-			toolUseBlock("copied-agent", "Agent", record{"subagent_type": "coder"}), toolUseBlock("copied-skill", "Skill", record{"skill": "copied"}))),
-		forked(resultRecord("2026-11-24T09:00:02Z", "copied-skill", false, record{"success": true})),
-		forked(record{"type": "system", "subtype": "compact_boundary", "timestamp": "2026-11-24T09:00:03Z"}),
+			toolUseBlock("copied-agent", "Agent", toolInput{SubagentType: "coder"}), toolUseBlock("copied-skill", "Skill", toolInput{Skill: "copied"}))),
+		forked(resultRecord("2026-11-24T09:00:02Z", "copied-skill", false, &resultDetails{Success: boolPtr(true)})),
+		forked(record{Type: "system", Subtype: "compact_boundary", Timestamp: "2026-11-24T09:00:03Z"}),
 		forked(assistant("2026-11-24T09:00:04Z", "req-copied", "model-a", "end_turn", usage(500, 500, 500))),
-		{"type": "attachment", "timestamp": "2026-11-24T10:00:00Z"},
+		{Type: "attachment", Timestamp: "2026-11-24T10:00:00Z"},
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		// An owned record repeating a copied identity is still inherited history.
 		assistant("2026-11-24T10:00:01Z", "req-copied", "model-a", "tool_use", usage(500, 500, 500)),
@@ -447,11 +425,11 @@ func TestSyntheticForkedHistoryContributesNothing(t *testing.T) {
 func TestSyntheticWorkingDirectoryComesFromRecordedCWD(t *testing.T) {
 	store := newStore(t)
 	first := prompt("2026-11-24T10:00:00Z", "sdk")
-	first["cwd"] = "/synthetic/recorded-checkout"
+	first.CWD = "/synthetic/recorded-checkout"
 	later := prompt("2026-11-24T10:01:00Z", "sdk")
-	later["cwd"] = "/synthetic/other-checkout"
+	later.CWD = "/synthetic/other-checkout"
 	store.root("-home-decoy-folder-name", syntheticRoot, []record{
-		{"type": "system", "subtype": "init", "timestamp": "2026-11-24T09:59:59Z"},
+		{Type: "system", Subtype: "init", Timestamp: "2026-11-24T09:59:59Z"},
 		first,
 		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "end_turn", usage(1, 1, 1)),
 		later,
@@ -474,17 +452,17 @@ func TestSyntheticSkillAndDelegationOwnership(t *testing.T) {
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "tool_use", usage(1, 1, 1),
-			toolUseBlock("call-child", "Agent", record{"description": "plan it"}),
-			toolUseBlock("s-open", "Skill", record{"skill": "never-finished"})),
-		resultRecord("2026-11-24T10:00:40Z", "call-child", false, record{"agentId": "achild", "agentType": "planner"}),
+			toolUseBlock("call-child", "Agent", toolInput{Description: "plan it"}),
+			toolUseBlock("s-open", "Skill", toolInput{Skill: "never-finished"})),
+		resultRecord("2026-11-24T10:00:40Z", "call-child", false, &resultDetails{AgentID: "achild", AgentType: "planner"}),
 		assistant("2026-11-24T10:00:41Z", "req-2", "model-a", "end_turn", usage(1, 1, 1)),
 	})
 	store.subagent(syntheticFolder, syntheticRoot, "achild", "call-child", "planner", []record{
 		prompt("2026-11-24T10:00:02Z", ""),
-		assistant("2026-11-24T10:00:03Z", "req-c1", "model-a", "tool_use", usage(1, 1, 1), toolUseBlock("s-1", "Skill", record{"skill": "review"})),
+		assistant("2026-11-24T10:00:03Z", "req-c1", "model-a", "tool_use", usage(1, 1, 1), toolUseBlock("s-1", "Skill", toolInput{Skill: "review"})),
 		resultRecord("2026-11-24T10:00:04Z", "s-1", false, nil),
-		assistant("2026-11-24T10:00:05Z", "req-c2", "model-a", "tool_use", usage(1, 1, 1), toolUseBlock("s-2", "Skill", record{"skill": "review"})),
-		resultRecord("2026-11-24T10:00:06Z", "s-2", false, record{"success": true}),
+		assistant("2026-11-24T10:00:05Z", "req-c2", "model-a", "tool_use", usage(1, 1, 1), toolUseBlock("s-2", "Skill", toolInput{Skill: "review"})),
+		resultRecord("2026-11-24T10:00:06Z", "s-2", false, &resultDetails{Success: boolPtr(true)}),
 		assistant("2026-11-24T10:00:07Z", "req-c3", "model-a", "end_turn", usage(1, 1, 1)),
 	})
 	_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, laterCutoff)
@@ -533,8 +511,8 @@ func TestSyntheticDisabledOptionalCategoriesAreOmitted(t *testing.T) {
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "tool_use", usage(1, 1, 1),
-			toolUseBlock("s-1", "Skill", record{"skill": "review"}), toolUseBlock("call-x", "Agent", record{"subagent_type": "coder"})),
-		resultRecord("2026-11-24T10:00:02Z", "s-1", false, record{"success": true}),
+			toolUseBlock("s-1", "Skill", toolInput{Skill: "review"}), toolUseBlock("call-x", "Agent", toolInput{SubagentType: "coder"})),
+		resultRecord("2026-11-24T10:00:02Z", "s-1", false, &resultDetails{Success: boolPtr(true)}),
 		assistant("2026-11-24T10:00:03Z", "req-2", "model-a", "end_turn", usage(1, 1, 1)),
 	})
 	for _, policy := range []domain.GenerationPolicy{{Skills: false, Delegations: true}, {Skills: true, Delegations: false}} {
@@ -566,10 +544,10 @@ func TestSyntheticCompactionsCountPerOwner(t *testing.T) {
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "end_turn", usage(1, 1, 1),
-			toolUseBlock("call-child", "Agent", record{"subagent_type": "coder"})),
+			toolUseBlock("call-child", "Agent", toolInput{SubagentType: "coder"})),
 	})
 	boundary := func(ts string) record {
-		return record{"type": "system", "subtype": "compact_boundary", "timestamp": ts, "compactMetadata": record{"trigger": "manual"}, "logicalParentUuid": "p"}
+		return record{Type: "system", Subtype: "compact_boundary", Timestamp: ts, CompactMetadata: &compactMetadata{Trigger: "manual"}, LogicalParentUUID: "p"}
 	}
 	store.subagent(syntheticFolder, syntheticRoot, "achild", "call-child", "coder", []record{
 		prompt("2026-11-24T10:00:02Z", ""),
@@ -604,8 +582,8 @@ func TestSyntheticTerminalResponseBlocksExtendTheClosedTurnOnce(t *testing.T) {
 	store := newStore(t)
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
-		assistant("2026-11-24T10:00:05Z", "req-1", "model-a", "end_turn", usage(4, 5, 6), record{"type": "thinking"}),
-		assistant("2026-11-24T10:00:08Z", "req-1", "model-a", "end_turn", usage(4, 5, 6), record{"type": "text"}),
+		assistant("2026-11-24T10:00:05Z", "req-1", "model-a", "end_turn", usage(4, 5, 6), block{Type: "thinking"}),
+		assistant("2026-11-24T10:00:08Z", "req-1", "model-a", "end_turn", usage(4, 5, 6), block{Type: "text"}),
 		// A different response after the turn closed adds no time.
 		assistant("2026-11-24T10:00:30Z", "req-2", "model-a", "end_turn", usage(1, 1, 1)),
 	})
@@ -613,5 +591,203 @@ func TestSyntheticTerminalResponseBlocksExtendTheClosedTurnOnce(t *testing.T) {
 	row := sessionByID(t, extraction.Sessions, syntheticRoot).Invocations[0]
 	if row.ActiveDurationSeconds != 8 || row.Turns != 1 || row.Tokens.Input != 5 || row.Tokens.Output != 6 || row.Tokens.CacheRead != 7 {
 		t.Fatalf("want one 8s turn and usage (4,5,6)+(1,1,1): active=%d turns=%d tokens=%+v", row.ActiveDurationSeconds, row.Turns, row.Tokens)
+	}
+}
+
+// Lifecycle records after the snapshot cutoff neither close nor extend a turn,
+// and a turn that starts after the cutoff is not measured. Usage is not gated
+// by the cutoff, so the later response's tokens still count.
+func TestSyntheticRecordsAfterCutoffAreNotMeasured(t *testing.T) {
+	cutoff := time.Date(2026, 11, 24, 10, 0, 30, 0, time.UTC)
+	t.Run("terminal record after the cutoff", func(t *testing.T) {
+		store := newStore(t)
+		store.root(syntheticFolder, syntheticRoot, []record{
+			prompt("2026-11-24T10:00:00Z", "sdk"),
+			assistant("2026-11-24T10:00:10Z", "req-1", "model-a", "tool_use", usage(1, 1, 1)),
+			assistant("2026-11-24T10:00:50Z", "req-2", "model-a", "end_turn", usage(2, 2, 2)),
+		})
+		_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, cutoff)
+		row := sessionByID(t, extraction.Sessions, syntheticRoot).Invocations[0]
+		// Open from 10:00:00 to the 10:00:30 cutoff: 30s, all provisional.
+		if row.ActiveDurationSeconds != 30 || row.ProvisionalSeconds != 30 || row.CompletedAt != nil || row.Turns != 1 {
+			t.Fatalf("a terminal record after the cutoff closed the turn: active=%d provisional=%d completed=%v turns=%d", row.ActiveDurationSeconds, row.ProvisionalSeconds, row.CompletedAt, row.Turns)
+		}
+		if row.Tokens.Input != 3 {
+			t.Fatalf("usage is not gated by the cutoff: %+v", row.Tokens)
+		}
+	})
+	t.Run("turn started after the cutoff", func(t *testing.T) {
+		store := newStore(t)
+		store.root(syntheticFolder, syntheticRoot, []record{
+			prompt("2026-11-24T10:00:00Z", "sdk"),
+			assistant("2026-11-24T10:00:20Z", "req-1", "model-a", "end_turn", usage(1, 1, 1)),
+			prompt("2026-11-24T10:00:40Z", "sdk"),
+			assistant("2026-11-24T10:00:45Z", "req-2", "model-a", "end_turn", usage(1, 1, 1)),
+		})
+		_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, cutoff)
+		row := sessionByID(t, extraction.Sessions, syntheticRoot).Invocations[0]
+		if row.ActiveDurationSeconds != 20 || row.ProvisionalSeconds != 0 || row.Turns != 1 {
+			t.Fatalf("a turn after the cutoff was measured: active=%d provisional=%d turns=%d", row.ActiveDurationSeconds, row.ProvisionalSeconds, row.Turns)
+		}
+	})
+}
+
+// A background subagent that is still running has no Agent tool_result yet;
+// its parent's delegation still names the child proven by the meta file.
+func TestSyntheticDelegationNamesProvenChildWithoutResult(t *testing.T) {
+	store := newStore(t)
+	store.root(syntheticFolder, syntheticRoot, []record{
+		prompt("2026-11-24T10:00:00Z", "sdk"),
+		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "end_turn", usage(1, 1, 1),
+			toolUseBlock("call-bg", "Agent", toolInput{SubagentType: "coder", Description: "background"})),
+	})
+	store.subagent(syntheticFolder, syntheticRoot, "abackground", "call-bg", "coder", []record{
+		prompt("2026-11-24T10:00:02Z", ""),
+		assistant("2026-11-24T10:00:03Z", "req-c1", "model-a", "tool_use", usage(1, 1, 1)),
+	})
+	_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, laterCutoff)
+	root := sessionByID(t, extraction.Sessions, syntheticRoot)
+	if len(root.Delegations) != 1 || root.Delegations[0].ChildSession != "abackground" {
+		t.Fatalf("a running background child must be referenced by proof: %+v", root.Delegations)
+	}
+	found := false
+	for _, event := range extraction.Events {
+		if event.CallID == "call-bg" && event.ChildSessionID == "abackground" && event.Status == "running" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("the running delegation event must carry the proven child: %+v", extraction.Events)
+	}
+}
+
+// One compaction on an owner served by two models is counted once.
+func TestSyntheticCompactionsOnMultiModelOwnerCountOnce(t *testing.T) {
+	store := newStore(t)
+	store.root(syntheticFolder, syntheticRoot, []record{
+		prompt("2026-11-24T10:00:00Z", "sdk"),
+		assistant("2026-11-24T10:00:05Z", "req-1", "model-a", "end_turn", usage(1, 1, 1)),
+		{Type: "system", Subtype: "compact_boundary", Timestamp: "2026-11-24T10:01:00Z"},
+		prompt("2026-11-24T10:02:00Z", "sdk"),
+		assistant("2026-11-24T10:02:05Z", "req-2", "model-b", "end_turn", usage(1, 1, 1)),
+	})
+	_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, laterCutoff)
+	root := sessionByID(t, extraction.Sessions, syntheticRoot)
+	var compactions int64
+	for _, row := range root.Invocations {
+		compactions += row.Compactions
+	}
+	if len(root.Invocations) != 2 || compactions != 1 {
+		t.Fatalf("want two rows and one compaction in total, got %d rows and %d", len(root.Invocations), compactions)
+	}
+}
+
+// requestId identifies a response; message.id is only the fallback.
+func TestSyntheticRequestIDTakesPrecedenceOverMessageID(t *testing.T) {
+	store := newStore(t)
+	withMessageID := func(r record, id string) record {
+		return r.edit(func(copied *record) { copied.Message.ID = id })
+	}
+	store.root(syntheticFolder, syntheticRoot, []record{
+		prompt("2026-11-24T10:00:00Z", "sdk"),
+		// Two responses that happen to share a message.id.
+		withMessageID(assistant("2026-11-24T10:00:01Z", "req-a", "model-a", "tool_use", usage(10, 0, 0)), "msg-shared"),
+		withMessageID(assistant("2026-11-24T10:00:02Z", "req-b", "model-a", "tool_use", usage(10, 0, 0)), "msg-shared"),
+		// One response whose content blocks carry different message ids.
+		withMessageID(assistant("2026-11-24T10:00:03Z", "req-c", "model-a", "end_turn", usage(5, 0, 0)), "msg-1"),
+		withMessageID(assistant("2026-11-24T10:00:04Z", "req-c", "model-a", "end_turn", usage(5, 0, 0)), "msg-2"),
+	})
+	_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, laterCutoff)
+	// req-a 10 + req-b 10 + req-c 5.
+	if got := sessionByID(t, extraction.Sessions, syntheticRoot).Invocations[0].Tokens.Input; got != 25 {
+		t.Fatalf("responses must be keyed by requestId first: input %d, want 25", got)
+	}
+}
+
+func harnessText(ts, text string) record {
+	return record{Type: "user", Timestamp: ts, UUID: "h-" + ts, Message: &message{Role: "user", Content: textContent(text)}}
+}
+
+// Local slash commands written with the stderr output envelope or the
+// command-message echo envelope are withdrawn like the stdout/command-name
+// pair, and later tool events keep the turn index of the following prompt.
+func TestSyntheticLocalCommandEnvelopeVariants(t *testing.T) {
+	cutoff := time.Date(2026, 11, 24, 10, 10, 0, 0, time.UTC)
+	for _, tc := range []struct{ name, echo, output string }{
+		{name: "command-message echo with stderr output", echo: "<command-message>compact</command-message>", output: "<local-command-stderr>synthetic</local-command-stderr>"},
+		{name: "command-name echo with stderr output", echo: "<command-name>/compact</command-name>", output: "<local-command-stderr>synthetic</local-command-stderr>"},
+		{name: "command-message echo with stdout output", echo: "<command-message>compact</command-message>", output: "<local-command-stdout>synthetic</local-command-stdout>"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := newStore(t)
+			store.root(syntheticFolder, syntheticRoot, []record{
+				prompt("2026-11-24T10:00:00Z", "sdk"),
+				assistant("2026-11-24T10:01:00Z", "req-1", "model-a", "end_turn", usage(1, 1, 1)),
+				harnessText("2026-11-24T10:05:00Z", tc.echo),
+				harnessText("2026-11-24T10:05:01Z", tc.output),
+				prompt("2026-11-24T10:06:00Z", "sdk"),
+				assistant("2026-11-24T10:06:05Z", "req-2", "model-a", "tool_use", usage(1, 1, 1), toolUseBlock("t-after", "Bash", toolInput{})),
+				resultRecord("2026-11-24T10:06:06Z", "t-after", false, nil),
+				assistant("2026-11-24T10:06:10Z", "req-3", "model-a", "end_turn", usage(1, 1, 1)),
+			})
+			_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, cutoff)
+			row := sessionByID(t, extraction.Sessions, syntheticRoot).Invocations[0]
+			// 60s + 10s over two prompted turns; the command adds nothing.
+			if row.UserIterations != 2 || row.Turns != 2 || row.ActiveDurationSeconds != 70 || row.ProvisionalSeconds != 0 {
+				t.Fatalf("local command counted: iterations=%d turns=%d active=%d provisional=%d", row.UserIterations, row.Turns, row.ActiveDurationSeconds, row.ProvisionalSeconds)
+			}
+			for _, event := range extraction.Events {
+				// p1 is turn 1, the withdrawn echo is not a turn, p2 is turn 2.
+				if event.CallID == "t-after" && event.Turn != 2 {
+					t.Fatalf("a withdrawn command shifted the next turn index: %d", event.Turn)
+				}
+			}
+		})
+	}
+}
+
+// A person's prompt that happens to begin with a command envelope is still
+// steering, even when a harness output record follows it.
+func TestSyntheticPersonPromptWithCommandEnvelopeStaysSteering(t *testing.T) {
+	store := newStore(t)
+	person := prompt("2026-11-24T10:05:00Z", "sdk")
+	person.Message.Content = textContent("<command-name>/not-local</command-name>")
+	store.root(syntheticFolder, syntheticRoot, []record{
+		prompt("2026-11-24T10:00:00Z", "sdk"),
+		assistant("2026-11-24T10:01:00Z", "req-1", "model-a", "end_turn", usage(1, 1, 1)),
+		person,
+		harnessText("2026-11-24T10:05:01Z", "<local-command-stdout>synthetic</local-command-stdout>"),
+	})
+	_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, time.Date(2026, 11, 24, 10, 10, 0, 0, time.UTC))
+	row := sessionByID(t, extraction.Sessions, syntheticRoot).Invocations[0]
+	// 60s closed, then the person's turn is open from 10:05:00 to the 10:10:00 cutoff.
+	if row.UserIterations != 2 || row.ActiveDurationSeconds != 360 || row.ProvisionalSeconds != 300 {
+		t.Fatalf("a person's prompt was withdrawn as a local command: iterations=%d active=%d provisional=%d", row.UserIterations, row.ActiveDurationSeconds, row.ProvisionalSeconds)
+	}
+}
+
+// An echo at the end of the transcript with neither output nor reply cannot be
+// told apart from a prompt just sent, so it stays an open, steering turn that
+// accrues provisional time up to the cutoff. A later read that finds the
+// command output withdraws it.
+func TestSyntheticTrailingCommandEchoStaysOpenTurn(t *testing.T) {
+	store := newStore(t)
+	records := []record{
+		prompt("2026-11-24T10:00:00Z", "sdk"),
+		assistant("2026-11-24T10:01:00Z", "req-1", "model-a", "end_turn", usage(1, 1, 1)),
+		harnessText("2026-11-24T10:05:00Z", "<command-name>/compact</command-name>"),
+	}
+	store.root(syntheticFolder, syntheticRoot, records)
+	cutoff := time.Date(2026, 11, 24, 10, 10, 0, 0, time.UTC)
+	_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, cutoff)
+	row := sessionByID(t, extraction.Sessions, syntheticRoot).Invocations[0]
+	if row.UserIterations != 2 || row.ActiveDurationSeconds != 360 || row.ProvisionalSeconds != 300 || row.CompletedAt != nil {
+		t.Fatalf("want an open steering turn of 300 provisional seconds: iterations=%d active=%d provisional=%d completed=%v", row.UserIterations, row.ActiveDurationSeconds, row.ProvisionalSeconds, row.CompletedAt)
+	}
+	store.root(syntheticFolder, syntheticRoot, append(records, harnessText("2026-11-24T10:05:01Z", "<local-command-stdout>synthetic</local-command-stdout>")))
+	_, extraction = extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, cutoff)
+	row = sessionByID(t, extraction.Sessions, syntheticRoot).Invocations[0]
+	if row.UserIterations != 1 || row.ActiveDurationSeconds != 60 || row.ProvisionalSeconds != 0 || row.CompletedAt == nil {
+		t.Fatalf("the completed local command must be withdrawn: iterations=%d active=%d provisional=%d", row.UserIterations, row.ActiveDurationSeconds, row.ProvisionalSeconds)
 	}
 }

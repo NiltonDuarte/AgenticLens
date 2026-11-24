@@ -52,18 +52,88 @@ func (f claudeCLIFixture) writeLocal(t *testing.T, telemetry string) {
 	}
 }
 
-type claudeCLIRecord map[string]any
-
-func claudeCLIPrompt(cwd, at string) claudeCLIRecord {
-	return claudeCLIRecord{"type": "user", "uuid": "u-" + at, "timestamp": at, "cwd": cwd, "promptSource": "sdk", "message": claudeCLIRecord{"role": "user", "content": "synthetic"}}
+// Typed synthetic Claude Code records; only native keys are written.
+type claudeCLIRecord struct {
+	Type          string           `json:"type"`
+	SessionID     string           `json:"sessionId"`
+	AgentID       string           `json:"agentId,omitempty"`
+	IsSidechain   bool             `json:"isSidechain,omitempty"`
+	UUID          string           `json:"uuid,omitempty"`
+	Timestamp     string           `json:"timestamp"`
+	CWD           string           `json:"cwd,omitempty"`
+	PromptSource  string           `json:"promptSource,omitempty"`
+	RequestID     string           `json:"requestId,omitempty"`
+	ToolUseResult *claudeCLIResult `json:"toolUseResult,omitempty"`
+	Message       claudeCLIMessage `json:"message"`
 }
 
-func claudeCLIResponse(at, request, model, stop string, input, output, cacheRead int, blocks ...claudeCLIRecord) claudeCLIRecord {
-	if blocks == nil {
-		blocks = []claudeCLIRecord{}
+type claudeCLIMessage struct {
+	ID         string           `json:"id,omitempty"`
+	Model      string           `json:"model,omitempty"`
+	Role       string           `json:"role,omitempty"`
+	StopReason string           `json:"stop_reason,omitempty"`
+	Usage      *claudeCLIUsage  `json:"usage,omitempty"`
+	Content    claudeCLIContent `json:"content"`
+}
+
+type claudeCLIUsage struct {
+	Input     int `json:"input_tokens"`
+	Output    int `json:"output_tokens"`
+	CacheRead int `json:"cache_read_input_tokens"`
+}
+
+// claudeCLIContent encodes as a prompt string, or as content blocks when
+// Blocks is non-nil.
+type claudeCLIContent struct {
+	Text   string
+	Blocks []claudeCLIBlock
+}
+
+func (c claudeCLIContent) MarshalJSON() ([]byte, error) {
+	if c.Blocks != nil {
+		return json.Marshal(c.Blocks)
 	}
-	return claudeCLIRecord{"type": "assistant", "timestamp": at, "requestId": request, "message": claudeCLIRecord{"id": "m-" + request, "model": model, "stop_reason": stop,
-		"usage": claudeCLIRecord{"input_tokens": input, "output_tokens": output, "cache_read_input_tokens": cacheRead}, "content": blocks}}
+	return json.Marshal(c.Text)
+}
+
+type claudeCLIBlock struct {
+	Type      string          `json:"type"`
+	ID        string          `json:"id,omitempty"`
+	Name      string          `json:"name,omitempty"`
+	Input     *claudeCLIInput `json:"input,omitempty"`
+	ToolUseID string          `json:"tool_use_id,omitempty"`
+}
+
+type claudeCLIInput struct {
+	SubagentType string `json:"subagent_type,omitempty"`
+	Description  string `json:"description,omitempty"`
+}
+
+type claudeCLIResult struct {
+	AgentID   string `json:"agentId,omitempty"`
+	AgentType string `json:"agentType,omitempty"`
+	Status    string `json:"status,omitempty"`
+}
+
+func claudeCLIPrompt(cwd, at string) claudeCLIRecord {
+	return claudeCLIRecord{Type: "user", UUID: "u-" + at, Timestamp: at, CWD: cwd, PromptSource: "sdk", Message: claudeCLIMessage{Role: "user", Content: claudeCLIContent{Text: "synthetic"}}}
+}
+
+func claudeCLIResponse(at, request, model, stop string, input, output, cacheRead int, blocks ...claudeCLIBlock) claudeCLIRecord {
+	if blocks == nil {
+		blocks = []claudeCLIBlock{}
+	}
+	return claudeCLIRecord{Type: "assistant", Timestamp: at, RequestID: request, Message: claudeCLIMessage{ID: "m-" + request, Model: model, StopReason: stop,
+		Usage: &claudeCLIUsage{Input: input, Output: output, CacheRead: cacheRead}, Content: claudeCLIContent{Blocks: blocks}}}
+}
+
+func claudeCLIAgentCall(id, agentType string) claudeCLIBlock {
+	return claudeCLIBlock{Type: "tool_use", ID: id, Name: "Agent", Input: &claudeCLIInput{SubagentType: agentType, Description: "synthetic"}}
+}
+
+func claudeCLIAgentResult(at, callID, agentID string) claudeCLIRecord {
+	return claudeCLIRecord{Type: "user", Timestamp: at, ToolUseResult: &claudeCLIResult{AgentID: agentID, Status: "completed"},
+		Message: claudeCLIMessage{Role: "user", Content: claudeCLIContent{Blocks: []claudeCLIBlock{{Type: "tool_result", ToolUseID: callID}}}}}
 }
 
 func writeClaudeCLITranscript(t *testing.T, path, sessionID, agentID string, records []claudeCLIRecord) {
@@ -73,10 +143,9 @@ func writeClaudeCLITranscript(t *testing.T, path, sessionID, agentID string, rec
 	}
 	var body bytes.Buffer
 	for _, record := range records {
-		record["sessionId"] = sessionID
+		record.SessionID = sessionID
 		if agentID != "" {
-			record["agentId"] = agentID
-			record["isSidechain"] = true
+			record.AgentID, record.IsSidechain = agentID, true
 		}
 		encoded, err := json.Marshal(record)
 		if err != nil {
@@ -139,6 +208,14 @@ func TestGenerateClaudeRefreshReplacesSnapshotRepeatsEquallyAndRestoresSmallerSn
 	if got := claudeCLISessions(initial)[claudeCLIRoot]; got.Source != domain.SourceClaude || len(got.Invocations) != 1 || got.Invocations[0].Tokens.Input != 100 || got.Invocations[0].ActiveDurationSeconds != 5 {
 		t.Fatalf("initial snapshot: %+v", got)
 	}
+	// The ticket starts at the root's first recorded prompt, and a new owner is
+	// attributed to the selected project's Git user.
+	if initial.StartedAt == nil || *initial.StartedAt != "2026-01-01T10:00:00Z" {
+		t.Fatalf("ledger started_at must be the first Claude Code record: %v", initial.StartedAt)
+	}
+	if got := claudeCLISessions(initial)[claudeCLIRoot].User; got != projectGitUser {
+		t.Fatalf("new owner user: %q, want %q", got, projectGitUser)
+	}
 	grown := append(append([]claudeCLIRecord{}, first...),
 		claudeCLIPrompt(f.project, "2026-01-01T10:01:00Z"),
 		claudeCLIResponse("2026-01-01T10:01:10Z", "r-2", "model-b", "end_turn", 50, 5, 0))
@@ -183,8 +260,8 @@ func TestGenerateClaudeMixedHarnessLedgerKeepsOtherOwnersAndUnavailableChild(t *
 	writeClaudeCLITranscript(t, claudeCLIRootPath(f.home, "-linked-worktree-folder", claudeCLIRoot), claudeCLIRoot, "", []claudeCLIRecord{
 		claudeCLIPrompt(f.project, "2026-01-01T10:00:00Z"),
 		claudeCLIResponse("2026-01-01T10:00:01Z", "r-1", "model-a", "tool_use", 7, 1, 0,
-			claudeCLIRecord{"type": "tool_use", "id": "call-gone", "name": "Agent", "input": claudeCLIRecord{"subagent_type": "coder", "description": "code"}}),
-		{"type": "user", "timestamp": "2026-01-01T10:00:02Z", "toolUseResult": claudeCLIRecord{"agentId": "agone", "status": "async_launched"}, "message": claudeCLIRecord{"role": "user", "content": []claudeCLIRecord{{"type": "tool_result", "tool_use_id": "call-gone"}}}},
+			claudeCLIBlock{Type: "tool_use", ID: "call-gone", Name: "Agent", Input: &claudeCLIInput{SubagentType: "coder", Description: "code"}}),
+		{Type: "user", Timestamp: "2026-01-01T10:00:02Z", ToolUseResult: &claudeCLIResult{AgentID: "agone", Status: "async_launched"}, Message: claudeCLIMessage{Role: "user", Content: claudeCLIContent{Blocks: []claudeCLIBlock{{Type: "tool_result", ToolUseID: "call-gone"}}}}},
 		claudeCLIResponse("2026-01-01T10:00:03Z", "r-2", "model-a", "end_turn", 3, 1, 0),
 	})
 	version := domain.CurrentSchemaVersion
@@ -277,7 +354,7 @@ func TestGenerateClaudeOwnershipAndHarnessCollisionFailBeforePublication(t *test
 		path := claudeCLIRootPath(f.home, "-synthetic-project", claudeCLIRoot)
 		writeClaudeCLITranscript(t, path, claudeCLIRoot, "", []claudeCLIRecord{
 			claudeCLIPrompt(f.project, "2026-01-01T10:00:00Z"),
-			{"type": "assistant", "timestamp": "2026-01-01T10:00:01Z", "requestId": "r-1", "message": claudeCLIRecord{"id": "m-1", "model": "model-a", "stop_reason": "end_turn", "content": []claudeCLIRecord{}}},
+			{Type: "assistant", Timestamp: "2026-01-01T10:00:01Z", RequestID: "r-1", Message: claudeCLIMessage{ID: "m-1", Model: "model-a", StopReason: "end_turn", Content: claudeCLIContent{Blocks: []claudeCLIBlock{}}}},
 		})
 		_, out, err := f.generate(t, "--source", "claude", "--claude-home", f.home, "--session-id", claudeCLIRoot)
 		if err == nil || !strings.Contains(out, "incomplete Claude Code root session") || !strings.Contains(out, "lacks usage") {
@@ -458,5 +535,127 @@ func TestBackfillCLIClaudeSourceSelection(t *testing.T) {
 	}
 	if got := sessions["codex-owner"].Invocations; len(got) != 1 || got[0].Model != "codex-model" || got[0].Tokens.Input != 5 {
 		t.Fatalf("Codex owner changed during a Claude Code backfill: %+v", sessions["codex-owner"])
+	}
+}
+
+// projectGitUser is the repository-local user.name that initCLIGitFixture
+// writes into every generate fixture project.
+const projectGitUser = "CLI Fixture"
+
+// writeClaudeCLITree stores a root under folder with one proven planner child,
+// one subagent without proof, and a literal nonce only in the child's prompt.
+func writeClaudeCLITree(t *testing.T, home, folder, cwd, nonce string) {
+	t.Helper()
+	writeClaudeCLITranscript(t, claudeCLIRootPath(home, folder, claudeCLIRoot), claudeCLIRoot, "", []claudeCLIRecord{
+		claudeCLIPrompt(cwd, "2026-01-01T10:00:00Z"),
+		claudeCLIResponse("2026-01-01T10:00:01Z", "r-1", "model-a", "tool_use", 3, 1, 0, claudeCLIAgentCall("call-1", "planner")),
+		claudeCLIAgentResult("2026-01-01T10:00:20Z", "call-1", "achild"),
+		claudeCLIResponse("2026-01-01T10:00:30Z", "r-2", "model-a", "end_turn", 4, 1, 0),
+	})
+	subagents := filepath.Join(home, "projects", folder, claudeCLIRoot, "subagents")
+	childPrompt := claudeCLIPrompt(cwd, "2026-01-01T10:00:02Z")
+	childPrompt.PromptSource = ""
+	childPrompt.Message.Content = claudeCLIContent{Text: "synthetic " + nonce}
+	writeClaudeCLITranscript(t, filepath.Join(subagents, "agent-achild.jsonl"), claudeCLIRoot, "achild", []claudeCLIRecord{
+		childPrompt,
+		claudeCLIResponse("2026-01-01T10:00:12Z", "r-c1", "model-a", "end_turn", 7, 1, 0),
+	})
+	writeClaudeCLITranscript(t, filepath.Join(subagents, "agent-astray.jsonl"), claudeCLIRoot, "astray", []claudeCLIRecord{
+		claudeCLIPrompt(cwd, "2026-01-01T10:00:03Z"),
+		claudeCLIResponse("2026-01-01T10:00:04Z", "r-s1", "model-a", "end_turn", 9, 1, 0),
+	})
+	for agent, toolUse := range map[string]string{"achild": "call-1", "astray": "call-not-in-tree"} {
+		meta := []byte(`{"agentType":"planner","toolUseId":"` + toolUse + `"}`)
+		if err := os.WriteFile(filepath.Join(subagents, "agent-"+agent+".meta.json"), meta, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestGenerateClaudeSelectsByNonceAndAgentID(t *testing.T) {
+	const nonce = "synthetic-nonce-5d1e"
+	for _, tc := range []struct {
+		name      string
+		selection []string
+	}{
+		{name: "literal nonce in a linked-worktree folder", selection: []string{"--nonce", nonce}},
+		{name: "proven agent ID", selection: []string{"--session-id", "achild"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newClaudeCLIFixture(t)
+			// The folder name is unrelated to the project; identity comes from cwd.
+			writeClaudeCLITree(t, f.home, "-elsewhere-linked-worktree-folder", f.project, nonce)
+			ledger, out, err := f.generate(t, append([]string{"--source", "claude", "--claude-home", f.home}, tc.selection...)...)
+			if err != nil {
+				t.Fatalf("generate failed: %v %s", err, out)
+			}
+			sessions := claudeCLISessions(ledger)
+			root, child := sessions[claudeCLIRoot], sessions["achild"]
+			if len(sessions) != 2 || len(root.Invocations) != 1 || root.Invocations[0].Tokens.Input != 7 {
+				t.Fatalf("the selection must publish the root tree only: %+v", ledger.Sessions)
+			}
+			if child.ParentID == nil || *child.ParentID != claudeCLIRoot || child.Invocations[0].Role != "planner" || child.Invocations[0].Tokens.Input != 7 || child.User != projectGitUser {
+				t.Fatalf("proven child: %+v", child)
+			}
+			if !strings.Contains(out, "astray unresolved") {
+				t.Fatalf("the unproven subagent must be reported: %s", out)
+			}
+		})
+	}
+	t.Run("unproven agent ID", func(t *testing.T) {
+		f := newClaudeCLIFixture(t)
+		writeClaudeCLITree(t, f.home, "-elsewhere-linked-worktree-folder", f.project, nonce)
+		_, out, err := f.generate(t, "--source", "claude", "--claude-home", f.home, "--session-id", "astray")
+		if err == nil || !strings.Contains(out, "astray is not a proven subagent") {
+			t.Fatalf("an unproven agent ID must be rejected: %v %s", err, out)
+		}
+		if _, statErr := os.Stat(f.output); !os.IsNotExist(statErr) {
+			t.Fatalf("a rejected agent selection published its root tree: %v", statErr)
+		}
+	})
+}
+
+// A root already recorded for the ticket refreshes even when its recorded cwd
+// is no longer inside this project (moved checkout or clone at another path);
+// a new root with that cwd is still rejected.
+func TestGenerateClaudeRecordedRootRefreshesAfterCheckoutMove(t *testing.T) {
+	f := newClaudeCLIFixture(t)
+	const original = "/synthetic/original-checkout"
+	writeClaudeCLITranscript(t, claudeCLIRootPath(f.home, "-synthetic-original-checkout", claudeCLIRoot), claudeCLIRoot, "", []claudeCLIRecord{
+		claudeCLIPrompt(original, "2026-01-01T10:00:00Z"),
+		claudeCLIResponse("2026-01-01T10:00:06Z", "r-1", "model-a", "end_turn", 21, 2, 0),
+	})
+	version := domain.CurrentSchemaVersion
+	ticket, title := "TEST-198", "Claude Code fixture"
+	if err := os.MkdirAll(filepath.Dir(f.output), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := adapters.SaveFactLedger(f.output, domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: []domain.SessionFact{
+		{ID: claudeCLIRoot, Source: domain.SourceClaude, User: "Recorded Developer", Invocations: []domain.InvocationFact{{Model: "stale-model", Tokens: domain.InvocationTokens{Input: 1}}}},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	ledger, out, err := f.generate(t, "--source", "claude", "--claude-home", f.home, "--session-id", claudeCLIRoot)
+	if err != nil {
+		t.Fatalf("a recorded root must refresh after its checkout moved: %v %s", err, out)
+	}
+	root := claudeCLISessions(ledger)[claudeCLIRoot]
+	if len(root.Invocations) != 1 || root.Invocations[0].Tokens.Input != 21 || root.Invocations[0].ActiveDurationSeconds != 6 {
+		t.Fatalf("recorded root not refreshed: %+v", root)
+	}
+	if root.User != "Recorded Developer" {
+		t.Fatalf("a refreshed owner keeps its recorded user: %q", root.User)
+	}
+	const newRoot = "claude-cli-new-root"
+	writeClaudeCLITranscript(t, claudeCLIRootPath(f.home, "-synthetic-original-checkout", newRoot), newRoot, "", []claudeCLIRecord{
+		claudeCLIPrompt(original, "2026-01-01T11:00:00Z"),
+		claudeCLIResponse("2026-01-01T11:00:01Z", "r-1", "model-a", "end_turn", 1, 1, 0),
+	})
+	before := readCaptureFile(t, f.output)
+	if _, out, err := f.generate(t, "--source", "claude", "--claude-home", f.home, "--session-id", newRoot); err == nil || !strings.Contains(out, "Source ownership conflict") {
+		t.Fatalf("a new root outside the project must still be rejected: %v %s", err, out)
+	}
+	if !bytes.Equal(before, readCaptureFile(t, f.output)) {
+		t.Fatal("a rejected new root changed the ledger")
 	}
 }

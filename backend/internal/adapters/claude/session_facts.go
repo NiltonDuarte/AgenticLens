@@ -324,7 +324,7 @@ func elapsedMillis(startRaw, endRaw string) (int64, bool) {
 }
 
 // measureTurns applies AL-64 duration rules. A turn starts at a qualifying
-// prompt and ends at the owner's terminal assistant record. A turn superseded
+// prompt and ends at the owner's terminal assistant record or at an interrupt. A turn superseded
 // by a new prompt ends at its last owned record, a final open turn adds
 // provisional time up to the cutoff, and idle time between turns is excluded.
 // The cutoff gates lifecycle records only; usage is not filtered.
@@ -379,6 +379,13 @@ func measureTurns(t Transcript, state *durationState, root bool, cutoff time.Tim
 			closed = nil
 			turnIndex++
 			open = &openTurn{index: turnIndex, start: entry, fallback: fallback(), lastOwned: entry.at, lastRaw: entry.raw}
+		case entryInterrupt:
+			// Esc ends the owner's open turn at the interrupt record. It is not a
+			// response, so a later record cannot extend that turn.
+			if open != nil {
+				finish(entry.at, entry.raw)
+			}
+			closed = nil
 		case entryAssistant:
 			if entry.model != "" {
 				state.current = entry.model

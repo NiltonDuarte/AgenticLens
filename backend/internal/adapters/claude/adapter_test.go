@@ -22,58 +22,45 @@ const (
 	syntheticFolder = "-synthetic-project"
 )
 
-type record map[string]any
-
 func prompt(ts, source string) record {
-	r := record{"type": "user", "timestamp": ts, "uuid": "u-" + ts, "cwd": "/synthetic/project", "message": record{"role": "user", "content": "synthetic prompt"}}
-	if source != "" {
-		r["promptSource"] = source
-	}
-	return r
+	return record{Type: "user", Timestamp: ts, UUID: "u-" + ts, CWD: "/synthetic/project", PromptSource: source,
+		Message: &message{Role: "user", Content: textContent("synthetic prompt")}}
 }
 
-func assistant(ts, requestID, model, stop string, usage record, blocks ...record) record {
+// assistant builds one response record; nil usage omits the usage object.
+func assistant(ts, requestID, model, stop string, usage json.RawMessage, blocks ...block) record {
 	if len(blocks) == 0 {
-		blocks = []record{{"type": "text", "text": "synthetic"}}
+		blocks = []block{{Type: "text", Text: "synthetic"}}
 	}
-	message := record{"id": "msg-" + requestID, "model": model, "role": "assistant", "stop_reason": stop, "content": blocks}
-	if usage != nil {
-		message["usage"] = usage
-	}
-	return record{"type": "assistant", "timestamp": ts, "requestId": requestID, "message": message}
+	return record{Type: "assistant", Timestamp: ts, RequestID: requestID,
+		Message: &message{ID: "msg-" + requestID, Model: model, Role: "assistant", StopReason: stop, Usage: usage, Content: encode(blocks)}}
 }
 
-func usage(input, output, cacheRead int64) record {
-	return record{"input_tokens": input, "output_tokens": output, "cache_read_input_tokens": cacheRead, "cache_creation_input_tokens": int64(0)}
+func usage(input, output, cacheRead int64) json.RawMessage {
+	return usageFields{Input: n64(input), Output: n64(output), CacheRead: n64(cacheRead), CacheCreation: n64(0)}.encode()
 }
 
-func toolUseBlock(id, name string, input record) record {
-	return record{"type": "tool_use", "id": id, "name": name, "input": input}
+func toolUseBlock(id, name string, input toolInput) block {
+	return block{Type: "tool_use", ID: id, Name: name, Input: &input}
 }
 
-func resultRecord(ts, id string, isError bool, details record) record {
-	r := record{"type": "user", "timestamp": ts, "message": record{"role": "user", "content": []record{{"type": "tool_result", "tool_use_id": id, "is_error": isError}}}}
-	if details != nil {
-		r["toolUseResult"] = details
-	}
-	return r
+func resultRecord(ts, id string, isError bool, details *resultDetails) record {
+	return record{Type: "user", Timestamp: ts, ToolUseResult: details,
+		Message: &message{Role: "user", Content: encode([]block{{Type: "tool_result", ToolUseID: id, IsError: boolPtr(isError)}})}}
 }
 
 func withIdentity(records []record, sessionID, agentID string) []record {
 	out := make([]record, 0, len(records))
 	for _, r := range records {
-		copied := record{}
-		for k, v := range r {
-			copied[k] = v
-		}
-		if _, set := copied["sessionId"]; !set {
-			copied["sessionId"] = sessionID
+		copied := r
+		if copied.SessionID == "" {
+			copied.SessionID = sessionID
 		}
 		if agentID != "" {
-			if _, set := copied["agentId"]; !set {
-				copied["agentId"] = agentID
+			if copied.AgentID == "" && !copied.OmitAgentID {
+				copied.AgentID = agentID
 			}
-			copied["isSidechain"] = true
+			copied.IsSidechain = true
 		}
 		out = append(out, copied)
 	}
@@ -116,7 +103,7 @@ func (s syntheticStore) subagent(folder, root, agent, toolUseID, agentType strin
 	dir := filepath.Join(s.home, "projects", folder, root, "subagents")
 	writeJSONL(s.t, filepath.Join(dir, "agent-"+agent+".jsonl"), withIdentity(records, root, agent))
 	if toolUseID != "" {
-		meta, _ := json.Marshal(record{"agentType": agentType, "toolUseId": toolUseID})
+		meta, _ := json.Marshal(metaFixture{AgentType: agentType, ToolUseID: toolUseID})
 		if err := os.WriteFile(filepath.Join(dir, "agent-"+agent+".meta.json"), meta, 0o644); err != nil {
 			s.t.Fatal(err)
 		}
@@ -156,13 +143,13 @@ func sessionByID(t *testing.T, sessions []domain.SessionFact, id string) domain.
 func TestSyntheticRepeatedContentBlocksCountOnceAndForkCopiesAreExcluded(t *testing.T) {
 	store := newStore(t)
 	fork := assistant("2026-11-24T10:00:01Z", "req-inherited", "model-a", "end_turn", usage(1000, 1000, 1000))
-	fork["forkedFrom"] = record{"sessionId": "source-session", "messageUuid": "m1"}
+	fork.ForkedFrom = &forkSource{SessionID: "source-session", MessageUUID: "m1"}
 	store.root(syntheticFolder, syntheticRoot, []record{
 		fork,
 		prompt("2026-11-24T10:00:00Z", "sdk"),
-		assistant("2026-11-24T10:00:02Z", "req-1", "model-a", "end_turn", usage(10, 20, 30), record{"type": "thinking"}),
-		assistant("2026-11-24T10:00:03Z", "req-1", "model-a", "end_turn", usage(10, 20, 30), record{"type": "text"}),
-		assistant("2026-11-24T10:00:04Z", "req-1", "model-a", "end_turn", usage(10, 20, 30), toolUseBlock("t1", "Bash", record{})),
+		assistant("2026-11-24T10:00:02Z", "req-1", "model-a", "end_turn", usage(10, 20, 30), block{Type: "thinking"}),
+		assistant("2026-11-24T10:00:03Z", "req-1", "model-a", "end_turn", usage(10, 20, 30), block{Type: "text"}),
+		assistant("2026-11-24T10:00:04Z", "req-1", "model-a", "end_turn", usage(10, 20, 30), toolUseBlock("t1", "Bash", toolInput{})),
 	})
 	_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, time.Date(2026, 11, 24, 11, 0, 0, 0, time.UTC))
 	root := sessionByID(t, extraction.Sessions, syntheticRoot)
@@ -185,7 +172,7 @@ func TestSyntheticMissingOrConflictingUsageMakesOwnerIncomplete(t *testing.T) {
 	for name, second := range map[string]record{
 		"missing":     assistant("2026-11-24T10:00:02Z", "req-2", "model-a", "end_turn", nil),
 		"conflicting": assistant("2026-11-24T10:00:02Z", "req-1", "model-a", "end_turn", usage(11, 20, 30)),
-		"partial":     assistant("2026-11-24T10:00:02Z", "req-3", "model-a", "end_turn", record{"input_tokens": 1, "output_tokens": 1}),
+		"partial":     assistant("2026-11-24T10:00:02Z", "req-3", "model-a", "end_turn", usageFields{Input: n64(1), Output: n64(1)}.encode()),
 	} {
 		t.Run(name, func(t *testing.T) {
 			store := newStore(t)
@@ -244,18 +231,18 @@ func TestSyntheticProvenNestedUnprovenAndExplicitChildren(t *testing.T) {
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "tool_use", usage(1, 1, 1),
-			toolUseBlock("call-child", "Agent", record{"subagent_type": "planner", "description": "plan"})),
-		resultRecord("2026-11-24T10:00:30Z", "call-child", false, record{"agentId": "achild", "status": "completed"}),
+			toolUseBlock("call-child", "Agent", toolInput{SubagentType: "planner", Description: "plan"})),
+		resultRecord("2026-11-24T10:00:30Z", "call-child", false, &resultDetails{AgentID: "achild", Status: "completed"}),
 		assistant("2026-11-24T10:00:31Z", "req-2", "model-a", "tool_use", usage(1, 1, 1),
-			toolUseBlock("call-missing", "Agent", record{"subagent_type": "coder", "description": "code"})),
-		resultRecord("2026-11-24T10:00:32Z", "call-missing", false, record{"agentId": "agone", "status": "async_launched"}),
+			toolUseBlock("call-missing", "Agent", toolInput{SubagentType: "coder", Description: "code"})),
+		resultRecord("2026-11-24T10:00:32Z", "call-missing", false, &resultDetails{AgentID: "agone", Status: "async_launched"}),
 		assistant("2026-11-24T10:00:33Z", "req-3", "model-a", "end_turn", usage(1, 1, 1)),
 	})
 	store.subagent(syntheticFolder, syntheticRoot, "achild", "call-child", "planner", []record{
 		prompt("2026-11-24T10:00:02Z", ""),
 		assistant("2026-11-24T10:00:03Z", "req-c1", "model-a", "tool_use", usage(2, 2, 2),
-			toolUseBlock("call-nested", "Agent", record{"subagent_type": "reviewer", "description": "review"})),
-		resultRecord("2026-11-24T10:00:20Z", "call-nested", false, record{"agentId": "anested"}),
+			toolUseBlock("call-nested", "Agent", toolInput{SubagentType: "reviewer", Description: "review"})),
+		resultRecord("2026-11-24T10:00:20Z", "call-nested", false, &resultDetails{AgentID: "anested"}),
 		assistant("2026-11-24T10:00:21Z", "req-c2", "model-a", "end_turn", usage(2, 2, 2)),
 	})
 	store.subagent(syntheticFolder, syntheticRoot, "anested", "call-nested", "reviewer", []record{
@@ -294,7 +281,7 @@ func TestSyntheticProvenNestedUnprovenAndExplicitChildren(t *testing.T) {
 func TestSyntheticSidechainInRootIsUnsupportedLayout(t *testing.T) {
 	store := newStore(t)
 	sidechain := assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "end_turn", usage(1, 1, 1))
-	sidechain["isSidechain"] = true
+	sidechain.IsSidechain = true
 	store.root(syntheticFolder, syntheticRoot, []record{prompt("2026-11-24T10:00:00Z", "sdk"), sidechain})
 	_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, time.Now())
 	if len(extraction.RootIncomplete) == 0 || !strings.Contains(extraction.RootIncomplete[0], "unsupported layout") {
@@ -307,10 +294,10 @@ func TestSyntheticSkillActivationsAndFailures(t *testing.T) {
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "tool_use", usage(1, 1, 1),
-			toolUseBlock("s-ok", "Skill", record{"skill": "review"}), toolUseBlock("s-false", "Skill", record{"skill": "review"})),
-		resultRecord("2026-11-24T10:00:02Z", "s-ok", false, record{"success": true, "commandName": "review"}),
-		resultRecord("2026-11-24T10:00:03Z", "s-false", false, record{"success": false}),
-		assistant("2026-11-24T10:00:04Z", "req-2", "model-a", "tool_use", usage(1, 1, 1), toolUseBlock("s-err", "Skill", record{"skill": "deploy"})),
+			toolUseBlock("s-ok", "Skill", toolInput{Skill: "review"}), toolUseBlock("s-false", "Skill", toolInput{Skill: "review"})),
+		resultRecord("2026-11-24T10:00:02Z", "s-ok", false, &resultDetails{Success: boolPtr(true), CommandName: "review"}),
+		resultRecord("2026-11-24T10:00:03Z", "s-false", false, &resultDetails{Success: boolPtr(false)}),
+		assistant("2026-11-24T10:00:04Z", "req-2", "model-a", "tool_use", usage(1, 1, 1), toolUseBlock("s-err", "Skill", toolInput{Skill: "deploy"})),
 		resultRecord("2026-11-24T10:00:05Z", "s-err", true, nil),
 		assistant("2026-11-24T10:00:06Z", "req-3", "model-a", "end_turn", usage(1, 1, 1)),
 	})
@@ -329,13 +316,13 @@ func TestSyntheticCompactionCountsAndResumedSubagentTurn(t *testing.T) {
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "tool_use", usage(1, 1, 1),
-			toolUseBlock("call-child", "Agent", record{"subagent_type": "coder"})),
-		{"type": "system", "subtype": "compact_boundary", "timestamp": "2026-11-24T10:00:02Z"},
+			toolUseBlock("call-child", "Agent", toolInput{SubagentType: "coder"})),
+		{Type: "system", Subtype: "compact_boundary", Timestamp: "2026-11-24T10:00:02Z"},
 		assistant("2026-11-24T10:00:03Z", "req-2", "model-a", "end_turn", usage(1, 1, 1)),
 	})
 	resume := prompt("2026-11-24T10:10:00Z", "")
-	resume["isMeta"] = true
-	resume["origin"] = record{"kind": "coordinator"}
+	resume.IsMeta = true
+	resume.Origin = &origin{Kind: "coordinator"}
 	store.subagent(syntheticFolder, syntheticRoot, "achild", "call-child", "coder", []record{
 		prompt("2026-11-24T10:00:01Z", ""),
 		assistant("2026-11-24T10:00:11Z", "req-c1", "model-a", "end_turn", usage(1, 1, 1)),
@@ -359,11 +346,11 @@ func TestSyntheticDiscoveryNonceAmbiguityAndBudget(t *testing.T) {
 	other := "00000000-0000-4000-8000-000000000002"
 	nonce := "synthetic-nonce-7f3a"
 	withNonce := prompt("2026-11-24T10:00:00Z", "sdk")
-	withNonce["message"] = record{"role": "user", "content": "run " + nonce}
+	withNonce.Message = &message{Role: "user", Content: textContent("run " + nonce)}
 	store.root("-worktree-a", syntheticRoot, []record{prompt("2026-11-24T10:00:00Z", "sdk")})
 	store.subagent("-worktree-a", syntheticRoot, "achild", "call-x", "coder", []record{withNonce})
 	store.root("-worktree-b", other, []record{prompt("2026-11-24T10:00:00Z", "sdk")})
-	writeJSONL(t, filepath.Join(store.home, "projects", "-worktree-a", syntheticRoot, "tool-results", "ignored.jsonl"), []record{{"type": "user"}})
+	writeJSONL(t, filepath.Join(store.home, "projects", "-worktree-a", syntheticRoot, "tool-results", "ignored.jsonl"), []record{{Type: "user"}})
 
 	files, err := DiscoverTree(DiscoveryOptions{ClaudeHome: store.home, Nonce: nonce})
 	if err != nil || files.RootID != syntheticRoot {

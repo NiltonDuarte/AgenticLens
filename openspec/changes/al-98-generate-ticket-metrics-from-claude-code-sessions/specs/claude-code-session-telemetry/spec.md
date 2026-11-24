@@ -13,7 +13,7 @@ Record Claude Code root sessions and their native subagents in portable ticket l
 - **THEN** recorded owners from all three harnesses are refreshed from their own stores
 
 #### Scenario: Backfill all without a Claude Code store
-- **WHEN** `backfill --source all --recompute-db` runs and the Claude Code store is not configured or cannot be read
+- **WHEN** `backfill --source all --recompute-db` runs and the Claude Code store is not configured, cannot be read, or has no readable `projects` directory
 - **THEN** the command fails before any publication with an error that names `--claude-home` or `telemetry.sources.claude.home`, and every ledger and summary stays unchanged
 
 #### Scenario: Backfill both is unchanged
@@ -88,6 +88,10 @@ Backfill discovery and reads for Claude Code SHALL consume `telemetry.capture.ma
 #### Scenario: Backfill budget reached
 - **WHEN** `backfill --source claude --recompute-db` reaches the session or byte budget before all recorded Claude Code owners are read
 - **THEN** owners that were not read keep their stored facts, the report marks the refresh incomplete and names the budget, and owners read completely may be replaced
+
+#### Scenario: Backfill finds an unrecorded proven root
+- **WHEN** a ledger records only a delegated Claude Code child and backfill proves its root
+- **THEN** the root and its proven children are added only if the root's recorded working directory passes the project check, each added owner is named in the output, and otherwise the root is skipped with a diagnostic
 
 ### Requirement: Count each API response once
 
@@ -219,13 +223,21 @@ Root steering iterations SHALL count prompts that a person sent. Prompts sent by
 - **WHEN** a background subagent's completion notification starts a root turn
 - **THEN** the turn's duration is measured, and the root's steering iterations do not increase
 
+#### Scenario: Local slash command
+- **WHEN** a session records a local command echo such as `/compact` followed by its local output before any assistant record
+- **THEN** neither record starts a turn or counts as steering, and the session has no open turn afterwards
+
+#### Scenario: Interrupt and bash-mode records
+- **WHEN** a session records a harness interrupt marker, or a bash-mode input followed by its output before any assistant record
+- **THEN** the interrupt ends the open turn at its timestamp, neither record counts as steering, and no turn is left open by them
+
 ### Requirement: Replace only completely read owners
 
 Generation and backfill SHALL replace only the Claude Code owners that were read completely from the selected store. A complete read SHALL replace that owner's stored snapshot even when it holds fewer invocations. Whole-ledger aggregates SHALL be recomputed over refreshed and preserved owners together.
 
 #### Scenario: Complete snapshot with fewer invocations
 - **WHEN** an older but complete transcript for the same root session ID is restored with fewer responses than the ledger records
-- **THEN** that root's snapshot is replaced with the smaller totals, the replacement is reported, and other sessions are unchanged
+- **THEN** that root's snapshot is replaced with the smaller totals, a diagnostic names the owner with its previous and new totals, and other sessions are unchanged
 
 ### Requirement: Preserve owners outside the refresh
 
@@ -238,6 +250,10 @@ Refresh SHALL preserve Codex, OpenCode and other-machine sessions. It SHALL also
 #### Scenario: Transcript cleaned up
 - **WHEN** a recorded Claude Code child's transcript no longer exists and its root is refreshed
 - **THEN** the child's stored facts remain, and the run reports the child unavailable
+
+#### Scenario: Recorded parent differs from the proven parent
+- **WHEN** `generate` or backfill proves a recorded Claude Code child under a different parent than the ledger records
+- **THEN** the child keeps its stored facts and parent link, and the run reports the changed link
 
 #### Scenario: Repeat on unchanged input
 - **WHEN** `generate` or `backfill --source claude --recompute-db` runs twice against an unchanged store

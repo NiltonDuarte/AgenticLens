@@ -41,36 +41,36 @@ func TestSyntheticUnprovenAndUnreadableChildrenStayUnresolved(t *testing.T) {
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "tool_use", usage(1, 1, 1),
-			toolUseBlock("call-good", "Agent", record{"subagent_type": "planner"}),
-			toolUseBlock("call-contradicted", "Agent", record{"subagent_type": "coder"}),
-			toolUseBlock("call-dup", "Agent", record{"subagent_type": "coder"}),
-			toolUseBlock("call-removed", "Agent", record{"subagent_type": "coder"}),
-			toolUseBlock("call-foreign", "Agent", record{"subagent_type": "coder"}),
-			toolUseBlock("call-noagent", "Agent", record{"subagent_type": "coder"})),
-		resultRecord("2026-11-24T10:00:02Z", "call-contradicted", false, record{"agentId": "areported"}),
+			toolUseBlock("call-good", "Agent", toolInput{SubagentType: "planner"}),
+			toolUseBlock("call-contradicted", "Agent", toolInput{SubagentType: "coder"}),
+			toolUseBlock("call-dup", "Agent", toolInput{SubagentType: "coder"}),
+			toolUseBlock("call-removed", "Agent", toolInput{SubagentType: "coder"}),
+			toolUseBlock("call-foreign", "Agent", toolInput{SubagentType: "coder"}),
+			toolUseBlock("call-noagent", "Agent", toolInput{SubagentType: "coder"})),
+		resultRecord("2026-11-24T10:00:02Z", "call-contradicted", false, &resultDetails{AgentID: "areported"}),
 		assistant("2026-11-24T10:00:03Z", "req-2", "model-a", "end_turn", usage(1, 1, 1)),
 	})
 	// Proven child that also repeats the root's call-dup identity.
 	store.subagent(syntheticFolder, syntheticRoot, "agood", "call-good", "planner", append(childRecords("2026-11-24T10:00:04Z"),
 		assistant("2026-11-24T10:00:05Z", "req-good-2", "model-a", "end_turn", usage(1, 1, 1),
-			toolUseBlock("call-dup", "Agent", record{"subagent_type": "coder"}), toolUseBlock("call-self", "Agent", record{}),
-			toolUseBlock("call-nested", "Agent", record{"subagent_type": "reviewer"}))))
+			toolUseBlock("call-dup", "Agent", toolInput{SubagentType: "coder"}), toolUseBlock("call-self", "Agent", toolInput{}),
+			toolUseBlock("call-nested", "Agent", toolInput{SubagentType: "reviewer"}))))
 	store.subagent(syntheticFolder, syntheticRoot, "acontradicted", "call-contradicted", "coder", childRecords("2026-11-24T10:00:06Z"))
 	store.subagent(syntheticFolder, syntheticRoot, "aduplicate", "call-dup", "coder", childRecords("2026-11-24T10:00:07Z"))
 	store.subagent(syntheticFolder, syntheticRoot, "aunproven", "call-missing", "coder", append(childRecords("2026-11-24T10:00:08Z"),
 		assistant("2026-11-24T10:00:09Z", "req-unproven-2", "model-a", "end_turn", usage(1, 1, 1),
-			toolUseBlock("call-under-unproven", "Agent", record{"subagent_type": "coder"}))))
+			toolUseBlock("call-under-unproven", "Agent", toolInput{SubagentType: "coder"}))))
 	store.subagent(syntheticFolder, syntheticRoot, "anestedunproven", "call-under-unproven", "coder", childRecords("2026-11-24T10:00:10Z"))
 	// A self-referencing meta file: the only matching call is in its own file.
 	store.subagent(syntheticFolder, syntheticRoot, "aself", "call-selfloop", "coder", append(childRecords("2026-11-24T10:00:11Z"),
 		assistant("2026-11-24T10:00:12Z", "req-self-2", "model-a", "end_turn", usage(1, 1, 1),
-			toolUseBlock("call-selfloop", "Agent", record{}))))
+			toolUseBlock("call-selfloop", "Agent", toolInput{}))))
 	store.subagent(syntheticFolder, syntheticRoot, "aremoved", "call-removed", "coder", childRecords("2026-11-24T10:00:13Z"))
 	foreign := childRecords("2026-11-24T10:00:14Z")
-	foreign[1]["sessionId"] = "foreign-session"
+	foreign[1].SessionID = "foreign-session"
 	store.subagent(syntheticFolder, syntheticRoot, "aforeign", "call-foreign", "coder", foreign)
 	noAgent := childRecords("2026-11-24T10:00:15Z")
-	noAgent[1]["agentId"] = nil
+	noAgent[1].OmitAgentID = true
 	store.subagent(syntheticFolder, syntheticRoot, "anoagent", "call-noagent", "coder", noAgent)
 	store.subagent(syntheticFolder, syntheticRoot, "abadmeta", "", "", childRecords("2026-11-24T10:00:16Z"))
 	writeFile(t, filepath.Join(subagentDir(store, syntheticRoot), "agent-abadmeta.meta.json"), "{not json")
@@ -169,7 +169,7 @@ func TestSyntheticDiscoverySelectionErrors(t *testing.T) {
 	other := "00000000-0000-4000-8000-000000000002"
 	nonce := "synthetic-nonce-91c2"
 	withNonce := prompt("2026-11-24T10:00:00Z", "sdk")
-	withNonce["message"] = record{"role": "user", "content": "run " + nonce}
+	withNonce.Message = &message{Role: "user", Content: textContent("run " + nonce)}
 	store.root(syntheticFolder, syntheticRoot, []record{withNonce})
 	store.root("-other-folder", other, []record{prompt("2026-11-24T10:00:00Z", "sdk")})
 	// The nonce in non-transcript files never selects a session.
@@ -227,11 +227,11 @@ func TestSyntheticDiscoveryBudgetBoundaries(t *testing.T) {
 	store := newStore(t)
 	nonce := "synthetic-nonce-budget"
 	withNonce := prompt("2026-11-24T10:00:00Z", "sdk")
-	withNonce["message"] = record{"role": "user", "content": nonce}
+	withNonce.Message = &message{Role: "user", Content: textContent(nonce)}
 	store.root(syntheticFolder, syntheticRoot, []record{
 		prompt("2026-11-24T10:00:00Z", "sdk"),
 		assistant("2026-11-24T10:00:01Z", "req-1", "model-a", "end_turn", usage(1, 1, 1),
-			toolUseBlock("call-child", "Agent", record{"subagent_type": "coder"})),
+			toolUseBlock("call-child", "Agent", toolInput{SubagentType: "coder"})),
 	})
 	store.subagent(syntheticFolder, syntheticRoot, "achild", "call-child", "coder", []record{withNonce, assistant("2026-11-24T10:00:02Z", "req-c", "model-a", "end_turn", usage(1, 1, 1))})
 	size := func(path string) int64 {

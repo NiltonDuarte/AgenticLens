@@ -184,6 +184,41 @@ func DiscoverTree(options DiscoveryOptions) (TreeFiles, error) {
 	return tree, ctx.Err()
 }
 
+// ValidateStore requires the selected store to be a directory whose projects
+// subdirectory is a readable directory. A home directory or any other folder
+// without a Claude Code transcript layout is rejected before any source read,
+// so no selection can publish while Claude Code owners are silently retained.
+func ValidateStore(home string) error {
+	const hint = "select the Claude Code store that contains projects/ with --claude-home or telemetry.sources.claude.home"
+	if strings.TrimSpace(home) == "" {
+		return fmt.Errorf("Claude Code store is required: %s", hint)
+	}
+	info, err := os.Stat(home)
+	if err != nil {
+		return fmt.Errorf("accessing selected Claude Code store %q: %w; %s", home, err, hint)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("selected Claude Code store %q must be a directory; %s", home, hint)
+	}
+	projects := filepath.Join(home, projectsDirectory)
+	info, err = os.Stat(projects)
+	if err != nil {
+		return fmt.Errorf("selected Claude Code store %q has no readable %s directory: %w; %s", home, projectsDirectory, err, hint)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("selected Claude Code store %q: %s is not a directory; %s", home, projectsDirectory, hint)
+	}
+	directory, err := os.Open(projects)
+	if err != nil {
+		return fmt.Errorf("selected Claude Code store %q: reading %s: %w; %s", home, projectsDirectory, err, hint)
+	}
+	_, readErr := directory.Readdirnames(1)
+	if readErr != nil && !errors.Is(readErr, io.EOF) {
+		err = fmt.Errorf("selected Claude Code store %q: reading %s: %w; %s", home, projectsDirectory, readErr, hint)
+	}
+	return errors.Join(err, directory.Close())
+}
+
 // listStore enumerates candidate root transcripts and subagent transcripts
 // without reading them. Non-transcript files such as tool-results are ignored.
 func listStore(ctx context.Context, home string) (storeListing, error) {

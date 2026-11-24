@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -48,12 +47,8 @@ func extractClaudeGeneration(input claudeGenerationInput, diagnostics io.Writer)
 	if err != nil {
 		return claudeGeneration{}, err
 	}
-	info, err := os.Stat(home)
-	if err != nil {
-		return claudeGeneration{}, fmt.Errorf("accessing selected Claude Code store %s: %w. Check telemetry.sources.claude.home or --claude-home", home, err)
-	}
-	if !info.IsDir() {
-		return claudeGeneration{}, fmt.Errorf("selected Claude Code store %s must be a directory. Check telemetry.sources.claude.home or --claude-home", home)
+	if err := claude.ValidateStore(home); err != nil {
+		return claudeGeneration{}, err
 	}
 	files, err := claude.DiscoverTree(claude.DiscoveryOptions{ClaudeHome: home, Nonce: input.nonce, SessionID: input.sessionID})
 	if err != nil {
@@ -83,13 +78,33 @@ func extractClaudeGeneration(input claudeGenerationInput, diagnostics io.Writer)
 	if err := validateClaudeOwnership(input.project, files.RootID, extraction.WorkingDirectory, input.baseline); err != nil {
 		return claudeGeneration{}, fmt.Errorf("Source ownership conflict: %w", err)
 	}
-	resolveCodexSessionUsers(extraction.Sessions, input.existingUsers, input.gitUser)
+	// A recorded owner whose source parent link changed keeps its stored
+	// snapshot, matching backfill recovery; it is neither relinked nor replaced.
+	fresh, retained := claude.RetainChangedParents(input.baseline, extraction.Sessions)
+	for _, diagnostic := range retained {
+		fmt.Fprintln(diagnostics, diagnostic)
+	}
+	kept := make(map[string]bool, len(fresh))
+	for _, owner := range fresh {
+		kept[owner.ID] = true
+	}
+	removed := make(map[string]bool)
+	for _, owner := range extraction.Sessions {
+		if !kept[owner.ID] {
+			removed[owner.ID] = true
+		}
+	}
+	for _, notice := range claude.ReplacementNotices(input.baseline, fresh) {
+		fmt.Fprintln(diagnostics, notice)
+	}
+	resolveSessionUsers(fresh, input.existingUsers, input.gitUser)
+	source := domain.SourceEvents{Events: extraction.Events, CheckpointEvidence: extraction.CheckpointEvidence, CompleteSessionIDs: extraction.CompleteSessionIDs}
 	return claudeGeneration{
-		sessions:  extraction.Sessions,
-		source:    domain.SourceEvents{Events: extraction.Events, CheckpointEvidence: extraction.CheckpointEvidence, CompleteSessionIDs: extraction.CompleteSessionIDs},
+		sessions:  fresh,
+		source:    claude.WithoutOwners(source, removed),
 		rootID:    files.RootID,
 		startedAt: extraction.StartedAt,
-		owners:    len(extraction.Sessions),
+		owners:    len(fresh),
 	}, nil
 }
 

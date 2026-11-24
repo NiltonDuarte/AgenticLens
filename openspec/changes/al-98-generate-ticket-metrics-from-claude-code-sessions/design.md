@@ -110,3 +110,13 @@ Review coverage:
 - **Resumed subagents:** A subagent resumed through `SendMessage` starts with a coordinator meta prompt (`isMeta: true`, `origin.kind: "coordinator"`). It now starts a turn when the subagent has no open turn, and never counts as steering. Without this, all work after a resume went unmeasured. Root meta records still start nothing.
 - **Client error notices:** Assistant records with model `<synthetic>` contribute no usage and no invocation row, but may end a turn.
 - **Preserved guarantees and verification:** Duration still excludes time between turns. The tester covers both cases with synthetic fixtures, and the native run exercises a resumed subagent from this ticket's own session.
+
+### Review round 1 corrections
+
+- **Source:** Consolidated findings of the eight round 1 discovery reviews of `809e23d6` (reviewer-data, reviewer-behavior, reviewer-architecture and reviewer-tests, each on claude-opus-5-5/medium and claude-sonnet-5-5/high), accepted by the orchestrator on 2026-11-24 as corrections within the approved intent. Native verification earlier found the local slash-command defect (F1), fixed in `264550f3`.
+- **Turn boundaries:** Local slash-command echoes withdrawn by their own output, harness interrupt markers and bash-mode records start no turn and never count as steering. An interrupt ends the open turn. These shapes come from Claude Code 2.1.331 records (local commands) and binary strings (interrupts, bash mode), pending native confirmation.
+- **Store check:** A Claude Code store must contain a readable `projects` directory before backfill reads or publishes anything.
+- **Refresh preservation:** `generate` now retains a child whose proven parent differs from its recorded parent, matching backfill and the existing requirement. A complete refresh with smaller totals names the owner and both totals.
+- **Backfill adoption:** Adding an unrecorded proven root matches Codex, but the root must pass the project check and every added owner is named.
+- **Accepted debt:** `recoverClaude` mirrors `recoverCodex`, and the discovery budget type and completeness rule are duplicated per harness. AL-94 rewrites the Codex recovery path; whichever ticket merges second must port AL-94's per-owner coverage to the Claude path. `recovery.go` merges without a textual conflict, so the delivery notes name it explicitly.
+

@@ -14,6 +14,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
+	"agenticlens/internal/adapters/claude"
 	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
@@ -249,6 +250,9 @@ func (e *BackfillEngine) ExecuteContext(ctx context.Context, opts BackfillOption
 		}
 		for _, diagnostic := range ticketResult.Diagnostics {
 			report.Warnings = append(report.Warnings, fmt.Sprintf("Ticket %s: %s", ticketResult.TicketID, diagnostic))
+		}
+		for _, notice := range ticketResult.Notices {
+			report.Warnings = append(report.Warnings, fmt.Sprintf("Ticket %s: %s", ticketResult.TicketID, notice))
 		}
 		if ticketResult.Skipped {
 			report.Skipped++
@@ -620,6 +624,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 		claudeComplete = recovery.complete
 		result.DBUpdated = result.DBUpdated || recovery.updated
 		result.Diagnostics = append(result.Diagnostics, recovery.diagnostics...)
+		result.Notices = append(result.Notices, recovery.notices...)
 	}
 	if ctx.Err() != nil {
 		return result
@@ -819,7 +824,7 @@ func selectedHarnessesComplete(harnesses []selectedHarness) bool {
 }
 
 // resolveClaudeStore resolves the explicit or configured Claude Code store and
-// requires a readable directory. No other location is consulted.
+// requires its readable projects directory. No other location is consulted.
 func resolveClaudeStore(explicit, configured string) (string, error) {
 	home, err := config.ResolveClaudeHome(explicit, configured)
 	if err != nil {
@@ -829,20 +834,10 @@ func resolveClaudeStore(explicit, configured string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolving selected Claude Code store: %w", err)
 	}
-	directory, err := os.Open(home)
-	if err != nil {
-		return "", fmt.Errorf("accessing selected Claude Code store %q (--claude-home or telemetry.sources.claude.home): %w", home, err)
+	if err := claude.ValidateStore(home); err != nil {
+		return "", err
 	}
-	info, err := directory.Stat()
-	if err == nil && !info.IsDir() {
-		err = fmt.Errorf("selected Claude Code store %q must be a directory (--claude-home or telemetry.sources.claude.home)", home)
-	}
-	if err == nil {
-		if _, readErr := directory.Readdirnames(1); readErr != nil && !errors.Is(readErr, io.EOF) {
-			err = fmt.Errorf("reading selected Claude Code store %q (--claude-home or telemetry.sources.claude.home): %w", home, readErr)
-		}
-	}
-	return home, errors.Join(err, directory.Close())
+	return home, nil
 }
 
 // publishBackfillLedger replaces one already-owned ledger atomically.
@@ -861,7 +856,7 @@ func publishBackfillLedger(metricPath string, data []byte) error {
 	return nil
 }
 
-func resolveCodexSessionUsers(fresh []domain.SessionFact, existing []domain.SessionFact, gitUser string) {
+func resolveSessionUsers(fresh []domain.SessionFact, existing []domain.SessionFact, gitUser string) {
 	existingUsers := make(map[string]string, len(existing))
 	for _, session := range existing {
 		if git.IsKnownUser(session.User) {

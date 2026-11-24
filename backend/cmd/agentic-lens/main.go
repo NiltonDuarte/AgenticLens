@@ -724,7 +724,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			fmt.Fprintln(os.Stderr, "Source ownership conflict:", ownerErr)
 			os.Exit(1)
 		}
-		resolveCodexSessionUsers(freshCodex, userBySessionID, currentUser)
+		resolveSessionUsers(freshCodex, userBySessionID, currentUser)
 		freshSessions = freshCodex
 		sourceEvents.Events = combined.Events
 		sourceEvents.CheckpointEvidence = combined.CheckpointEvidence
@@ -1053,7 +1053,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 	}
 }
 
-func resolveCodexSessionUsers(fresh []domain.SessionFact, existingUsers map[string]string, gitUser string) {
+func resolveSessionUsers(fresh []domain.SessionFact, existingUsers map[string]string, gitUser string) {
 	for i := range fresh {
 		fresh[i].User = git.ResolveSessionUser(fresh[i].User, existingUsers[fresh[i].ID], gitUser)
 	}

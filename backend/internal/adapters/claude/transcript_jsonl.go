@@ -27,8 +27,6 @@ type Transcript struct {
 	AgentID string
 	// WorkingDirectory is the first recorded cwd of an owned record.
 	WorkingDirectory string
-	Version          string
-	Entrypoint       string
 	// Incomplete lists reasons that prevent replacing this owner's stored facts.
 	Incomplete []string
 
@@ -88,6 +86,9 @@ const (
 	// entryResume is a coordinator message that resumes an idle subagent. It
 	// starts a turn only when no turn is open.
 	entryResume
+	// entryInterrupt is the harness record written when a person presses Esc.
+	// It ends the owner's open turn at its own timestamp.
+	entryInterrupt
 )
 
 type timelineEntry struct {
@@ -102,26 +103,23 @@ type timelineEntry struct {
 }
 
 type rawRecord struct {
-	Type              string          `json:"type"`
-	Subtype           string          `json:"subtype"`
-	SessionID         *string         `json:"sessionId"`
-	AgentID           *string         `json:"agentId"`
-	UUID              string          `json:"uuid"`
-	Timestamp         string          `json:"timestamp"`
-	CWD               string          `json:"cwd"`
-	Version           string          `json:"version"`
-	Entrypoint        string          `json:"entrypoint"`
-	IsSidechain       bool            `json:"isSidechain"`
-	IsMeta            bool            `json:"isMeta"`
-	IsCompactSummary  bool            `json:"isCompactSummary"`
-	TranscriptOnly    bool            `json:"isVisibleInTranscriptOnly"`
-	PromptSource      string          `json:"promptSource"`
-	Origin            json.RawMessage `json:"origin"`
-	ForkedFrom        json.RawMessage `json:"forkedFrom"`
-	RequestID         string          `json:"requestId"`
-	IsAPIErrorMessage bool            `json:"isApiErrorMessage"`
-	Message           json.RawMessage `json:"message"`
-	ToolUseResult     json.RawMessage `json:"toolUseResult"`
+	Type             string          `json:"type"`
+	Subtype          string          `json:"subtype"`
+	SessionID        *string         `json:"sessionId"`
+	AgentID          *string         `json:"agentId"`
+	UUID             string          `json:"uuid"`
+	Timestamp        string          `json:"timestamp"`
+	CWD              string          `json:"cwd"`
+	IsSidechain      bool            `json:"isSidechain"`
+	IsMeta           bool            `json:"isMeta"`
+	IsCompactSummary bool            `json:"isCompactSummary"`
+	TranscriptOnly   bool            `json:"isVisibleInTranscriptOnly"`
+	PromptSource     string          `json:"promptSource"`
+	Origin           json.RawMessage `json:"origin"`
+	ForkedFrom       json.RawMessage `json:"forkedFrom"`
+	RequestID        string          `json:"requestId"`
+	Message          json.RawMessage `json:"message"`
+	ToolUseResult    json.RawMessage `json:"toolUseResult"`
 }
 
 type rawUsage struct {
@@ -268,12 +266,6 @@ func (t *Transcript) readRecord(record rawRecord, line int) {
 	}
 	if t.WorkingDirectory == "" && strings.TrimSpace(record.CWD) != "" {
 		t.WorkingDirectory = record.CWD
-	}
-	if t.Version == "" {
-		t.Version = record.Version
-	}
-	if t.Entrypoint == "" {
-		t.Entrypoint = record.Entrypoint
 	}
 	at, timeErr := time.Parse(time.RFC3339Nano, record.Timestamp)
 	switch record.Type {
@@ -474,19 +466,50 @@ func (t *Transcript) readUser(record rawRecord, at time.Time, line int) {
 		}
 		t.results[block.ToolUseID] = result
 	}
-	t.timeline = append(t.timeline, timelineEntry{kind: entryOwned, at: at, raw: record.Timestamp})
+	kind := entryOwned
+	if harnessRecord(record) {
+		// An interrupt during tool use can share the record with the cancelled
+		// tool results.
+		for _, block := range blocks {
+			if block.Type == "text" && isInterrupt(block.Text) {
+				kind = entryInterrupt
+				break
+			}
+		}
+	}
+	t.timeline = append(t.timeline, timelineEntry{kind: kind, at: at, raw: record.Timestamp})
 }
 
 // Claude Code writes a local slash command (such as /compact) as two harness
 // user records: an echo whose content opens with a <command-name> envelope and
 // an output record whose content opens with a <local-command-stdout> or
-// <local-command-stderr> envelope. Neither carries promptSource and no model
-// replies to them. A prompt-type slash command also opens with the echo
-// envelope but receives a model reply instead of an output record.
+// <local-command-stderr> envelope. Bash mode (a "!" command) is written the same
+// way with <bash-input> and <bash-stdout> or <bash-stderr> envelopes. Neither
+// record carries promptSource and no model replies to them. A prompt-type
+// slash command also opens with the echo envelope but receives a model reply
+// instead of an output record.
 var (
-	commandEchoEnvelopes   = []string{"<command-name>", "<command-message>"}
-	commandOutputEnvelopes = []string{"<local-command-stdout>", "<local-command-stderr>"}
+	commandEchoEnvelopes   = []string{"<command-name>", "<command-message>", "<bash-input>"}
+	commandOutputEnvelopes = []string{"<local-command-stdout>", "<local-command-stderr>", "<bash-stdout>", "<bash-stderr>"}
 )
+
+// interruptMarker opens the harness records Claude Code 2.1.331 writes when a
+// person presses Esc: "[Request interrupted by user]" and "[Request interrupted
+// by user for tool use]". The binary recognizes both with the same prefix.
+const interruptMarker = "[Request interrupted by user"
+
+func isInterrupt(text string) bool {
+	// Mirrors the binary's own pattern: the marker followed by any text up to
+	// the closing bracket, at the start of the record content.
+	trimmed := strings.TrimSpace(text)
+	return strings.HasPrefix(trimmed, interruptMarker) && strings.Contains(trimmed[len(interruptMarker):], "]")
+}
+
+// harnessRecord bounds envelope and interrupt handling to records the harness
+// wrote: no promptSource and not meta.
+func harnessRecord(record rawRecord) bool {
+	return strings.TrimSpace(record.PromptSource) == "" && !record.IsMeta
+}
 
 func hasEnvelope(text string, envelopes []string) bool {
 	trimmed := strings.TrimSpace(text)
@@ -505,7 +528,12 @@ func hasEnvelope(text string, envelopes []string) bool {
 // starts a turn nor counts as steering.
 func (t *Transcript) readPrompt(record rawRecord, at time.Time, text string) {
 	harness := strings.TrimSpace(record.PromptSource) == ""
-	if harness && !record.IsMeta && hasEnvelope(text, commandOutputEnvelopes) {
+	if harnessRecord(record) && isInterrupt(text) {
+		// An interrupt is not a prompt and is never steering; it ends the turn.
+		t.timeline = append(t.timeline, timelineEntry{kind: entryInterrupt, at: at, raw: record.Timestamp})
+		return
+	}
+	if harnessRecord(record) && hasEnvelope(text, commandOutputEnvelopes) {
 		if t.pendingCommand > 0 {
 			t.timeline[t.pendingCommand-1].kind = entryOwned
 			t.promptCount--
