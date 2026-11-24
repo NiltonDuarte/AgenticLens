@@ -319,6 +319,29 @@ func TestBackfillClaudeBudgetExhaustionRetainsStoredFacts(t *testing.T) {
 	if res := report.Results[0]; !res.RefreshIncomplete || !strings.Contains(strings.Join(res.Diagnostics, "\n"), "budget") {
 		t.Fatalf("the budget must be named in an incomplete refresh: %+v", res)
 	}
+	// A stored child skipped with its unread tree carries the tree's reason.
+	for _, id := range []string{claudeFixtureRoot, claudeFixtureChild} {
+		owner := claudeCoverageOwner(t, report.Results[0], id)
+		if owner.Status != OwnerRetained || !strings.Contains(owner.Reason, "budget") {
+			t.Fatalf("owner %s must be retained for the budget: %+v", id, owner)
+		}
+	}
+}
+
+func claudeCoverageOwner(t *testing.T, result TicketMigrationResult, id string) OwnerRefreshCoverage {
+	t.Helper()
+	for _, harness := range result.Coverage {
+		if harness.Harness != domain.SourceClaude {
+			continue
+		}
+		for _, owner := range harness.Owners {
+			if owner.SessionID == id {
+				return owner
+			}
+		}
+	}
+	t.Fatalf("no Claude Code coverage for owner %s: %+v", id, result.Coverage)
+	return OwnerRefreshCoverage{}
 }
 
 func TestBackfillClaudeOwnerConflictingWithAnotherHarnessIsRetained(t *testing.T) {
@@ -602,7 +625,7 @@ func TestBackfillClaudeSourceWithoutClaudeOwnersPreservesLedger(t *testing.T) {
 		t.Fatalf("backfill failed: %+v %v", report, err)
 	}
 	res := report.Results[0]
-	if !res.RefreshIncomplete || res.DBFound || !res.CollectionsRetained || !strings.Contains(strings.Join(res.Diagnostics, "\n"), "No exact selected-source owner is recorded") {
+	if !res.RefreshIncomplete || res.DBFound || res.CollectionsRetained || !strings.Contains(strings.Join(res.Diagnostics, "\n"), "No exact selected-source owner is recorded") {
 		t.Fatalf("a ledger without Claude Code owners must be preserved and reported: %+v", res)
 	}
 	if after := sessionsByID(t, workspace); !reflect.DeepEqual(after, before) {
