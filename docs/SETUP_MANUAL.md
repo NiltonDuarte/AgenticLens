@@ -193,7 +193,7 @@ If automatic publication is unavailable, wait until native completion and the av
 
 ```bash
 agentic-lens generate \
-  --source "<opencode-or-codex>" \
+  --source "<opencode|codex|claude>" \
   --session-id "<EXACT_ROOT_SESSION_ID>" \
   --ticket-id "<TICKET_ID>" \
   --ticket-title "<TICKET_TITLE>" \
