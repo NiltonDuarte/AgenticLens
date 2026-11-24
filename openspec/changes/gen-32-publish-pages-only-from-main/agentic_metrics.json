@@ -1,0 +1,60 @@
+{
+  "tags": {
+    "agentic-lens-dev": "0.1.1",
+    "agentic-lens-po": "0.1.1",
+    "agentic-lens-review": "0.1.1"
+  },
+  "schema_version": 6,
+  "ticket_id": "GEN-32",
+  "ticket_title": "Publish Pages only from main",
+  "ticket_type": "ci",
+  "started_at": "2026-11-23T23:06:03.491Z",
+  "completed_at": "2026-11-24T13:50:49.271148+00:00",
+  "updated_at": "2026-11-24T13:50:49.271148+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 1
+  },
+  "sessions": [
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "8560a88a-e027-43c4-93f9-b0dcf5623f5d",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-23T23:06:03.491Z",
+          "completed_at": "2026-11-23T23:39:55.626Z",
+          "active_duration_seconds": 601,
+          "turns": 3,
+          "tokens": {"input": 158, "output": 43759, "cache_read": 8464682, "reasoning": 11669, "peak_context": 154824},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 1
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 62, "errors": 2},
+        {"name": "Edit", "calls": 1, "errors": 0},
+        {"name": "Monitor", "calls": 2, "errors": 1},
+        {"name": "TaskStop", "calls": 1, "errors": 0},
+        {"name": "ToolSearch", "calls": 4, "errors": 0},
+        {"name": "Write", "calls": 2, "errors": 0},
+        {"name": "mcp__t3-code__link_pull_request", "calls": 1, "errors": 0},
+        {"name": "mcp__t3-code__t3_background_wait", "calls": 4, "errors": 2}
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}

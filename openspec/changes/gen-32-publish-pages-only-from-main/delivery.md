@@ -28,7 +28,7 @@ This session reviewed the diff directly. No independent reviewer ran.
 - The new trigger set, retry and re-run guard run on GitHub only after merge. `pull_request_target` workflows run from main, so this PR still triggers the old preview workflow once.
 - A main publication can still fail if the artifact stays unreadable for about 80 seconds. It fails before the pending marker, and a dispatch from main publishes again.
 - The unused `github-pages-preview` environment remains in the repository settings for an administrator to remove.
-- This session ran in Claude Code, which AgenticLens cannot extract yet, so this change has no `agentic_metrics.json`. No ledger was generated from another harness's session.
+- Telemetry was backfilled after AL-98 added the Claude Code source, using the pinned release `v3.0.0-rc.169+6c41095e`. The implementation session was selected by its session ID, and the ledger has one complete root session with no subagents. Cost is unavailable because Claude Code transcripts record no cost.
 
 ## Pull request
 
@@ -40,6 +40,38 @@ The Ticket roadmap pages workflow ran on every same-repository PR to publish a r
 - The publish job refuses re-run attempts, which upload a second `github-pages` artifact that deploy-pages refuses after the marker is recorded. Dispatch from main instead.
 - The Pages README describes main-only publication and recovery by dispatch.
 
-Verification: the Pages composition suite (8 tests), a composition against a copy of the live state branch, a YAML and reference check, actionlint (apart from its existing `concurrency.queue` gap), strict OpenSpec validation, `git diff --check` and the integrated `make`. Telemetry is unavailable because this session ran in Claude Code.
+Verification: the Pages composition suite (8 tests), a composition against a copy of the live state branch, a YAML and reference check, actionlint (apart from its existing `concurrency.queue` gap), strict OpenSpec validation, `git diff --check` and the integrated `make`. Telemetry was added after AL-98 shipped.
 
 Because `pull_request_target` workflows run from main, this PR still triggers the old preview workflow once. The change takes effect after merge; the first main run should be checked for a successful deployment and an empty preview set.
+
+<!-- agentic-lens:metrics:start -->
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 1
+- **Active Agent Duration:** 10m 1s (recorded duration)
+- **Context Window Health:** HEALTHY — Root agent peak 154.8k tokens (34% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
+- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
+- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
+- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
+- **Reasoning Effort:** 11,669 reasoning tokens (21.1% of generated output)
+- **Tool Health & Self-Correction:** 77 tool calls (5 self-corrections, 93.5% success rate)
+
+### Anomalies & Health Flags
+- **Status:** No execution anomalies detected (clean session).
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **Unknown** | 1 | 158 | 43,759 | 8,464,682 | 100.0% | 154.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **158** | **43,759** | **8,464,682** | **100.0%** | **154.8k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **claude-opus-5-5** | 1 | 158 | 43,759 | 8,464,682 | 100.0% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **158** | **43,759** | **8,464,682** | **100.0%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+<!-- agentic-lens:metrics:end -->
