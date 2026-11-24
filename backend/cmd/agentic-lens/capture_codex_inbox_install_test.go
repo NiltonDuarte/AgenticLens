@@ -176,7 +176,7 @@ func TestCodexInboxPreexistingGrantAndConflictPreflight(t *testing.T) {
 				if bytes.Equal(current, updated) {
 					t.Fatal("fixture did not overlap its private state")
 				}
-				if err := os.WriteFile(local, updated, 0600); err != nil {
+				if err := writeCaptureFileAtomic(local, updated, 0600); err != nil {
 					t.Fatal(err)
 				}
 			}

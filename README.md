@@ -1,6 +1,6 @@
 # AgenticLens
 
-AgenticLens records multi-agent development telemetry, detects execution anomalies, and provides a local dashboard. It supports live OpenCode monitoring and offline OpenCode/Codex session ledgers. The native `agentic-lens` manager installs and selects project engines; `agentic-lens-engine` performs telemetry work and embeds the dashboard.
+AgenticLens records multi-agent development telemetry, detects execution anomalies, and provides a local dashboard. It supports live OpenCode monitoring and offline OpenCode, Codex and Claude Code session ledgers. The native `agentic-lens` manager installs and selects project engines; `agentic-lens-engine` performs telemetry work and embeds the dashboard.
 
 Ledgers are trusted, durable project records designed to be committed and shared through Git across developers, machines and harnesses. Local source sessions take precedence when refreshed; unavailable sessions remain preserved in the ledger, and the runtime aggregates the full result. Migration is best-effort and resumable across machines. See the [portable ledger contract](TECHNICAL_GUIDELINES.md#portable-ledger-contract) for preservation, refresh and compatibility guarantees.
 
@@ -25,7 +25,7 @@ The setup skill guides the agent through downloading the platform binaries, conf
 - **Live observability:** OpenCode SQLite polling and SSE streams show turns, tools, token growth, and subagent handoffs.
 - **Anomaly detection:** Configurable rules flag tool retry streaks, high failure rates, context saturation, and subagent rework. See [rules and thresholds](ARCHITECTURE.md#31-detection-rules).
 - **SDLC analytics:** Compare role effort, duration, model costs, cache efficiency, reasoning tokens, code changes, test-to-production ratios, and tool self-correction.
-- **Session ledgers:** Generate versioned JSON facts and Markdown summaries from OpenCode or Codex; backfill historical facts and migrate schemas with invariant checks.
+- **Session ledgers:** Generate versioned JSON facts and Markdown summaries from OpenCode, Codex or Claude Code; backfill historical facts and migrate schemas with invariant checks.
 - **Standalone deployment:** Go embeds the TypeScript/React dashboard; production needs no Node.js, Docker, or external database server.
 
 Telemetry supports planning, implementation, test review, and handoff. Ratios and anomaly verdicts inform review; they do not establish test coverage or quality.

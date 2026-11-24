@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -1306,7 +1307,35 @@ func writeCaptureFixtureLocal(t *testing.T, f captureGenerationFixture, body []b
 		}
 		text += fmt.Sprintf("agenticlens:\n  state_dir: %q\n", publication)
 	}
-	return os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(text), 0600)
+	return writeCaptureFileAtomic(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(text), 0600)
+}
+
+// Live and detached capture workers re-read local configuration on every
+// refresh. An in-place truncate-and-write lets them observe an empty or partial
+// file, so fixtures replace the file by renaming a complete sibling over it.
+func writeCaptureFileAtomic(path string, body []byte, mode os.FileMode) (err error) {
+	temporary, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			err = errors.Join(err, os.Remove(temporary.Name()))
+		}
+	}()
+	if _, err = temporary.Write(body); err != nil {
+		return errors.Join(err, temporary.Close())
+	}
+	if err = temporary.Sync(); err != nil {
+		return errors.Join(err, temporary.Close())
+	}
+	if err = temporary.Close(); err != nil {
+		return err
+	}
+	if err = os.Chmod(temporary.Name(), mode); err != nil {
+		return err
+	}
+	return os.Rename(temporary.Name(), path)
 }
 
 // These fixtures test source guards or explicit publication, while autonomous

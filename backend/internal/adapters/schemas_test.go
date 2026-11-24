@@ -1978,3 +1978,53 @@ func fixtureExplicitAnomalyPolicy(t *testing.T) domain.AnomalyThresholdsConfig {
 	cfg.ConsecutiveErrorsStreakCritical = 5
 	return cfg
 }
+
+// A current-schema ledger with a Claude Code owner is canonical and readable on
+// a machine without any transcript store; values outside the supported source
+// set are rejected. The ledger is a self-contained synthetic fixture.
+func TestCanonicalLedgerAcceptsClaudeSourceAndRejectsUnknownSources(t *testing.T) {
+	ledger := func(source string) []byte {
+		return []byte(`{"schema_version":6,"ticket_id":"TEST-CLAUDE","sessions":[{"id":"root-synthetic","source":` + source + `,"user":"alice","invocations":[{"role":"","model":"model-synthetic","started_at":"2026-11-24T10:00:00Z","completed_at":"2026-11-24T10:00:20Z","active_duration_seconds":20,"turns":1,"tokens":{"input":6,"output":7,"cache_read":8,"reasoning":0,"peak_context":14},"cost_usd":null,"cost_evidence":{"state":"unavailable"},"compactions":1,"user_iterations":1}],"tools":[{"name":"Agent","calls":1,"errors":0}],"anomalies":[],"delegations":[{"agent_type":"planner","invoked_at":"2026-11-24T10:00:01Z","description":"plan","child_session_id":"achild"}]},{"id":"achild","parent_id":"root-synthetic","source":` + source + `,"user":"alice","invocations":[{"role":"planner","model":"model-synthetic","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":1,"output":1,"cache_read":1,"reasoning":0,"peak_context":2},"cost_usd":null,"cost_evidence":{"state":"unavailable"},"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`)
+	}
+	input := ledger(`"claude"`)
+	if err := adapters.ValidateRuntimeFactLedger(input); err != nil {
+		t.Fatalf("Claude Code owner rejected: %v", err)
+	}
+	var dto adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(input, &dto); err != nil {
+		t.Fatal(err)
+	}
+	facts := dto.ToDomain()
+	if len(facts.Sessions) != 2 {
+		t.Fatalf("want two sessions, got %+v", facts.Sessions)
+	}
+	for _, session := range facts.Sessions {
+		if session.Source != domain.SourceClaude {
+			t.Fatalf("source not decoded verbatim: %+v", session)
+		}
+		if session.Invocations[0].CostEvidence.State != domain.CostUnavailable {
+			t.Fatalf("unavailable cost changed: %+v", session.Invocations[0])
+		}
+	}
+	if facts.Sessions[0].Invocations[0].Tokens.Input != 6 || facts.Sessions[0].Delegations[0].ChildSession != "achild" {
+		t.Fatalf("recorded facts lost: %+v", facts.Sessions[0])
+	}
+	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(facts))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"source":"claude"`) {
+		t.Fatalf("persisted label must be claude: %s", encoded)
+	}
+	if err := adapters.ValidateRuntimeFactLedger(encoded); err != nil {
+		t.Fatalf("re-encoded Claude Code ledger rejected: %v", err)
+	}
+	for _, source := range []string{`"claude-code"`, `"Claude"`, `"anthropic"`, `"unknown"`, `""`, `null`, `7`} {
+		t.Run(source, func(t *testing.T) {
+			err := adapters.ValidateRuntimeFactLedger(ledger(source))
+			if err == nil || !strings.Contains(err.Error(), "opencode, codex or claude") {
+				t.Fatalf("unsupported source %s must be rejected with the supported values: %v", source, err)
+			}
+		})
+	}
+}

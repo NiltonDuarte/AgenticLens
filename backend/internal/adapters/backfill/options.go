@@ -11,6 +11,7 @@ type BackfillOptions struct {
 	TicketID        string
 	Source          string
 	CodexHome       string
+	ClaudeHome      string
 	RecomputeGit    bool
 	CodeRef         string
 	RecomputeDB     bool

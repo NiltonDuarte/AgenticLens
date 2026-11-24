@@ -6,15 +6,15 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## In Progress
 
+- **AL-98**: Generate ticket metrics from Claude Code sessions
+  - **Status**: In Progress; **Blocked by**: None; **Blocks**: AL-99
+  - **File**: [AL-98](to-do/AL-98%20generate%20ticket%20metrics%20from%20claude%20code%20sessions.md); **Change**: [al-98-generate-ticket-metrics-from-claude-code-sessions](../../openspec/changes/al-98-generate-ticket-metrics-from-claude-code-sessions/)
+
 - **AL-97**: Warn about staged pending capture snapshots
   - **Status**: In Progress; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-97](to-do/AL-97%20warn%20about%20staged%20pending%20capture%20snapshots.md)
 
 ## Ready
-
-- **AL-98**: Generate ticket metrics from Claude Code sessions
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-99
-  - **File**: [AL-98](to-do/AL-98%20generate%20ticket%20metrics%20from%20claude%20code%20sessions.md)
 
 - **AL-94**: Make explicit backfill repeatable and report refresh coverage
   - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-95

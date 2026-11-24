@@ -67,7 +67,7 @@ function delegation(value: unknown): boolean {
 }
 function session(value: unknown): boolean {
   return isRecord(value) && !Object.hasOwn(value, 'anomaly_availability') && string(value.id) && optionalString(value.parent_id) &&
-    (value.source === undefined || value.source === 'unknown' || value.source === 'opencode' || value.source === 'codex') &&
+    (value.source === undefined || value.source === 'unknown' || value.source === 'opencode' || value.source === 'codex' || value.source === 'claude') &&
     (value.user === undefined || string(value.user)) && array(value.invocations, invocation) &&
     array(value.tools, (v) => isRecord(v) && string(v.name) && fields(v, ['calls', 'errors'], number)) &&
     optionalArray(value.anomalies, isAnomaly) && optionalArray(value.skills, skill) && optionalArray(value.delegations, delegation) &&
