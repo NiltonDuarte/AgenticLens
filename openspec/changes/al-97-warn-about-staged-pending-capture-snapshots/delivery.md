@@ -10,7 +10,9 @@ The implementation candidate is `2e7465d5` over `db4477fa`. Integration commit `
 
 The integrated command `GOFLAGS='-p=1 -timeout=35m' GOMAXPROCS=4 VITEST_MAX_FORKS=2 VITEST_MIN_FORKS=1 make -j2` passed at `371a9bc1`. It ran the CLI and adapter suites with the race detector, 231 frontend unit tests, 819 frontend integration tests, installation and distribution checks, vet, typecheck, lint, and the multi-platform build. The first broad run had capture-fixture failures and two Go package timeouts. Serializing Go packages and extending the package deadline enabled the full integrated pass. Strict OpenSpec validation and `git diff --check` also passed.
 
-The `publish` check on `5ef7638f` uploaded the Pages artifact successfully but attempted to read it before the run artifact index exposed it. The workflow now waits up to 60 seconds for the current run's artifact metadata before downloading and deploying it. The workflow YAML and shell syntax parse, and the ticket-pages preview tests pass; the hosted rerun is pending.
+Integration commit `990e1590` merged `main` again, bringing in AL-98 (Claude Code source) and GEN-33. The roadmap index conflict was resolved by listing both AL-98 and AL-97 as In Progress. `make build` passed at that commit. The integrated `make` gate did not complete locally there. The default run hit the 10-minute Go deadline in `cmd/agentic-lens` and `internal/adapters/capture`. Four capture tests in that run failed because their workers were killed when their time ran out, while another worktree was running `make`. One serialized run passed the frontend unit and integration tests and the distribution checks. An outside SIGTERM then stopped its Go integration step. The final run was stopped on request, and hosted CI on the pushed commit is the verification for `990e1590`.
+
+The `publish` check on `5ef7638f` uploaded the Pages artifact successfully but attempted to read it before the run artifact index exposed it. Commit `837d3f06` makes the workflow wait up to 60 seconds for the current run's artifact metadata before downloading it. The workflow YAML and shell syntax parse, and the ticket-pages preview tests pass. The hosted `publish` check still failed on `5baf9eff` because `pull_request_target` runs the workflow from `main`, so this branch's change cannot take effect on its own PR. The same race also fails on `main` and other PRs. Branch protection does not require the check, and GEN-32 ([#166](https://github.com/NiltonDuarte/AgenticLens/pull/166)) owns the main-only Pages fix. This PR leaves the check as it is.
 
 ## Review
 
@@ -18,25 +20,29 @@ Behavior and architecture review on GPT-6.2 Sol (high) found that an incomplete 
 
 ## Telemetry coverage
 
-The post-merge bounded Codex reconciliation completed 25 registered source attempts with no pending children or unresolved parent links; all 25 registrations were current at completion. Explicit generation is refreshed from the bound AL-97 root and then checked against its recorded children. Previously accepted independent Codex sessions and other harnesses remain preserved. One earlier architecture review run lacked a verified binding for its reported session ID and is absent. Costs are unavailable and the open root interval remains provisional.
+The ledger holds the Codex root `01a205de`, its planner, coder and tester children, 21 independent review sessions, and the Claude Code session that merged `main`. One earlier architecture review run lacked a verified binding for its reported session ID and is absent. Costs are unavailable for every session.
+
+After `5baf9eff`, the installed capture worker (`v3.0.0-rc.0+fix20.192bb060`) republished this ledger without the root's three `child_session_id` delegation links. The children stayed in the ledger with the correct `parent_id`; only the links were lost. The worker refreshes each owner separately and reached its 512 MiB source budget after rereading the root but before the children. It then resolves delegation links only against transcripts read in that pass (`finishCaptureAnnotations` in `backend/internal/adapters/capture/reconcile.go`). Codex `spawn_agent` results carry only the agent path, so the root's links were rebuilt as empty and replaced the accepted ones. That rewrite was not committed. Explicit generation with the engine built at the integration commit read all four rollouts of the root tree and restored the links. The capture defect remains on `main` and needs its own ticket.
+
+The final Codex generation reused the literal nonce recorded in that session's last generation command, because a completed Codex session cannot receive a new nonce. The Claude Code session was generated with `--source claude` from the same build. Engines without Claude Code support, including the installed capture worker, reject a ledger containing a `claude` session.
 
 ## Pull request
 
 Add an opt-in advisory for pending captures added or updated by the proposed Git commit. The hook distinguishes the two pending states, keeps working when the optional local registry is unavailable, and defers commit and staging decisions to Git and the developer.
 
-The hook uses Git's effective commit index, including path-limited commits, and retains the existing health warning when a staged scan is incomplete. Existing hooks remain under their owners' control. The integrated `make` gate passed.
+The hook uses Git's effective commit index, including path-limited commits, and retains the existing health warning when a staged scan is incomplete. Existing hooks remain under their owners' control. The integrated `make` gate passed at `371a9bc1`; the later merge of `main` relies on hosted CI.
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 80
-- **Active Agent Duration:** 3h 31m (recorded duration including 257s provisional)
+- **Software Development Life Cycle Iterations:** 85
+- **Active Agent Duration:** 3h 44m (recorded duration including 37s provisional)
 - **Context Window Health:** ELEVATED — Root agent peak 317.7k tokens (71% of 450k healthy ceiling, 1 compactions) | Subagents peak 254.7k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 2.3 avg turns/run (peak: 4 turns) | Planner 1.0, Coder 4.0, Tester 2.0
 - **Test-to-Production Code Ratio:** 1.0:1 (+588 test lines / +605 prod lines)
 - **Code Delivered:** +1,193 / -33 lines across 14 code files (excluding docs)
-- **Reasoning Effort:** 101,492 reasoning tokens (25.6% of generated output)
-- **Tool Health & Self-Correction:** 933 tool calls (65 self-corrections, 93.0% success rate)
+- **Reasoning Effort:** 113,359 reasoning tokens (25.5% of generated output)
+- **Tool Health & Self-Correction:** 1,018 tool calls (69 self-corrections, 93.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 4 execution anomalies detected (1 CRITICAL, 3 WARNING).
@@ -55,15 +61,16 @@ The hook uses Git's effective commit index, including path-limited commits, and 
 | **planner** | 1 | 140,360 | 2,629 | 1,145,600 | 89.1% | 138.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **coder** | 1 | 176,853 | 40,727 | 19,895,808 | 99.1% | 254.7k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **tester** | 1 | 164,561 | 37,864 | 20,795,136 | 99.2% | 241.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 23 | 2,607,044 | 213,734 | 100,409,728 | 97.5% | 317.7k | ELEVATED | Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations) |
-| **Total** | **26** | **3,088,818** | **294,954** | **142,246,272** | **97.9%** | **317.7k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
+| **Unknown** | 24 | 2,613,434 | 250,098 | 110,063,090 | 97.7% | 317.7k | ELEVATED | Unavailable (0 observed, 0 partial, 24 unavailable / 24 invocations) |
+| **Total** | **27** | **3,095,208** | **331,318** | **151,899,634** | **98.0%** | **317.7k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 12 | 711,425 | 79,513 | 15,138,816 | 95.5% | Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations) |
+| **claude-opus-5-5** | 1 | 168 | 32,765 | 8,542,450 | 100.0% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **gpt-6-luna** | 12 | 717,647 | 83,112 | 16,249,728 | 95.8% | Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations) |
 | **gpt-6.2-sol** | 14 | 2,377,393 | 215,441 | 127,107,456 | 98.2% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
-| **Total** | **26** | **3,088,818** | **294,954** | **142,246,272** | **97.9%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
+| **Total** | **27** | **3,095,208** | **331,318** | **151,899,634** | **98.0%** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
 
-Retained recorded history: 21 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
+Retained recorded history: 25 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
 <!-- agentic-lens:metrics:end -->
