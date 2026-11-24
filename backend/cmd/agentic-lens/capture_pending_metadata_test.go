@@ -65,7 +65,7 @@ func verifyPendingMetadataConflict(t *testing.T, secondKind, failure string) {
 
 	local := filepath.Join(fixture.project, ".agenticlens-config.local.yaml")
 	policy := strings.Replace(string(readCaptureFile(t, local)), "max_lifetime_ms: 10000", "max_lifetime_ms: 1500", 1)
-	if err := os.WriteFile(local, []byte(policy), 0600); err != nil {
+	if err := writeCaptureFileAtomic(local, []byte(policy), 0600); err != nil {
 		t.Fatal(err)
 	}
 	output, err := runInitialPublicationWorker(t, fixture)

@@ -79,6 +79,7 @@
 - [x] 8.1 Run focused Go and web checks, then commit the candidate. Merge main and reconcile AL-94 and AL-78 changes in the backfill engine and `main.go` if either has landed. Run the integrated `make` and record the tested revision, commands and skipped stages.
 - [x] 8.2 Run independent focused reviews (data, behavior, architecture, tests) on a frozen candidate, then a consolidated review. Route fixes to the coder and missing tests to the tester, re-review the affected scope, and keep compact findings in `evidence/REVIEW_SUMMARY.json`.
 - [x] 8.3 Write `delivery.md` and the release notes. Both must state that engines older than this change, including the pinned `v3.0.0-rc.156`, reject ledgers containing `source: "claude"`, and that backfill `--source all` now requires a Claude Code store. As the final step, generate telemetry with the built candidate and a literal nonce: `--source claude --ticket-id AL-98 --ticket-type feat --json-output <CHANGE_DIR>/agentic_metrics.json --append <CHANGE_DIR>/delivery.md`. Verify the root, children and preserved owners, then commit, push and create or update the PR.
+- [x] 8.4 Fix the CI race in capture test fixtures (user request, 2026-11-24): replace the local configuration atomically wherever a capture worker can be reading it, rerun the affected tests under the race detector and the full `cmd/agentic-lens` package, and regenerate telemetry before the final commit.
 
 ## Workflow follow-up
 

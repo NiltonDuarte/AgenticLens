@@ -17,6 +17,8 @@ A developer working in Claude Code can now publish ticket metrics with `generate
 
 The reviewed and tested candidate is `f1749596`, integrated with `origin/main` at `1161f43a`; main had not moved at delivery. The full `make` passed on `f1749596`: Go unit, race and integration suites, 231 frontend unit tests, 829 frontend integration tests, vet and lint, release, installation, capture-distribution and orchestration checks, and native builds for four platforms. An earlier `make` at `03f50ca2` lost one Codex capture-worker test to its 8-second process deadline while eight reviewers were running tests; it passed three times alone under the race detector and passed in the final run. Strict OpenSpec validation passes.
 
+After delivery, CI on `f5ad3cf3` hit a pre-existing race in the capture test fixtures: they rewrote the local configuration in place while a capture worker re-read it. The fixtures now replace the file atomically ([design.md](design.md#ci-flake-in-capture-test-fixtures)). This change touches test files only. The affected capture tests passed five times under the race detector, the other 32 tests that use the changed helpers passed under the race detector, and the full `cmd/agentic-lens` package passed. The full `make` was not rerun for this change.
+
 Native verification ran against Claude Code 2.1.331; see [NATIVE_VERIFICATION.md](evidence/NATIVE_VERIFICATION.md). This ticket's own session tree (`t3-code` entrypoint, root and five subagents) matched an independent oracle exactly on tokens, tools, delegations, skills, turns and duration, and repeated runs were byte-identical. A `claude -p` probe (`sdk-cli`) confirmed one compaction in the same file. An interactive `cli` session driven through tmux confirmed Esc interrupts and bash-mode records. Native runs found two defects, both fixed and re-checked: local slash commands left an open turn, and answered bash-mode commands dropped their turn.
 
 Behavior, data integrity, architecture and test effectiveness were each reviewed by claude-opus-5-5/medium and claude-sonnet-5-5/high, as main's review policy (GEN-33) requires. Round 1 at `809e23d6` requested changes in seven of eight cells; the architecture review by claude-opus-5-5 approved. The confirmed findings were interrupt and bash-mode turns, the store check, changed-parent retention, unreported shrinking refreshes, repeated tree reads, unchecked root adoption, `any` in tests, stale guidance and test gaps. Round 2 at `03f50ca2` approved in all eight cells. Round 3 re-reviewed the bash-mode fix and test additions at `f1749596` in the data, behavior and test cells and approved all six; architecture approval carried forward because only turn logic inside the existing parser changed. All 40 findings, reporters and dispositions are in [REVIEW_SUMMARY.json](evidence/REVIEW_SUMMARY.json). Four earlier Codex `gpt-6-luna` review runs failed at start on a Codex usage limit, before main switched the policy to Claude, and did no review work.
@@ -30,6 +32,7 @@ Behavior, data integrity, architecture and test effectiveness were each reviewed
 - **Not observed natively.** Forks, nested subagents, subagent skill calls, failed skill calls, interrupt records written by SDK hosts and the `sdk-ts`, `sdk-py` and `claude-vscode` entrypoints. The [capability matrix](../al-63-verify-source-capabilities-across-harnesses/CAPABILITIES.md) records each cell.
 - **Accepted debt.** Per-harness copies of the discovery budget type, the completeness rule and the changed-parent rule remain. Low-severity test gaps around bash-mode resets and record variants are listed in the review summary.
 - **Reading the metrics.** Claude Code subagent roles are recorded as their native agent types, such as `reviewer-data`; the shared `role_mappings` maps only `reviewer`, so these types are not grouped yet. The subagent rework-loop anomalies reflect parallel subagents whose invocations interleave in time, not sequential coder and tester rework.
+- **Roadmap Pages check.** The `publish` job of the Ticket roadmap pages workflow fails on this PR with "Artifact not found for name: github-pages". The job runs main's workflow (`pull_request_target`), so this branch cannot change it; AL-97's PR hit the same error.
 - **Pending captures.** The four failed Codex review runs left unbound automatic-capture snapshots under the local `.agenticlens/pending/`; they are not committed and contain no review work.
 
 ## Pull request
@@ -40,6 +43,7 @@ Behavior, data integrity, architecture and test effectiveness were each reviewed
 - Accept `--source claude`, `--claude-home` and local `telemetry.sources.claude.home` in `generate`, `backfill` and `init`, with no implicit store. Backfill `all` now includes Claude Code.
 - Accept `source: "claude"` in backend and dashboard ledger readers.
 - Update AGENTS.md rule 7, setup, operator and cost guidance, and the source capability matrix.
+- Make capture test fixtures replace the local configuration atomically, so a running capture worker never reads a partly written file.
 
 ### Compatibility
 
@@ -49,7 +53,9 @@ Behavior, data integrity, architecture and test effectiveness were each reviewed
 
 ### Verification
 
-PR_The reviewed and tested candidate is `f1749596`, integrated with `origin/main` at `1161f43a`; main had not moved at delivery. The full `make` passed on `f1749596`: Go unit, race and integration suites, 231 frontend unit tests, 829 frontend integration tests, vet and lint, release, installation, capture-distribution and orchestration checks, and native builds for four platforms. An earlier `make` at `03f50ca2` lost one Codex capture-worker test to its 8-second process deadline while eight reviewers were running tests; it passed three times alone under the race detector and passed in the final run. Strict OpenSpec validation passes.
+The reviewed and tested candidate is `f1749596`, integrated with `origin/main` at `1161f43a`; main had not moved at delivery. The full `make` passed on `f1749596`: Go unit, race and integration suites, 231 frontend unit tests, 829 frontend integration tests, vet and lint, release, installation, capture-distribution and orchestration checks, and native builds for four platforms. An earlier `make` at `03f50ca2` lost one Codex capture-worker test to its 8-second process deadline while eight reviewers were running tests; it passed three times alone under the race detector and passed in the final run. Strict OpenSpec validation passes.
+
+After delivery, CI on `f5ad3cf3` hit a pre-existing race in the capture test fixtures: they rewrote the local configuration in place while a capture worker re-read it. The fixtures now replace the file atomically ([design.md](design.md#ci-flake-in-capture-test-fixtures)). This change touches test files only. The affected capture tests passed five times under the race detector, the other 32 tests that use the changed helpers passed under the race detector, and the full `cmd/agentic-lens` package passed. The full `make` was not rerun for this change.
 
 Native verification ran against Claude Code 2.1.331; see [NATIVE_VERIFICATION.md](evidence/NATIVE_VERIFICATION.md). This ticket's own session tree (`t3-code` entrypoint, root and five subagents) matched an independent oracle exactly on tokens, tools, delegations, skills, turns and duration, and repeated runs were byte-identical. A `claude -p` probe (`sdk-cli`) confirmed one compaction in the same file. An interactive `cli` session driven through tmux confirmed Esc interrupts and bash-mode records. Native runs found two defects, both fixed and re-checked: local slash commands left an open turn, and answered bash-mode commands dropped their turn.
 
@@ -57,15 +63,15 @@ Behavior, data integrity, architecture and test effectiveness were each reviewed
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 5
-- **Active Agent Duration:** 5h 32m (recorded duration including 7s provisional)
+- **Software Development Life Cycle Iterations:** 7
+- **Active Agent Duration:** 6h 1m (recorded duration including 819s provisional)
 - **Context Window Health:** BLOATED — Root agent peak 342.1k tokens (76% of 450k healthy ceiling, 1 compactions) | Subagents peak 499.6k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 2.8 avg turns/run (peak: 5 turns) | Planner 2.0, Coder 4.0, Tester 2.5, Reviewer-architecture 2.0, Reviewer-behavior 3.0, Reviewer-data 3.0, Reviewer-tests 3.0
+- **Subagent Turn Velocity & Thrashing:** 2.7 avg turns/run (peak: 5 turns) | Planner 2.0, Coder 4.0, Tester 2.0, Reviewer-architecture 2.0, Reviewer-behavior 3.0, Reviewer-data 3.0, Reviewer-tests 3.0
 - **Test-to-Production Code Ratio:** 1.7:1 (+4,194 test lines / +2,527 prod lines)
 - **Code Delivered:** +6,721 / -67 lines across 40 code files (excluding docs)
-- **Reasoning Effort:** 424,161 reasoning tokens (24.5% of generated output)
-- **Tool Health & Self-Correction:** 1,402 tool calls (14 self-corrections, 99.0% success rate)
+- **Reasoning Effort:** 431,379 reasoning tokens (24.5% of generated output)
+- **Tool Health & Self-Correction:** 1,445 tool calls (14 self-corrections, 99.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 19 execution anomalies detected (6 CRITICAL, 13 WARNING).
@@ -98,18 +104,18 @@ Behavior, data integrity, architecture and test effectiveness were each reviewed
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 182 | 87,438 | 17,109,915 | 100.0% | 314.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **coder** | 2 | 488 | 246,687 | 60,336,661 | 100.0% | 477.7k | BLOATED (106%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **tester** | 2 | 538 | 295,163 | 63,342,820 | 100.0% | 499.6k | BLOATED (111%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Unknown** | 1 | 398 | 129,547 | 28,915,904 | 100.0% | 342.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 3 | 576 | 309,118 | 64,720,242 | 100.0% | 499.6k | BLOATED (111%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **Unknown** | 1 | 452 | 142,059 | 31,692,355 | 100.0% | 342.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 2 | 198 | 70,273 | 11,954,527 | 100.0% | 223.6k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-behavior** | 2 | 432 | 160,455 | 38,777,337 | 100.0% | 322.8k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-data** | 2 | 278 | 148,506 | 23,625,541 | 100.0% | 309.7k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-tests** | 2 | 320 | 166,603 | 34,920,087 | 100.0% | 379.0k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Total** | **14** | **2,834** | **1,304,672** | **278,982,792** | **100.0%** | **499.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **Total** | **15** | **2,926** | **1,331,139** | **283,136,665** | **100.0%** | **499.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **claude-opus-5-5** | 10 | 2,130 | 983,632 | 211,946,878 | 100.0% | Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations) |
+| **claude-opus-5-5** | 11 | 2,222 | 1,010,099 | 216,100,751 | 100.0% | Unavailable (0 observed, 0 partial, 11 unavailable / 11 invocations) |
 | **claude-sonnet-5-5** | 4 | 704 | 321,040 | 67,035,914 | 100.0% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **14** | **2,834** | **1,304,672** | **278,982,792** | **100.0%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **Total** | **15** | **2,926** | **1,331,139** | **283,136,665** | **100.0%** | **Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations)** |
 <!-- agentic-lens:metrics:end -->

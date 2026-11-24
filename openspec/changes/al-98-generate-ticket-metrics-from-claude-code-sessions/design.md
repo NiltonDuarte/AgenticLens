@@ -120,3 +120,9 @@ Review coverage:
 - **Backfill adoption:** Adding an unrecorded proven root matches Codex, but the root must pass the project check and every added owner is named.
 - **Accepted debt:** `recoverClaude` mirrors `recoverCodex`, and the discovery budget type and completeness rule are duplicated per harness. AL-94 rewrites the Codex recovery path. At `03f50ca2` a trial merge with AL-94 conflicts in `engine.go`, `recovery.go`, `report.go` and `source_budget.go`; AL-78 merges cleanly. Whichever ticket merges second must port `recoverClaude` to AL-94's recovery structure, add Claude Code to AL-94's per-harness coverage, and fold the Claude replacement notices into AL-94's per-owner coverage report instead of keeping a second reporting channel. Resolving the conflicts so that the code compiles is not enough.
 
+### CI flake in capture test fixtures
+
+- **Source:** The user asked on 2026-11-24 to fix on this PR a CI failure on `f5ad3cf3`. In `TestCaptureLiveDisableStopsWritesAndManualRecoverySurvives/yaml`, the capture worker exited with "local configuration ... must be a mapping".
+- **Cause:** Test helpers rewrote `.agenticlens-config.local.yaml` in place while a live or detached capture worker re-read it, so the worker could read an empty or partial file. The race predates this ticket; no product code is involved.
+- **Change:** Capture test fixtures that rewrite the local configuration while a worker can be running now write a complete sibling file and rename it over the target. Fixtures that create the file before any worker runs, or run with capture disabled, are unchanged. No assertions or test semantics change.
+- **Verification impact:** Test files only. The affected capture tests pass repeatedly under the race detector, and the `cmd/agentic-lens` package passes in full.
