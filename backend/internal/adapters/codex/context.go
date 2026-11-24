@@ -87,10 +87,25 @@ func readSessionContext(path string, limit int64, budget *DiscoveryBudget) (resu
 	if err != nil {
 		return result, err
 	}
-	if metadata.ID == "" || metadata.CWD == "" {
-		return result, errors.New("exact native session metadata unavailable")
+	return exactSessionContext(metadata.ID, metadata.ParentID, metadata.CWD, conflictingNativeParent(metadata))
+}
+
+// exactSessionContext applies the exact-owner metadata rules shared by every
+// capture header reader: an identity and working directory are required, and
+// both ancestry spellings must agree.
+func exactSessionContext(id, parentID, workingDirectory string, conflictingParent bool) (SessionMetadataContext, error) {
+	if id == "" || workingDirectory == "" {
+		return SessionMetadataContext{}, errors.New("exact native session metadata unavailable")
 	}
-	// Both authoritative ancestry spellings must agree when both are present.
+	if conflictingParent {
+		return SessionMetadataContext{}, fmt.Errorf("%w: conflicting native parent metadata", ErrSessionContextMismatch)
+	}
+	return SessionMetadataContext{ID: id, ParentID: parentID, WorkingDirectory: workingDirectory}, nil
+}
+
+// conflictingNativeParent reports a session_meta whose direct parent and
+// subagent thread_spawn parent are both present and differ.
+func conflictingNativeParent(metadata sessionMetadata) bool {
 	var nested struct {
 		Subagent struct {
 			ThreadSpawn struct {
@@ -98,10 +113,7 @@ func readSessionContext(path string, limit int64, budget *DiscoveryBudget) (resu
 			} `json:"thread_spawn"`
 		} `json:"subagent"`
 	}
-	if err := json.Unmarshal(metadata.Source, &nested); err == nil && nested.Subagent.ThreadSpawn.ParentID != "" && metadata.ParentID != "" && nested.Subagent.ThreadSpawn.ParentID != metadata.ParentID {
-		return result, fmt.Errorf("%w: conflicting native parent metadata", ErrSessionContextMismatch)
-	}
-	return SessionMetadataContext{ID: metadata.ID, ParentID: metadata.ParentID, WorkingDirectory: metadata.CWD}, nil
+	return json.Unmarshal(metadata.Source, &nested) == nil && nested.Subagent.ThreadSpawn.ParentID != "" && metadata.ParentID != "" && nested.Subagent.ThreadSpawn.ParentID != metadata.ParentID
 }
 
 // SessionContext requires exact source identity for ordinary root/parent reads.

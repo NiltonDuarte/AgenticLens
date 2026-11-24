@@ -194,13 +194,10 @@ type RolloutHeader struct {
 // session_meta with an identity and working directory, and both ancestry
 // spellings agree.
 func (header RolloutHeader) SessionContext() (SessionMetadataContext, error) {
-	if !header.First || header.ID == "" || header.WorkingDirectory == "" {
+	if !header.First {
 		return SessionMetadataContext{}, errors.New("exact native session metadata unavailable")
 	}
-	if header.ConflictingParent {
-		return SessionMetadataContext{}, fmt.Errorf("%w: conflicting native parent metadata", ErrSessionContextMismatch)
-	}
-	return SessionMetadataContext{ID: header.ID, ParentID: header.ParentID, WorkingDirectory: header.WorkingDirectory}, nil
+	return exactSessionContext(header.ID, header.ParentID, header.WorkingDirectory, header.ConflictingParent)
 }
 
 // HeaderRead reports one header lookup. Bytes is what this call read from the
@@ -241,8 +238,9 @@ var errHeaderBound = errors.New("native session metadata exceeds its structural 
 
 // ReadHeader returns the rollout's header, charging the bytes actually read to
 // budget's byte allowance, never more than the 64 KiB structural bound. A read
-// starts only when the smaller of the file size and that bound fits in the
-// remaining allowance; otherwise it reads nothing and returns
+// starts only when the smaller of the file size and that bound, or the whole
+// bound for a compressed rollout, fits in the remaining allowance; otherwise
+// it reads nothing and returns
 // ErrDiscoveryBudget, which is not cached. It does not claim a session slot.
 func (cache *HeaderCache) ReadHeader(ctx context.Context, path string, budget *DiscoveryBudget) (HeaderRead, error) {
 	if err := ctx.Err(); err != nil {
@@ -259,7 +257,13 @@ func (cache *HeaderCache) ReadHeader(ctx context.Context, path string, budget *D
 	}
 	// Start a read only when its structural bound fits, so a header is never
 	// abandoned part way through. The charge is still the bytes actually read.
-	if budget != nil && budget.MaxSourceBytes-budget.SourceBytesRead < min(key.size, maxSessionMetadataBytes) {
+	need := min(key.size, maxSessionMetadataBytes)
+	if strings.HasSuffix(path, ".gz") {
+		// Charges count decompressed bytes, which the compressed size does
+		// not bound, so admission needs the whole structural bound.
+		need = maxSessionMetadataBytes
+	}
+	if budget != nil && budget.MaxSourceBytes-budget.SourceBytesRead < need {
 		return HeaderRead{}, ErrDiscoveryBudget
 	}
 	header, consumed, err := readRolloutHeader(ctx, path, budget)
@@ -351,16 +355,7 @@ func headerFromMetadata(metadata sessionMetadata, first bool) RolloutHeader {
 	if created, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(metadata.Timestamp)); err == nil {
 		header.CreatedAt = created.UTC()
 	}
-	var nested struct {
-		Subagent struct {
-			ThreadSpawn struct {
-				ParentID string `json:"parent_thread_id"`
-			} `json:"thread_spawn"`
-		} `json:"subagent"`
-	}
-	if err := json.Unmarshal(metadata.Source, &nested); err == nil && nested.Subagent.ThreadSpawn.ParentID != "" && metadata.ParentID != "" && nested.Subagent.ThreadSpawn.ParentID != metadata.ParentID {
-		header.ConflictingParent = true
-	}
+	header.ConflictingParent = conflictingNativeParent(metadata)
 	return header
 }
 

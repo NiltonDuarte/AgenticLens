@@ -72,6 +72,13 @@ type LargeStoreSpec struct {
 	ChildBytes       int64
 	// ChildDelays are the children's creation offsets after the root.
 	ChildDelays []time.Duration
+	// LaterUnrelated rollouts of other sessions are created after the root,
+	// spread evenly over LaterSpan, so they fall inside a child sweep's window.
+	LaterUnrelated int
+	LaterSpan      time.Duration
+	// WindowIrregular adds a name without a UUID and a non-v7 name to the
+	// root's own day directory, which a child sweep always lists.
+	WindowIrregular bool
 }
 
 // File describes one generated rollout.
@@ -84,6 +91,8 @@ type File struct {
 	Archived    bool
 	Family      bool
 	Compressed  bool
+	// Later marks an unrelated rollout created after the root.
+	Later bool
 	// Conventional is true when the name matches the rollout naming
 	// convention with a version 7 UUID equal to the session_meta ID.
 	Conventional bool
@@ -111,6 +120,9 @@ const (
 	NoteMismatch   = "name UUID differs from metadata"
 	NoteGzip       = "gzip-compressed"
 	NoteDuplicate  = "same-UUID copy"
+	// NoteWindowNoUUID and NoteWindowNonV7 sit in the root's day directory.
+	NoteWindowNoUUID = "window name without UUID"
+	NoteWindowNonV7  = "window non-v7 UUID"
 )
 
 // IncidentScaleSpec reproduces the AL-71 store: at divisor 1, about 1,900
@@ -224,6 +236,23 @@ func WriteLargeStore(t testing.TB, spec LargeStoreSpec) LargeStore {
 		store.Files = append(store.Files, writeFamilyRollout(t, spec, file, c.created, source, spec.ChildBytes, nil))
 		store.ChildIDs = append(store.ChildIDs, c.id)
 		store.ChildPaths = append(store.ChildPaths, file.Path)
+	}
+	// Optional later and in-window rollouts draw from the generator only after
+	// the family, so they leave every other identity unchanged.
+	for i := 0; i < spec.LaterUnrelated; i++ {
+		created := rootCreated.Add(spec.LaterSpan * time.Duration(i+1) / time.Duration(spec.LaterUnrelated+1)).Truncate(time.Millisecond)
+		id := UUID(created, 7, rnd)
+		size := spec.MinUnrelated + rnd.Int64N(spec.MaxUnrelated-spec.MinUnrelated+1)
+		file := File{Path: ConventionalPath(home, created, id, false), SessionID: id, Conventional: true, Later: true}
+		store.Files = append(store.Files, writeUnrelatedRollout(t, spec, file, created, size, !spec.SparseUnrelated))
+	}
+	if spec.WindowIrregular {
+		local := rootCreated.In(spec.Location)
+		noUUID := local.Add(3 * time.Minute)
+		irregular(noUUID.Format("sessions/2006/01/02/rollout-2006-01-02T15-04-05")+".jsonl", noUUID, UUID(noUUID, 7, rnd), NoteWindowNoUUID, false)
+		nonV7At := local.Add(4 * time.Minute)
+		windowNonV7 := UUID(nonV7At, 4, rnd)
+		irregular(RolloutRelative(nonV7At, windowNonV7, false), nonV7At, windowNonV7, NoteWindowNonV7, false)
 	}
 	sort.Slice(store.Files, func(i, j int) bool { return store.Files[i].Path < store.Files[j].Path })
 	return store

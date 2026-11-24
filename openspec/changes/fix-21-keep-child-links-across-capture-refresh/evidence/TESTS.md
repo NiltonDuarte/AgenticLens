@@ -117,22 +117,20 @@ The baseline section above is the historical "before". Its generator and measure
 
 ## Candidate verification
 
-**Result.** Every acceptance case passes on the current candidate, with and without `-race`, and no data race is reported.
-- **D1 is resolved.** The domain rule is now idempotent after a sibling release.
-- **Deferred owners.** An owner deferred only by the identification reservation is now retried before owners discovered later in the same pass. A new regression test covers this.
-- **Incident scale.** The whole family is extracted in pass 1 for 50,802,494 bytes, which is 9.5 % of 512 MiB, and pass 2 links 9 of 9 children. In the baseline, every pass spent the full 512 MiB and the root settled at 3 of 9 links.
+**Result.** Every acceptance case, every review round 1 regression and the approved ordinal group retention pass on the current candidate. No data race is reported. The review findings are in [REVIEW.md](REVIEW.md), and the ordinal rule is the design's Steering entry "Ordinal group retention".
+- **Mutations.** Each confirmed product fix and each test gap has a test that fails when its fix is removed in a scratch copy.
+- **No new product defect.**
+- **Incident scale.** The fixture now also holds unrelated sessions after the root. The whole family is extracted in pass 1 for 51,064,638 bytes, which is 9.5 % of 512 MiB, and pass 2 links 9 of 9 children. In the baseline, every pass spent the full 512 MiB and the root settled at 3 of 9 links.
 
 ### Revision and working tree
 
-- **Tested revision:** `030bf0ec` plus the uncommitted candidate diff, including the coder's two follow-up changes:
-  - the two-phase `reconcileOwnerChildLinks` in `domain/child_links.go`;
-  - the `workBudget.deferred` set, which sorts deferred owners first in the final leftover refresh, in `capture/children.go` and `reconcile.go`.
-- **Product files untouched.** The tester did not edit the eleven product files. Their SHA-256 hashes, taken before the final runs, matched after the runs and after every scratch mutation.
+- **Tested revision:** commit `0f73f759`, plus the coder's uncommitted round 1 fixes, the ordinal group retention in `domain/child_links.go`, and the tester's uncommitted tests. Since round 1, only `domain/child_links.go` changed among the product files.
+  - **Coder's fixes:** `domain/child_links.go`, `capture/reconcile.go`, `children.go` and `archive_projection.go`, `codex/context.go`, `discovery.go` and `discovery_budget.go`, `cmd/agentic-lens/capture.go` and `main.go`.
+  - **Product files untouched.** The tester did not edit the product files. Their SHA-256 hashes, taken before the mutations and the final runs, matched afterwards.
 - **Tester files:**
-  - New: `domain/child_links_test.go`, `capture/reconcile_child_links_test.go`, `codex/discovery_window_test.go`, `cmd/agentic-lens/capture_child_links_test.go` and `cmd/agentic-lens/capture_corrections_isolation_test.go`.
-  - Rewritten: `capture/reconcile_large_store_test.go`.
-  - Extended: `capture/reconcile_archived_rollout_test.go`, `capture/reconcile_nested_codex_test.go` and `capture/reconcile_test.go`.
-  - Moved: the generator is now the stdlib-only, test-support package `internal/adapters/codex/codexstoretest`, with its own self-test. `capture/large_codex_store_fixture_test.go` was removed.
+  - New: `capture/retain_child_links_test.go`, `capture/children_sweep_internal_test.go` and `codex/codexstoretest/import_guard_test.go`.
+  - Extended: `domain/child_links_test.go`, `capture/reconcile_child_links_test.go`, `capture/reconcile_archived_rollout_test.go`, `capture/reconcile_large_store_test.go`, `codex/discovery_window_test.go`, `codex/codexstoretest/store.go` and `store_test.go`, `cmd/agentic-lens/capture_child_links_test.go` and `capture_corrections_isolation_test.go`.
+  - `tasks.md` gains a DATA-02 tester task line and an ordinal-retention tester task line.
 - **Toolchain:** Go 1.26.0, linux/amd64 (WSL2). All fixtures are under `t.TempDir()`.
 
 ### Commands
@@ -141,67 +139,94 @@ All commands run from `backend/`.
 
 | Command | Result | Time |
 |---|---|---|
-| `go test -count=1 ./internal/domain/ ./internal/adapters/codex/ ./internal/adapters/codex/codexstoretest/` | PASS | 2 s |
-| `go test -count=1 -timeout 30m ./internal/adapters/capture/` | PASS | 117 s (83 s before the new tests) |
-| `go test -count=1 -timeout 40m ./cmd/agentic-lens` | PASS | 387 s (316 s before the new tests) |
-| `go test -race -count=1 -timeout 40m ./internal/domain/ ./internal/adapters/codex/ ./internal/adapters/capture/` | PASS, no data race. capture 410 s (baseline 379 s) | 426 s |
-| `go test -count=1 -run TestLargeStore -v ./internal/adapters/capture/ -fix21.large-store-divisor=1` | PASS | 13 s (baseline 53 s) |
-| `go list -deps` over `./...` | No production package depends on `codexstoretest`. Its imports are stdlib only. | |
+| `go test -count=1 ./internal/domain/` | PASS | under 1 s |
+| `go test -count=1 -timeout 30m ./internal/adapters/capture/` | PASS | 104 s |
+| `go test -count=1 -timeout 40m ./cmd/agentic-lens` | PASS | 365 s |
+| `go test -race -count=1 ./internal/domain/` | PASS, no data race | 8 s |
+
+The following round 1 runs are reused, because their packages' product code is unchanged since then: codex and codexstoretest (PASS), `-race` on codex and capture (PASS, capture 417 s), and the large-store test at divisor 1 (PASS: pass 1 is 51,064,638 bytes, 9.5 % of 512 MiB, and pass 2 links 9 of 9). Capture under `-race` was not rerun after the domain change. The domain package itself passes under `-race`.
+
+### Review round 1: finding to test
+
+| Finding | Test | What it asserts |
+|---|---|---|
+| DATA-01 | `TestReconcileInterruptedAnnotationKeepsRegistryLinks` | A registry trigger aborts the parent's first write after its refreshed snapshot commits, which is the family annotation, the same seam the archived checkpoint tests use. The registry keeps all 4 links. The follow-up partial pass keeps them and reports 2 unresolved. |
+| BEH-01 | `TestResumedSweepAtTheCeilingKeepsItsFileCursor`, `TestBrandNewSweepAdmittingNothingWritesNoCursor` | Two parents under one ticket. The second parent, with a real file cursor, finds identification below its next candidate's 64 KiB start bound, so its cursor, hints and discoveries are unchanged and discovery is pending. Later `ReconcileAt` passes find all 8 children. A brand-new sweep that admits nothing writes no cursor row and is found later. |
+| DATA-02 | `TestRetainAcceptedChildLinksReportsRefusedLinks` (domain), `TestRetainAcceptedChildLinksCountsRefusedLinksOnceBesideFreshLinks` (capture API), CLI case "ambiguous accepted provenance" | Typed reasons, and no link is moved. The count is exact, the child also queued as a start is counted once, and the attempt is partial. stderr reports "could not place 2 accepted link(s)". |
+| BEH-02/ARCH-03 | `TestRetainAcceptedChildLinksReportsRegistryContention` | A held `BEGIN IMMEDIATE` surfaces as registry contention, and nothing is recorded. After release, a new request records the partial diagnostic with 4 unresolved children. |
+| ARCH-04 | `TestHeaderCacheAdmitsCompressedHeaderOnlyWithTheWholeBound` | A `.gz` header that fits its compressed size but not its decompressed header reads nothing below 64 KiB. With the whole bound, it is charged exactly the decompressed bytes. |
+| DATA-03 | CLI case "queued path of an unregistered child" | The queued path and the kept link of the same child count once: 4 unresolved, not 5. |
+| DATA-04 | `TestRetainAcceptedChildLinksPrefersKnownChildEvidence` (domain), `TestRetainAcceptedChildLinksUsesRegistrySessionsAsChildEvidence` (capture API) | Registry proof replaces, or contradicts, the older ledger link. Agreement changes nothing, and a fresh read still wins. |
+| TEST-01 | `TestReconcileArchivedRegroupKeepsAcceptedChildLink` | An archived child is superseded after the annotation. The regrouped parent keeps its accepted link in the refreshed and published owners, counted once, and its spawn event carries no child. |
+| TEST-02 | CLI case "some children read with the parent on the second run" | Exact counts: run 1 keeps 4 (4 unresolved). Run 2 resolves children 1 and 2 freshly and keeps 3 and 4. Child 3's hint and kept link count once: 2 unresolved, not 3. |
+| TEST-03 | `TestChildSweepWindowFromNonV7ParentTimestamp` | A UUIDv4 parent's `session_meta` timestamp sets the window. The children and a later rollout are read, earlier rollouts cost nothing, and the byte total is exact. |
+| TEST-04 | `TestRetainAcceptedChildLinksRewritesRestoredSessions` | A restored parent regains C1. C2, which the same request refreshed with another parent, stays cleared. |
+| TEST-05 | `TestLargeStoreFamilyWithinCaptureBudget` with 6 later unrelated rollouts and two irregular names in the root's day directory | The sweep and pass byte oracles include them exactly. The exact lookup still reads only unconventional and same-UUID names. |
+| TEST-06 | `TestRetainAcceptedChildLinksIsIdempotentAfterSiblingRelease`; `TestNoProductionPackageImportsCodexStoreTest`; `TestCaptureWorkerIsolatesUnrecoverableUnassignedRollout`; `TestManualGenerateLeavesLinkToMissingChildEmpty`; CLI case "contradicting child read on machine B" | Exact `[C1 C2]` with its outcomes. A `go list`-based import guard. The worker is judged by its outcome, under a harness allowance of 3 times its lifetime, with no wall-clock bound. Manual generation leaves a missing child's link empty. `--capture-auto` clears a contradicted link. |
+
+| Ordinal group retention | `TestRetainAcceptedChildLinks` (3 renamed cases), `TestRetainAcceptedChildLinksReportsRefusedLinks` (4 renamed and 4 new cases), `TestRetainAcceptedChildLinksOrdinalGroups`, `TestReconcileAmbiguousGroupLinksSurviveRepeatedPartialPasses` | Accepted link i is carried to fresh delegation i, and appended delegations stay empty. A group with one fresh link set, or a smaller fresh group, is refused and reported, including with unknown invoked_at. A contradicted child is skipped, not refused. A child held by another final delegation is refused as held by a sibling. The rule is idempotent and invents no link. Repeated passes, each taking the previous published output as the accepted ledger, keep the links and report them every time. In capture, two consecutive partial passes keep both links of an ambiguous group in the registry and the published owners, with 2 unresolved each pass. This removes the earlier "reported once, then lost" limit. |
+
+All CLI cases now assert exact per-run counts (kept, refused, unresolved) and ledger byte identity on the repeat. The CLI ambiguous case is unchanged by the ordinal rule, because its fresh group is smaller than the accepted group, which is still a refusal.
 
 ### Accounting oracles
 
-A header read costs `min(size, ceil(header line / 4 KiB) × 4 KiB, 64 KiB)`. That is 32,768 bytes for the fixture's 29,696-byte header. Each header is read at most once per pass. Extraction costs the file size.
+A header read costs `min(size, ceil(header line / 4 KiB) × 4 KiB, 64 KiB)`, and decompressed bytes for `.gz`. Each header is read at most once per pass. Extraction costs the file size.
 
-- **Large store, pass 1:** family bytes, plus each family header once, plus the three unconventional names once. The non-date file swept later is already cached. Attempts: 10.
-- **Large store, pass 2:** the same total, and the root links 9 of 9 children. The same holds at `max_sessions: 256`. In the baseline, a lookup failed at listing at that budget.
-- **Child sweep:** charges only the family headers and the non-date file. It uses 0 session slots and 0 attempts. Baseline: 121,453,353 bytes and 1,906 slots.
-- **Capture exact lookup:** claims and reads only same-UUID and unconventional names. Duplicate copies stay ambiguous. Live lookup is unchanged and still claims every rollout.
-- **Reserved quarter:**
-  - **Extraction ahead of discovery:** the replay runs the refresh class before the sweep. Extraction stays at three quarters or less, with the quarter untouched. Deferred owners are not attempted, and their slots are refunded. The hinted child is then discovered from the quarter. The pass total is exact.
-  - **Unused share:** with one session, the root alone needs more than three quarters. It is read in one attempt, with the exact need.
-  - **Ceiling:** identification starts exactly 4 child headers under the 64 KiB start rule. The root is extracted, and discovery is pending, not failed. The next pass continues.
-- **Deferred owner first** (`TestLargeStoreDeferredOwnerPrecedesLaterDiscoveryInFinalRefresh`):
-  - **Setup:** one session. The root needs more than three quarters, and one child is discovered from the quarter in the same pass.
-  - **Assertions:** the root takes the refunded slot in the final refresh. Attempts: 1. Bytes equal the root's need plus the child's header exactly. The child stays registered but unread.
-  - **Key order:** the store is relocated to directory names that make the child's registry key sort after the root's in one case, and before it in the other. The outcome is asserted for both orders.
-- **CET and CEST across local midnight:** every child is found. Unconventional names inside pruned old day directories cost nothing, which proves those directories are not listed.
+- **Large store, pass 1:** family bytes, plus each family header once, plus the unconventional names once, plus the later and in-window non-v7 rollouts that only the sweep reads. Attempts: 10.
+- **Large store, pass 2:** family bytes, family headers and unconventional names, and the root links 9 of 9 children. The same holds at `max_sessions: 256`.
+- **Child sweep:** charges the family headers and the in-window rollouts only. It uses 0 session slots and 0 attempts. Baseline: 121,453,353 bytes and 1,906 slots.
+- **Reserved quarter, deferral and deferred-first ordering:** as in the first round. These are unchanged, and the tests still pass.
 
 ### Rationale for changed existing tests
 
-- **`TestReconcileCodexRecoversNestedSpawnWithoutChildCallbacks`:** its UUIDv7 IDs (`019c0000-0000-7…`) encode 2026-01-27T15:00:18.048Z, but the files were in `sessions/2026/01/01`. The 14-hour directory rule correctly pruned that directory. The directory, file names and record times now match the encoded instant, as Codex writes them. The test's intent and assertions are unchanged.
-- **`TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities`:** `SourceBytes == allowance` held only because the work equalled the cap. The oracle is now derived from the new rules: every candidate header read once, at whole-file cost because each file is under 4 KiB, plus the bound owner's extraction. It is asserted at a tight allowance, which goes through deferral and the final refresh, and at double that allowance. The original assertions are kept.
-- **Reviewed and unchanged:**
-  - `TestReconcileChargesDiscoveryAndExtractionOnce…` and the failed-read accounting test in `reconcile_test.go`: their exact-fit allowances still discriminate. Any extra charge would starve the extraction they assert.
-  - `fix19_budget_test.go`: its oversized first record is still read in full by the exact lookup's historical tolerance.
-  - `fix19_candidate_budget_internal_test.go` and `codex/discovery_budget_test.go`: they cover manual or live discovery, or have no split.
-  - `codex/discovery_test.go`: manual discovery passes unchanged.
+- **`TestReconcileCodexRecoversNestedSpawnWithoutChildCallbacks`:** the files' dates now match their UUIDv7 instants. The test's intent and assertions are unchanged.
+- **`TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities`:** the oracle is now derived from the new rules, at a tight and a double allowance. The original assertions are kept.
+- **CLI cross-machine test:** `PendingChildren >= 2` became exact per-run counts (TEST-02), and five cases now cover the review findings.
+- **Worker isolation test:** the 8 s wall-clock bound was replaced by the outcome under a 30 s harness allowance (TEST-06).
+- **Large-store fixture:** it gains opt-in later and in-window rollouts. Existing identities are unchanged, because the new files are drawn after the family.
+- **Domain oracles changed by the ordinal rule (design Steering "Ordinal group retention").** They are renamed to their new meaning:
+  - "duplicate provenance is carried by position", "a larger fresh group is carried by position" and "unknown invocation time is carried by position" were refusals. They are now carries, with the `retained_by_position` outcome.
+  - In the refusal test, the three corresponding cases now assert no refusal and the carried links as unresolved.
+  - "contradicted child in an ordinal group is skipped, not refused" now carries the uncontradicted sibling.
+  - The refusal branch keeps its own cases: a fresh link set in the group, a smaller fresh group (timed and untimed), and a child held by another final delegation.
+  - The second-application check in the refusal test now compares facts only. After an ordinal carry, the rule's own output is a partly linked group, which is refused as a whole with nothing left to report. The design's idempotence is about facts, so the links are unchanged.
 
 ### Mutation checks
 
-Each mutation was applied in a scratch copy of `backend/`, never in the checkout.
+Each mutation was applied in a fresh scratch copy of `backend/`, never in the checkout.
 
 | Mutation | Detected by |
 |---|---|
-| M1: carry-forward removed. In the current two-phase rule, the accepted child is no longer assigned in the fixpoint. | 6 domain table cases. Capture partial refresh: registry links lose children 3 and 4. |
-| M2: the `retainCaptureChildLinks` call in `main.go` disabled | Both CLI cases: published links all empty. |
-| M3: `SkipsFile` and `SkipsDirectory` return false | Large-store sweep, pass, allowance and local-midnight tests, plus the codex window tests. |
-| M4: the worker's isolated-row exclusion removed | Worker case: killed at 8 s, never idle. |
-| M5: the deferred slot refund removed (`sessions++`, `attempts--`) | Allowance replay, the one-session unused-share case and the tight unassigned-roots case. |
-| M6: the deferred-first sort in `refreshTicketOwners` removed | The deferred-owner test, under both key orders: the root stays pending with "Not refreshed within this pass" while the later child takes the slot. |
-
-M1 to M5 were run on the first candidate. M1 was repeated against the current domain rule.
+| M1 to M6 (first rounds: carry-forward, CLI call, window pre-filter, worker isolation exclusion, slot refund, deferred-first sort) | As recorded earlier. M1 was repeated against the current rule. |
+| M7: per-owner retention removed (DATA-01) | Interrupted-annotation test: registry links `["" "" "" ""]`. |
+| M8c: both sweep fixes reverted, back to candidate `0f73f759` behaviour (BEH-01) | Both sweep tests: cursor moved to `""` (closed), and an empty sweep wrote `""`. |
+| M8a: only `last := cursor` reverted | Not detected. It is an equivalent mutant: the new "admitted nothing, write no row" branch alone keeps the saved row. |
+| M8b: only the no-row branch removed | Brand-new sweep test. |
+| M9: refusals not reported | The domain, capture API and CLI ambiguous cases. |
+| M10: contention type lost (`errors.New(err.Error())`) | The contention test. |
+| M11: `.gz` admitted by compressed size | The gzip test: 49,151 bytes read, then abandoned. |
+| M12: name-based dedup removed (DATA-03) | CLI queued-path case: 5 unresolved instead of 4. |
+| M13: `Known` dropped from `capture.RetainAcceptedChildLinks` | The registry-evidence API test: the older ledger link wins. |
+| M14: regroup retention removed (TEST-01) | The regroup test: an empty link after the regroup. |
+| M15: parent timestamp shifted by +48 h (TEST-03) | The non-v7 window test: 312 bytes charged against 2,476, children pruned. |
+| M16: the restored rewrite removed (TEST-04) | The restored-sessions test. |
+| M17: non-v7 names pruned by their UUID bits (TEST-05) | Large-store sweep and pass-1 oracles: 32,768 bytes short. |
+| M18: a production import of `codexstoretest` (TEST-06) | The import guard lists every dependent production package. |
+| M19: the ordinal branch disabled, so every non-unique group is refused | 11 domain subcases. The capture two-pass test: published group links `["" ""]` on pass 1. |
 
 ### Defects
 
-- **D1, resolved.** The two-phase `reconcileOwnerChildLinks` fixed it.
-  - **Trigger:** accepted delegations D1→C1 and D2→C2. The fresh read leaves D1 empty, and links D2 to C1 without confirmation.
-  - **Before the fix:** the result alternated, `["" C2]` and then `[C1 C2]`.
-  - **Now:** `TestRetainAcceptedChildLinksIsIdempotentAfterSiblingRelease` passes, and every domain table case passes its second-application check.
-- **No open defects.**
+- **D1 is resolved** (first round).
+- **Round 1 product findings DATA-01 to DATA-04, BEH-01, BEH-02, ARCH-03 and ARCH-04:** fixed by the coder and protected by the tests above.
+- **No open product defect.**
 
 ### Limits
 
-- **Contradiction warning.** For a task-name-only result, the codex adapter raises no warning, because the child no longer matches the parent's key. For an explicit `session_id` result, the warning is raised but capture does not surface it: `CompleteSessionIDs` comes from the transcripts. The tests assert that the link is cleared, not the warning.
-- **Cache re-read on change** is proven at the `HeaderCache` level, for both a size change and an mtime-only change. A file changing in the middle of a capture pass has no deterministic capture-level trigger.
-- **Rotation cursor.** A deferred owner still advances the persisted rotation cursor, by design. Holding the cursor broke `TestFIX19CodexDiscoveryCannotPermanentlyStarveFittingOpenCodeOwner`. Within the pass, deferred-first ordering compensates. Across passes, ordering follows the existing rotation.
-- **Spec tension, for the planner.** The exact lookup skips a conventional name carrying another UUID, including a non-v7 UUID or a name whose metadata names a different session. The directory rule also skips unconventional names inside pruned old directories. Both are tested as implemented. They conflict with the literal "never skipped" wording of "File names never establish identity".
+- **BEH-02, end to end.** The busy exit code is asserted at the capture API boundary only. A lock that contends with the retention write also contends with the reconciliation that precedes it, and the product has no seam between them. The CLI maps contention to `capturePublicationBusyExit` in one branch, verified by reading.
+- **DATA-01 trigger.** The test interrupts the pass at the annotation write with a registry trigger, not with a cancelled context. A counting context, as the review probe used, depends on how many context checks the code makes, so it is not stable.
+- **Held by sibling counts even when the child stays linked.** A child confirmed on another delegation of the same parent is still counted once as unresolved, which is the documented "not linked from the delegation they had" rule. It over-reports for one pass.
+- **Refused links are reported once.** This now applies only to the refusal branch: a fresh link set in the group, or a smaller fresh group. A refused link is never moved, so the publication of that pass holds the fresh delegations, and later passes no longer see it. The ambiguous CLI case asserts this. Groups that the ordinal rule can align keep their links across passes.
+- **Small `max_source_bytes` (accepted limit).** With an identification quarter under 64 KiB, an in-window rollout larger than the quarter, and not cached by another consumer, can stop a sweep at its cursor indefinitely. It shows as pending. A 12 KiB probe stayed at 10 of 18 owners for 80 passes. The BEH-01 tests therefore keep the quarter above the largest in-window rollout.
+- **Shared dedup state.** A copied `ReconcileResult` shares its counted-links map, so a retention call on a copy affects the original's deduplication. Tests use a separate request for each call.
+- **Contradiction warning.** It is still not surfaced by capture (accepted, pre-existing).
+- **Spec tension.** The exact-UUID and directory pre-filters versus the literal "never skipped" wording are unchanged from the first round.

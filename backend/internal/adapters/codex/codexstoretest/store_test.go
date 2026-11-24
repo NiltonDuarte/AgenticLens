@@ -12,6 +12,7 @@ import (
 // window oracles, so a generator regression must fail here first.
 func TestWriteLargeStoreInvariants(t *testing.T) {
 	spec := IncidentScaleSpec("/fixture/project", 16)
+	spec.LaterUnrelated, spec.LaterSpan, spec.WindowIrregular = 4, 90*time.Minute, true
 	store := WriteLargeStore(t, spec)
 	rootMillis := UUIDv7Millis(t, store.RootID)
 	if rootMillis != spec.RootCreated.UnixMilli() {
@@ -37,7 +38,10 @@ func TestWriteLargeStoreInvariants(t *testing.T) {
 		}
 		millis := UUIDv7Millis(t, file.SessionID)
 		child := file.Family && file.SessionID != store.RootID
-		if (child && millis <= rootMillis) || (!file.Family && millis >= rootMillis) {
+		if (child && millis <= rootMillis) || (!file.Family && !file.Later && millis >= rootMillis) {
+			t.Fatalf("%s instant %d is on the wrong side of the root instant %d", file.Path, millis, rootMillis)
+		}
+		if file.Later && (millis <= rootMillis || millis > rootMillis+spec.LaterSpan.Milliseconds()) {
 			t.Fatalf("%s instant %d is on the wrong side of the root instant %d", file.Path, millis, rootMillis)
 		}
 		if !file.Archived {
@@ -47,10 +51,19 @@ func TestWriteLargeStoreInvariants(t *testing.T) {
 			}
 		}
 	}
-	for _, note := range []string{NoteNoUUID, NoteCustomName, NoteNonDateDir, NoteNonV7, NoteMismatch, NoteGzip, NoteDuplicate} {
+	for _, note := range []string{NoteNoUUID, NoteCustomName, NoteNonDateDir, NoteNonV7, NoteMismatch, NoteGzip, NoteDuplicate, NoteWindowNoUUID, NoteWindowNonV7} {
 		if notes[note] != 1 {
 			t.Fatalf("irregular name %q generated %d times, want once", note, notes[note])
 		}
+	}
+	rootDay := filepath.Dir(store.RootPath)
+	for _, note := range []string{NoteWindowNoUUID, NoteWindowNonV7} {
+		if filepath.Dir(store.Noted(note).Path) != rootDay {
+			t.Fatalf("%s is not in the root's day directory", note)
+		}
+	}
+	if later := store.Count(func(f File) bool { return f.Later }); later != spec.LaterUnrelated {
+		t.Fatalf("generated %d later rollouts, want %d", later, spec.LaterUnrelated)
 	}
 	if len(store.ChildIDs) != len(spec.ChildDelays) || notes["root"] != 1 {
 		t.Fatalf("family has %d children and %d roots", len(store.ChildIDs), notes["root"])

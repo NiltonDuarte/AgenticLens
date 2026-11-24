@@ -649,3 +649,65 @@ func TestReconcileArchivedUnassignedCodexChild(t *testing.T) {
 		})
 	}
 }
+
+// FIX-21 TEST-01: when an archived child is superseded after the family
+// annotation, the family is regrouped without the child's read. The parent's
+// accepted link to that child, which the regrouped read cannot re-prove, is
+// kept on the published owner and counted as unresolved child evidence; the
+// spawn event carries no child.
+func TestReconcileArchivedRegroupKeepsAcceptedChildLink(t *testing.T) {
+	const spawn = `{"timestamp":"2026-01-01T00:00:05Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\"}"}}
+{"timestamp":"2026-01-01T00:00:06Z","type":"response_item","payload":{"type":"function_call_output","call_id":"spawn","output":"{\"agent_id\":\"child\"}"}}
+`
+	s := openStore(t, t.TempDir())
+	home, active, archive := archivedRolloutFixture(t)
+	parentPath := filepath.Join(active, "parent.jsonl")
+	childPath := filepath.Join(active, "child.jsonl")
+	writeParent := func(tokens int) {
+		t.Helper()
+		body := append(writeRollout(t, parentPath, "parent", "", tokens), []byte(spawn)...)
+		if err := os.WriteFile(parentPath, body, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeParent(13)
+	writeRollout(t, childPath, "child", "parent", 17)
+	registerBound(t, s, home, parentPath, "parent", "TEST-100")
+	registerBound(t, s, home, childPath, "child", "TEST-100")
+	prior := reconcileArchiveFixture(t, s, fixtureByteBudget)
+	accepted := archivedFixtureOwner(t, prior, "parent")
+	if len(accepted.Snapshot) != 1 || len(accepted.Snapshot[0].Delegations) != 1 || accepted.Snapshot[0].Delegations[0].ChildSession != "child" {
+		t.Fatalf("fixture did not accept the parent's link to its child: %+v", accepted.Snapshot)
+	}
+
+	writeParent(23)
+	writeRollout(t, childPath, "child", "parent", 29)
+	if err := os.Rename(childPath, filepath.Join(archive, filepath.Base(childPath))); err != nil {
+		t.Fatal(err)
+	}
+	supersedeArchiveCheckpoint(t, s, true)
+	result := reconcileArchiveFixture(t, s, fixtureByteBudget)
+	if child := archivedFixtureOwner(t, result, "child"); child.SourceFingerprint != "newer-checkpoint" || slices.ContainsFunc(result.RefreshedSessions, func(row domain.SessionFact) bool { return row.ID == "child" }) {
+		t.Fatalf("fixture must supersede the archived child after annotation: %+v", child)
+	}
+	for _, view := range []struct {
+		name     string
+		sessions []domain.SessionFact
+	}{{"refreshed", result.RefreshedSessions}, {"published", result.Sessions}} {
+		i := slices.IndexFunc(view.sessions, func(row domain.SessionFact) bool { return row.ID == "parent" })
+		if i < 0 || len(view.sessions[i].Invocations) != 1 || view.sessions[i].Invocations[0].Tokens.Input != 23 {
+			t.Fatalf("%s parent was not refreshed: %+v", view.name, view.sessions)
+		}
+		if delegations := view.sessions[i].Delegations; len(delegations) != 1 || delegations[0].ChildSession != "child" {
+			t.Fatalf("%s parent lost its accepted link after the regroup: %+v", view.name, delegations)
+		}
+	}
+	if result.PendingChildren != 1 {
+		t.Fatalf("unresolved child evidence = %d, want the retained link", result.PendingChildren)
+	}
+	if slices.ContainsFunc(result.SourceEvents.Events, func(event domain.EventFact) bool {
+		return event.SessionID == "parent" && event.CallID == "spawn" && event.ChildSessionID != ""
+	}) {
+		t.Fatal("a retained link reached the regrouped spawn event")
+	}
+}

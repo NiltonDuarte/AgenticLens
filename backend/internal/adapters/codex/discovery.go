@@ -636,6 +636,13 @@ func parseRolloutName(name string) (rolloutName, bool) {
 	return rolloutName{id: id, created: created, v7: v7}, true
 }
 
+// RolloutNameSessionID returns the session ID a conventional rollout file name
+// claims. A name is only a hint: identity always comes from session_meta.
+func RolloutNameSessionID(name string) (string, bool) {
+	parsed, ok := parseRolloutName(name)
+	return parsed.id, ok
+}
+
 // uuidCreation validates a canonical UUID and, for an RFC 9562 version 7
 // UUID, returns the UTC creation instant in its first 48 bits.
 func uuidCreation(id string) (time.Time, bool, bool) {

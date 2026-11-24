@@ -145,10 +145,23 @@ func headerCost(file codexstoretest.File) int64 {
 // exact lookups read them for every owner; names with another UUID are skipped.
 func unconventional(file codexstoretest.File) bool {
 	switch file.Note {
-	case codexstoretest.NoteNoUUID, codexstoretest.NoteCustomName, codexstoretest.NoteNonDateDir:
+	case codexstoretest.NoteNoUUID, codexstoretest.NoteCustomName, codexstoretest.NoteNonDateDir, codexstoretest.NoteWindowNoUUID:
 		return true
 	}
 	return false
+}
+
+// sweepOnlyHeaders are the in-window rollouts that only a child sweep reads:
+// unrelated rollouts created after the root and the non-v7 name in the root's
+// day directory, which exact lookups skip for its other UUID.
+func (fx largeStoreFixture) sweepOnlyHeaders() int64 {
+	var total int64
+	for _, file := range fx.store.Files {
+		if file.Later || file.Note == codexstoretest.NoteWindowNonV7 {
+			total += headerCost(file)
+		}
+	}
+	return total
 }
 
 func (fx largeStoreFixture) unconventionalHeaders() int64 {
@@ -228,7 +241,11 @@ func TestLargeStoreFamilyWithinCaptureBudget(t *testing.T) {
 	}
 	byteBudget := incidentByteBudget / int64(divisor)
 	fx := newLargeStoreFixture(t, func(project string) codexstoretest.LargeStoreSpec {
-		return codexstoretest.IncidentScaleSpec(project, divisor)
+		spec := codexstoretest.IncidentScaleSpec(project, divisor)
+		// Unrelated sessions continue after the root, and two irregular names
+		// sit in the root's own day directory, inside the sweep's window.
+		spec.LaterUnrelated, spec.LaterSpan, spec.WindowIrregular = 6, 90*time.Minute, true
+		return spec
 	}, byteBudget)
 	store := fx.store
 	family := func(f codexstoretest.File) bool { return f.Family }
@@ -322,10 +339,11 @@ func TestLargeStoreFamilyWithinCaptureBudget(t *testing.T) {
 		if _, err := s.recoverChildren(context.Background(), largeStoreTicket, budget, workStarts); err != nil {
 			t.Fatal(err)
 		}
-		// The root and its children are in the parent's day directory, and the
+		// The root and its children are in the parent's day directory with the
+		// later unrelated rollouts and the in-window irregular names, and the
 		// non-date directory is always listed. Every earlier rollout, including
 		// unconventional names inside earlier day directories, costs nothing.
-		want := fx.familyHeaders() + headerCost(nonDate)
+		want := fx.familyHeaders() + headerCost(nonDate) + headerCost(store.Noted(codexstoretest.NoteWindowNoUUID)) + fx.sweepOnlyHeaders()
 		if budget.readBytes != want || budget.sessions != unboundedSessions || budget.attempts != 0 {
 			t.Fatalf("sweep charged %d bytes, %d slots and %d attempts; want %d bytes and none", budget.readBytes, unboundedSessions-budget.sessions, budget.attempts, want)
 		}
@@ -349,10 +367,11 @@ func TestLargeStoreFamilyWithinCaptureBudget(t *testing.T) {
 			s := fx.openRegistry(t, byteBudget, allChildren(len(store.ChildIDs)), nil)
 			// Pass 1 reads the root, discovers every child and extracts them in
 			// the final refresh. Every family header and every unconventional
-			// name is charged once: the non-date rollout the sweep visits was
-			// already read by the root's exact lookup in the same pass.
+			// name is charged once: the unconventional rollouts the sweep visits
+			// were already read by the root's exact lookup in the same pass.
+			// The sweep alone reads the later and non-v7 in-window rollouts.
 			first := reconcileLarge(t, s, fx, sessions, byteBudget)
-			if want := familyBytes + fx.familyHeaders() + fx.unconventionalHeaders(); first.SourceBytes != want || first.SourceAttempts != 1+len(store.ChildIDs) {
+			if want := familyBytes + fx.familyHeaders() + fx.unconventionalHeaders() + fx.sweepOnlyHeaders(); first.SourceBytes != want || first.SourceAttempts != 1+len(store.ChildIDs) {
 				t.Fatalf("pass 1: bytes=%d attempts=%d, want %d and %d", first.SourceBytes, first.SourceAttempts, want, 1+len(store.ChildIDs))
 			}
 			if len(first.RefreshedSessions) != 1+len(store.ChildIDs) {

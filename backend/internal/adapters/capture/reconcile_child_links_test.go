@@ -2,7 +2,9 @@ package capture_test
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -345,5 +347,129 @@ func TestReconcileFreshContradictingChildClearsItsRetainedLink(t *testing.T) {
 				t.Fatal("repeating the pass restored the contradicted link")
 			}
 		})
+	}
+}
+
+// FIX-21 DATA-01: a pass that stops after the parent's own snapshot commit
+// and before the family annotation commit must not leave the registry with
+// fewer accepted links. The annotation write is made to fail with a registry
+// trigger, the same seam the archived checkpoint tests use: the trigger aborts
+// the first update of the parent's row after its refreshed snapshot (input
+// 41) was committed.
+func TestReconcileInterruptedAnnotationKeepsRegistryLinks(t *testing.T) {
+	registry, _ := newChildLinkRegistry(t)
+	family := registry.family
+	db, err := sql.Open("sqlite", filepath.Join(registry.store.RegistryDirectory(), "registry.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	input := "json_extract(%s.record, '$.snapshot[0].invocations[0].tokens.input')"
+	if _, err := db.Exec(`CREATE TRIGGER interrupt_family_annotation BEFORE UPDATE ON registrations
+WHEN NEW.session_id = '` + family.parent + `' AND ` + fmt.Sprintf(input, "OLD") + ` = 41 AND ` + fmt.Sprintf(input, "NEW") + ` = 41
+BEGIN SELECT RAISE(ABORT, 'fixture interrupts the family annotation'); END`); err != nil {
+		t.Fatal(err)
+	}
+	family.writeParent(t, 41)
+	_, err = registry.store.Reconcile(context.Background(), childLinkTicket, "tester", 20, childLinkPartialBudget, fixtureGenerationPolicy())
+	if err == nil || !strings.Contains(err.Error(), "fixture interrupts the family annotation") {
+		t.Fatalf("the fixture must interrupt the pass at the family annotation, got %v", err)
+	}
+	stored := registry.snapshots(t)[family.parent]
+	if got := parentInput(t, stored, family.parent); got != 41 {
+		t.Fatalf("the parent's own snapshot must have committed before the interruption, input %d", got)
+	}
+	if links, _ := childLinkLinks(stored, family.parent); !slices.Equal(links, family.children) {
+		t.Fatalf("interrupted pass left registry links %q, want every accepted link %q", links, family.children)
+	}
+	if _, err := db.Exec(`DROP TRIGGER interrupt_family_annotation`); err != nil {
+		t.Fatal(err)
+	}
+	// The next partial pass still retains the unread children's links and
+	// reports them as unresolved.
+	next := registry.reconcile(t, childLinkPartialBudget)
+	if links, _ := childLinkLinks(registry.snapshots(t)[family.parent], family.parent); !slices.Equal(links, family.children) {
+		t.Fatalf("follow-up pass registry links = %q", links)
+	}
+	if links, _ := childLinkLinks(next.RefreshedSessions, family.parent); !slices.Equal(links, family.children) {
+		t.Fatalf("follow-up pass refreshed links = %q", links)
+	}
+	if next.PendingChildren != 2 {
+		t.Fatalf("follow-up unresolved child evidence = %d, want children 3 and 4", next.PendingChildren)
+	}
+}
+
+// FIX-21 ordinal group retention: two spawns share agent type, description
+// and invocation time, so their accepted links can only be placed by position.
+// Their agent_id results resolve only when the children are read. Two
+// consecutive partial passes keep both links in the registry and in the
+// published owners, and count them as unresolved each time.
+func TestReconcileAmbiguousGroupLinksSurviveRepeatedPartialPasses(t *testing.T) {
+	s := openStore(t, t.TempDir())
+	home, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	active := filepath.Join(home, "sessions")
+	if err := os.MkdirAll(active, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	parentPath := filepath.Join(active, "group-parent.jsonl")
+	writeParent := func(tokens int) {
+		t.Helper()
+		var body strings.Builder
+		fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:00Z","type":"session_meta","payload":{"id":"group-parent","timestamp":"2026-11-24T09:00:00Z","cwd":"/fixture/project","source":"cli"}}`+"\n")
+		fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:01Z","type":"turn_context","payload":{"model":"fixture","turn_id":"turn-one"}}`+"\n")
+		for i, child := range []string{"group-child-1", "group-child-2"} {
+			// Same agent type, arguments and timestamp: one key group.
+			fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:05Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn-%d","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\"}"}}`+"\n", i+1)
+			fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:06Z","type":"response_item","payload":{"type":"function_call_output","call_id":"spawn-%d","output":"{\"agent_id\":\"%s\"}"}}`+"\n", i+1, child)
+		}
+		fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:03:00Z","type":"token_usage_record","payload":{"thread_id":"group-parent","turn_id":"turn-one","usage":{"input_tokens":%d,"output_tokens":2}}}`+"\n", tokens)
+		if err := os.WriteFile(parentPath, []byte(body.String()), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeParent(11)
+	registerBound(t, s, home, parentPath, "group-parent", childLinkTicket)
+	children := []string{"group-child-1", "group-child-2"}
+	for _, child := range children {
+		path := filepath.Join(active, child+".jsonl")
+		// Each child is larger than the partial budget.
+		text := strings.Repeat("synthetic child output ", childLinkLargeBytes/23+1)
+		body := fmt.Sprintf(`{"timestamp":"2026-11-24T09:00:06Z","type":"session_meta","payload":{"id":%q,"parent_thread_id":"group-parent","timestamp":"2026-11-24T09:00:06Z","cwd":"/fixture/project"}}`+"\n"+
+			`{"timestamp":"2026-11-24T09:00:07Z","type":"turn_context","payload":{"model":"fixture","turn_id":"turn-one"}}`+"\n"+
+			`{"timestamp":"2026-11-24T09:00:08Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":%q}]}}`+"\n"+
+			`{"timestamp":"2026-11-24T09:00:09Z","type":"token_usage_record","payload":{"thread_id":%q,"turn_id":"turn-one","usage":{"input_tokens":5,"output_tokens":2}}}`+"\n", child, text, child)
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		registerBound(t, s, home, path, child, childLinkTicket)
+	}
+	registry := childLinkRegistry{store: s}
+	full := registry.reconcile(t, fixtureByteBudget)
+	if links, delegations := childLinkLinks(full.RefreshedSessions, "group-parent"); !slices.Equal(links, children) || delegations[0].InvokedAt == nil || *delegations[0].InvokedAt != *delegations[1].InvokedAt {
+		t.Fatalf("fixture must accept two links in one key group: %q", links)
+	}
+	for pass := 1; pass <= 2; pass++ {
+		writeParent(40 + pass)
+		partial := registry.reconcile(t, childLinkPartialBudget)
+		read := refreshedIDs(partial)
+		if !read["group-parent"] || read[children[0]] || read[children[1]] {
+			t.Fatalf("pass %d must read the parent without its children, read %v", pass, read)
+		}
+		if links, _ := childLinkLinks(partial.RefreshedSessions, "group-parent"); !slices.Equal(links, children) {
+			t.Fatalf("pass %d published group links = %q, want %q", pass, links, children)
+		}
+		if links, _ := childLinkLinks(registry.snapshots(t)["group-parent"], "group-parent"); !slices.Equal(links, children) {
+			t.Fatalf("pass %d registry group links = %q, want %q", pass, links, children)
+		}
+		if partial.PendingChildren != 2 {
+			t.Fatalf("pass %d unresolved child evidence = %d, want both carried links", pass, partial.PendingChildren)
+		}
 	}
 }

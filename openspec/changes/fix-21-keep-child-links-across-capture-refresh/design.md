@@ -38,11 +38,10 @@ Child parent evidence has three typed states:
 The rule applies these decisions:
 - A fresh link to a contradicted child is cleared.
 - A different fresh child replaces the accepted link only when that child is confirmed.
-- An accepted link is carried onto an empty fresh delegation only when all of these hold:
-  - the agent type, description and invoked-at key is unique on both sides;
-  - the invoked-at time is known;
-  - the child is not contradicted;
-  - no sibling delegation already holds that child.
+- Accepted links are carried onto empty fresh delegations by key group. For one parent, the key is (agent type, description, invoked-at), with an unknown invoked-at as its own key value. The accepted and fresh groups are each taken in transcript order.
+  - When every fresh delegation in the group has an empty link and the fresh group is at least as large as the accepted group, accepted link i goes to fresh delegation i. Codex transcripts are append-only, so the accepted group is a prefix of the fresh group. A unique key is the one-element case.
+  - When any fresh delegation in the group has a link, or the fresh group is smaller, nothing in the group is carried, and the refused links are reported.
+  - Per-child guards still apply: a contradicted child is never carried, and neither is a child held by another final delegation of the parent.
 
 Owners with nil delegations, owners from other harnesses and owners that were not refreshed are untouched, and delegation order is preserved. Applying the rule again changes nothing. Events never receive retained links.
 
@@ -53,7 +52,7 @@ Owners with nil delegations, owners from other harnesses and owners that were no
    - It runs against `baseline.Current`, on `RefreshedSessions` and `RestoredSessions`.
    - It runs before pending sync, merge, restore acknowledgement and publication.
 
-**Coverage.** Each distinct retained (parent, child) pair adds 1 to `ReconcileResult.PendingChildren`. No new counter or field is added.
+**Coverage.** Each distinct (parent, child) pair adds 1 to `ReconcileResult.PendingChildren`. A pair counts when its accepted link was retained, including by ordinal group carry. It also counts when the rule refused to carry it, because its group failed the ordinal condition or another delegation holds the child, while the fresh link is empty and not contradicted. A refused link is never moved. No new counter or field is added.
 - **Deduplication.** A pair is not added again when one of these already counts it:
   - a `pending_starts` row with the same store, the same parent and `agent` equal to the child ID;
   - a `pending_children` row for the same parent whose path equals the child's registered transcript path;
@@ -115,6 +114,11 @@ Manual `generate` and backfill use `DiscoverRolloutPaths` and stay unchanged. Th
   - For an explicit `session_id` result, the warning stays in the owner's source warnings and does not reach capture output.
   - The guarantee FIX-21 makes is that a contradicted link is cleared.
 - **Renamed rollouts.** An exact lookup would miss a renamed rollout whose file name carries a UUID other than its `session_meta.id`. On the user's real store, the file-name UUID equalled `session_meta.id` in 1909 of 1909 files.
+- **Children that can never be re-read.** On a machine that can never read the children again, coverage stays partial. The "continue reconciliation" hint cannot resolve it there.
+- **Coverage reported as partial too often.** When the parent and a child are read in different rounds of the same pass, coverage can be reported as partial even though both were read.
+- **Very small `max_source_bytes`.** A very small value can stall identification. It shows as pending.
+- **OpenCode child pages.** They still consume session slots. This predates FIX-21.
+- **ARCH-01, accepted debt.** The capture exact lookup duplicates the manual and live lookup rules. A follow-up should unify them.
 
 ### Owners
 
@@ -189,10 +193,26 @@ No open decisions remain.
 4. **Stricter directory rule.** It uses 14 hours plus 5 seconds and also applies to year and month directories. The rule skips less.
 5. **Header read admission.** A header read starts only when `min(size, 64 KiB)` fits in the remaining allowance.
 
-The discovery-budget spec and tasks were aligned with these.
+The discovery-budget spec and tasks were aligned with these. Verification adds assertions for deferral and retry, the attempts figure, year and month directories at the boundary, and refusal to admit a read.
 
 **Spec wording alignment.** On 2026-11-24 the tester reported two places where the spec's wording contradicted the accepted design, and the orchestrator settled both. Neither changes behavior or scope.
 - **Contradiction scenarios.** They now promise that the link is cleared and that existing source-level warning behavior is unchanged. They no longer promise a capture-visible warning, and the limit is recorded under Known limits.
 - **File names.** The requirement "File names never establish identity" became "File names only exclude candidates", plus a separate requirement that unconventional names are read. These permit the exact-lookup and date-directory exclusions, while inclusion still requires the candidate's own `session_meta`. The residual risk from renamed rollouts is recorded under Known limits.
 
-Verification asserts that the link is cleared, not that a warning appears, and covers both permitted exclusions. Verification adds assertions for deferral and retry, the attempts figure, year and month directories at the boundary, and refusal to admit a read.
+Verification asserts that the link is cleared, not that a warning appears, and covers both permitted exclusions.
+
+**Review DATA-02.** Reported by reviewer-data and reviewer-behavior in review round 1. The orchestrator decided it to restore the user's approved acceptance criterion 3, with no new scope. The "Ambiguous delegation provenance" scenario had lost "and the pass reports them as unresolved".
+- **Change.** An accepted link that the rule refuses to carry now counts as unresolved child evidence, deduplicated like retained pairs, which keeps the pass partial. This applies to an ambiguous key, an unknown invoked_at, or a child held by a sibling, when the accepted link existed, the fresh link is empty and there is no contradiction. The link is never moved.
+- **Artifacts.** The scenario's THEN clause is restored, and the coverage requirement now names refused links. The other accepted review limits are listed under Known limits.
+- **Verification.** It adds a refused-link case that asserts the count, the deduplication and the partial attempt.
+
+**Ordinal group retention.** The user approved this on 2026-11-24 in the main conversation, choosing "Manter o grupo" over "Aceitar como limite". It refines D1 for ambiguous groups.
+- **Problem.** The first rule refused every delegation in a group that shared agent type, description and invoked-at (or had an unknown invoked-at) when its children were not read. The pass reported them once as unresolved, but the published ledger then lost those links, so later passes had nothing to report.
+- **Decision.** Accepted links are now carried by ordinal position within the key group when every fresh link in the group is empty and the fresh group is at least as large. The per-child guards and the unresolved-evidence count apply to each carried pair. The previous refusal and reporting remain when any fresh link in the group is set or the fresh group is smaller. No link is invented, and the rule stays idempotent.
+- **Superseded.** This replaces D1-A's refusal of ambiguous keys and of unknown invoked-at. DATA-02's reporting now applies only to the refusal branch.
+- **Artifacts.** The spec adds the "Retain ambiguous groups by ordinal position" requirement, with scenarios for ordinal retention, refusal and repetition.
+- **Verification.** It adds these cases:
+  - an ordinal carry for duplicate keys and for unknown invoked-at, with the published ledger keeping the links across repeated passes;
+  - refusal and reporting when a fresh link is set or the fresh group is smaller;
+  - a contradicted or already-held child skipped within a group;
+  - idempotence.

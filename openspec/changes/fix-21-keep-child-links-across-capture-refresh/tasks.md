@@ -30,6 +30,8 @@
   - the latest reconciliation is partial
   - a repeated run keeps the ledger bytes and timestamps
 - [x] **Tester:** confirm that a full manual `generate --source codex` links task-name-only children. Add a case to `main_codex_test.go` only if no existing case covers this.
+- [x] **Tester (review DATA-02):** cover refused accepted links. In `domain/child_links_test.go`, each typed reason (ambiguous, unknown provenance, held by a sibling) is reported once, and no refused link is moved. Through `capture.RetainAcceptedChildLinks` and `generate --capture-auto`, refused links count once as unresolved child evidence beside queued work, the attempt is partial, and stderr reports "could not place N accepted link(s)".
+- [x] **Tester (ordinal group retention):** in `domain/child_links_test.go`, cover the ordinal carry for duplicate keys, a larger fresh group with appended delegations and unknown invoked_at. Cover refusal and reporting when a fresh link in the group is set or the fresh group is smaller. Cover a contradicted child and a child held by another final delegation within a group, idempotence, and repeated passes with the published output as the accepted ledger. In `capture/reconcile_child_links_test.go`, an ambiguous group's links survive two consecutive partial passes and stay counted as unresolved.
 
 ## Discovery budget
 
@@ -69,6 +71,8 @@
 
 - [x] Run the affected package tests, raising the `./cmd/agentic-lens` timeout under host load. Record the revision, commands and results in `evidence/TESTS.md`.
 - [ ] Get independent review of data integrity, behavior, architecture and tests. Resolve the findings and reverify the affected paths.
+  - Candidate: `133100bb..0f73f759`. Each focus runs on both configured profiles, Opus 5.5 at medium effort and Sonnet 5.5 at high effort, giving eight discovery runs.
+  - Working reports go to `evidence/review/<focus>-<profile>.md`. The orchestrator owns `evidence/REVIEW.md` and compacts it into `evidence/REVIEW_SUMMARY.json`.
 - [ ] Commit the candidate and merge main. Resolve any `main.go` overlap with PR #162 so both sides' behavior is kept. Run the integrated `make` gate, which covers the frontend build and embedded assets.
 - [ ] Write `delivery.md`, generate the final telemetry, then push and open the PR.
 

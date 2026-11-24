@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -86,15 +87,12 @@ func TestCaptureWorkerIsolatesUnrecoverableUnassignedRollout(t *testing.T) {
 	if err = registry.RequestPublication(ctx); err != nil {
 		t.Fatal(err)
 	}
-	started := time.Now()
-	out, err := runCaptureNative(t, f.project, "", "capture", "worker", "--repo", f.project, "--state-dir", f.state)
-	elapsed := time.Since(started)
+	// The harness allows three times the policy's 10 s lifetime, so only the
+	// worker's own outcome decides: a worker that retried the isolated row
+	// would end with its lifetime exhausted, however loaded the host is.
+	out, err := runCaptureWorkerWithin(t, f.project, 30*time.Second, "capture", "worker", "--repo", f.project, "--state-dir", f.state)
 	if err != nil || strings.Contains(string(out), "lifetime exhausted") {
-		t.Fatalf("an isolated unassigned row failed the worker: %v after %s\n%s", err, elapsed, out)
-	}
-	// The policy's lifetime is 10 s; an idle exit is far shorter.
-	if elapsed > 8*time.Second {
-		t.Fatalf("worker ran %s, close to its lifetime, instead of exiting when idle", elapsed)
+		t.Fatalf("an isolated unassigned row failed the worker: %v\n%s", err, out)
 	}
 	assertCaptureRootInputFor(t, f.ledger(t), "verified", 31)
 	got := accepted()
@@ -135,4 +133,18 @@ func assertCaptureRootInputFor(t *testing.T, ledger domain.AgenticFactLedger, id
 		}
 	}
 	t.Fatalf("missing %s session", id)
+}
+
+// runCaptureWorkerWithin runs a native capture command like runCaptureNative,
+// with an explicit harness timeout.
+func runCaptureWorkerWithin(t *testing.T, cwd string, timeout time.Duration, args ...string) ([]byte, error) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if len(args) > 1 && args[0] == "capture" {
+		args = append([]string{"capture"}, prepareCaptureInstall(t, cwd, args[1:])...)
+	}
+	cmd := exec.CommandContext(ctx, cliBinaryPath, args...)
+	cmd.Dir = cwd
+	return cmd.CombinedOutput()
 }

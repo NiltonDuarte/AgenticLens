@@ -1,6 +1,7 @@
 package codex_test
 
 import (
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
@@ -408,4 +409,56 @@ func TestHeaderCacheReadsOncePerFileStateAndChargesActualBytes(t *testing.T) {
 			t.Fatalf("nil cache charged %d", budget.SourceBytesRead)
 		}
 	})
+}
+
+// FIX-21 ARCH-04: a compressed rollout's charge counts decompressed bytes,
+// which its file size does not bound. Its header read starts only when the
+// whole 64 KiB structural bound fits, so it is never abandoned part way.
+func TestHeaderCacheAdmitsCompressedHeaderOnlyWithTheWholeBound(t *testing.T) {
+	ctx := context.Background()
+	const header = 48 * 1024
+	plain := filepath.Join(t.TempDir(), "rollout.jsonl")
+	decompressed := windowRollout(t, plain, "compressed-owner", header, header+512)
+	body, err := os.ReadFile(plain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := plain + ".gz"
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := gzip.NewWriter(file)
+	if _, err := writer.Write(body); err != nil {
+		t.Fatal(err)
+	}
+	if err := errors.Join(writer.Close(), file.Close()); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cost := windowHeaderCost(header, decompressed)
+	// The allowance covers the compressed file and is just short of the
+	// decompressed header, so a read admitted by file size would stop part way.
+	allowance := cost - 1
+	if info.Size() >= allowance || allowance >= 64*1024 {
+		t.Fatalf("fixture compressed size %d and allowance %d do not separate the bounds", info.Size(), allowance)
+	}
+	cache := codex.NewHeaderCache()
+	short := &codex.DiscoveryBudget{MaxSessions: 1, MaxSourceBytes: allowance}
+	read, err := cache.ReadHeader(ctx, path, short)
+	if !errors.Is(err, codex.ErrDiscoveryBudget) || read.Bytes != 0 || short.SourceBytesRead != 0 {
+		t.Fatalf("compressed header under its bound = %+v, %v, charged %d; want nothing read", read, err, short.SourceBytesRead)
+	}
+	almost := &codex.DiscoveryBudget{MaxSessions: 1, MaxSourceBytes: 64*1024 - 1}
+	if read, err := cache.ReadHeader(ctx, path, almost); !errors.Is(err, codex.ErrDiscoveryBudget) || almost.SourceBytesRead != 0 {
+		t.Fatalf("compressed header one byte under 64 KiB = %+v, %v", read, err)
+	}
+	whole := &codex.DiscoveryBudget{MaxSessions: 1, MaxSourceBytes: 64 * 1024}
+	read, err = cache.ReadHeader(ctx, path, whole)
+	if err != nil || read.Header.ID != "compressed-owner" || read.Bytes != cost || whole.SourceBytesRead != cost {
+		t.Fatalf("compressed header with the whole bound = %+v, %v, charged %d; want %d decompressed bytes", read, err, whole.SourceBytesRead, cost)
+	}
 }

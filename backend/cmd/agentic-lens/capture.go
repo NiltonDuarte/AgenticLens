@@ -787,47 +787,26 @@ func reconcileCaptureGenerationAtWithPolicy(project, dir, ticket string, cutoff 
 // retainCaptureChildLinks keeps accepted Codex delegation child links on the
 // owners an automatic capture pass refreshed or restored without re-reading
 // their children. The committed ledger is the accepted baseline, so a machine
-// without the earlier capture state keeps them as well. Retained links count
-// as unresolved child evidence, and the latest reconciliation is recorded as
-// partial. Transcript events and manual generation are unchanged.
-func retainCaptureChildLinks(project, directory, ticket string, accepted []domain.SessionFact, result *capture.ReconcileResult) error {
-	if result == nil || len(accepted) == 0 {
-		return nil
-	}
-	refreshed := domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: accepted, Fresh: result.RefreshedSessions, Observed: result.RestoredSessions})
-	restored := domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: accepted, Fresh: result.RestoredSessions, Observed: result.RefreshedSessions})
-	result.RefreshedSessions = refreshed.Sessions
-	result.RestoredSessions = restored.Sessions
-	kept := map[domain.ChildLink]bool{}
-	links := append(refreshed.Report.RetainedLinks(), restored.Report.RetainedLinks()...)
-	for _, link := range links {
-		kept[link] = true
-	}
-	cleared := 0
-	for _, decision := range append(refreshed.Report.Decisions, restored.Report.Decisions...) {
-		if decision.Outcome == domain.ChildLinkCleared {
-			cleared++
-		}
-	}
-	added := result.AddRetainedChildLinks(links)
-	if len(kept) == 0 && cleared == 0 {
-		return nil
-	}
-	fmt.Fprintf(os.Stderr, "Capture kept %d accepted delegation child link(s) for ticket %s that this pass did not re-read, and cleared %d contradicted link(s); unresolved child evidence: %d, so the reconciliation remains partial.\n", len(kept), ticket, cleared, result.PendingChildren)
-	if added == 0 {
-		return nil
-	}
-	diagnostic, recorded := result.ReconciliationDiagnostic()
-	if !recorded {
-		return nil
-	}
-	s, err := capture.OpenProject(directory, project)
-	if err != nil {
-		return err
-	}
+// without the earlier capture state keeps them as well. Kept and refused links
+// count as unresolved child evidence, and the latest reconciliation is
+// recorded as partial. A contended registry ends generation with the busy
+// exit code, like reconciliation itself. Transcript events and manual
+// generation are unchanged.
+func retainCaptureChildLinks(project, directory, ticket string, accepted []domain.SessionFact, result *capture.ReconcileResult) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	return errors.Join(s.RecordDiagnostic(ctx, diagnostic), s.Close())
+	retention, err := capture.RetainAcceptedChildLinks(ctx, directory, project, result, accepted)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot record retained child links; publication not completed: %v\n", err)
+		if capture.IsRegistryContention(err) {
+			os.Exit(capturePublicationBusyExit)
+		}
+		os.Exit(1)
+	}
+	if retention.Kept == 0 && retention.Refused == 0 && retention.Cleared == 0 {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "Capture kept %d accepted delegation child link(s) for ticket %s that this pass did not re-read, could not place %d accepted link(s) whose delegation is ambiguous, has no known invocation time or is held by a sibling, and cleared %d contradicted link(s); unresolved child evidence: %d, so the reconciliation remains partial.\n", retention.Kept, ticket, retention.Refused, retention.Cleared, result.PendingChildren)
 }
 
 func recordGenerationPublication(project, directory, ticket, outcome, destination, summary string, owners []domain.SessionFact, detail string, refreshed ...[]domain.SessionFact) error {

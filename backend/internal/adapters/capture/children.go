@@ -198,10 +198,11 @@ func (b *workBudget) readHeader(ctx context.Context, path string, limit int64) (
 	return b.headers.ReadHeader(ctx, path, &codex.DiscoveryBudget{Context: ctx, MaxSourceBytes: max(0, limit)})
 }
 
-// readMetadata identifies a child candidate from its first session_meta
+// readMetadata identifies a Codex child candidate from its first session_meta
 // record. It is charged the bytes actually read to the identification share.
-// It consumes no owner-extraction session slot and so no source attempt,
-// which counts those slots. A cached header is free.
+// A Codex header read consumes no owner-extraction session slot and so no
+// source attempt, which counts those slots; OpenCode child pages still do. A
+// cached header is free.
 func readMetadata(ctx context.Context, path string, budget *workBudget) (codex.RolloutHeader, error) {
 	read, err := budget.readHeader(ctx, path, budget.identificationRemaining())
 	budget.chargeIdentification(read.Bytes)
@@ -489,7 +490,8 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 		// A child is created after its parent. Candidates created earlier are
 		// neither claimed nor read; names never establish identity.
 		window := childCreationWindow(ctx, parent, budget)
-		last := ""
+		// A resumed sweep keeps its cursor until it admits a later candidate.
+		last := cursor
 		visited := 0
 		exhausted := false
 		maxEntries := max(16, budget.sessions*16)
@@ -555,6 +557,10 @@ SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?
 		if exhausted {
 			// Identification reached its share; discovery continues, not failed.
 			budget.discoveryPending = true
+			if last == "" {
+				// A sweep that admitted nothing stays unstarted, never closed.
+				continue
+			}
 		}
 		if _, e = s.db.ExecContext(ctx, `INSERT INTO discovery_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,parent) DO UPDATE SET path=excluded.path`, s.worktreeID, IdentityKey(parent.Identity), last); e != nil {
 			return 0, e
@@ -657,7 +663,8 @@ func (s *Store) pendingChildWork(ctx context.Context, ticket string, parents []d
 
 // pendingChildLinks returns the (parent, child) links already counted as
 // pending child work for the ticket's parents: a queued start whose agent is
-// the child, or a queued child path registered to the child.
+// the child, or a queued child path registered to the child or, before
+// registration, named with the child's session ID.
 func (s *Store) pendingChildLinks(ctx context.Context, ticket string, registrations []domain.CaptureRegistration) (map[domain.ChildLink]bool, error) {
 	links := map[domain.ChildLink]bool{}
 	byPath := make(map[string]string, len(registrations))
@@ -682,6 +689,12 @@ func (s *Store) pendingChildLinks(ctx context.Context, ticket string, registrati
 			child := agent
 			if path != "" {
 				child = byPath[parent.Identity.Store+"\x00"+path]
+				if child == "" {
+					// A child not yet registered is counted under the session
+					// its conventional file name claims. This only avoids
+					// counting one pending child twice; it never sets identity.
+					child, _ = codex.RolloutNameSessionID(filepath.Base(path))
+				}
 			}
 			if child != "" {
 				links[domain.ChildLink{ParentID: parent.Identity.SessionID, ChildSessionID: child}] = true

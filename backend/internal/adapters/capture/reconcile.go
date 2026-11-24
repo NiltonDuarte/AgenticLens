@@ -310,7 +310,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	result.PendingChildren = pending
 	// Links kept without re-proof are unresolved child evidence, counted once
 	// beside pending child work for the same parent.
-	result.AddRetainedChildLinks(result.retainedChildLinks)
+	result.addUnresolvedChildLinks(result.retainedChildLinks)
 	result.DiscoveryPending = budget.discoveryPending || discoveryPending
 	owners := map[string]string{}
 	for _, r := range registrations {
@@ -348,11 +348,12 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	return result, nil
 }
 
-// AddRetainedChildLinks counts accepted delegation links kept without being
-// re-proved as unresolved child evidence (PendingChildren). A link already
-// counted as pending child work for the same parent, or by an earlier call in
-// this request, is counted once. It returns the number of links added.
-func (result *ReconcileResult) AddRetainedChildLinks(links []domain.ChildLink) int {
+// addUnresolvedChildLinks counts accepted delegation links this request did not
+// re-prove, retained or refused, as unresolved child evidence
+// (PendingChildren). A link already counted as pending child work for the same
+// parent, or earlier in this request, is counted once. It returns the number
+// of links added.
+func (result *ReconcileResult) addUnresolvedChildLinks(links []domain.ChildLink) int {
 	if result.countedChildLinks == nil {
 		result.countedChildLinks = make(map[domain.ChildLink]bool, len(links))
 	}
@@ -368,11 +369,11 @@ func (result *ReconcileResult) AddRetainedChildLinks(links []domain.ChildLink) i
 	return added
 }
 
-// ReconciliationDiagnostic returns this request's recorded reconciliation
+// reconciliationDiagnostic returns this request's recorded reconciliation
 // diagnostic with its current unresolved child evidence. A completed attempt
 // with unresolved child evidence becomes partial. It reports false when the
 // request recorded no reconciliation.
-func (result ReconcileResult) ReconciliationDiagnostic() (domain.CaptureDiagnostic, bool) {
+func (result ReconcileResult) reconciliationDiagnostic() (domain.CaptureDiagnostic, bool) {
 	if result.reconciliation == nil || result.reconciliation.Reconciliation == nil {
 		return domain.CaptureDiagnostic{}, false
 	}
@@ -385,6 +386,70 @@ func (result ReconcileResult) ReconciliationDiagnostic() (domain.CaptureDiagnost
 	}
 	diagnostic.Reconciliation = &reconciliation
 	return diagnostic, true
+}
+
+// ChildLinkRetention reports one application of RetainAcceptedChildLinks.
+type ChildLinkRetention struct {
+	// Kept is the number of distinct accepted links kept without re-proof.
+	Kept int
+	// Refused is the number of distinct accepted links, not contradicted, that
+	// the rule declined to carry.
+	Refused int
+	// Cleared is the number of fresh links cleared as contradicted.
+	Cleared int
+	// Added is the number of links newly counted as unresolved child evidence.
+	Added int
+}
+
+// RetainAcceptedChildLinks keeps accepted Codex delegation child links on the
+// owners a reconciliation refreshed or restored without re-reading their
+// children, using accepted facts from another store, such as the committed
+// ledger. The request's registry snapshots are child evidence ahead of those
+// facts. Kept and refused links count as unresolved child evidence. When that
+// count grows, the request's reconciliation is recorded again as partial in
+// the project registry, which is opened only then. Transcript events are
+// unchanged.
+func RetainAcceptedChildLinks(ctx context.Context, directory, project string, result *ReconcileResult, accepted []domain.SessionFact) (ChildLinkRetention, error) {
+	var retention ChildLinkRetention
+	if result == nil || len(accepted) == 0 {
+		return retention, nil
+	}
+	refreshed := domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: accepted, Known: result.Sessions, Fresh: result.RefreshedSessions, Observed: result.RestoredSessions})
+	restored := domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: accepted, Known: result.Sessions, Fresh: result.RestoredSessions, Observed: result.RefreshedSessions})
+	result.RefreshedSessions = refreshed.Sessions
+	result.RestoredSessions = restored.Sessions
+	kept := map[domain.ChildLink]bool{}
+	refused := map[domain.ChildLink]bool{}
+	for _, report := range []domain.ChildLinkReport{refreshed.Report, restored.Report} {
+		for _, link := range report.RetainedLinks() {
+			kept[link] = true
+		}
+		for _, link := range report.Refused {
+			refused[link.Link] = true
+		}
+		for _, decision := range report.Decisions {
+			if decision.Outcome == domain.ChildLinkCleared {
+				retention.Cleared++
+			}
+		}
+	}
+	for link := range kept {
+		delete(refused, link)
+	}
+	retention.Kept, retention.Refused = len(kept), len(refused)
+	retention.Added = result.addUnresolvedChildLinks(append(refreshed.Report.UnresolvedLinks(), restored.Report.UnresolvedLinks()...))
+	if retention.Added == 0 {
+		return retention, nil
+	}
+	diagnostic, recorded := result.reconciliationDiagnostic()
+	if !recorded {
+		return retention, nil
+	}
+	store, err := OpenProjectContext(ctx, directory, project)
+	if err != nil {
+		return retention, err
+	}
+	return retention, errors.Join(store.RecordDiagnostic(ctx, diagnostic), store.Close())
 }
 
 // sourceRead never enters registry serialization or diagnostic publication.
@@ -786,8 +851,10 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		if r.Identity.Source == domain.SourceCodex && r.TicketID == "" && relocating {
 			isolation, isolated = unassignedRelocationIsolation(extractErr)
 		}
-		// An owner refused only because extraction is holding identification's
-		// reserved share is retried by the final leftover refresh.
+		// An owner refused for budget while the identification reservation
+		// limits extraction is retried by the final leftover refresh. The
+		// reservation need not be the cause, for example a discovery session
+		// limit; the retry is then one bounded extra attempt.
 		deferred := (errors.Is(extractErr, opencode.ErrCaptureBudget) || errors.Is(extractErr, codex.ErrDiscoveryBudget)) && budget.extractionReserved()
 		updated, updateErr := s.saveCaptureRead(ctx, r, budget.controlRevision, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 			if isolated {
@@ -823,7 +890,11 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			if relocating {
 				current.TranscriptPath = sourceOwner.TranscriptPath
 			}
-			current.Snapshot = domain.RetainIncompleteGroupSummaries(previousSnapshots, compact.Sessions)
+			// Keep accepted links in this first commit, so a pass that stops
+			// before the family annotation never leaves fewer links than
+			// before. The annotation applies the same rule to the family read.
+			retention := domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: previousSnapshots, Fresh: compact.Sessions})
+			current.Snapshot = domain.RetainIncompleteGroupSummaries(previousSnapshots, retention.Sessions)
 			current.SnapshotNeedsRefresh = false
 			current.ProjectDirectory = s.project
 			current.ProjectProof = domain.CaptureProjectVerified
@@ -1020,7 +1091,7 @@ func (s *Store) finishCaptureAnnotations(ctx context.Context, ticket string, reg
 		// accepted links it cannot re-prove; transcript events stay as read.
 		retention := domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: previous, Fresh: owners})
 		owners = retention.Sessions
-		retained = retention.Report.RetainedLinks()
+		retained = retention.Report.UnresolvedLinks()
 		byID := make(map[string]domain.SessionFact)
 		for _, owner := range owners {
 			byID[owner.ID] = owner
