@@ -209,13 +209,14 @@ const (
 	EventTypeCompaction      EventType = "compaction"
 )
 
-// SourceHarness identifies the agentic runtime harness (e.g. OpenCode, Codex).
+// SourceHarness identifies the agentic runtime harness (e.g. OpenCode, Codex, Claude Code).
 type SourceHarness string
 
 const (
 	SourceUnknown  SourceHarness = "unknown"
 	SourceOpenCode SourceHarness = "opencode"
 	SourceCodex    SourceHarness = "codex"
+	SourceClaude   SourceHarness = "claude"
 )
 
 // DataSource identifies the origin and hydration level of telemetry facts.

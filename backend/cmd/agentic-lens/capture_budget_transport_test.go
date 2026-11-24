@@ -27,7 +27,7 @@ func TestNativeWorkerPublicationKeepsExplicitBudgetOverrides(t *testing.T) {
 			if mode == "different-local-budgets" {
 				local = strings.Replace(local, "  capture:\n", "  capture:\n    max_sessions: 1\n    max_source_bytes: 1\n", 1)
 			}
-			if err := os.WriteFile(localPath, []byte(local), 0600); err != nil {
+			if err := writeCaptureFileAtomic(localPath, []byte(local), 0600); err != nil {
 				t.Fatal(err)
 			}
 			registry, err := capture.OpenProject(f.state, f.project)

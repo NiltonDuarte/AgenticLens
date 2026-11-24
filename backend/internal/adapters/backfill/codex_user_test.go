@@ -24,7 +24,7 @@ func TestResolveCodexSessionUsersForBackfill(t *testing.T) {
 			fresh := []domain.SessionFact{{ID: "session-1", User: tt.freshUser}}
 			stored := []domain.SessionFact{{ID: "session-1", User: tt.storedUser}}
 
-			resolveCodexSessionUsers(fresh, stored, tt.gitUser)
+			resolveSessionUsers(fresh, stored, tt.gitUser)
 
 			if fresh[0].User != tt.want {
 				t.Fatalf("resolved backfill user = %q, want %q", fresh[0].User, tt.want)

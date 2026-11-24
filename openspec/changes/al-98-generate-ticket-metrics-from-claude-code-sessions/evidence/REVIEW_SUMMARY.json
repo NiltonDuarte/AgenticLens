@@ -1,0 +1,878 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "NAT-01",
+      "severity": 5,
+      "issue": "Local slash-command records started phantom steering turns and left the last turn open.",
+      "reporters": [
+        {
+          "persona": "tester (native verifier)",
+          "model": "claude-opus-5-5",
+          "effort": null,
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 264550f3: an echo withdrawn by its own output starts no turn; natively re-checked."
+    },
+    {
+      "finding_id": "NAT-02",
+      "severity": 4,
+      "issue": "An answered bash-mode command dropped the reply's turn and time.",
+      "reporters": [
+        {
+          "persona": "tester (native verifier)",
+          "model": "claude-opus-5-5",
+          "effort": null,
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in f1749596: answered bash exchanges are non-steering turns; natively re-checked (6 turns, 52 s)."
+    },
+    {
+      "finding_id": "BEH-01",
+      "severity": 5,
+      "issue": "Esc-interrupt and bash-mode records counted as person prompts and could leave a turn open.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2: interrupts close the open turn without steering; natively confirmed on an interactive cli session."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 4,
+      "issue": "A readable directory without projects/ passed the Claude store check, so backfill all published other harnesses.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2: claude.ValidateStore requires a readable projects directory for generate and backfill."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 3,
+      "issue": "Generate replaced a stored child whose proven parent differed from the recorded parent.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2: the child keeps its stored snapshot with a diagnostic."
+    },
+    {
+      "finding_id": "DATA-03",
+      "severity": 3,
+      "issue": "A complete refresh with smaller totals was not reported.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2: a per-owner notice names both totals in generate and backfill."
+    },
+    {
+      "finding_id": "DATA-04",
+      "severity": 2,
+      "issue": "Backfill re-read unrecoverable trees, charged the byte budget twice and repeated diagnostics.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2 for the Claude path; the Codex path keeps its existing behavior."
+    },
+    {
+      "finding_id": "DATA-05",
+      "severity": 3,
+      "issue": "Backfill adopted an unrecorded proven root without the project ownership check.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2: adopted roots must pass the project check and are named; adoption itself matches Codex."
+    },
+    {
+      "finding_id": "DATA-06",
+      "severity": 2,
+      "issue": "One unreadable project folder makes every Claude Code tree stay as stored while backfill all still publishes other harnesses.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Accepted limit: no facts are lost and incompleteness is reported; documented in delivery."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 3,
+      "issue": "New tests used map[string]any against the zero-any rule.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2: typed fixture records."
+    },
+    {
+      "finding_id": "ARCH-02",
+      "severity": 5,
+      "issue": "recoverClaude mirrors recoverCodex, so the AL-94 rewrite needs an explicit port to the Claude path.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Accepted debt: delivery names the four conflicting files and the required port for whichever ticket merges second."
+    },
+    {
+      "finding_id": "ARCH-03",
+      "severity": 2,
+      "issue": "The discovery budget type is duplicated per harness.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Accepted debt."
+    },
+    {
+      "finding_id": "ARCH-04",
+      "severity": 2,
+      "issue": "The selected-harness completeness rule is written twice.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Accepted debt."
+    },
+    {
+      "finding_id": "ARCH-05",
+      "severity": 1,
+      "issue": "A Codex-named user helper was reused for Claude owners.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2: renamed resolveSessionUsers."
+    },
+    {
+      "finding_id": "ARCH-06",
+      "severity": 3,
+      "issue": "The content-envelope discriminator can miss future envelopes, and a trailing echo stays an open turn.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Accepted residual: bounded to harness records; trailing echo pinned by a test."
+    },
+    {
+      "finding_id": "ARCH-07",
+      "severity": 1,
+      "issue": "Unused transcript fields and members were left in the adapter.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2 except ErrOwnerUnavailable, which is used."
+    },
+    {
+      "finding_id": "ARCH-08",
+      "severity": 2,
+      "issue": "The changed-parent and ownership rules are written in both generate and backfill, with different messages.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Accepted suggestion; not changed."
+    },
+    {
+      "finding_id": "DOC-01",
+      "severity": 3,
+      "issue": "Review guidance said AgenticLens could not read Claude Code sessions.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2."
+    },
+    {
+      "finding_id": "DOC-02",
+      "severity": 2,
+      "issue": "The capability matrix Duration cell was stale and later cited an unreachable commit.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed: cell cites the native evidence and f1749596."
+    },
+    {
+      "finding_id": "DOC-03",
+      "severity": 2,
+      "issue": "AGENTS.md rule 7 implied a default Claude Code store.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2."
+    },
+    {
+      "finding_id": "DOC-04",
+      "severity": 2,
+      "issue": "The setup manual omitted that trace and live views do not support Claude Code owners.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2."
+    },
+    {
+      "finding_id": "DOC-05",
+      "severity": 2,
+      "issue": "The roadmap ticket still stated the removed effort and requested-model scope.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed: note added under the acceptance criteria."
+    },
+    {
+      "finding_id": "DOC-06",
+      "severity": 2,
+      "issue": "The design said recovery.go merges with AL-94 without a conflict.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed: design and delivery name the four conflicting files."
+    },
+    {
+      "finding_id": "SPEC-01",
+      "severity": 3,
+      "issue": "The local-command, interrupt, bash-mode and changed-parent rules were missing from the spec.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed: spec scenarios added."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 3,
+      "issue": "Interrupt markers stamped with promptSource by SDK hosts and the session-ended interrupt text are not handled.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Accepted limit: CLI interrupts carry no promptSource natively; SDK-host and session-ended records are unobserved and documented."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 5,
+      "issue": "No CLI test used --nonce for Claude, and the unproven agent-ID check was unkillable.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 4,
+      "issue": "Removing the snapshot cutoff gate passed every test.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2."
+    },
+    {
+      "finding_id": "TEST-03",
+      "severity": 4,
+      "issue": "No Claude backfill test could observe a complete refresh or the Claude completeness terms.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2."
+    },
+    {
+      "finding_id": "TEST-04",
+      "severity": 3,
+      "issue": "The recorded-root ownership exemption was unkillable.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2."
+    },
+    {
+      "finding_id": "TEST-05",
+      "severity": 3,
+      "issue": "No test covered a delegation to a still-running subagent.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2."
+    },
+    {
+      "finding_id": "TEST-06",
+      "severity": 3,
+      "issue": "No test covered backfill of an incomplete recorded root.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2."
+    },
+    {
+      "finding_id": "TEST-07",
+      "severity": 2,
+      "issue": "Compactions on multi-model owners, requestId precedence and local-command variants were unpinned.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2."
+    },
+    {
+      "finding_id": "TEST-08",
+      "severity": 3,
+      "issue": "No CLI assertions covered started_at and user attribution for Claude owners.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in 03f50ca2."
+    },
+    {
+      "finding_id": "TEST-09",
+      "severity": 2,
+      "issue": "One oversized or unreadable transcript aborts nonce discovery across the store.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Accepted fail-safe limit: nothing is published."
+    },
+    {
+      "finding_id": "TEST-10",
+      "severity": 1,
+      "issue": "Two tool results in one record are untested.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Not taken: no such record among 1,105 native tool results."
+    },
+    {
+      "finding_id": "TEST-11",
+      "severity": 3,
+      "issue": "A retained changed-parent child's exclusion from fresh source events and the sourceEvents wiring were unpinned.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in f1749596."
+    },
+    {
+      "finding_id": "TEST-12",
+      "severity": 2,
+      "issue": "Shrink notices were pinned only when rows and tokens both decreased.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in f1749596."
+    },
+    {
+      "finding_id": "TEST-13",
+      "severity": 2,
+      "issue": "Interrupt marker boundaries were unpinned.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Fixed in f1749596."
+    },
+    {
+      "finding_id": "TEST-14",
+      "severity": 2,
+      "issue": "Bash-mode resets on interrupt and resume, the promoted turn number, bash-stderr, harness guards and null stop_reason fixtures are unpinned.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Accepted test debt: low severity; product behavior confirmed natively."
+    },
+    {
+      "finding_id": "BEH-03",
+      "severity": 1,
+      "issue": "A bash command during an open turn or answered by an API error notice can split or add a short turn.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Served model observed in the AL-98 ledger; effort was requested at dispatch and is not recorded by the source."
+        }
+      ],
+      "disposition": "Accepted residual: timing only, not observed natively."
+    }
+  ]
+}

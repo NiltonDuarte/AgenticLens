@@ -43,7 +43,7 @@ Dependencies flow strictly inward across layers:
 
 AgenticLens is multi-developer, multi-machine and multi-harness by design. Versioned ledgers in the configured workspace are trusted, durable project records intended to be committed, shared and reviewed through Git. A supported, valid ledger remains usable when the developer, machine, harness, checkout path or availability of its original sources changes.
 
-**Source of truth, per session: local harness database/session store -> existing ledger.** During generation, update or backfill, successfully extracted facts from a session available on the current machine are authoritative for that session's recorded values. When its source session is unavailable, preserve the existing ledger's record. The local harness source means OpenCode's database or the equivalent Codex rollout store; a capture registry, cache or receipt is not a higher authority over shared history.
+**Source of truth, per session: local harness database/session store -> existing ledger.** During generation, update or backfill, successfully extracted facts from a session available on the current machine are authoritative for that session's recorded values. When its source session is unavailable, preserve the existing ledger's record. The local harness source means OpenCode's database, the Codex rollout store or the Claude Code transcript store; a capture registry, cache or receipt is not a higher authority over shared history.
 
 **Preserve every session outside a successful complete local refresh. Replace refreshed sessions from their authoritative local snapshots. Never duplicate records or discard unavailable history.**
 

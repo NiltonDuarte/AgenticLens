@@ -438,7 +438,7 @@ func TestCodexInboxVerifiesExactOwnerAndRetriesAfterSourceFlush(t *testing.T) {
 	if bytes.Equal(original, overlap) {
 		t.Fatal("fixture did not change its capture state")
 	}
-	if err := os.WriteFile(localPath, overlap, 0600); err != nil {
+	if err := writeCaptureFileAtomic(localPath, overlap, 0600); err != nil {
 		t.Fatal(err)
 	}
 	out, submitErr := captureCLI(t, f.project, "", "submit-binding", "--repo", f.project, "--store", f.store, "--session-id", "root", "--request", rootKey, "--ticket-id", "TEST-100", "--ticket-title", "Root", "--ticket-type", "fix")
@@ -448,7 +448,7 @@ func TestCodexInboxVerifiesExactOwnerAndRetriesAfterSourceFlush(t *testing.T) {
 	if files, err := os.ReadDir(inbox); err != nil || len(files) != 0 {
 		t.Fatalf("submission touched unavailable inbox: %v %v", files, err)
 	}
-	if err := os.WriteFile(localPath, original, 0600); err != nil {
+	if err := writeCaptureFileAtomic(localPath, original, 0600); err != nil {
 		t.Fatal(err)
 	}
 	beforeRows, err := store.List(ctx)

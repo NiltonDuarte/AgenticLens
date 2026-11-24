@@ -325,15 +325,15 @@ func loadSelected(project string, capturePolicy bool) (domain.ProjectConfig, err
 			return cfg, err
 		}
 		value := strings.ToLower(strings.TrimSpace(n.Value))
-		if value != "opencode" && value != "codex" {
-			return cfg, fmt.Errorf("local configuration %s: telemetry.default_source must be opencode or codex", selection.LocalPath)
+		if value != "opencode" && value != "codex" && value != "claude" {
+			return cfg, fmt.Errorf("local configuration %s: telemetry.default_source must be opencode, codex or claude", selection.LocalPath)
 		}
 		cfg.Telemetry.DefaultSource = value
 	}
 	for _, source := range []struct {
 		key    string
 		target *string
-	}{{"telemetry.sources.opencode.database_path", &cfg.Telemetry.Sources.OpenCodeDatabasePath}, {"telemetry.sources.codex.home", &cfg.Telemetry.Sources.CodexHome}} {
+	}{{"telemetry.sources.opencode.database_path", &cfg.Telemetry.Sources.OpenCodeDatabasePath}, {"telemetry.sources.codex.home", &cfg.Telemetry.Sources.CodexHome}, {"telemetry.sources.claude.home", &cfg.Telemetry.Sources.ClaudeHome}} {
 		if n := nodes[source.key]; n != nil {
 			if err := requireNodeType(n, source.key, yaml.ScalarNode, "!!str"); err != nil {
 				return cfg, err

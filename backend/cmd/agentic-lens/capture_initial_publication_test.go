@@ -749,7 +749,7 @@ func TestCaptureConsumedSelectionPreservesCanonicalLedgerOwnership(t *testing.T)
 			if scenario == "reject prior ledger for another ticket" {
 				local := filepath.Join(f.project, ".agenticlens-config.local.yaml")
 				short := bytes.Replace(readCaptureFile(t, local), []byte("max_lifetime_ms: 10000"), []byte("max_lifetime_ms: 1800"), 1)
-				if err := os.WriteFile(local, short, 0600); err != nil {
+				if err := writeCaptureFileAtomic(local, short, 0600); err != nil {
 					t.Fatal(err)
 				}
 				interruptedLedger, interruptedSummary := readCaptureFile(t, original), readCaptureFile(t, summary)
@@ -1208,7 +1208,7 @@ func TestCaptureFirstPublicationRefusesMissingUnsafeAndAmbiguousSelection(t *tes
 			localPath := filepath.Join(f.project, ".agenticlens-config.local.yaml")
 			local := string(readCaptureFile(t, localPath))
 			local = strings.Replace(local, "max_lifetime_ms: 10000", "max_lifetime_ms: 1400", 1)
-			if err := os.WriteFile(localPath, []byte(local), 0600); err != nil {
+			if err := writeCaptureFileAtomic(localPath, []byte(local), 0600); err != nil {
 				t.Fatal(err)
 			}
 			output, err := runInitialPublicationWorker(t, f)
