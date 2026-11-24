@@ -1,13 +1,17 @@
 # AgenticLens Platform Setup Manual and Telemetry Integration Guide
 
-AgenticLens is a developer telemetry and observability platform for OpenCode and Codex workflows. It provides real-time monitoring for OpenCode and offline telemetry ingestion from either harness.
+AgenticLens is a developer telemetry and observability platform for OpenCode, Codex and Claude Code workflows. It provides real-time monitoring for OpenCode and offline telemetry ingestion from each of these harnesses.
 
 Workspace ledgers are durable project records designed for Git-based sharing across developers, machines and harnesses. A new installation's local sources enable collection and enrichment; missing another developer's private logs/capture database must not invalidate supported recorded history. See the [portable ledger contract](../TECHNICAL_GUIDELINES.md#portable-ledger-contract) for the distinction between preservation and source refresh. This is a product requirement; check the installed release's documented limits rather than assuming every compatibility path is already verified.
 
 OpenCode traces are extracted read-only from its explicitly selected local SQLite database. The supported evidence window is OpenCode v1.19.5 (`session`/`message`/`part`) and npm `@opencode/cli` v2.2.0 (`session_v2`/`session_message`), whose `latest` tag was resolved on 2026-10-29. AgenticLens validates the complete required table and column set and automatically selects exactly one schema family. Partial, mixed, malformed, and unknown schemas fail with diagnostics; schema detection does not identify the exact runtime release. `--db-path` overrides the selected-local database path. Missing or unavailable selected paths fail without another location.
 
 Compatibility workflows are `make opencode-compat-v1`, `make opencode-compat-v2`, and `make opencode-compat`. They require the corresponding runtime (`OPENCODE_V1_BIN` / `OPENCODE_V2_BIN` can select explicit binaries) and a local deterministic provider already running. The workflows create isolated temporary HOME, XDG data/config/state roots, project roots, and absolute `OPENCODE_DB` paths, then remove them at exit. Ordinary adapter tests use deterministic SQLite fixtures and need no OpenCode installation. Evidence fixtures are sanitized runtime-produced records, not synthesized runtime integration runs. Nonzero native-provider pricing, imported-history extraction after migration, partial migration states, duplicate handling, and releases outside v1.19.5/v2.2.0 are not verified.
-Codex traces are read from rollout files beneath its explicitly selected home directory. OpenCode and Codex are independent sources; selecting one never falls back to the other.
+Codex traces are read from rollout files beneath its explicitly selected home directory.
+
+Claude Code traces are read from the root and subagent transcripts under `projects/` in an explicitly selected store directory. The supported layout is the one written by Claude Code 2.1.331. `CLAUDE_CONFIG_DIR` and `~/.claude` are never read implicitly. Claude Code deletes transcripts after its `cleanupPeriodDays` setting, so generate before cleanup; ledgers keep the recorded facts of cleaned-up sessions. Claude Code supports manual `generate` and `backfill` only; automatic capture is pending in AL-99. Engines released before Claude Code support reject ledgers that contain a `claude` session, so upgrade every reader before committing one.
+
+OpenCode, Codex and Claude Code are independent sources; selecting one never falls back to another.
 
 Use this guide to install, configure, and operate AgenticLens in an adopting repository.
 
@@ -54,7 +58,7 @@ See [CLI operations](../.agents/skills/agentic-lens-operator/references/cli.md) 
 
 ## 2. Agnostic Adoption for OpenCode Projects
 
-Live SSE uses OpenCode; offline generation supports OpenCode and Codex. Sources are independent and never silently substituted after a failure.
+Live SSE uses OpenCode; offline generation supports OpenCode, Codex and Claude Code. Sources are independent and never silently substituted after a failure.
 
 ### 2.1 Complete Methodology Neutrality within OpenCode
 
@@ -70,9 +74,9 @@ The [configuration reference](../.agents/skills/agentic-lens-operator/references
 
 ### Telemetry Source and Session Selection
 
-Generation selects `--source` first, otherwise the selected-local `telemetry.default_source`, otherwise fails without output. OpenCode uses `--db-path` before local `telemetry.sources.opencode.database_path`; Codex uses supported `--codex-home` before local `telemetry.sources.codex.home`. No automatic store/harness search follows a selected failure.
+Generation selects `--source` first, otherwise the selected-local `telemetry.default_source`, otherwise fails without output. OpenCode uses `--db-path` before local `telemetry.sources.opencode.database_path`; Codex uses supported `--codex-home` before local `telemetry.sources.codex.home`; Claude Code uses `--claude-home` before local `telemetry.sources.claude.home`. No automatic store/harness search follows a selected failure.
 
-Choose a root with `--session-id` or supply a unique literal `--nonce`. Direct OpenCode validates exact roots, searches nonce text literally, requires one matching root and requires both supplied selectors to agree. Ticket text alone cannot choose a session. Codex uses explicit selectors too. Root selection can discover source-proven children; it cannot invent parent identities or trust a UI task identifier as a native session ID.
+Choose a root with `--session-id` or supply a unique literal `--nonce`. Direct OpenCode validates exact roots, searches nonce text literally, requires one matching root and requires both supplied selectors to agree. Ticket text alone cannot choose a session. Codex and Claude Code use explicit selectors too; a Claude Code subagent ID resolves to its root. Root selection can discover source-proven children; it cannot invent parent identities or trust a UI task identifier as a native session ID.
 
 Select one whole worktree-local file; only when absent, use the same repository's Git-established base-local file. A present invalid file never triggers base selection. Relative configured source paths belong to the selected file, CLI paths to invocation cwd; explicit `~/` expands or fails. Preserve physical symlink/`..` traversal. Guided setup is base-only; no local copy or per-worktree enrollment is required when the base file is shared.
 
@@ -151,7 +155,7 @@ role_mappings: {}
 role_order: []
 ```
 
-An illustrative local candidate for manual-only telemetry follows. Replace its paths with approved actual locations. Disabled automatic capture permits manual generation; worker-only timing fields are not needed until workers are enabled.
+An illustrative local candidate for manual-only telemetry follows. Replace its paths with approved actual locations. For Claude Code, use `default_source: claude` with `sources.claude.home`. Disabled automatic capture permits manual generation; worker-only timing fields are not needed until workers are enabled.
 
 ```yaml
 agenticlens:
@@ -189,7 +193,7 @@ For manual recovery, select the actual harness and exact root session ID or pass
 
 ```bash
 agentic-lens generate \
-  --source "<opencode-or-codex>" \
+  --source "<opencode|codex|claude>" \
   --nonce "<GENERATED_NONCE>" \
   --ticket-id "<TICKET_ID>" \
   --ticket-type "<CONVENTIONAL_TYPE>" \
@@ -543,4 +547,4 @@ preserving ticket metrics and point coordinates.
 
 ## OpenSpec execution adoption
 
-Follow [the pinned workflow](OPENSPEC_WORKFLOW.md) for supported setup/custom schemas, ticket-prefixed creation, standard artifacts and archive. The separate roadmap remains editable without creating execution changes. This repository's selected roots include alspaces and OpenSpec changes/archive as equal ordinary locations; the native platform has no OpenSpec storage mode or folder-name identity parser. A planning-only change is invisible until first ledger generation. Actual native Codex/OpenCode extraction/publication must be verified for the delivered engine; installed assistant skills and schema validation alone are not capture evidence.
+Follow [the pinned workflow](OPENSPEC_WORKFLOW.md) for supported setup/custom schemas, ticket-prefixed creation, standard artifacts and archive. The separate roadmap remains editable without creating execution changes. This repository's selected roots include alspaces and OpenSpec changes/archive as equal ordinary locations; the native platform has no OpenSpec storage mode or folder-name identity parser. A planning-only change is invisible until first ledger generation. Actual native extraction/publication for each claimed harness must be verified for the delivered engine; installed assistant skills and schema validation alone are not capture evidence.

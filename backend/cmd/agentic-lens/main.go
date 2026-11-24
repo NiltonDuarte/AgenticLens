@@ -54,6 +54,7 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 	appendFlag := genFlags.String("append", "", "Path to markdown file to append/update metrics table in")
 	dbPathFlag := genFlags.String("db-path", "", "Path to OpenCode SQLite database")
 	codexHomeFlag := genFlags.String("codex-home", "", "Explicit Codex source store; otherwise selected local telemetry.sources.codex.home")
+	claudeHomeFlag := genFlags.String("claude-home", "", "Explicit Claude Code source store; otherwise selected local telemetry.sources.claude.home")
 	anomaliesFlag := genFlags.Bool("anomalies", false, "Display anomalies and health flags; generation.metrics.anomalies=false reports disabled and never re-enables analysis")
 	captureDirFlag := genFlags.String("capture-dir", "", "Automatic capture registry override; ignored by manual generation")
 	autoFlag := genFlags.Bool("capture-auto", false, "Native lifecycle publication of registered owners. Protected workers retain the admitted private publication state.")
@@ -142,6 +143,10 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 	}
 	if provided["codex-home"] && strings.TrimSpace(*codexHomeFlag) == "" {
 		fmt.Fprintln(os.Stderr, "--codex-home must be nonblank when supplied")
+		os.Exit(1)
+	}
+	if err := errClaudeHomeBlank(provided, *claudeHomeFlag); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	if *jsonOutputFlag != "" {
@@ -733,6 +738,25 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			activeCompletedAt = &combined.CompletedAt
 		}
 		fmt.Fprintf(os.Stderr, "Discovered %d Codex thread rollout(s) for session %s.\n", len(rolloutPaths), combined.ThreadID)
+	} else if activeSource == "claude" {
+		extracted, claudeErr := extractClaudeGeneration(claudeGenerationInput{
+			project: project, claudeHomeFlag: *claudeHomeFlag, configuredHome: projCfg.Telemetry.Sources.ClaudeHome,
+			nonce: *nonceFlag, sessionID: *sessionIDFlag, cutoff: snapshotCutoff, policy: generationPolicy,
+			recorded: sessions, baseline: baseline.Current, existingUsers: userBySessionID, gitUser: currentUser,
+		}, os.Stderr)
+		if claudeErr != nil {
+			fmt.Fprintln(os.Stderr, "Error:", claudeErr)
+			os.Exit(1)
+		}
+		freshSessions = extracted.sessions
+		sourceEvents = extracted.source
+		for _, owner := range extracted.sessions {
+			knownThreadIDs = append(knownThreadIDs, owner.ID)
+		}
+		if strings.TrimSpace(*startedAtFlag) == "" && extracted.startedAt != "" {
+			activeStartedAt = &extracted.startedAt
+		}
+		fmt.Fprintf(os.Stderr, "Discovered %d complete Claude Code session(s) for root %s.\n", extracted.owners, extracted.rootID)
 	} else {
 		dbPath, pathErr := adaptersconfig.ResolveOpenCodePath(*dbPathFlag, projCfg.Telemetry.Sources.OpenCodeDatabasePath)
 		if pathErr != nil {
@@ -1133,8 +1157,9 @@ func runBackfill(args []string) {
 		fmt.Fprintf(out, "Usage: agentic-lens backfill [flags]\n\n")
 		fmt.Fprintf(out, "Batch telemetry backfill, Git code facts recomputation, and schema upgrades.\n\n")
 		fmt.Fprintf(out, "Flags:\n")
-		fmt.Fprintf(out, "  --source <harness>     Required telemetry harness to backfill: opencode, codex, or both\n")
+		fmt.Fprintf(out, "  --source <harness>     Required telemetry harness to backfill: opencode, codex, claude, both (OpenCode and Codex) or all (OpenCode, Codex and Claude Code)\n")
 		fmt.Fprintf(out, "  --codex-home <path>    Explicit Codex source store; otherwise selected local telemetry.sources.codex.home\n")
+		fmt.Fprintf(out, "  --claude-home <path>   Explicit Claude Code source store; otherwise selected local telemetry.sources.claude.home\n")
 		fmt.Fprintf(out, "  --ticket-id <id>       Target single ticket identifier to filter backfill operation\n")
 		fmt.Fprintf(out, "  --recompute-git        Recompute Git code facts and SDLC iterations from repository history\n")
 		fmt.Fprintf(out, "  --code-ref <ref>        Required with --recompute-git; branch or commit to compare with configured base\n")
@@ -1153,8 +1178,9 @@ func runBackfill(args []string) {
 		return
 	}
 	workspaceSelection := backfillFlags.String("workspace", "", "Explicit existing ledger directory")
-	sourceFlag := backfillFlags.String("source", "", "Telemetry harness to backfill: opencode, codex, or both (required)")
+	sourceFlag := backfillFlags.String("source", "", "Telemetry harness to backfill: opencode, codex, claude, both (OpenCode and Codex) or all (OpenCode, Codex and Claude Code) (required)")
 	codexHomeFlag := backfillFlags.String("codex-home", "", "Explicit Codex source store; otherwise selected local telemetry.sources.codex.home")
+	claudeHomeFlag := backfillFlags.String("claude-home", "", "Explicit Claude Code source store; otherwise selected local telemetry.sources.claude.home")
 	ticketIDFlag := backfillFlags.String("ticket-id", "", "Target single ticket identifier to filter backfill operation")
 	recomputeGitFlag := backfillFlags.Bool("recompute-git", false, "Recompute Git code facts and SDLC iterations from repository history")
 	codeRefFlag := backfillFlags.String("code-ref", "", "Git branch or commit to compare with the configured base when recomputing code facts")
@@ -1171,18 +1197,18 @@ func runBackfill(args []string) {
 		os.Exit(1)
 	}
 	backfillFlags.Visit(func(f *flag.Flag) {
-		if (f.Name == "db-path" && strings.TrimSpace(*dbPathFlag) == "") || (f.Name == "codex-home" && strings.TrimSpace(*codexHomeFlag) == "") {
+		if (f.Name == "db-path" && strings.TrimSpace(*dbPathFlag) == "") || (f.Name == "codex-home" && strings.TrimSpace(*codexHomeFlag) == "") || (f.Name == "claude-home" && strings.TrimSpace(*claudeHomeFlag) == "") {
 			fmt.Fprintf(os.Stderr, "--%s must be nonblank when supplied\n", f.Name)
 			os.Exit(1)
 		}
 	})
 	cleanSource := strings.ToLower(strings.TrimSpace(*sourceFlag))
 	if cleanSource == "" {
-		fmt.Fprintln(os.Stderr, "Error: --source flag is required for backfill. Specify 'opencode', 'codex', or 'both'.")
+		fmt.Fprintln(os.Stderr, "Error: --source flag is required for backfill. Specify 'opencode', 'codex', 'claude', 'both' (OpenCode and Codex) or 'all' (OpenCode, Codex and Claude Code).")
 		os.Exit(1)
 	}
-	if cleanSource != "opencode" && cleanSource != "codex" && cleanSource != "both" && cleanSource != "all" {
-		fmt.Fprintf(os.Stderr, "Error: invalid --source %q. Specify 'opencode', 'codex', or 'both'.\n", *sourceFlag)
+	if cleanSource != "opencode" && cleanSource != "codex" && cleanSource != "claude" && cleanSource != "both" && cleanSource != "all" {
+		fmt.Fprintf(os.Stderr, "Error: invalid --source %q. Specify 'opencode', 'codex', 'claude', 'both' (OpenCode and Codex) or 'all' (OpenCode, Codex and Claude Code).\n", *sourceFlag)
 		os.Exit(1)
 	}
 	if *recomputeGitFlag {
@@ -1208,6 +1234,11 @@ func runBackfill(args []string) {
 		fmt.Fprintln(os.Stderr, pathErr)
 		os.Exit(1)
 	}
+	resolvedClaudeHome, pathErr := adaptersconfig.ExpandHomePath(strings.TrimSpace(*claudeHomeFlag))
+	if pathErr != nil {
+		fmt.Fprintln(os.Stderr, pathErr)
+		os.Exit(1)
+	}
 
 	opts := backfill.BackfillOptions{
 		Project:         "",
@@ -1215,6 +1246,7 @@ func runBackfill(args []string) {
 		TicketID:        *ticketIDFlag,
 		Source:          cleanSource,
 		CodexHome:       resolvedCodexHome,
+		ClaudeHome:      resolvedClaudeHome,
 		RecomputeGit:    *recomputeGitFlag,
 		CodeRef:         strings.TrimSpace(*codeRefFlag),
 		RecomputeDB:     *recomputeDBFlag,
@@ -1555,7 +1587,7 @@ func printRootUsage() {
 	fmt.Fprintln(out, "Subcommands:")
 	fmt.Fprintln(out, "  init      Scaffold and generate a new .agenticlens-config.yaml configuration")
 	fmt.Fprintln(out, "  server    Start the HTTP dashboard server and API service")
-	fmt.Fprintln(out, "  generate  Ingest and compute facts from OpenCode or Codex and Git history")
+	fmt.Fprintln(out, "  generate  Ingest and compute facts from OpenCode, Codex or Claude Code and Git history")
 	fmt.Fprintln(out, "  capture   Install hooks, bind exact sessions, reconcile local snapshots and diagnose coverage")
 	fmt.Fprintln(out, "  backfill  Batch telemetry backfill, Git code facts recomputation, and schema upgrades")
 	fmt.Fprintln(out, "  migrate   Universal stepwise schema migration engine for telemetry ledgers")
@@ -1595,8 +1627,9 @@ func initCommand(args []string) error {
 	localOnly := flags.Bool("local-only", false, "Fill missing explicitly supplied local choices; preserve valid existing choices")
 	state := flags.String("state-dir", "", "Explicit local capture state directory")
 	enabled := flags.String("capture-enabled", "", "Explicit true or false; configuration does not install capture integration")
-	source := flags.String("source", "", "Explicit local telemetry source: codex or opencode")
+	source := flags.String("source", "", "Explicit local telemetry source: codex, opencode or claude")
 	codexHome := flags.String("codex-home", "", "Explicit Codex source store")
+	claudeHome := flags.String("claude-home", "", "Explicit Claude Code source store")
 	database := flags.String("db-path", "", "Explicit OpenCode source database")
 	force := flags.Bool("force", false, "Overwrite the selected shared file with the approved candidate")
 	complete := flags.Bool("complete-scaffold", false, "Complete only an unchanged owned bootstrap scaffold; preserve valid local settings")
@@ -1614,7 +1647,7 @@ func initCommand(args []string) error {
 	}
 	provided := map[string]bool{}
 	flags.Visit(func(f *flag.Flag) { provided[f.Name] = true })
-	for _, choice := range []struct{ flag, value string }{{"settings", *settings}, {"local-settings", *localSettings}, {"project-name", *name}, {"agenticlens-version", *version}, {"publication-state-dir", *publicationState}, {"state-dir", *state}, {"capture-enabled", *enabled}, {"source", *source}, {"codex-home", *codexHome}, {"db-path", *database}, {"capture-state-dir", *captureState}} {
+	for _, choice := range []struct{ flag, value string }{{"settings", *settings}, {"local-settings", *localSettings}, {"project-name", *name}, {"agenticlens-version", *version}, {"publication-state-dir", *publicationState}, {"state-dir", *state}, {"capture-enabled", *enabled}, {"source", *source}, {"codex-home", *codexHome}, {"claude-home", *claudeHome}, {"db-path", *database}, {"capture-state-dir", *captureState}} {
 		if provided[choice.flag] && strings.TrimSpace(choice.value) == "" {
 			return fmt.Errorf("--%s must be nonblank when supplied", choice.flag)
 		}
@@ -1622,7 +1655,7 @@ func initCommand(args []string) error {
 	if *localOnly {
 		for key := range provided {
 			switch key {
-			case "local-only", "local-settings", "publication-state-dir", "state-dir", "capture-enabled", "source", "codex-home", "db-path", "output", "dry-run":
+			case "local-only", "local-settings", "publication-state-dir", "state-dir", "capture-enabled", "source", "codex-home", "claude-home", "db-path", "output", "dry-run":
 			default:
 				return fmt.Errorf("--local-only cannot be combined with --%s", key)
 			}
@@ -1671,7 +1704,7 @@ func initCommand(args []string) error {
 	for _, choice := range []struct {
 		flag  string
 		value *string
-	}{{"codex-home", codexHome}, {"db-path", database}, {"state-dir", state}, {"publication-state-dir", publicationState}} {
+	}{{"codex-home", codexHome}, {"claude-home", claudeHome}, {"db-path", database}, {"state-dir", state}, {"publication-state-dir", publicationState}} {
 		if !provided[choice.flag] {
 			continue
 		}
@@ -1708,7 +1741,7 @@ func initCommand(args []string) error {
 			*candidate = expanded
 		}
 	}
-	localYAML, err := adaptersconfig.InitialLocalYAMLWithSettings(project, *localSettings, *enabled, *source, *codexHome, *database, *state, *publicationState)
+	localYAML, err := adaptersconfig.InitialLocalYAMLWithSettings(project, *localSettings, *enabled, *source, *codexHome, *claudeHome, *database, *state, *publicationState)
 	if err != nil {
 		return err
 	}

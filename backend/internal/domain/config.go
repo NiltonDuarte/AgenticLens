@@ -165,6 +165,7 @@ type TelemetryConfig struct {
 type TelemetrySourcePaths struct {
 	OpenCodeDatabasePath string `json:"database_path,omitempty" yaml:"database_path,omitempty"`
 	CodexHome            string `json:"home,omitempty" yaml:"home,omitempty"`
+	ClaudeHome           string `json:"claude_home,omitempty" yaml:"claude_home,omitempty"`
 }
 
 // AnomalyThresholdsConfig defines numerical thresholds for anomaly detection rules.

@@ -9,16 +9,16 @@
 
 ## 1. Source selection and configuration (coder)
 
-- [ ] 1.1 Add `domain.SourceClaude` and `TelemetrySourcePaths.ClaudeHome`. Extend `ResolveSource`, add `ResolveClaudeHome`, and make the loader accept `telemetry.default_source: claude` and `telemetry.sources.claude.home`. Update the supported-value messages.
-- [ ] 1.2 Extend `InitialLocalYAMLWithSettings`, the allowed `--local-settings` keys and the `init` flags with `--claude-home`. Leave capture identity and installation validation unchanged.
-- [ ] 1.3 Add `--claude-home` to `generate` and `backfill`, reject a blank supplied value, update the usage text and add `claude` to the source lists. In backfill, `all` covers OpenCode, Codex and Claude Code, and `both` keeps meaning OpenCode plus Codex. Update the help text and the error messages to describe all three values.
+- [x] 1.1 Add `domain.SourceClaude` and `TelemetrySourcePaths.ClaudeHome`. Extend `ResolveSource`, add `ResolveClaudeHome`, and make the loader accept `telemetry.default_source: claude` and `telemetry.sources.claude.home`. Update the supported-value messages.
+- [x] 1.2 Extend `InitialLocalYAMLWithSettings`, the allowed `--local-settings` keys and the `init` flags with `--claude-home`. Leave capture identity and installation validation unchanged.
+- [x] 1.3 Add `--claude-home` to `generate` and `backfill`, reject a blank supplied value, update the usage text and add `claude` to the source lists. In backfill, `all` covers OpenCode, Codex and Claude Code, and `both` keeps meaning OpenCode plus Codex. Update the help text and the error messages to describe all three values.
 
 ## 2. Claude Code adapter (coder, `backend/internal/adapters/claude/`)
 
-- [ ] 2.1 `store_discovery.go`: enumerate root and subagent files under `<store>/projects`, ignoring `tool-results` and other non-transcript files. Select by literal nonce, by exact root ID, or by an agent ID resolved to its root. Report ambiguity and absence, honor cancellation, and accept an optional session and byte budget whose exhaustion is a typed error.
-- [ ] 2.2 `transcript_jsonl.go`: parse conversation, system and attachment records and ignore the other native record types. Treat a malformed line, a record with no type or a foreign `sessionId` as an incomplete owner. Exclude records marked `forkedFrom`. Report a root that contains sidechain conversation records as an unsupported layout.
-- [ ] 2.3 `subagent_proof.go`: link a child only through its meta `toolUseId`, the matching `Agent` tool_use in the same tree and agreeing `agentId` and `sessionId` values, including nested children. Return diagnostics for unproven, unreadable and missing children without inventing a parent.
-- [ ] 2.4 `session_facts.go`:
+- [x] 2.1 `store_discovery.go`: enumerate root and subagent files under `<store>/projects`, ignoring `tool-results` and other non-transcript files. Select by literal nonce, by exact root ID, or by an agent ID resolved to its root. Report ambiguity and absence, honor cancellation, and accept an optional session and byte budget whose exhaustion is a typed error.
+- [x] 2.2 `transcript_jsonl.go`: parse conversation, system and attachment records and ignore the other native record types. Treat a malformed line, a record with no type or a foreign `sessionId` as an incomplete owner. Exclude records marked `forkedFrom`. Report a root that contains sidechain conversation records as an unsupported layout.
+- [x] 2.3 `subagent_proof.go`: link a child only through its meta `toolUseId`, the matching `Agent` tool_use in the same tree and agreeing `agentId` and `sessionId` values, including nested children. Return diagnostics for unproven, unreadable and missing children without inventing a parent.
+- [x] 2.4 `session_facts.go`:
   - Deduplicate responses by `requestId`, falling back to `message.id`. Reject missing or conflicting usage.
   - Build one invocation row per served model, mapping tokens as in the design.
   - Record unavailable cost, tool rows that count `is_error` results as errors, and compaction counts.
@@ -27,23 +27,23 @@
 
 ## 3. Generate wiring (coder)
 
-- [ ] 3.1 `cmd/agentic-lens/claude_generation.go`: resolve and stat the store, discover and parse the selected tree, and fail before publication on discovery errors or an incomplete root. Print child diagnostics. Validate the root's `cwd` with `capture.ValidateProject`, and check for collisions with `capture.ValidateSessionMerge`. Resolve users, set start and completion times, and merge through `mergeSessions` and `retainUnrefreshedGenerationOwners`.
-- [ ] 3.2 Dispatch from `runGeneration` when `activeSource == "claude"` and leave the Codex, OpenCode and `--capture-auto` branches unchanged.
+- [x] 3.1 `cmd/agentic-lens/claude_generation.go`: resolve and stat the store, discover and parse the selected tree, and fail before publication on discovery errors or an incomplete root. Print child diagnostics. Validate the root's `cwd` with `capture.ValidateProject`, and check for collisions with `capture.ValidateSessionMerge`. Resolve users, set start and completion times, and merge through `mergeSessions` and `retainUnrefreshedGenerationOwners`.
+- [x] 3.2 Dispatch from `runGeneration` when `activeSource == "claude"` and leave the Codex, OpenCode and `--capture-auto` branches unchanged.
 
 ## 4. Backfill recovery (coder)
 
-- [ ] 4.1 Add `BackfillOptions.ClaudeHome` with resolution and the directory check. Add the Claude Code bucket and its protected sets to `engine.go`, and include it in the completeness calculation without changing Codex or OpenCode outcomes. Make `all` select Claude Code too, and fail before any read or publication when its store is missing or unreadable. Leave `both` unchanged.
-- [ ] 4.2 Add `recoverClaude` to `recovery.go`, mirroring `recoverCodex`: exact roots, retention when parent links change, conflicts with other harnesses, newly proven children and diagnostics. Charge reads to `sourceReadBudget`.
+- [x] 4.1 Add `BackfillOptions.ClaudeHome` with resolution and the directory check. Add the Claude Code bucket and its protected sets to `engine.go`, and include it in the completeness calculation without changing Codex or OpenCode outcomes. Make `all` select Claude Code too, and fail before any read or publication when its store is missing or unreadable. Leave `both` unchanged.
+- [x] 4.2 Add `recoverClaude` to `recovery.go`, mirroring `recoverCodex`: exact roots, retention when parent links change, conflicts with other harnesses, newly proven children and diagnostics. Charge reads to `sourceReadBudget`.
 
 ## 5. Ledger readers and dashboard (coder)
 
-- [ ] 5.1 Accept `claude` in the canonical validation in `fact_ledger_dto.go`.
-- [ ] 5.2 Accept `'claude'` in `web/src/types/telemetry.ts` and `web/src/api/validation.ts`. Run the canonical frontend build and confirm that the assets in `backend/internal/adapters/web/dist` are current, following the tracking policy for generated files.
+- [x] 5.1 Accept `claude` in the canonical validation in `fact_ledger_dto.go`.
+- [x] 5.2 Accept `'claude'` in `web/src/types/telemetry.ts` and `web/src/api/validation.ts`. Run the canonical frontend build and confirm that the assets in `backend/internal/adapters/web/dist` are current, following the tracking policy for generated files.
 
 ## 6. Guidance and capability matrix (coder)
 
-- [ ] 6.1 Rewrite AGENTS.md rule 7: a Claude Code session uses `--source claude` and passes `--claude-home` only for a nonstandard store. Update the source statements in `docs/OPENSPEC_WORKFLOW.md`, and add the Claude Code store to the local-source sentence in TECHNICAL_GUIDELINES.md.
-- [ ] 6.2 Update `docs/SETUP_MANUAL.md`, `.agents/skills/agentic-lens-operator/references/{cli.md,configuration.md}`, `.agents/skills/agentic-lens-setup/SKILL.md`, `docs/OWNED_OCCURRENCES.md` (Claude Code classification), `docs/COST_SEMANTICS.md` (unavailable cost, `cost-state` excluded) and the README source list. In the operator reference, describe `--source claude`, `all` (OpenCode, Codex and Claude Code, failing without a readable Claude Code store) and `both` (OpenCode plus Codex). Explain that `CLAUDE_CONFIG_DIR` is not read, cover the `cleanupPeriodDays` retention caveat and state that automatic capture is pending in AL-99. Search active guidance for "codex or opencode" wording that conflicts with this change.
+- [x] 6.1 Rewrite AGENTS.md rule 7: a Claude Code session uses `--source claude` and passes `--claude-home` only for a nonstandard store. Update the source statements in `docs/OPENSPEC_WORKFLOW.md`, and add the Claude Code store to the local-source sentence in TECHNICAL_GUIDELINES.md.
+- [x] 6.2 Update `docs/SETUP_MANUAL.md`, `.agents/skills/agentic-lens-operator/references/{cli.md,configuration.md}`, `.agents/skills/agentic-lens-setup/SKILL.md`, `docs/OWNED_OCCURRENCES.md` (Claude Code classification), `docs/COST_SEMANTICS.md` (unavailable cost, `cost-state` excluded) and the README source list. In the operator reference, describe `--source claude`, `all` (OpenCode, Codex and Claude Code, failing without a readable Claude Code store) and `both` (OpenCode plus Codex). Explain that `CLAUDE_CONFIG_DIR` is not read, cover the `cleanupPeriodDays` retention caveat and state that automatic capture is pending in AL-99. Search active guidance for "codex or opencode" wording that conflicts with this change.
 - [ ] 6.3 Append a Claude Code column or section to `openspec/changes/al-63-verify-source-capabilities-across-harnesses/CAPABILITIES.md`. Record the tested version, the evidence ID behind each cell and the cells that are unsupported or not run: hydration, live, cost, entrypoints that were not verified, and compaction or forks until observed.
 
 ## 7. Verification (tester; native verifier for 7.3)

@@ -108,7 +108,7 @@ func TestLocalWriterEmitsPublicationStateSeparatelyAndPreservesSelection(t *test
 	project := t.TempDir()
 	captureState := filepath.Join(project, "capture-registry")
 	publicationState := filepath.Join(project, "publication-state")
-	body, err := config.InitialLocalYAMLWithSettings(project, "", "false", "codex", filepath.Join(project, "codex-source"), "", captureState, publicationState)
+	body, err := config.InitialLocalYAMLWithSettings(project, "", "false", "codex", filepath.Join(project, "codex-source"), "", "", captureState, publicationState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +121,7 @@ func TestLocalWriterEmitsPublicationStateSeparatelyAndPreservesSelection(t *test
 	if !strings.Contains(string(body), captureState) {
 		t.Fatalf("writer lost separate capture policy: %s", body)
 	}
-	repeated, err := config.InitialLocalYAMLWithSettings(project, "", "false", "codex", "", "", captureState, filepath.Join(project, "different-publication-state"))
+	repeated, err := config.InitialLocalYAMLWithSettings(project, "", "false", "codex", "", "", "", captureState, filepath.Join(project, "different-publication-state"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -203,6 +203,10 @@ A turn SHALL start at a user prompt record that is not a tool result, meta recor
 - **WHEN** a root has one completed turn of 120 seconds, an idle gap of 600 seconds and an open turn that started 30 seconds before the cutoff
 - **THEN** its duration is 150 seconds, of which 30 are provisional
 
+#### Scenario: Resumed subagent
+- **WHEN** a subagent with no open turn is resumed and its first new record is a coordinator meta prompt
+- **THEN** that record starts a measured turn for the subagent and does not count as steering
+
 #### Scenario: Completion after a provisional snapshot
 - **WHEN** the open turn later reaches `end_turn` and `generate` runs again
 - **THEN** the measured total replaces the earlier provisional snapshot without adding to it

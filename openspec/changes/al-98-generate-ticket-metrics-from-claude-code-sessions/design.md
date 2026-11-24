@@ -103,3 +103,10 @@ Review coverage:
 - **Current acceptance:** Invocation rows record only the served model, and no new ledger fields are added.
 - **Preserved guarantees:** Responses are counted once. Missing required usage still makes the owner incomplete rather than zero. Cost stays unavailable.
 - **Verification impact:** No tests, documentation or matrix cells cover effort or requested model. Verification checks only that rows are keyed by the served model.
+
+### Implementation corrections within approved intent
+
+- **Source:** Coder findings against the real Claude Code 2.1.331 store on 2026-11-24, accepted by the orchestrator as routine corrections that keep AL-64 and usage-once intent.
+- **Resumed subagents:** A subagent resumed through `SendMessage` starts with a coordinator meta prompt (`isMeta: true`, `origin.kind: "coordinator"`). It now starts a turn when the subagent has no open turn, and never counts as steering. Without this, all work after a resume went unmeasured. Root meta records still start nothing.
+- **Client error notices:** Assistant records with model `<synthetic>` contribute no usage and no invocation row, but may end a turn.
+- **Preserved guarantees and verification:** Duration still excludes time between turns. The tester covers both cases with synthetic fixtures, and the native run exercises a resumed subagent from this ticket's own session.

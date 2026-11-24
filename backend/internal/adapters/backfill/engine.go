@@ -59,10 +59,10 @@ func (e *BackfillEngine) ExecuteContext(ctx context.Context, opts BackfillOption
 	e = &run
 	cleanSource := strings.ToLower(strings.TrimSpace(opts.Source))
 	if cleanSource == "" && opts.RecomputeDB {
-		return nil, fmt.Errorf("--source is required for source backfill: select opencode, codex or both")
+		return nil, fmt.Errorf("--source is required for source backfill: select opencode, codex, claude, both (OpenCode and Codex) or all (OpenCode, Codex and Claude Code)")
 	}
-	if cleanSource != "" && cleanSource != "opencode" && cleanSource != "codex" && cleanSource != "both" && cleanSource != "all" {
-		return nil, fmt.Errorf("invalid source %q: must be 'opencode', 'codex', or 'both'", opts.Source)
+	if cleanSource != "" && cleanSource != "opencode" && cleanSource != "codex" && cleanSource != "claude" && cleanSource != "both" && cleanSource != "all" {
+		return nil, fmt.Errorf("invalid source %q: must be 'opencode', 'codex', 'claude', 'both' (OpenCode and Codex) or 'all' (OpenCode, Codex and Claude Code)", opts.Source)
 	}
 	opts.Source = cleanSource
 
@@ -143,6 +143,15 @@ func (e *BackfillEngine) ExecuteContext(ctx context.Context, opts BackfillOption
 	var opencodeDB *opencode.OpenCodeDB
 	wantsOpenCode := cleanSource == "opencode" || cleanSource == "both" || cleanSource == "all"
 	wantsCodex := cleanSource == "codex" || cleanSource == "both" || cleanSource == "all"
+	wantsClaude := cleanSource == "claude" || cleanSource == "all"
+	if opts.RecomputeDB && wantsClaude {
+		// Checked before any other selected store is opened, so a missing or
+		// unreadable Claude Code store stops "all" before any read or publication.
+		opts.ClaudeHome, err = resolveClaudeStore(opts.ClaudeHome, cfg.Telemetry.Sources.ClaudeHome)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if opts.RecomputeDB && wantsOpenCode {
 		if err := config.ValidateDatabasePolicy(cfg); err != nil {
 			return nil, err
@@ -442,14 +451,18 @@ func (e *BackfillEngine) processSingleWorkspace(
 	cleanSource := strings.ToLower(strings.TrimSpace(opts.Source))
 	wantsOpenCode := cleanSource == "opencode" || cleanSource == "both" || cleanSource == "all"
 	wantsCodex := cleanSource == "codex" || cleanSource == "both" || cleanSource == "all"
+	wantsClaude := cleanSource == "claude" || cleanSource == "all"
 
 	var openCodeSessions []domain.SessionFact
 	var codexSessions []domain.SessionFact
+	var claudeSessions []domain.SessionFact
 	var otherSessions []domain.SessionFact
 	for _, s := range factLedger.Sessions {
 		switch s.Source {
 		case domain.SourceCodex:
 			codexSessions = append(codexSessions, s)
+		case domain.SourceClaude:
+			claudeSessions = append(claudeSessions, s)
 		case domain.SourceOpenCode:
 			openCodeSessions = append(openCodeSessions, s)
 		default:
@@ -477,6 +490,9 @@ func (e *BackfillEngine) processSingleWorkspace(
 		hasTargetSessions = true
 	}
 	if wantsCodex && len(codexSessions) > 0 {
+		hasTargetSessions = true
+	}
+	if wantsClaude && len(claudeSessions) > 0 {
 		hasTargetSessions = true
 	}
 
@@ -532,15 +548,15 @@ func (e *BackfillEngine) processSingleWorkspace(
 	// 2. Recover complete owner trees before publishing any replacement snapshot.
 	dbAttempted := opts.RecomputeDB && hasTargetSessions
 	hasExistingDBFacts := len(factLedger.InvocationFacts()) > 0 || len(factLedger.Sessions) > 0
-	openCodeComplete, codexComplete := false, false
+	openCodeComplete, codexComplete, claudeComplete := false, false, false
 	var sourceEvents domain.SourceEvents
 	if opts.RecomputeDB && wantsOpenCode && (len(openCodeSessions) > 0 || len(factLedger.Sessions) == 0) {
 		var db *sql.DB
 		if opencodeDB != nil {
 			db = opencodeDB.DB()
 		}
-		protected := make(map[string]bool, len(codexSessions)+len(otherSessions))
-		for _, owner := range append(append([]domain.SessionFact{}, codexSessions...), otherSessions...) {
+		protected := make(map[string]bool, len(codexSessions)+len(claudeSessions)+len(otherSessions))
+		for _, owner := range append(append(append([]domain.SessionFact{}, codexSessions...), claudeSessions...), otherSessions...) {
 			protected[owner.ID] = true
 		}
 		workspacePaths := []string{location.Path}
@@ -579,14 +595,29 @@ func (e *BackfillEngine) processSingleWorkspace(
 		return result
 	}
 	if opts.RecomputeDB && wantsCodex && (len(codexSessions) > 0 || len(factLedger.Sessions) == 0) {
-		protected := make(map[string]bool, len(openCodeSessions)+len(otherSessions))
-		for _, owner := range append(append([]domain.SessionFact{}, openCodeSessions...), otherSessions...) {
+		protected := make(map[string]bool, len(openCodeSessions)+len(claudeSessions)+len(otherSessions))
+		for _, owner := range append(append(append([]domain.SessionFact{}, openCodeSessions...), claudeSessions...), otherSessions...) {
 			protected[owner.ID] = true
 		}
 		recovery := e.recoverCodex(ctx, codexSessions, opts.CodexHome, gitUser, protected)
 		codexSessions = recovery.sessions
 		sourceEvents = domain.MergeSourceEvents(sourceEvents, recovery.source)
 		codexComplete = recovery.complete
+		result.DBUpdated = result.DBUpdated || recovery.updated
+		result.Diagnostics = append(result.Diagnostics, recovery.diagnostics...)
+	}
+	if ctx.Err() != nil {
+		return result
+	}
+	if opts.RecomputeDB && wantsClaude && len(claudeSessions) > 0 {
+		protected := make(map[string]bool, len(openCodeSessions)+len(codexSessions)+len(otherSessions))
+		for _, owner := range append(append(append([]domain.SessionFact{}, openCodeSessions...), codexSessions...), otherSessions...) {
+			protected[owner.ID] = true
+		}
+		recovery := e.recoverClaude(ctx, claudeSessions, opts.ClaudeHome, gitUser, protected)
+		claudeSessions = recovery.sessions
+		sourceEvents = domain.MergeSourceEvents(sourceEvents, recovery.source)
+		claudeComplete = recovery.complete
 		result.DBUpdated = result.DBUpdated || recovery.updated
 		result.Diagnostics = append(result.Diagnostics, recovery.diagnostics...)
 	}
@@ -602,12 +633,19 @@ func (e *BackfillEngine) processSingleWorkspace(
 	if wantsOpenCode && len(codexSessions) == 0 && len(openCodeSessions) > 0 {
 		selectedComplete = (!wantsOpenCode || openCodeComplete)
 	}
+	if wantsClaude {
+		selectedComplete = selectedHarnessesComplete([]selectedHarness{
+			{wanted: wantsOpenCode, owners: len(openCodeSessions), complete: openCodeComplete},
+			{wanted: wantsCodex, owners: len(codexSessions), complete: codexComplete},
+			{wanted: true, owners: len(claudeSessions), complete: claudeComplete},
+		})
+	}
 	if opts.RecomputeDB && !hasTargetSessions {
 		selectedComplete = false
 		result.CollectionsRetained = true
 		result.Diagnostics = append(result.Diagnostics, "No exact selected-source owner is recorded; previous snapshot preserved without heuristic source reassignment")
 	}
-	globalComplete := len(factLedger.Sessions) > 0 && len(otherSessions) == 0 && (len(openCodeSessions) == 0 || wantsOpenCode && openCodeComplete) && (len(codexSessions) == 0 || wantsCodex && codexComplete)
+	globalComplete := len(factLedger.Sessions) > 0 && len(otherSessions) == 0 && (len(openCodeSessions) == 0 || wantsOpenCode && openCodeComplete) && (len(codexSessions) == 0 || wantsCodex && codexComplete) && (len(claudeSessions) == 0 || wantsClaude && claudeComplete)
 
 	dbSessionFound := selectedComplete
 	if factLedger.Migration != nil {
@@ -624,6 +662,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	var finalSessions []domain.SessionFact
 	finalSessions = append(finalSessions, openCodeSessions...)
 	finalSessions = append(finalSessions, codexSessions...)
+	finalSessions = append(finalSessions, claudeSessions...)
 	finalSessions = append(finalSessions, otherSessions...)
 	sort.SliceStable(finalSessions, func(i, j int) bool {
 		return finalSessions[i].ID < finalSessions[j].ID
@@ -750,6 +789,60 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	return result
+}
+
+type selectedHarness struct {
+	wanted   bool
+	owners   int
+	complete bool
+}
+
+// selectedHarnessesComplete applies the rule used for OpenCode and Codex to any
+// selection that includes Claude Code: a selected harness without recorded
+// owners needs no recovery when another selected harness owns the sessions.
+func selectedHarnessesComplete(harnesses []selectedHarness) bool {
+	owned := false
+	for _, harness := range harnesses {
+		if harness.wanted && harness.owners > 0 {
+			owned = true
+		}
+	}
+	for _, harness := range harnesses {
+		if !harness.wanted || owned && harness.owners == 0 {
+			continue
+		}
+		if !harness.complete {
+			return false
+		}
+	}
+	return true
+}
+
+// resolveClaudeStore resolves the explicit or configured Claude Code store and
+// requires a readable directory. No other location is consulted.
+func resolveClaudeStore(explicit, configured string) (string, error) {
+	home, err := config.ResolveClaudeHome(explicit, configured)
+	if err != nil {
+		return "", err
+	}
+	home, err = capture.ProjectDirectory(home)
+	if err != nil {
+		return "", fmt.Errorf("resolving selected Claude Code store: %w", err)
+	}
+	directory, err := os.Open(home)
+	if err != nil {
+		return "", fmt.Errorf("accessing selected Claude Code store %q (--claude-home or telemetry.sources.claude.home): %w", home, err)
+	}
+	info, err := directory.Stat()
+	if err == nil && !info.IsDir() {
+		err = fmt.Errorf("selected Claude Code store %q must be a directory (--claude-home or telemetry.sources.claude.home)", home)
+	}
+	if err == nil {
+		if _, readErr := directory.Readdirnames(1); readErr != nil && !errors.Is(readErr, io.EOF) {
+			err = fmt.Errorf("reading selected Claude Code store %q (--claude-home or telemetry.sources.claude.home): %w", home, readErr)
+		}
+	}
+	return home, errors.Join(err, directory.Close())
 }
 
 // publishBackfillLedger replaces one already-owned ledger atomically.
