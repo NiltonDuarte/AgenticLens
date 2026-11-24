@@ -99,3 +99,29 @@ Architecture/Sol discovered CAP-01; behavior/Sol discovered CAP-02–05; data/So
 No fresh active OpenCode walkthrough, native positive v2 skill/delegation/navigation session, native browser click-through, enabled v2 heuristic fallback, concurrency/power-loss probe or all-version compatibility claim was executed. Live update/SSE evidence is fixture-based. Existing tests distinguish complete-empty, partial and unavailable trace coverage; native unavailable-source zero events are not a verified complete-empty snapshot. Preserve this distinction when using the matrix to inform AL-65 defaults.
 
 Before upstream AL-82 added ledger tags, the November 8/11 SHA256 values were AL-55 `77625de54c0125576bbf48240d9e41e16a2db1497e289283e52e99cf71d4b3b2`, AL-62 `6391077a4c528a3a027b0e61ab965a6995c3f30f34224dc0df63c2b1d0baa874`. Both current ledgers match main byte-for-byte. Removing only the upstream tags yields the same parsed facts as November 11. Raw rollouts, SQLite backups and probe programs/results stay outside Git. Current open and resolved dispositions are listed above; the original reports preserve historical findings. A completed capability audit does not certify defect-free sources or authorize implementation.
+
+## Claude Code addendum (AL-98, November 24)
+
+AL-98 added Claude Code as a manual `generate` and `backfill` source. This section records its capabilities separately, and the rows above are unchanged. The tested version is Claude Code 2.1.331 with the AL-98 candidate at `0f106ae7`. The evidence is in the [AL-98 native verification](../al-98-generate-ticket-metrics-from-claude-code-sessions/evidence/NATIVE_VERIFICATION.md), and it uses these IDs:
+
+- **N1:** section 7.3 of that report. This ticket's own root (`t3-code` entrypoint) and five native subagents, compared with an independent oracle. It also covers the refresh, backfill and standalone binary reads. Runs B and C used snapshot copies whose root `cwd` was rewritten to pass the ownership check.
+- **N2:** section 7.4 of that report. A new `claude -p` session (`sdk-cli` entrypoint) with one background native subagent and a `/compact`.
+- **N3:** the `03f50ca2` section of that report and its F2 re-check. A new interactive `cli` session driven through tmux with Esc interrupts (before a response, while streaming and during a tool call) and two bash-mode commands.
+- **F1** and **O1:** the finding and observation of the same names in that report.
+
+Labels follow the definitions above. **V/N** marks a native session that was started for this verification.
+
+| Capability | Claude Code 2.1.331 (transcript JSONL) |
+| --- | --- |
+| Ingestion and entrypoints | Root and subagent transcripts read from the selected store. `t3-code` **V/R** (N1), `sdk-cli` **V/N** (N2) and `cli` **V/N** (N3). `sdk-ts`, `sdk-py` and `claude-vscode` are **NOT RUN**. |
+| Usage, counted once per response | Each response is counted once by `requestId`. All six owners match the oracle, with duplicated content-block records collapsed. **V/R** (N1), **V/N** (N2). |
+| Child sessions and parentage | Children are linked only when the `meta.json` `toolUseId` matches an `Agent` call. Five children have the root as parent and their native `agentType` as role. **V/R** (N1), plus one background child **V/N** (N2). Nested subagents were not observed: **NOT RUN**. |
+| Skill facts | One successful `Skill` activation on the root **V/R** (N1). Subagent skill calls and failed skill calls were not observed: **NOT RUN**. |
+| Delegation facts | Five `Agent` delegations with proven child IDs **V/R** (N1). One more **V/N** (N2). |
+| Duration (AL-64) | Turns, measured and provisional time and steering match the turn oracle, including task-notification turns that add no steering. **V/R** (N1). Local slash commands: fixed in `264550f3` and covered by synthetic tests. A reviewer re-ran the fixed adapter over the N2 probe tree and got 2 root turns, steering 1, 5 s active and no provisional time. Esc interrupts and bash-mode commands **V/N** (N3): interrupts close the open turn without steering, and an answered bash-mode command is a non-steering turn (fixed in `f1749596` after F2, where the reply's turn was dropped). An interrupted streaming response records only its first chunk's usage, so its output tokens are a lower bound. Interrupt records from SDK hosts are not observed. History: at `0f106ae7` this cell was **FAIL**, because local slash-command records started phantom turns and steering and left the last turn open (F1, N2). |
+| Compaction | Compaction keeps the same file, and each `compact_boundary` record counts as one compaction. **V/N** (N2). The compaction request's own usage is not written to the transcript, so ledgers undercount compaction usage: **UNAVAILABLE** (O1). |
+| Forks | Copied `forkedFrom` records were not observed natively: **NOT RUN**. |
+| Invocation cost | **UNSUPPORTED**. Every invocation records unavailable cost (N1, N2). Claude Code's `cost-state` estimate is excluded by design and is never persisted or summed. |
+| Source-backed recovery | `backfill --source claude --recompute-db` refresh, a byte-identical unchanged repeat, and replacement from an older complete snapshot **V/R** (N1). |
+| Historical trace hydration | **UNSUPPORTED**. The events endpoint returns `unavailable` with an unsupported-source diagnostic for every owner, and stored metrics stay visible (N1). |
+| Live observability | **UNSUPPORTED**. Live views read only OpenCode SQLite. |

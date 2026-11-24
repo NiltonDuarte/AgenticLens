@@ -14,10 +14,10 @@ func ResolveSource(explicit, configured string) (string, error) {
 		selected = strings.ToLower(strings.TrimSpace(configured))
 	}
 	if selected == "" {
-		return "", fmt.Errorf("telemetry source is required: supply --source codex|opencode or configure telemetry.default_source in the selected local YAML")
+		return "", fmt.Errorf("telemetry source is required: supply --source codex|opencode|claude or configure telemetry.default_source in the selected local YAML")
 	}
-	if selected != "opencode" && selected != "codex" {
-		return "", fmt.Errorf("unsupported source %q: use opencode or codex", selected)
+	if selected != "opencode" && selected != "codex" && selected != "claude" {
+		return "", fmt.Errorf("unsupported source %q: use opencode, codex or claude", selected)
 	}
 	return selected, nil
 }
@@ -27,6 +27,12 @@ func ResolveOpenCodePath(explicit, configured string) (string, error) {
 }
 func ResolveCodexHome(explicit, configured string) (string, error) {
 	return resolveSourcePath(explicit, configured, "--codex-home", "telemetry.sources.codex.home")
+}
+
+// ResolveClaudeHome selects the explicit Claude Code store. CLAUDE_CONFIG_DIR and
+// the default ~/.claude directory are never consulted implicitly.
+func ResolveClaudeHome(explicit, configured string) (string, error) {
+	return resolveSourcePath(explicit, configured, "--claude-home", "telemetry.sources.claude.home")
 }
 func resolveSourcePath(explicit, configured, flag, key string) (string, error) {
 	value := strings.TrimSpace(explicit)

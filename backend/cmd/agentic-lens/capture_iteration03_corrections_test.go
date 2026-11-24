@@ -417,7 +417,7 @@ func TestCaptureSamePinOtherProjectInstallPreservesAcknowledgedActiveWorker(t *t
 	if err := store.RequestPublication(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(localPath, []byte(strings.Replace(local, "enabled: false", "enabled: true", 1)), 0600); err != nil {
+	if err := writeCaptureFileAtomic(localPath, []byte(strings.Replace(local, "enabled: false", "enabled: true", 1)), 0600); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -439,7 +439,7 @@ func TestCaptureSamePinOtherProjectInstallPreservesAcknowledgedActiveWorker(t *t
 	}
 	t.Cleanup(func() {
 		defer cancel()
-		if err := os.WriteFile(localPath, []byte(local), 0600); err != nil {
+		if err := writeCaptureFileAtomic(localPath, []byte(local), 0600); err != nil {
 			t.Error(err)
 		}
 		done := make(chan error, 1)

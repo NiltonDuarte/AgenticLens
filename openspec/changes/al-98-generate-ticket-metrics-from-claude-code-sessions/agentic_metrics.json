@@ -1,0 +1,589 @@
+{
+  "tags": {
+    "agentic-lens-dev": "0.1.1",
+    "agentic-lens-po": "0.1.1",
+    "agentic-lens-review": "0.1.1"
+  },
+  "schema_version": 6,
+  "ticket_id": "AL-98",
+  "ticket_title": "Generate ticket metrics from Claude Code sessions",
+  "ticket_type": "feat",
+  "started_at": "2026-11-23T23:11:18.553Z",
+  "completed_at": "2026-11-24T10:42:36.617452+00:00",
+  "updated_at": "2026-11-24T10:42:36.617452+00:00",
+  "code": {
+    "lines_added": 6721,
+    "lines_deleted": 67,
+    "test_lines_added": 4194,
+    "test_lines_deleted": 8,
+    "prod_lines_added": 2527,
+    "prod_lines_deleted": 59,
+    "files_changed": 40,
+    "sdlc_iterations": 7
+  },
+  "sessions": [
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "a1925df71259a3a72",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "started_at": "2026-11-24T01:07:36.364Z",
+          "completed_at": "2026-11-24T02:12:15.748Z",
+          "active_duration_seconds": 2299,
+          "turns": 3,
+          "tokens": {"input": 184, "output": 99383, "cache_read": 21590928, "reasoning": 36919, "peak_context": 378999},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 78, "errors": 1},
+        {"name": "Read", "calls": 20, "errors": 0},
+        {"name": "Write", "calls": 3, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 251315, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "a1cf292b04ba03662",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-23T23:40:25.437Z",
+          "completed_at": "2026-11-24T01:21:36.390Z",
+          "active_duration_seconds": 392,
+          "turns": 3,
+          "tokens": {"input": 112, "output": 33219, "cache_read": 5446000, "reasoning": 8341, "peak_context": 170876},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 50, "errors": 0},
+        {"name": "Edit", "calls": 2, "errors": 0},
+        {"name": "Read", "calls": 2, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "a376abf34dc09df2e",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-24T01:06:47.715Z",
+          "completed_at": "2026-11-24T02:10:05.304Z",
+          "active_duration_seconds": 811,
+          "turns": 3,
+          "tokens": {"input": 122, "output": 59338, "cache_read": 9318268, "reasoning": 27247, "peak_context": 252519},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 55, "errors": 0},
+        {"name": "Write", "calls": 3, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 3, "context_tokens": 250079, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "a3cc6b32776c52c59",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-24T01:07:29.258Z",
+          "completed_at": "2026-11-24T02:11:12.595Z",
+          "active_duration_seconds": 1278,
+          "turns": 3,
+          "tokens": {"input": 136, "output": 67220, "cache_read": 13329159, "reasoning": 22813, "peak_context": 322665},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 68, "errors": 0},
+        {"name": "Edit", "calls": 1, "errors": 0},
+        {"name": "Write", "calls": 3, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 2, "context_tokens": 254296, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "a3d71179621061b8d",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-24T01:07:15.512Z",
+          "completed_at": "2026-11-24T01:42:59.095Z",
+          "active_duration_seconds": 397,
+          "turns": 2,
+          "tokens": {"input": 80, "output": 28611, "cache_read": 4032844, "reasoning": 9033, "peak_context": 169302},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 36, "errors": 0},
+        {"name": "Write", "calls": 2, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "a4be96aac8c181a48",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "started_at": "2026-11-24T01:07:09.001Z",
+          "completed_at": "2026-11-24T02:10:49.165Z",
+          "active_duration_seconds": 1117,
+          "turns": 3,
+          "tokens": {"input": 246, "output": 90827, "cache_read": 23216030, "reasoning": 33295, "peak_context": 322792},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 117, "errors": 2},
+        {"name": "Read", "calls": 5, "errors": 0},
+        {"name": "Write", "calls": 3, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 2, "context_tokens": 257537, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "a6908b3b63f013f22",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-23T23:40:16.310Z",
+          "completed_at": "2026-11-24T02:04:27.058Z",
+          "active_duration_seconds": 3075,
+          "turns": 5,
+          "tokens": {"input": 376, "output": 213468, "cache_read": 54890661, "reasoning": 55231, "peak_context": 477708},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 172, "errors": 4},
+        {"name": "Read", "calls": 7, "errors": 0},
+        {"name": "Write", "calls": 13, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 4, "context_tokens": 450972, "threshold": "450000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 2, "context_tokens": 253374, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "a6bbc56a9508cd15e",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "planner",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-23T23:12:42.595Z",
+          "completed_at": "2026-11-23T23:39:52.815Z",
+          "active_duration_seconds": 1067,
+          "turns": 2,
+          "tokens": {"input": 182, "output": 87438, "cache_read": 17109915, "reasoning": 32036, "peak_context": 314118},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 83, "errors": 1},
+        {"name": "Edit", "calls": 8, "errors": 0},
+        {"name": "Read", "calls": 6, "errors": 0},
+        {"name": "Write", "calls": 5, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 254278, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "a81fed47e8ddd1cbf",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "tester",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-24T10:29:21.438Z",
+          "completed_at": "2026-11-24T10:41:38.664Z",
+          "active_duration_seconds": 737,
+          "turns": 1,
+          "tokens": {"input": 38, "output": 13955, "cache_read": 1377422, "reasoning": 3635, "peak_context": 91939},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 19, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "aa6f8cf29d24f2e96",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-24T01:07:01.802Z",
+          "completed_at": "2026-11-24T02:09:55.638Z",
+          "active_duration_seconds": 869,
+          "turns": 3,
+          "tokens": {"input": 186, "output": 69628, "cache_read": 15561307, "reasoning": 24698, "peak_context": 278866},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 89, "errors": 1},
+        {"name": "Write", "calls": 3, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 2, "context_tokens": 250251, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "acf98b05392fa1a74",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "tester",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-24T00:32:56.377Z",
+          "completed_at": "2026-11-24T01:47:12.863Z",
+          "active_duration_seconds": 1210,
+          "turns": 2,
+          "tokens": {"input": 220, "output": 88989, "cache_read": 15715827, "reasoning": 25904, "peak_context": 224597},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 106, "errors": 2},
+        {"name": "Edit", "calls": 1, "errors": 0},
+        {"name": "Read", "calls": 1, "errors": 0},
+        {"name": "Write", "calls": 1, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "af552497c95386615",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "started_at": "2026-11-24T01:06:54.058Z",
+          "completed_at": "2026-11-24T02:10:22.548Z",
+          "active_duration_seconds": 1007,
+          "turns": 3,
+          "tokens": {"input": 156, "output": 89168, "cache_read": 14307273, "reasoning": 49195, "peak_context": 309670},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 75, "errors": 0},
+        {"name": "Read", "calls": 5, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 2, "context_tokens": 252894, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "af70fc0dbbf166bd8",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "started_at": "2026-11-24T01:07:21.756Z",
+          "completed_at": "2026-11-24T01:43:14.142Z",
+          "active_duration_seconds": 515,
+          "turns": 2,
+          "tokens": {"input": 118, "output": 41662, "cache_read": 7921683, "reasoning": 16015, "peak_context": 223574},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 54, "errors": 1},
+        {"name": "Read", "calls": 4, "errors": 0},
+        {"name": "Write", "calls": 2, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "af94d85cf2d5b0ae8",
+      "parent_id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "tester",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-24T00:32:42.025Z",
+          "completed_at": "2026-11-24T02:06:59.560Z",
+          "active_duration_seconds": 2615,
+          "turns": 3,
+          "tokens": {"input": 318, "output": 206174, "cache_read": 47626993, "reasoning": 63967, "peak_context": 499583},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "Bash", "calls": 153, "errors": 0},
+        {"name": "Edit", "calls": 3, "errors": 0},
+        {"name": "Read", "calls": 3, "errors": 0},
+        {"name": "Write", "calls": 5, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 2, "context_tokens": 450188, "threshold": "450000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 250027, "threshold": "250000"}}
+      ]
+    },
+    {
+      "skills": [
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": null,
+          "invoked_at": "2026-11-23T23:11:29.138Z"
+        }
+      ],
+      "delegations": [
+        {
+          "agent_type": "planner",
+          "description": "Plan AL-98 Claude source",
+          "invoked_at": "2026-11-23T23:12:42.560Z",
+          "child_session_id": "a6bbc56a9508cd15e"
+        },
+        {
+          "agent_type": "coder",
+          "description": "Implement AL-98 backend and web",
+          "invoked_at": "2026-11-23T23:40:16.286Z",
+          "child_session_id": "a6908b3b63f013f22"
+        },
+        {
+          "agent_type": "coder",
+          "description": "Update AL-98 guidance docs",
+          "invoked_at": "2026-11-23T23:40:25.429Z",
+          "child_session_id": "a1cf292b04ba03662"
+        },
+        {
+          "agent_type": "tester",
+          "description": "AL-98 adversarial test suite",
+          "invoked_at": "2026-11-24T00:32:42.017Z",
+          "child_session_id": "af94d85cf2d5b0ae8"
+        },
+        {
+          "agent_type": "tester",
+          "description": "AL-98 native verification runs",
+          "invoked_at": "2026-11-24T00:32:56.368Z",
+          "child_session_id": "acf98b05392fa1a74"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "AL-98 review data opus",
+          "invoked_at": "2026-11-24T01:06:47.698Z",
+          "child_session_id": "a376abf34dc09df2e"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "AL-98 review data sonnet",
+          "invoked_at": "2026-11-24T01:06:54.048Z",
+          "child_session_id": "af552497c95386615"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "AL-98 review behavior opus",
+          "invoked_at": "2026-11-24T01:07:01.795Z",
+          "child_session_id": "aa6f8cf29d24f2e96"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "AL-98 review behavior sonnet",
+          "invoked_at": "2026-11-24T01:07:08.996Z",
+          "child_session_id": "a4be96aac8c181a48"
+        },
+        {
+          "agent_type": "reviewer-architecture",
+          "description": "AL-98 review architecture opus",
+          "invoked_at": "2026-11-24T01:07:15.499Z",
+          "child_session_id": "a3d71179621061b8d"
+        },
+        {
+          "agent_type": "reviewer-architecture",
+          "description": "AL-98 review architecture sonnet",
+          "invoked_at": "2026-11-24T01:07:21.747Z",
+          "child_session_id": "af70fc0dbbf166bd8"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "AL-98 review tests opus",
+          "invoked_at": "2026-11-24T01:07:29.250Z",
+          "child_session_id": "a3cc6b32776c52c59"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "AL-98 review tests sonnet",
+          "invoked_at": "2026-11-24T01:07:36.353Z",
+          "child_session_id": "a1925df71259a3a72"
+        },
+        {
+          "agent_type": "tester",
+          "description": "Make capture test config writes atomic",
+          "invoked_at": "2026-11-24T10:29:21.416Z",
+          "child_session_id": "a81fed47e8ddd1cbf"
+        }
+      ],
+      "id": "b918d950-b1d1-42d6-8d61-a688c68333da",
+      "source": "claude",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "provisional_seconds": 819,
+          "role": "",
+          "model": "claude-opus-5-5",
+          "started_at": "2026-11-23T23:11:18.553Z",
+          "completed_at": null,
+          "active_duration_seconds": 4306,
+          "turns": 43,
+          "tokens": {"input": 452, "output": 142059, "cache_read": 31692355, "reasoning": 23050, "peak_context": 342062},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 1,
+          "user_iterations": 7
+        }
+      ],
+      "tools": [
+        {"name": "Agent", "calls": 14, "errors": 0},
+        {"name": "AskUserQuestion", "calls": 2, "errors": 0},
+        {"name": "Bash", "calls": 114, "errors": 1},
+        {"name": "SendMessage", "calls": 27, "errors": 0},
+        {"name": "Skill", "calls": 1, "errors": 0},
+        {"name": "ToolSearch", "calls": 4, "errors": 0},
+        {"name": "Write", "calls": 2, "errors": 0},
+        {"name": "mcp__t3-code__delegate_task", "calls": 5, "errors": 1},
+        {"name": "mcp__t3-code__link_pull_request", "calls": 1, "errors": 0},
+        {"name": "mcp__t3-code__orchestrator_capabilities", "calls": 3, "errors": 0},
+        {"name": "mcp__t3-code__task_cancel", "calls": 4, "errors": 0},
+        {"name": "mcp__t3-code__task_status", "calls": 1, "errors": 0},
+        {"name": "mcp__t3-code__watch_pull_request", "calls": 1, "errors": 0}
+      ],
+      "anomalies": [
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 6, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 18, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 23, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-tests", "count": 5, "threshold": "5"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 24, "context_tokens": 258288, "threshold": "250000"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 3, "threshold": "3"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-data", "secondary_role": "reviewer-behavior", "count": 4, "threshold": "3"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "tester", "secondary_role": "reviewer-tests", "count": 3, "threshold": "3"}}
+      ]
+    }
+  ],
+  "anomalies": []
+}

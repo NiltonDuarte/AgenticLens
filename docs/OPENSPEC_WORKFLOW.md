@@ -11,7 +11,7 @@ npm ci --prefix tools/openspec
 scripts/openspec.sh --version
 ```
 
-The wrapper uses only that installed package and disables OpenSpec's separate anonymous command telemetry. It never installs a newer release implicitly. AgenticLens session telemetry still comes only from its selected Codex/OpenCode source adapter.
+The wrapper uses only that installed package and disables OpenSpec's separate anonymous command telemetry. It never installs a newer release implicitly. AgenticLens session telemetry still comes only from its selected Codex, OpenCode or Claude Code source adapter.
 
 ## Setup and creation
 
@@ -19,7 +19,7 @@ The supported project customization points are `openspec/config.yaml`, the proje
 
 The setup bundle installer’s explicit `--with-openspec` option installs this pinned tool/schema bundle from the selected exact AgenticLens release (or approved local source), preflighting every target and refusing differing custom files before any installation writes. It does not run npm, enable capture or generate assistant files.
 
-After explicitly approving setup in an adopting repository, use the pinned CLI's `init --tools codex,opencode --no-animation` and install the reviewed schema bundle/configuration. Preserve custom/unrelated instructions and review generated-file conflicts before accepting updates; do not run `--force` to remove them. This repository's generated shared skills support both Codex and OpenCode. No additional AgenticLens source adapters are implied.
+After explicitly approving setup in an adopting repository, use the pinned CLI's `init --tools codex,opencode --no-animation` and install the reviewed schema bundle/configuration. Preserve custom/unrelated instructions and review generated-file conflicts before accepting updates; do not run `--force` to remove them. This repository's generated shared skills support both Codex and OpenCode; Claude Code reaches the same files through the `.claude/skills/` links. No additional AgenticLens source adapters are implied.
 
 For this repository, create selected execution work from the project root:
 
@@ -64,7 +64,7 @@ Use the [contributor steering format](../CONTRIBUTING.md#71-recording-steering-w
 
 Configure every chosen search directory explicitly. This repository selects `alspaces`, `openspec/changes` and `openspec/changes/archive` with depth 1 and budget 300; the generic configuration writer initializes depth 0/budget 300. Root entries have only a path and discovery policy, with optional configured artifact overrides. No scalar `workspaces.dir`, root ID, minimum depth or runtime `--workspaces` override is retained.
 
-AgenticLens ignores a planning-only folder. First generation needs the canonical ticket ID, actual source/session selection, explicit conventional type and ledger destination. The following is a command shape, not permission to generate telemetry early:
+AgenticLens ignores a planning-only folder. First generation needs the canonical ticket ID, actual source/session selection, explicit conventional type and ledger destination. The following is a command shape, not permission to generate telemetry early; a Claude Code session uses `--source claude` instead:
 
 ```bash
 agentic-lens generate --source codex --session-id <ACTUAL_ROOT_ID> --ticket-id AL-123 --ticket-type feat --json-output openspec/changes/al-123-add-login/agentic_metrics.json --append openspec/changes/al-123-add-login/delivery.md
@@ -88,4 +88,4 @@ Review Git changes for configuration, guidance and selected execution artifacts.
 
 Run `python3 scripts/tests/openspec_workflow_test.py` after installing the pinned toolchain for durable isolated creation/schema/archive checks. Missing dependencies fail explicitly; there are no silent skips.
 
-The pinned package has been exercised in isolated native CLI probes: project init for Codex/OpenCode, schema validation, creation, instructions/status, strict change validation and archive with delivery evidence retained and delta specs synchronized. Those probes establish OpenSpec's CLI/schema surface, not AgenticLens capture compatibility. Native Codex/OpenCode source extraction, archive-safe publication and standalone dashboard evidence must be recorded against the actual delivered AgenticLens candidate.
+The pinned package has been exercised in isolated native CLI probes: project init for Codex/OpenCode, schema validation, creation, instructions/status, strict change validation and archive with delivery evidence retained and delta specs synchronized. Those probes establish OpenSpec's CLI/schema surface, not AgenticLens capture compatibility. Native source extraction for each harness the delivery claims (Codex, OpenCode or Claude Code), archive-safe publication and standalone dashboard evidence must be recorded against the actual delivered AgenticLens candidate.
