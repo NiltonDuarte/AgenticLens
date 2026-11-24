@@ -41,7 +41,10 @@ type Transcript struct {
 	timeline      []timelineEntry
 	compactions   []string
 	promptCount   int64
-	sidechainSeen bool
+	// pendingCommand is the timeline position plus one of a local slash-command
+	// echo that no assistant record has answered yet; zero means none.
+	pendingCommand int
+	sidechainSeen  bool
 }
 
 type response struct {
@@ -137,6 +140,7 @@ type rawBlock struct {
 	Name      string          `json:"name"`
 	Input     json.RawMessage `json:"input"`
 	ToolUseID string          `json:"tool_use_id"`
+	Text      string          `json:"text"`
 	IsError   *bool           `json:"is_error"`
 }
 
@@ -310,6 +314,8 @@ func responseKey(requestID, messageID string) string {
 }
 
 func (t *Transcript) readAssistant(record rawRecord, at time.Time, line int) {
+	// A model reply means a preceding slash-command echo was a real prompt.
+	t.pendingCommand = 0
 	var message rawAssistantMessage
 	if err := json.Unmarshal(record.Message, &message); err != nil || len(record.Message) == 0 {
 		t.incomplete(fmt.Sprintf("line %d: assistant record has no readable message", line))
@@ -421,7 +427,7 @@ func (t *Transcript) readUser(record rawRecord, at time.Time, line int) {
 	}
 	var text string
 	if json.Unmarshal(message.Content, &text) == nil {
-		t.readPrompt(record, at)
+		t.readPrompt(record, at, text)
 		return
 	}
 	var blocks []rawBlock
@@ -436,7 +442,14 @@ func (t *Transcript) readUser(record rawRecord, at time.Time, line int) {
 		}
 	}
 	if len(results) == 0 {
-		t.readPrompt(record, at)
+		leading := ""
+		for _, block := range blocks {
+			if block.Type == "text" {
+				leading = block.Text
+				break
+			}
+		}
+		t.readPrompt(record, at, leading)
 		return
 	}
 	for _, block := range results {
@@ -464,9 +477,43 @@ func (t *Transcript) readUser(record rawRecord, at time.Time, line int) {
 	t.timeline = append(t.timeline, timelineEntry{kind: entryOwned, at: at, raw: record.Timestamp})
 }
 
+// Claude Code writes a local slash command (such as /compact) as two harness
+// user records: an echo whose content opens with a <command-name> envelope and
+// an output record whose content opens with a <local-command-stdout> or
+// <local-command-stderr> envelope. Neither carries promptSource and no model
+// replies to them. A prompt-type slash command also opens with the echo
+// envelope but receives a model reply instead of an output record.
+var (
+	commandEchoEnvelopes   = []string{"<command-name>", "<command-message>"}
+	commandOutputEnvelopes = []string{"<local-command-stdout>", "<local-command-stderr>"}
+)
+
+func hasEnvelope(text string, envelopes []string) bool {
+	trimmed := strings.TrimSpace(text)
+	for _, envelope := range envelopes {
+		if strings.HasPrefix(trimmed, envelope) {
+			return true
+		}
+	}
+	return false
+}
+
 // readPrompt starts a turn only for a prompt that is not a meta record, a
-// compaction summary or transcript-only text.
-func (t *Transcript) readPrompt(record rawRecord, at time.Time) {
+// compaction summary, transcript-only text or local slash-command output. A
+// command echo is provisionally a prompt and is withdrawn when its local
+// output arrives before any assistant record, so a local command neither
+// starts a turn nor counts as steering.
+func (t *Transcript) readPrompt(record rawRecord, at time.Time, text string) {
+	harness := strings.TrimSpace(record.PromptSource) == ""
+	if harness && !record.IsMeta && hasEnvelope(text, commandOutputEnvelopes) {
+		if t.pendingCommand > 0 {
+			t.timeline[t.pendingCommand-1].kind = entryOwned
+			t.promptCount--
+			t.pendingCommand = 0
+		}
+		t.timeline = append(t.timeline, timelineEntry{kind: entryOwned, at: at, raw: record.Timestamp})
+		return
+	}
 	if record.IsMeta && t.AgentID != "" && originKind(record.Origin) == "coordinator" && !record.IsCompactSummary && !record.TranscriptOnly {
 		t.promptCount++
 		t.timeline = append(t.timeline, timelineEntry{kind: entryResume, at: at, raw: record.Timestamp, nativeID: strings.TrimSpace(record.UUID), system: true})
@@ -478,6 +525,10 @@ func (t *Transcript) readPrompt(record rawRecord, at time.Time) {
 	}
 	t.promptCount++
 	t.timeline = append(t.timeline, timelineEntry{kind: entryPrompt, at: at, raw: record.Timestamp, nativeID: strings.TrimSpace(record.UUID), system: record.PromptSource == "system"})
+	t.pendingCommand = 0
+	if harness && hasEnvelope(text, commandEchoEnvelopes) {
+		t.pendingCommand = len(t.timeline)
+	}
 }
 
 func originKind(raw json.RawMessage) string {

@@ -134,3 +134,71 @@ func TestLocalWriterEmitsPublicationStateSeparatelyAndPreservesSelection(t *test
 		}
 	}
 }
+
+// The local writer accepts an explicit Claude Code source, round-trips through
+// the real loader, and fills only missing choices. Paths are synthetic fixtures.
+func TestLocalWriterRecordsClaudeSourceAndPreservesExistingValues(t *testing.T) {
+	writeLocal := func(t *testing.T, project string, body []byte) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), body, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Run("fresh setup", func(t *testing.T) {
+		project := t.TempDir()
+		store := filepath.Join(project, "claude-synthetic-store")
+		body, err := config.InitialLocalYAMLWithSettings(project, "", "false", "claude", "", store, "", filepath.Join(project, "capture"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(body), "codex") || strings.Contains(string(body), "database_path") {
+			t.Fatalf("Claude Code setup wrote another harness store:\n%s", body)
+		}
+		writeConfig(t, project, ".agenticlens-config.yaml", fixtureSharedBody(t))
+		writeLocal(t, project, body)
+		cfg, err := config.Load(project)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Telemetry.DefaultSource != "claude" || cfg.Telemetry.Sources.ClaudeHome != store {
+			t.Fatalf("writer output did not round-trip: %+v", cfg.Telemetry)
+		}
+		repeated, err := config.InitialLocalYAMLWithSettings(project, "", "false", "claude", "", filepath.Join(project, "different-store"), "", filepath.Join(project, "capture"))
+		if err != nil || string(repeated) != string(body) {
+			t.Fatalf("repeated setup replaced the selected store: %v\n%s", err, repeated)
+		}
+	})
+	t.Run("missing store", func(t *testing.T) {
+		project := t.TempDir()
+		_, err := config.InitialLocalYAMLWithSettings(project, "", "false", "claude", filepath.Join(project, "codex"), "", "", filepath.Join(project, "capture"))
+		if err == nil || !strings.Contains(err.Error(), "telemetry.sources.claude.home") {
+			t.Fatalf("a Claude Code source without its store must fail: %v", err)
+		}
+	})
+	t.Run("existing selection preserved", func(t *testing.T) {
+		project := t.TempDir()
+		existing := []byte("telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: /synthetic/codex\n  capture:\n    enabled: false\n    state_dir: /synthetic/capture\nagenticlens:\n  state_dir: /synthetic/publication\n")
+		writeLocal(t, project, existing)
+		body, err := config.InitialLocalYAMLWithSettings(project, "", "false", "claude", "", "/synthetic/claude", "", "/synthetic/capture")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(body) != string(existing) {
+			t.Fatalf("valid existing source selection must be preserved:\n%s", body)
+		}
+	})
+	t.Run("settings candidate", func(t *testing.T) {
+		project := t.TempDir()
+		candidate := filepath.Join(t.TempDir(), "local-settings.yaml")
+		if err := os.WriteFile(candidate, []byte("telemetry:\n  default_source: claude\n  sources:\n    claude:\n      home: /synthetic/claude-from-settings\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		body, err := config.InitialLocalYAMLWithSettings(project, candidate, "false", "", "", "", "", "/synthetic/capture")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(body), "default_source: claude") || !strings.Contains(string(body), "home: /synthetic/claude-from-settings") {
+			t.Fatalf("approved settings candidate lost the Claude Code store:\n%s", body)
+		}
+	})
+}

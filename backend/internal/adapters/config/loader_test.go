@@ -302,6 +302,26 @@ func TestLoadLocalTelemetrySelectionIsIndependent(t *testing.T) {
 	if cfg.Telemetry.DefaultSource != "codex" || cfg.Telemetry.Sources.CodexHome != filepath.Join(root, "selected-codex") || cfg.Telemetry.Sources.OpenCodeDatabasePath != filepath.Join(root, "selected.db") || cfg.LocalConfigPath != local {
 		t.Fatalf("local source origin lost: %+v", cfg)
 	}
+	// A non-default Claude Code store resolves relative to the selected local
+	// file, independently of the other sources.
+	writeConfig(t, root, ".agenticlens-config.local.yaml", "telemetry:\n  default_source: claude\n  sources:\n    claude:\n      home: stores/claude-synthetic\n    codex:\n      home: selected-codex\n  capture:\n    enabled: false\n    state_dir: selected-state\n")
+	claudeCfg, err := config.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if claudeCfg.Telemetry.DefaultSource != "claude" || claudeCfg.Telemetry.Sources.ClaudeHome != filepath.Join(root, "stores", "claude-synthetic") || claudeCfg.Telemetry.Sources.CodexHome != filepath.Join(root, "selected-codex") || claudeCfg.Telemetry.Sources.OpenCodeDatabasePath != "" {
+		t.Fatalf("local Claude Code selection lost: %+v", claudeCfg.Telemetry)
+	}
+	for body, want := range map[string]string{
+		"telemetry:\n  default_source: claude-code\n":            "opencode, codex or claude",
+		"telemetry:\n  sources:\n    claude:\n      home: 7\n":   "telemetry.sources.claude.home",
+		"telemetry:\n  sources:\n    claude:\n      home: [a]\n": "telemetry.sources.claude.home",
+	} {
+		writeConfig(t, root, ".agenticlens-config.local.yaml", body)
+		if _, err := config.Load(root); err == nil || !strings.Contains(err.Error(), want) {
+			t.Fatalf("invalid local Claude Code setting %q accepted or unnamed: %v", body, err)
+		}
+	}
 	raw, err := os.ReadFile(shared)
 	if err != nil {
 		t.Fatal(err)

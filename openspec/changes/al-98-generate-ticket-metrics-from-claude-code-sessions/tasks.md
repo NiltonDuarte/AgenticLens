@@ -44,11 +44,11 @@
 
 - [x] 6.1 Rewrite AGENTS.md rule 7: a Claude Code session uses `--source claude` and passes `--claude-home` only for a nonstandard store. Update the source statements in `docs/OPENSPEC_WORKFLOW.md`, and add the Claude Code store to the local-source sentence in TECHNICAL_GUIDELINES.md.
 - [x] 6.2 Update `docs/SETUP_MANUAL.md`, `.agents/skills/agentic-lens-operator/references/{cli.md,configuration.md}`, `.agents/skills/agentic-lens-setup/SKILL.md`, `docs/OWNED_OCCURRENCES.md` (Claude Code classification), `docs/COST_SEMANTICS.md` (unavailable cost, `cost-state` excluded) and the README source list. In the operator reference, describe `--source claude`, `all` (OpenCode, Codex and Claude Code, failing without a readable Claude Code store) and `both` (OpenCode plus Codex). Explain that `CLAUDE_CONFIG_DIR` is not read, cover the `cleanupPeriodDays` retention caveat and state that automatic capture is pending in AL-99. Search active guidance for "codex or opencode" wording that conflicts with this change.
-- [ ] 6.3 Append a Claude Code column or section to `openspec/changes/al-63-verify-source-capabilities-across-harnesses/CAPABILITIES.md`. Record the tested version, the evidence ID behind each cell and the cells that are unsupported or not run: hydration, live, cost, entrypoints that were not verified, and compaction or forks until observed.
+- [x] 6.3 Append a Claude Code column or section to `openspec/changes/al-63-verify-source-capabilities-across-harnesses/CAPABILITIES.md`. Record the tested version, the evidence ID behind each cell and the cells that are unsupported or not run: hydration, live, cost, entrypoints that were not verified, and compaction or forks until observed.
 
 ## 7. Verification (tester; native verifier for 7.3)
 
-- [ ] 7.1 Adapter tests in `backend/internal/adapters/claude/*_test.go` with labeled synthetic fixtures:
+- [x] 7.1 Adapter tests in `backend/internal/adapters/claude/*_test.go` with labeled synthetic fixtures:
   - duplicate content blocks and fork copies
   - missing and conflicting usage
   - one invocation row per served model
@@ -60,7 +60,7 @@
   - Agent delegations with child references
   - completed, open, superseded and task-notification turns
   - compaction counts and unavailable cost
-- [ ] 7.2 Extend the existing tables rather than duplicating them:
+- [x] 7.2 Extend the existing tables rather than duplicating them:
   - `config/source_test.go`, `loader_test.go` and the local-setup writer tests: precedence, non-default paths, no environment fallback
   - `cmd/agentic-lens/main_codex_test.go` `TestGenerateSelectedSourceDoesNotFallback`, plus a new `main_claude_test.go`:
     - refresh replaces and an unchanged repeat is equal
@@ -71,8 +71,8 @@
   - Backfill CLI and engine: `--source all` with a missing or unreadable Claude Code store fails before publication and leaves the ledgers unchanged; `--source all` with all three stores refreshes each harness; `--source both` behaves as before and preserves Claude Code owners
   - Backfill: a new `claude_recovery_test.go` covering exact refresh, parent-link retention, budget exhaustion and the protection of Codex and OpenCode owners
   - The `fact_ledger_dto` decode tests and the web validation tests: accept a `claude` session and reject unknown values
-- [ ] 7.3 Native run: build the candidate and generate a disposable ledger outside Git from this ticket's root `b918d950-b1d1-42d6-8d61-a688c68333da` and its native subagents. Compare it with an independent oracle outside Git that sums unique responses per owner. Repeat the run unchanged and compare. Record the version, IDs, totals, diagnostics and limits under `evidence/` without transcript content.
-- [ ] 7.4 Native probe (native verifier, approved 2026-11-24): run a disposable `claude -p` session with a native subagent and a `/compact` in an isolated fixture repository. Generate a disposable ledger outside Git and record the `sdk-cli` entrypoint, whether compaction kept the same file, the `compact_boundary` count, the IDs and the limits under `evidence/`. The transcripts stay outside Git.
+- [x] 7.3 Native run: build the candidate and generate a disposable ledger outside Git from this ticket's root `b918d950-b1d1-42d6-8d61-a688c68333da` and its native subagents. Compare it with an independent oracle outside Git that sums unique responses per owner. Repeat the run unchanged and compare. Record the version, IDs, totals, diagnostics and limits under `evidence/` without transcript content.
+- [x] 7.4 Native probe (native verifier, approved 2026-11-24): run a disposable `claude -p` session with a native subagent and a `/compact` in an isolated fixture repository. Generate a disposable ledger outside Git and record the `sdk-cli` entrypoint, whether compaction kept the same file, the `compact_boundary` count, the IDs and the limits under `evidence/`. The transcripts stay outside Git.
 
 ## Integration and delivery
 
