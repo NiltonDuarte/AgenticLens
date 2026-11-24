@@ -42,7 +42,10 @@ type Transcript struct {
 	// pendingCommand is the timeline position plus one of a local slash-command
 	// echo that no assistant record has answered yet; zero means none.
 	pendingCommand int
-	sidechainSeen  bool
+	// pendingBash is the timeline position plus one of a bash-mode input that
+	// no assistant record has answered yet; zero means none.
+	pendingBash   int
+	sidechainSeen bool
 }
 
 type response struct {
@@ -306,8 +309,10 @@ func responseKey(requestID, messageID string) string {
 }
 
 func (t *Transcript) readAssistant(record rawRecord, at time.Time, line int) {
-	// A model reply means a preceding slash-command echo was a real prompt.
+	// A model reply means a preceding slash-command echo was a real prompt and
+	// a preceding bash-mode input started an answered turn.
 	t.pendingCommand = 0
+	t.promoteBash()
 	var message rawAssistantMessage
 	if err := json.Unmarshal(record.Message, &message); err != nil || len(record.Message) == 0 {
 		t.incomplete(fmt.Sprintf("line %d: assistant record has no readable message", line))
@@ -483,15 +488,34 @@ func (t *Transcript) readUser(record rawRecord, at time.Time, line int) {
 // Claude Code writes a local slash command (such as /compact) as two harness
 // user records: an echo whose content opens with a <command-name> envelope and
 // an output record whose content opens with a <local-command-stdout> or
-// <local-command-stderr> envelope. Bash mode (a "!" command) is written the same
-// way with <bash-input> and <bash-stdout> or <bash-stderr> envelopes. Neither
-// record carries promptSource and no model replies to them. A prompt-type
-// slash command also opens with the echo envelope but receives a model reply
-// instead of an output record.
+// <local-command-stderr> envelope. Neither carries promptSource and no model
+// replies to them. A prompt-type slash command also opens with the echo
+// envelope but receives a model reply instead of an output record.
+//
+// Bash mode (a "!" command) writes a <bash-input> record and then a
+// <bash-stdout> or <bash-stderr> record. The output record carries
+// turnPosition and turnOrigin "human" but no promptSource, and the model then
+// replies to the command. An answered bash exchange is a turn that starts at
+// the input record; an unanswered one is neither a turn nor steering.
 var (
-	commandEchoEnvelopes   = []string{"<command-name>", "<command-message>", "<bash-input>"}
-	commandOutputEnvelopes = []string{"<local-command-stdout>", "<local-command-stderr>", "<bash-stdout>", "<bash-stderr>"}
+	commandEchoEnvelopes   = []string{"<command-name>", "<command-message>"}
+	commandOutputEnvelopes = []string{"<local-command-stdout>", "<local-command-stderr>"}
+	bashInputEnvelopes     = []string{"<bash-input>"}
+	bashOutputEnvelopes    = []string{"<bash-stdout>", "<bash-stderr>"}
 )
+
+// promoteBash turns a pending bash-mode input into a non-steering turn start
+// once the model replies to it.
+func (t *Transcript) promoteBash() {
+	if t.pendingBash == 0 {
+		return
+	}
+	entry := &t.timeline[t.pendingBash-1]
+	entry.kind = entryPrompt
+	entry.system = true
+	t.promptCount++
+	t.pendingBash = 0
+}
 
 // interruptMarker opens the harness records Claude Code 2.1.331 writes when a
 // person presses Esc: "[Request interrupted by user]" and "[Request interrupted
@@ -530,7 +554,19 @@ func (t *Transcript) readPrompt(record rawRecord, at time.Time, text string) {
 	harness := strings.TrimSpace(record.PromptSource) == ""
 	if harnessRecord(record) && isInterrupt(text) {
 		// An interrupt is not a prompt and is never steering; it ends the turn.
+		t.pendingBash = 0
 		t.timeline = append(t.timeline, timelineEntry{kind: entryInterrupt, at: at, raw: record.Timestamp})
+		return
+	}
+	if harnessRecord(record) && hasEnvelope(text, bashInputEnvelopes) {
+		// Held as an owned record until a model reply promotes it.
+		t.timeline = append(t.timeline, timelineEntry{kind: entryOwned, at: at, raw: record.Timestamp, nativeID: strings.TrimSpace(record.UUID)})
+		t.pendingBash = len(t.timeline)
+		return
+	}
+	if harnessRecord(record) && hasEnvelope(text, bashOutputEnvelopes) {
+		// Its turnPosition and turnOrigin do not make it a person prompt.
+		t.timeline = append(t.timeline, timelineEntry{kind: entryOwned, at: at, raw: record.Timestamp})
 		return
 	}
 	if harnessRecord(record) && hasEnvelope(text, commandOutputEnvelopes) {
@@ -543,6 +579,7 @@ func (t *Transcript) readPrompt(record rawRecord, at time.Time, text string) {
 		return
 	}
 	if record.IsMeta && t.AgentID != "" && originKind(record.Origin) == "coordinator" && !record.IsCompactSummary && !record.TranscriptOnly {
+		t.pendingBash = 0
 		t.promptCount++
 		t.timeline = append(t.timeline, timelineEntry{kind: entryResume, at: at, raw: record.Timestamp, nativeID: strings.TrimSpace(record.UUID), system: true})
 		return
@@ -551,6 +588,7 @@ func (t *Transcript) readPrompt(record rawRecord, at time.Time, text string) {
 		t.timeline = append(t.timeline, timelineEntry{kind: entryOwned, at: at, raw: record.Timestamp})
 		return
 	}
+	t.pendingBash = 0
 	t.promptCount++
 	t.timeline = append(t.timeline, timelineEntry{kind: entryPrompt, at: at, raw: record.Timestamp, nativeID: strings.TrimSpace(record.UUID), system: record.PromptSource == "system"})
 	t.pendingCommand = 0

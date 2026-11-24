@@ -694,3 +694,47 @@ func TestBackfillClaudeUnavailableRootDoesNotStopLaterRoots(t *testing.T) {
 		t.Fatalf("an unavailable root keeps the refresh incomplete: %+v", report.Results[0])
 	}
 }
+
+// A complete read that replaces a recorded owner with fewer invocation rows,
+// or with a lower input+output+cache-read total, is reported; each condition
+// triggers the notice on its own, and a larger replacement is not reported.
+func TestBackfillClaudeSmallerReplacementNotice(t *testing.T) {
+	// The fixture root is one row with 300 input, 30 output and 5 cache-read
+	// tokens (335); the child is one row with 40+4+1 = 45.
+	for _, tc := range []struct {
+		name   string
+		stored []domain.InvocationFact
+		want   string
+	}{
+		{name: "fewer rows only", stored: []domain.InvocationFact{{Model: "model-a", Tokens: domain.InvocationTokens{Input: 1}}, {Model: "model-b", Tokens: domain.InvocationTokens{Input: 1}}},
+			want: "Claude Code owner " + claudeFixtureRoot + " replaced by a complete read with smaller totals: invocations 2 -> 1, tokens 2 -> 335"},
+		{name: "lower tokens only", stored: []domain.InvocationFact{{Model: "claude-synthetic-model", Tokens: domain.InvocationTokens{Input: 9000, Output: 900, CacheRead: 100}}},
+			want: "Claude Code owner " + claudeFixtureRoot + " replaced by a complete read with smaller totals: invocations 1 -> 1, tokens 10000 -> 335"},
+		{name: "larger replacement", stored: []domain.InvocationFact{{Model: "claude-synthetic-model", Tokens: domain.InvocationTokens{Input: 1}}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := newBackfillProject(t)
+			ticket := "TEST-CLAUDE-NOTICE"
+			ledger := claudeOnlyLedger(ticket)
+			ledger.Sessions[0].Invocations = tc.stored
+			workspace := createTestWorkspace(t, root, ticket, ledger)
+			home := t.TempDir()
+			writeClaudeFixtureStore(t, home, true)
+			report, err := NewEngine().Execute(BackfillOptions{Project: root, TicketID: ticket, Source: "claude", ClaudeHome: home, RecomputeDB: true})
+			if err != nil || report.Results[0].Error != nil {
+				t.Fatalf("backfill failed: %+v %v", report, err)
+			}
+			assertClaudeFixtureRefreshed(t, sessionsByID(t, workspace))
+			notices := report.Results[0].Notices
+			if tc.want == "" {
+				if len(notices) != 0 {
+					t.Fatalf("a larger replacement must not be reported: %q", notices)
+				}
+				return
+			}
+			if len(notices) != 1 || notices[0] != tc.want {
+				t.Fatalf("want exactly %q, got %q", tc.want, notices)
+			}
+		})
+	}
+}

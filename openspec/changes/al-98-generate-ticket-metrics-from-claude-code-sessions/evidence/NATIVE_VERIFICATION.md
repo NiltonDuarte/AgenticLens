@@ -101,3 +101,91 @@ Observed:
 - **Live root.** The ticket's root kept running throughout. Equality claims cover frozen snapshots, and growth between snapshots was shown to be append-only.
 - **Not observed natively.** Forks (`forkedFrom`), nested subagents, Skill calls from subagents and failed Skill calls were not observed. The `cli`, `sdk-ts`, `sdk-py` and `claude-vscode` entrypoints are NOT RUN.
 - **Probe transcripts.** They remain in the default store under the scratch fixture's project folder, outside Git.
+
+## Follow-up for candidate 03f50ca2 (review finding BEH-01)
+
+This run was native verification only, under the approved probe scope. The F1 fix is confirmed. Interrupt handling matches the native records. One remaining defect concerns bash mode (F2): in Claude Code 2.1.331, the model replies to bash-mode output, so treating bash-mode records as "never a turn" leaves those replies unmeasured.
+
+- **Revision:** `03f50ca2`, built outside Git from a clean export with the canonical web build. The binary reports version `al98-native-03f50ca2`.
+- **Isolation:** each fixture repository had its own configuration and publication state. Nothing was written to the repository except this section, and nothing to `~/.agenticlens`.
+
+### F1 re-check on the earlier probe root
+
+Generating again from probe root `985a4490-c5bc-4fc7-8ce7-e59ce49e0b9c` in the unchanged default store gave:
+
+- `completed_at` 2026-11-24T00:39:38.703Z, with no provisional time
+- 5 s of active duration and 2 turns
+- `user_iterations: 1` and `compactions: 1`
+- tokens unchanged from the earlier run
+
+A repeat 2 s later was byte-identical. The independent oracle (v2, rules below) also gives 5.001 s of measured time, no open turn, steering 1 and one withdrawn command echo. F1 is fixed natively.
+
+### Interactive session
+
+The session was driven in a fresh scratch Git repository through tmux: `claude --session-id 8e0be1de-0580-4ca7-9b11-2ca1d1d02293 --model haiku --strict-mcp-config`, with the parent session's `CLAUDE*` variables unset. The folder-trust prompt was accepted for that fixture only. The permission mode was `auto`, so Bash ran without a permission prompt. Every conversation record carries `entrypoint: "cli"`, and typed prompts carry `promptSource: "typed"`, `origin.kind: "human"` and `turnPosition`. `/exit` wrote no conversation record. The session produced:
+
+1. A completed story prompt.
+2. A prompt interrupted with Esc before any assistant record was written.
+3. A prompt interrupted with Esc while text was streaming.
+4. A Bash `sleep 20` call interrupted with Esc while running.
+5. Two bash-mode commands (`!echo hi` and `!echo second`).
+6. A final short prompt that completed.
+
+### Native record shapes
+
+Only keys and envelope prefixes were recorded, never content.
+
+| Situation | Native records |
+|---|---|
+| Esc during streaming | Assistant records for the response have `stop_reason: null`. They are followed by a user record whose content is a list with one text block opening `[Request interrupted by user]`. That record has an `interruptedMessageId` key and no `promptSource`, `origin`, `turnPosition` or `isMeta`. |
+| Esc during a tool call | The assistant tool_use is followed by a user tool_result with `is_error: true` and `toolUseResult`. A separate user record follows, with one text block opening `[Request interrupted by user for tool use]`, the `interruptedMessageId` key and no `promptSource`. |
+| Esc before any response | The typed prompt record stays in the transcript, the request is logged and no assistant record or interrupt marker follows. The UI puts the text back in the input box. |
+| Bash mode | A user record with string content opening `<bash-input>`, with no `promptSource` and no `turnPosition`. Then a user record opening `<bash-stdout>` and containing `<bash-stderr>`, which carries `turnPosition` and `turnOrigin: "human"` but no `promptSource`. **The model then replied with an `end_turn` response, both times.** Claude Code wrote its own `system` `turn_duration` record for each exchange: 2,448 ms and 2,017 ms, measured from the `<bash-input>` record. |
+| Usage on interrupted responses | The streamed assistant records carry the usage of the first streamed chunk (output 2 tokens), although about 17 s of text streamed. The final usage is never written. |
+
+### Oracle and ledger
+
+Generation printed `Discovered 1 complete Claude Code session(s)` and no diagnostics. A repeat 2 s later was byte-identical.
+
+- **Usage** matches the independent usage oracle exactly: 6 responses, input 16, output 2,896, cache read 240,167, reasoning 1,607 and peak context 44,591. Tools: Bash 1 call, 1 error (the interrupted call). Cost is unavailable.
+- **Turns** were checked against an independent turn oracle (v2), written from the native records rather than the adapter. It applies these rules:
+  - Typed prompts start turns and count as steering.
+  - Interrupt markers close the open turn and are never prompts.
+  - A command or bash echo whose output arrives with no model reply is withdrawn.
+  - A bash or command exchange that the model answers is a turn starting at the echo. This matches Claude Code's own `turn_duration`.
+  - Bash and command records never count as steering, as the design specifies.
+
+| Measure | Oracle v2 | Ledger (03f50ca2) | Result |
+|---|---|---|---|
+| Completion and open turn | complete, no open turn | `completed_at` set, no provisional | match |
+| Steering | 5 typed prompts (interrupts and bash excluded) | `user_iterations: 5` | match |
+| Interrupt during streaming | turn closed at marker, 22.114 s | included | match |
+| Interrupt during tool call | turn closed at marker, 9.911 s | included | match |
+| Prompt cancelled before any response | superseded, 0 s, no served response | 0 s, not counted as a turn | match |
+| Bash-mode exchanges answered by the model | 2 turns, 2.339 s and 1.915 s | not in any turn | **mismatch (F2)** |
+| Turns with a served response | 6 | 4 | **mismatch (F2)** |
+| Measured duration | 52.356 s | 48 s | **mismatch: 4.25 s, exactly the two bash turns** |
+
+### F2 (defect, low to medium): replies to bash-mode output are never in a turn
+
+- **Trigger.** In an interactive Claude Code 2.1.331 session, type `!echo hi` and press Enter.
+- **Native behaviour.** The harness writes a `<bash-input>` echo, then a `<bash-stdout>` record with `turnPosition`. The model then replies with `end_turn`, and Claude Code records the exchange as a turn (`turn_duration`).
+- **Adapter behaviour.** `readPrompt` in `transcript_jsonl.go` withdraws the echo when the output envelope arrives. Its comment assumes that no model replies to bash output. The reply that follows therefore lands outside any turn.
+- **Effect.** The reply's usage is still counted, but its time and its turn are dropped. Here the session lost 4.25 s and 2 turns. Steering is unaffected.
+- **Fix direction (owner's decision).** Withdraw the echo only when the next prompt or the end of the transcript comes before any assistant record. Otherwise, let the echo start the turn and keep it out of steering. That treatment matches the native `turn_duration`.
+
+### Observations
+
+- **O5: interrupted responses understate output.** Claude Code writes only the first chunk's usage for a response interrupted while streaming. Ledger output for interrupted responses is therefore a lower bound. This is a source limit.
+- **O6: a prompt cancelled before any response still counts.** The prompt record remains in the transcript and counts as one steering iteration, with a zero-length turn that has no served response.
+
+### Limits
+
+- **Records only in auto mode.** Bash ran under `auto` permission mode. The records written when a person rejects a permission prompt were not produced.
+- **Not exercised.** Local slash commands with stderr output (`<local-command-stderr>`) and bash commands that fail (non-empty `<bash-stderr>`) were not run.
+- **Transcripts outside Git.** The interactive session's transcript stays in the default store under the scratch fixture's project folder.
+
+## F2 fix re-check
+
+The coder re-ran the adapter with the F2 bash-mode fix (uncommitted at the time, committed in the next candidate) over the native roots, using a temporary probe file that was then deleted. Interactive root `8e0be1de-0580-4ca7-9b11-2ca1d1d02293` now gives 6 turns, steering 5, 52 s measured and nothing provisional, matching the oracle above (6 turns, 52.356 s). The `claude -p` probe root `985a4490-c5bc-4fc7-8ce7-e59ce49e0b9c` is unchanged: 2 turns, steering 1, 5 s, 1 compaction, completed; its subagent `aa6eb7a828948a248` is complete with 1 turn.
+

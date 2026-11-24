@@ -102,6 +102,7 @@ type claudeCLIBlock struct {
 	Name      string          `json:"name,omitempty"`
 	Input     *claudeCLIInput `json:"input,omitempty"`
 	ToolUseID string          `json:"tool_use_id,omitempty"`
+	IsError   bool            `json:"is_error,omitempty"`
 }
 
 type claudeCLIInput struct {
@@ -657,5 +658,144 @@ func TestGenerateClaudeRecordedRootRefreshesAfterCheckoutMove(t *testing.T) {
 	}
 	if !bytes.Equal(before, readCaptureFile(t, f.output)) {
 		t.Fatal("a rejected new root changed the ledger")
+	}
+}
+
+// seedClaudeCLILedger publishes a stored ledger for the fixture ticket.
+func seedClaudeCLILedger(t *testing.T, f claudeCLIFixture, sessions []domain.SessionFact) domain.AgenticFactLedger {
+	t.Helper()
+	version := domain.CurrentSchemaVersion
+	ticket, title := "TEST-198", "Claude Code fixture"
+	if err := os.MkdirAll(filepath.Dir(f.output), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := adapters.SaveFactLedger(f.output, domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: sessions}); err != nil {
+		t.Fatal(err)
+	}
+	var stored domain.AgenticFactLedger
+	if err := json.Unmarshal(readCaptureFile(t, f.output), &stored); err != nil {
+		t.Fatal(err)
+	}
+	return stored
+}
+
+// A complete read that replaces a recorded root with fewer rows, or with a
+// lower input+output+cache-read total, is reported; each condition alone
+// triggers the notice and a larger replacement is silent.
+func TestGenerateClaudeSmallerReplacementNotice(t *testing.T) {
+	// The fresh root is one model-a row with 100+10+20 = 130 tokens.
+	for _, tc := range []struct {
+		name   string
+		stored []domain.InvocationFact
+		want   string
+	}{
+		{name: "fewer rows only", stored: []domain.InvocationFact{{Model: "model-a", Tokens: domain.InvocationTokens{Input: 1}}, {Model: "model-b", Tokens: domain.InvocationTokens{Input: 1}}},
+			want: "Claude Code owner " + claudeCLIRoot + " replaced by a complete read with smaller totals: invocations 2 -> 1, tokens 2 -> 130"},
+		{name: "lower tokens only", stored: []domain.InvocationFact{{Model: "model-a", Tokens: domain.InvocationTokens{Input: 9000, Output: 900, CacheRead: 100}}},
+			want: "Claude Code owner " + claudeCLIRoot + " replaced by a complete read with smaller totals: invocations 1 -> 1, tokens 10000 -> 130"},
+		{name: "larger replacement", stored: []domain.InvocationFact{{Model: "model-a", Tokens: domain.InvocationTokens{Input: 1}}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newClaudeCLIFixture(t)
+			writeClaudeCLITranscript(t, claudeCLIRootPath(f.home, "-synthetic-project", claudeCLIRoot), claudeCLIRoot, "", []claudeCLIRecord{
+				claudeCLIPrompt(f.project, "2026-01-01T10:00:00Z"),
+				claudeCLIResponse("2026-01-01T10:00:05Z", "r-1", "model-a", "end_turn", 100, 10, 20),
+			})
+			seedClaudeCLILedger(t, f, []domain.SessionFact{{ID: claudeCLIRoot, Source: domain.SourceClaude, User: "local", Invocations: tc.stored}})
+			ledger, out, err := f.generate(t, "--source", "claude", "--claude-home", f.home, "--session-id", claudeCLIRoot)
+			if err != nil {
+				t.Fatalf("generate failed: %v %s", err, out)
+			}
+			if got := claudeCLISessions(ledger)[claudeCLIRoot].Invocations; len(got) != 1 || got[0].Tokens.Input != 100 {
+				t.Fatalf("the complete read must replace the stored snapshot: %+v", got)
+			}
+			if tc.want == "" {
+				if strings.Contains(out, "replaced by a complete read") {
+					t.Fatalf("a larger replacement must not be reported: %s", out)
+				}
+				return
+			}
+			if strings.Count(out, "replaced by a complete read") != 1 || !strings.Contains(out, tc.want) {
+				t.Fatalf("want one notice %q in:\n%s", tc.want, out)
+			}
+		})
+	}
+}
+
+// A child retained because its recorded parent changed keeps its whole stored
+// snapshot: fresh events from its transcript must not add anomaly summaries or
+// checkpoint feedback to it.
+func TestGenerateClaudeRetainedChildKeepsStoredSnapshot(t *testing.T) {
+	f := newClaudeCLIFixture(t)
+	writeClaudeCLITranscript(t, claudeCLIRootPath(f.home, "-synthetic-project", claudeCLIRoot), claudeCLIRoot, "", []claudeCLIRecord{
+		claudeCLIPrompt(f.project, "2026-01-01T10:00:00Z"),
+		claudeCLIResponse("2026-01-01T10:00:01Z", "r-1", "model-a", "tool_use", 3, 1, 0, claudeCLIAgentCall("call-1", "planner")),
+		claudeCLIAgentResult("2026-01-01T10:00:20Z", "call-1", "achild"),
+		claudeCLIResponse("2026-01-01T10:00:30Z", "r-2", "model-a", "end_turn", 4, 1, 0),
+	})
+	// Six consecutive failing Bash calls, then the child stays open: enough for
+	// streak, error-rate and thrashing anomalies and an open-turn interval.
+	child := []claudeCLIRecord{claudeCLIPrompt(f.project, "2026-01-01T10:00:02Z")}
+	child[0].PromptSource = ""
+	for i := 0; i < 6; i++ {
+		id := fmt.Sprintf("bash-%d", i)
+		at := fmt.Sprintf("2026-01-01T10:00:%02d", 3+2*i)
+		child = append(child,
+			claudeCLIResponse(at+"Z", "r-c"+id, "model-a", "tool_use", 1, 1, 0, claudeCLIBlock{Type: "tool_use", ID: id, Name: "Bash", Input: &claudeCLIInput{}}),
+			claudeCLIRecord{Type: "user", Timestamp: fmt.Sprintf("2026-01-01T10:00:%02dZ", 4+2*i), Message: claudeCLIMessage{Role: "user", Content: claudeCLIContent{Blocks: []claudeCLIBlock{{Type: "tool_result", ToolUseID: id, IsError: true}}}}})
+	}
+	subagents := filepath.Join(f.home, "projects", "-synthetic-project", claudeCLIRoot, "subagents")
+	writeClaudeCLITranscript(t, filepath.Join(subagents, "agent-achild.jsonl"), claudeCLIRoot, "achild", child)
+	if err := os.WriteFile(filepath.Join(subagents, "agent-achild.meta.json"), []byte(`{"agentType":"planner","toolUseId":"call-1"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	elsewhere := "recorded-elsewhere"
+	stored := seedClaudeCLILedger(t, f, []domain.SessionFact{
+		{ID: claudeCLIRoot, Source: domain.SourceClaude, User: "local", Invocations: []domain.InvocationFact{{Model: "model-a", Tokens: domain.InvocationTokens{Input: 1}}}},
+		{ID: "achild", ParentID: &elsewhere, Source: domain.SourceClaude, User: "remote", Anomalies: []domain.Anomaly{},
+			Skills: []domain.SkillFact{{Name: "stored-skill"}}, Tools: []domain.SessionToolFact{{Name: "Read", Calls: 2}},
+			Invocations: []domain.InvocationFact{{Role: "planner", Model: "model-a", ActiveDurationSeconds: 500, ProvisionalSeconds: 500, Tokens: domain.InvocationTokens{Input: 77}}}},
+	})
+	ledger, out, err := f.generate(t, "--source", "claude", "--claude-home", f.home, "--session-id", claudeCLIRoot)
+	if err != nil {
+		t.Fatalf("generate failed: %v %s", err, out)
+	}
+	after := claudeCLISessions(ledger)
+	if !reflect.DeepEqual(after["achild"], claudeCLISessions(stored)["achild"]) {
+		t.Fatalf("the retained child changed:\nbefore %+v\nafter  %+v", claudeCLISessions(stored)["achild"], after["achild"])
+	}
+	if !strings.Contains(out, "Claude Code owner achild retained: source parent linkage changed from recorded-elsewhere to "+claudeCLIRoot) {
+		t.Fatalf("the retention must be reported: %s", out)
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "session=achild") && !strings.Contains(line, "native interval evidence is unavailable") {
+			t.Fatalf("checkpoint feedback for the retained child used fresh source evidence: %s", line)
+		}
+	}
+	if root := after[claudeCLIRoot]; len(root.Invocations) != 1 || root.Invocations[0].Tokens.Input != 7 {
+		t.Fatalf("the root must still refresh: %+v", root)
+	}
+}
+
+// Fresh source events reach the publication boundary: a complete Claude Code
+// owner gets a recorded (empty) anomaly summary, and an open turn produces
+// checkpoint feedback that cites the native interval.
+func TestGenerateClaudeSourceEventsReachSummariesAndCheckpointFeedback(t *testing.T) {
+	f := newClaudeCLIFixture(t)
+	writeClaudeCLITranscript(t, claudeCLIRootPath(f.home, "-synthetic-project", claudeCLIRoot), claudeCLIRoot, "", []claudeCLIRecord{
+		claudeCLIPrompt(f.project, "2026-01-01T10:00:00Z"),
+		claudeCLIResponse("2026-01-01T10:00:05Z", "r-1", "model-a", "tool_use", 2, 1, 0),
+	})
+	ledger, out, err := f.generate(t, "--source", "claude", "--claude-home", f.home, "--session-id", claudeCLIRoot)
+	if err != nil {
+		t.Fatalf("generate failed: %v %s", err, out)
+	}
+	root := claudeCLISessions(ledger)[claudeCLIRoot]
+	if root.Anomalies == nil || len(root.Anomalies) != 0 {
+		t.Fatalf("a complete clean owner must record an empty anomaly summary, not leave it absent: %#v", root.Anomalies)
+	}
+	want := "AgenticLens checkpoint: source=claude; session=" + claudeCLIRoot + "; invocation=1"
+	if !strings.Contains(out, want) || !strings.Contains(out, "Source reports open turn u-2026-01-01T10:00:00Z, started at 2026-01-01T10:00:00Z") {
+		t.Fatalf("the open turn must be reported from native interval evidence:\n%s", out)
 	}
 }

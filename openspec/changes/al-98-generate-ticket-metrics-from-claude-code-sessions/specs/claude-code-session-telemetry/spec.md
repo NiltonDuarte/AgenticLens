@@ -227,9 +227,13 @@ Root steering iterations SHALL count prompts that a person sent. Prompts sent by
 - **WHEN** a session records a local command echo such as `/compact` followed by its local output before any assistant record
 - **THEN** neither record starts a turn or counts as steering, and the session has no open turn afterwards
 
-#### Scenario: Interrupt and bash-mode records
-- **WHEN** a session records a harness interrupt marker, or a bash-mode input followed by its output before any assistant record
-- **THEN** the interrupt ends the open turn at its timestamp, neither record counts as steering, and no turn is left open by them
+#### Scenario: Interrupt records
+- **WHEN** a session records a harness interrupt marker
+- **THEN** the marker ends the open turn at its timestamp, does not count as steering, and leaves no turn open
+
+#### Scenario: Bash-mode command
+- **WHEN** a session records a bash-mode input and its output
+- **THEN** a model reply that follows makes the exchange a measured turn that does not count as steering, and without a reply before the next prompt or the end of the transcript the command adds no turn and leaves none open
 
 ### Requirement: Replace only completely read owners
 

@@ -791,3 +791,59 @@ func TestSyntheticTrailingCommandEchoStaysOpenTurn(t *testing.T) {
 		t.Fatalf("the completed local command must be withdrawn: iterations=%d active=%d provisional=%d", row.UserIterations, row.ActiveDurationSeconds, row.ProvisionalSeconds)
 	}
 }
+
+// The interrupt rule applies only to harness records (no promptSource, not
+// meta) whose text opens with the marker and closes its bracket. Everything
+// else keeps its ordinary prompt or meta meaning.
+func TestSyntheticInterruptMarkerBoundaries(t *testing.T) {
+	cutoff := time.Date(2026, 11, 24, 11, 0, 0, 0, time.UTC)
+	t.Run("person prompt with the marker is steering", func(t *testing.T) {
+		store := newStore(t)
+		person := prompt("2026-11-24T10:01:00Z", "sdk")
+		person.Message.Content = textContent("[Request interrupted by user]")
+		store.root(syntheticFolder, syntheticRoot, []record{
+			prompt("2026-11-24T10:00:00Z", "sdk"),
+			assistant("2026-11-24T10:00:10Z", "req-1", "model-a", "end_turn", usage(1, 1, 1)),
+			person,
+			assistant("2026-11-24T10:01:05Z", "req-2", "model-a", "end_turn", usage(1, 1, 1)),
+		})
+		_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, cutoff)
+		row := sessionByID(t, extraction.Sessions, syntheticRoot).Invocations[0]
+		// 10s + 5s over two prompted turns.
+		if row.UserIterations != 2 || row.Turns != 2 || row.ActiveDurationSeconds != 15 {
+			t.Fatalf("a person's prompt was treated as an interrupt: iterations=%d turns=%d active=%d", row.UserIterations, row.Turns, row.ActiveDurationSeconds)
+		}
+	})
+	t.Run("harness marker without a closing bracket is a prompt", func(t *testing.T) {
+		store := newStore(t)
+		store.root(syntheticFolder, syntheticRoot, []record{
+			prompt("2026-11-24T10:00:00Z", "sdk"),
+			assistant("2026-11-24T10:00:05Z", "req-1", "model-a", "tool_use", usage(1, 1, 1)),
+			harnessText("2026-11-24T10:00:20Z", "[Request interrupted by user"),
+			assistant("2026-11-24T10:00:40Z", "req-2", "model-a", "end_turn", usage(1, 1, 1)),
+		})
+		_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, cutoff)
+		row := sessionByID(t, extraction.Sessions, syntheticRoot).Invocations[0]
+		// Turn 1 is superseded at its last owned record (5s); turn 2 runs 20s.
+		if row.UserIterations != 2 || row.ActiveDurationSeconds != 25 || row.ProvisionalSeconds != 0 {
+			t.Fatalf("an unclosed marker was treated as an interrupt: iterations=%d active=%d provisional=%d", row.UserIterations, row.ActiveDurationSeconds, row.ProvisionalSeconds)
+		}
+	})
+	t.Run("meta record with the marker ends nothing", func(t *testing.T) {
+		store := newStore(t)
+		meta := harnessText("2026-11-24T10:00:20Z", "[Request interrupted by user]")
+		meta.IsMeta = true
+		store.root(syntheticFolder, syntheticRoot, []record{
+			prompt("2026-11-24T10:00:00Z", "sdk"),
+			assistant("2026-11-24T10:00:05Z", "req-1", "model-a", "tool_use", usage(1, 1, 1)),
+			meta,
+			assistant("2026-11-24T10:00:40Z", "req-2", "model-a", "end_turn", usage(1, 1, 1)),
+		})
+		_, extraction := extract(t, store.home, DiscoveryOptions{SessionID: syntheticRoot}, cutoff)
+		row := sessionByID(t, extraction.Sessions, syntheticRoot).Invocations[0]
+		// One turn from 10:00:00 to the terminal record at 10:00:40.
+		if row.UserIterations != 1 || row.Turns != 1 || row.ActiveDurationSeconds != 40 {
+			t.Fatalf("a meta record ended the turn: iterations=%d turns=%d active=%d", row.UserIterations, row.Turns, row.ActiveDurationSeconds)
+		}
+	})
+}
