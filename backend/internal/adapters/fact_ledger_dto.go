@@ -332,23 +332,23 @@ func ValidateRuntimeFactLedger(data []byte) error {
 		return fmt.Errorf("decoding ledger metadata: %w", err)
 	}
 	if metadata.SchemaVersion == nil {
-		return errors.New("ledger schema version is missing; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
+		return errors.New("ledger schema version is missing; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex|claude>`")
 	}
 	if *metadata.SchemaVersion > domain.CurrentSchemaVersion {
 		return fmt.Errorf("unsupported ledger schema %d; current schema is %d and downgrades are not supported", *metadata.SchemaVersion, domain.CurrentSchemaVersion)
 	}
 	if *metadata.SchemaVersion != domain.CurrentSchemaVersion {
-		return fmt.Errorf("ledger schema version %d is not runtime-ingestible; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", *metadata.SchemaVersion)
+		return fmt.Errorf("ledger schema version %d is not runtime-ingestible; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex|claude>`", *metadata.SchemaVersion)
 	}
 	for _, key := range []string{"invocations", "tools", "events", "events_are_partial", "skills", "task_links", "unresolved_facts"} {
 		if _, exists := fields[key]; exists {
-			return fmt.Errorf("schema v6 ledger contains ambiguous root-level %s; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", key)
+			return fmt.Errorf("schema v6 ledger contains ambiguous root-level %s; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex|claude>`", key)
 		}
 	}
 
 	sessionsJSON, sessionsExists := fields["sessions"]
 	if !sessionsExists || string(sessionsJSON) == "null" || !json.Valid(sessionsJSON) {
-		return errors.New("canonical schema v6 ledger requires a sessions collection; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
+		return errors.New("canonical schema v6 ledger requires a sessions collection; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex|claude>`")
 	}
 	if metadata.Migration != nil && (metadata.Migration.Status != string(domain.MigrationStatusCompleted) || len(metadata.Migration.StepsPending) > 0) {
 		return errors.New("schema v6 ledger has incomplete migration metadata; resume the explicit migration and source-backed backfill workflow before runtime ingestion")
@@ -388,8 +388,8 @@ func ValidateRuntimeFactLedger(data []byte) error {
 			}
 		}
 		var source string
-		if err := json.Unmarshal(session["source"], &source); err != nil || (source != string(domain.SourceOpenCode) && source != string(domain.SourceCodex)) {
-			return fmt.Errorf("canonical schema v6 session %d requires a supported source (opencode or codex)", si)
+		if err := json.Unmarshal(session["source"], &source); err != nil || (source != string(domain.SourceOpenCode) && source != string(domain.SourceCodex) && source != string(domain.SourceClaude)) {
+			return fmt.Errorf("canonical schema v6 session %d requires a supported source (opencode, codex or claude)", si)
 		}
 		var invocations []json.RawMessage
 		if err := json.Unmarshal(session["invocations"], &invocations); err != nil || invocations == nil {

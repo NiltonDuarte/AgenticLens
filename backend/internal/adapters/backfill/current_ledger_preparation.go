@@ -52,11 +52,13 @@ func migrationStatus(ledger domain.AgenticFactLedger) string {
 	return "unversioned"
 }
 
-func sessionsByHarness(sessions []domain.SessionFact) (openCode, codex, other []domain.SessionFact) {
+func sessionsByHarness(sessions []domain.SessionFact) (openCode, codex, claude, other []domain.SessionFact) {
 	for _, session := range sessions {
 		switch session.Source {
 		case domain.SourceCodex:
 			codex = append(codex, session)
+		case domain.SourceClaude:
+			claude = append(claude, session)
 		case "", domain.SourceOpenCode:
 			session.Source = domain.SourceOpenCode
 			openCode = append(openCode, session)
@@ -64,7 +66,7 @@ func sessionsByHarness(sessions []domain.SessionFact) (openCode, codex, other []
 			other = append(other, session)
 		}
 	}
-	return openCode, codex, other
+	return openCode, codex, claude, other
 }
 
 // retainStoredFacts restores wire facts that survived the source recovery and

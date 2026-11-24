@@ -93,7 +93,7 @@ func TestCaptureWorkerRetriesPendingCleanupAfterDurableCommit(t *testing.T) {
 				}
 				local := filepath.Join(f.project, ".agenticlens-config.local.yaml")
 				policy := strings.Replace(string(readCaptureFile(t, local)), "max_lifetime_ms: 10000", "max_lifetime_ms: 1400", 1)
-				if err := os.WriteFile(local, []byte(policy), 0600); err != nil {
+				if err := writeCaptureFileAtomic(local, []byte(policy), 0600); err != nil {
 					t.Fatal(err)
 				}
 			}

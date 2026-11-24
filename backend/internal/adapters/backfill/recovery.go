@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"agenticlens/internal/adapters/capture"
+	"agenticlens/internal/adapters/claude"
 	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
@@ -24,6 +26,9 @@ type sourceRecovery struct {
 	reads       map[string]OwnerRefreshCoverage
 	failures    map[string]error
 	failure     error
+	// notices report facts, such as replacements and newly added owners,
+	// without marking the recovery incomplete.
+	notices []string
 }
 
 func newSourceRecovery(stored []domain.SessionFact) sourceRecovery {
@@ -117,7 +122,7 @@ func (e *BackfillEngine) recoverCodex(ctx context.Context, stored []domain.Sessi
 			}
 		}
 		out.source = domain.MergeSourceEvents(out.source, acceptedSource)
-		resolveCodexSessionUsers(fresh, stored, user)
+		resolveSessionUsers(fresh, stored, user)
 		replaceRecoveredOwners(&out.sessions, fresh)
 		out.updated = true
 	}
@@ -198,6 +203,196 @@ func (e *BackfillEngine) readCodexOwners(ctx context.Context, root, home string,
 	}
 	*source = domain.MergeSourceEvents(*source, events)
 	return fresh, nil
+}
+
+// recoverClaude mirrors recoverCodex: it refreshes exact recorded trees, keeps
+// owners whose parent link changed or whose source is unavailable, rejects
+// conflicts with other harnesses and adds newly proven children. Each tree is
+// read at most once per operation, so an unavailable tree is neither charged
+// twice nor reported twice.
+func (e *BackfillEngine) recoverClaude(ctx context.Context, stored []domain.SessionFact, home, user string, protected map[string]bool) sourceRecovery {
+	out := newSourceRecovery(stored)
+	roots := append(storedTreeRoots(stored), stored...)
+	if len(roots) == 0 {
+		out.complete = false
+		out.diagnostics = append(out.diagnostics, "Claude Code owner tree unavailable or ambiguous")
+	}
+	previous := make(map[string]domain.SessionFact, len(stored))
+	for _, owner := range stored {
+		previous[owner.ID] = owner
+	}
+	attemptedOwners := make(map[string]bool)
+	attemptedTrees := make(map[string]bool)
+	for _, root := range roots {
+		if ctx.Err() != nil {
+			out.complete = false
+			return out
+		}
+		if _, covered := out.reads[root.ID]; covered || attemptedOwners[root.ID] || storedAncestorAttempted(root, previous, attemptedOwners) {
+			continue
+		}
+		attemptedOwners[root.ID] = true
+		var source domain.SourceEvents
+		read, err := e.readClaudeOwners(ctx, root.ID, home, attemptedTrees, &source)
+		if errors.Is(err, errClaudeTreeAttempted) {
+			continue
+		}
+		if len(read.diagnostics) > 0 {
+			out.complete = false
+			out.diagnostics = append(out.diagnostics, read.diagnostics...)
+		}
+		if err != nil {
+			out.complete = false
+			out.failures[root.ID] = err
+			out.diagnostics = append(out.diagnostics, fmt.Sprintf("Claude Code tree %s retained: %v", root.ID, err))
+			continue
+		}
+		fresh := read.sessions
+		if _, recordedRoot := previous[read.rootID]; !recordedRoot {
+			// Adopting an unrecorded root requires the same project ownership
+			// check generate applies to a new root. New owners of a rejected
+			// root are skipped; recorded owners in the tree still refresh.
+			if err := capture.ValidateProject(e.projectRoot, read.workingDirectory); err != nil {
+				out.complete = false
+				out.diagnostics = append(out.diagnostics, fmt.Sprintf("Claude Code root %s not added: %v; its unrecorded owners are skipped", read.rootID, err))
+				recordedOnly := fresh[:0:0]
+				for _, owner := range fresh {
+					if _, known := previous[owner.ID]; known {
+						recordedOnly = append(recordedOnly, owner)
+					}
+				}
+				fresh = recordedOnly
+			}
+		}
+		accepted := []domain.SessionFact{}
+		for _, owner := range fresh {
+			if protected[owner.ID] {
+				out.complete = false
+				out.diagnostics = append(out.diagnostics, fmt.Sprintf("Claude Code owner %s conflicts with another recorded harness; history retained", owner.ID))
+				continue
+			}
+			if old, known := previous[owner.ID]; known && ((old.ParentID == nil) != (owner.ParentID == nil) || old.ParentID != nil && owner.ParentID != nil && *old.ParentID != *owner.ParentID) {
+				out.complete = false
+				out.failures[owner.ID] = errors.New("source parent linkage changed")
+				out.diagnostics = append(out.diagnostics, fmt.Sprintf("Claude Code owner %s retained: source parent linkage changed", owner.ID))
+				continue
+			}
+			accepted = append(accepted, owner)
+		}
+		if len(accepted) == 0 {
+			continue
+		}
+		acceptedIDs := make(map[string]bool, len(accepted))
+		for _, owner := range accepted {
+			acceptedIDs[owner.ID] = true
+			out.accept(owner, previous[owner.ID])
+			if _, known := previous[owner.ID]; !known {
+				out.notices = append(out.notices, fmt.Sprintf("Claude Code owner %s added from recorded tree %s", owner.ID, read.rootID))
+			}
+		}
+		out.notices = append(out.notices, claude.ReplacementNotices(stored, accepted)...)
+		acceptedSource := domain.SourceEvents{}
+		for _, id := range source.CompleteSessionIDs {
+			if acceptedIDs[id] {
+				acceptedSource.CompleteSessionIDs = append(acceptedSource.CompleteSessionIDs, id)
+			}
+		}
+		for _, event := range source.Events {
+			if acceptedIDs[event.SessionID] {
+				acceptedSource.Events = append(acceptedSource.Events, event)
+			}
+		}
+		out.source = domain.MergeSourceEvents(out.source, acceptedSource)
+		resolveSessionUsers(accepted, stored, user)
+		replaceRecoveredOwners(&out.sessions, accepted)
+		out.updated = true
+	}
+	for _, old := range stored {
+		if _, covered := out.reads[old.ID]; !covered {
+			out.complete = false
+			out.diagnostics = append(out.diagnostics, fmt.Sprintf("Claude Code stored session %s not recovered", old.ID))
+		}
+	}
+	return out
+}
+
+// storedAncestorAttempted reports whether a recorded ancestor's tree was
+// already attempted, so a stored child of an unrecoverable tree is not read or
+// reported again.
+func storedAncestorAttempted(owner domain.SessionFact, stored map[string]domain.SessionFact, attempted map[string]bool) bool {
+	seen := map[string]bool{owner.ID: true}
+	for parent := owner.ParentID; parent != nil && !seen[*parent]; {
+		if attempted[*parent] {
+			return true
+		}
+		seen[*parent] = true
+		next, known := stored[*parent]
+		if !known {
+			return false
+		}
+		parent = next.ParentID
+	}
+	return false
+}
+
+var errClaudeTreeAttempted = errors.New("Claude Code tree already attempted in this operation")
+
+type claudeTreeRead struct {
+	rootID           string
+	workingDirectory string
+	sessions         []domain.SessionFact
+	diagnostics      []string
+}
+
+// readClaudeOwners reads one tree selected by a recorded owner ID, which may be
+// a root session ID or a subagent agent ID, charging the shared budget. A tree
+// whose root was already attempted is not read again.
+func (e *BackfillEngine) readClaudeOwners(ctx context.Context, owner, home string, attemptedTrees map[string]bool, source *domain.SourceEvents) (claudeTreeRead, error) {
+	read := claudeTreeRead{diagnostics: []string{}}
+	if err := ctx.Err(); err != nil {
+		return read, err
+	}
+	budget, seen, err := e.budget.claudeDiscovery(ctx)
+	if err != nil {
+		return read, err
+	}
+	files, err := claude.DiscoverTree(claude.DiscoveryOptions{ClaudeHome: home, SessionID: owner, Budget: budget})
+	var tree claude.Tree
+	if err == nil {
+		read.rootID = files.RootID
+		if attemptedTrees[files.RootID] {
+			e.budget.chargeClaude(budget, seen)
+			return read, errClaudeTreeAttempted
+		}
+		attemptedTrees[files.RootID] = true
+		tree, err = claude.ReadTree(ctx, files, budget)
+	}
+	e.budget.chargeClaude(budget, seen)
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return read, errors.Join(ctxErr, err)
+	}
+	if errors.Is(err, claude.ErrDiscoveryBudget) {
+		return read, errSourceBudget
+	}
+	if err != nil {
+		return read, fmt.Errorf("discovering source: %w", err)
+	}
+	proven := tree.Prove()
+	extraction, err := proven.Facts(e.snapshotCutoff, e.generationPolicy)
+	if err != nil {
+		return read, fmt.Errorf("extracting source: %w", err)
+	}
+	read.workingDirectory = extraction.WorkingDirectory
+	read.diagnostics = append(read.diagnostics, extraction.Diagnostics...)
+	if len(extraction.RootIncomplete) > 0 {
+		read.diagnostics = append(read.diagnostics, fmt.Sprintf("Claude Code owner %s is incomplete; previous snapshot retained: %s", files.RootID, strings.Join(extraction.RootIncomplete, "; ")))
+	}
+	if len(extraction.Sessions) == 0 {
+		return read, fmt.Errorf("no complete Claude Code owners available")
+	}
+	*source = domain.MergeSourceEvents(*source, domain.SourceEvents{Events: extraction.Events, CompleteSessionIDs: extraction.CompleteSessionIDs})
+	read.sessions = extraction.Sessions
+	return read, nil
 }
 
 func discoverOpenCodeTreeIDs(ctx context.Context, db *sql.DB, table, root string, limit int) (ids []string, resultErr error) {

@@ -8,7 +8,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 - **AL-94**: Make explicit backfill repeatable and report refresh coverage
   - **Status**: In Progress; **Blocked by**: None; **Blocks**: AL-95
-  - **File**: [AL-94](to-do/AL-94%20make%20explicit%20backfill%20repeatable%20and%20report%20refresh%20coverage.md)
+  - **File**: [AL-94](to-do/AL-94%20make%20explicit%20backfill%20repeatable%20and%20report%20refresh%20coverage.md); **Change**: [al-94-make-explicit-backfill-repeatable-and-report-refresh-coverage](../../openspec/changes/al-94-make-explicit-backfill-repeatable-and-report-refresh-coverage/)
+- **AL-98**: Generate ticket metrics from Claude Code sessions
+  - **Status**: In Progress; **Blocked by**: None; **Blocks**: AL-99
+  - **File**: [AL-98](to-do/AL-98%20generate%20ticket%20metrics%20from%20claude%20code%20sessions.md); **Change**: [al-98-generate-ticket-metrics-from-claude-code-sessions](../../openspec/changes/al-98-generate-ticket-metrics-from-claude-code-sessions/)
 
 ## Ready
 
@@ -70,6 +73,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **AL-95**: Preview source-backed defaults and decide on rollout
   - **Status**: Blocked; **Blocked by**: AL-94; **Blocks**: None
   - **File**: [AL-95](to-do/AL-95%20preview%20source%20backed%20defaults%20and%20decide%20on%20rollout.md)
+
+- **AL-99**: Capture Claude Code sessions across worktrees
+  - **Status**: Blocked; **Blocked by**: AL-98; **Blocks**: None
+  - **File**: [AL-99](to-do/AL-99%20capture%20claude%20code%20sessions%20across%20worktrees.md)
 
 - **AL2-4**: Monitor and refresh remote Git projects
   - **Status**: Blocked; **Blocked by**: AL2-3; **Blocks**: AL2-5

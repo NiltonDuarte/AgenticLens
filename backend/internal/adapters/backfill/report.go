@@ -29,18 +29,21 @@ type TicketMigrationResult struct {
 	RefreshIncomplete   bool                     `json:"refresh_incomplete"`
 	CollectionsRetained bool                     `json:"collections_retained"`
 	Diagnostics         []string                 `json:"diagnostics,omitempty"`
-	TicketID            string                   `json:"ticket_id"`
-	WorkspacePath       string                   `json:"workspace_path"`
-	LedgerPath          string                   `json:"ledger_path"`
-	PreviousStatus      string                   `json:"previous_status"`
-	NewStatus           string                   `json:"new_status"`
-	GitUpdated          bool                     `json:"git_updated"`
-	DBUpdated           bool                     `json:"db_updated"`
-	DBFound             bool                     `json:"db_found"`
-	Skipped             bool                     `json:"skipped"`
-	PendingSteps        []string                 `json:"pending_steps,omitempty"`
-	Notes               string                   `json:"notes,omitempty"`
-	Error               error                    `json:"error,omitempty"`
+	// Notices report source facts, such as a smaller complete replacement or a
+	// newly added owner, without marking the refresh incomplete.
+	Notices        []string `json:"notices,omitempty"`
+	TicketID       string   `json:"ticket_id"`
+	WorkspacePath  string   `json:"workspace_path"`
+	LedgerPath     string   `json:"ledger_path"`
+	PreviousStatus string   `json:"previous_status"`
+	NewStatus      string   `json:"new_status"`
+	GitUpdated     bool     `json:"git_updated"`
+	DBUpdated      bool     `json:"db_updated"`
+	DBFound        bool     `json:"db_found"`
+	Skipped        bool     `json:"skipped"`
+	PendingSteps   []string `json:"pending_steps,omitempty"`
+	Notes          string   `json:"notes,omitempty"`
+	Error          error    `json:"error,omitempty"`
 }
 
 // BackfillReport summarizes the aggregate outcome of a backfill run.
@@ -159,7 +162,7 @@ func (r *BackfillReport) blockedBeforePublication(ctx context.Context, targets [
 			r.Results = append(r.Results, result)
 			continue
 		}
-		var openCode, codex []domain.SessionFact
+		var openCode, codex, claude []domain.SessionFact
 		ledger, inventoryErr := readPreflightLedger(ctx, target, cfg)
 		if inventoryErr == nil {
 			result.PreviousStatus = migrationStatus(ledger)
@@ -167,7 +170,7 @@ func (r *BackfillReport) blockedBeforePublication(ctx context.Context, targets [
 			if ledger.Migration != nil {
 				result.PendingSteps = ledger.Migration.StepsPending
 			}
-			openCode, codex, _ = sessionsByHarness(ledger.Sessions)
+			openCode, codex, claude, _ = sessionsByHarness(ledger.Sessions)
 		}
 		for _, harness := range selectedHarnesses(opts.Source) {
 			status := HarnessBlocked
@@ -178,8 +181,11 @@ func (r *BackfillReport) blockedBeforePublication(ctx context.Context, targets [
 				reason = fmt.Errorf("selected %s store failed preflight", unavailable)
 			}
 			stored := openCode
-			if harness == domain.SourceCodex {
+			switch harness {
+			case domain.SourceCodex:
 				stored = codex
+			case domain.SourceClaude:
+				stored = claude
 			}
 			coverage := recoveredCoverage(harness, stored, sourceRecovery{failure: reason}, nil)
 			coverage.Status = status

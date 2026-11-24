@@ -57,7 +57,7 @@ func writeCaptureSuccessfulPublicationPolicy(t *testing.T, project, state string
 		body += fmt.Sprintf("  sources:\n    codex:\n      home: %q\n", cfg.Telemetry.Sources.CodexHome)
 	}
 	body += fmt.Sprintf("agenticlens:\n  state_dir: %q\n", cfg.AgenticLens.StateDir)
-	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(body), 0600); err != nil {
+	if err := writeCaptureFileAtomic(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(body), 0600); err != nil {
 		t.Fatal(err)
 	}
 }

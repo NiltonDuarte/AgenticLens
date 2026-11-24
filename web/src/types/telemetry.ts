@@ -2,7 +2,7 @@ export type EventType = 'tool_call' | 'turn_message' | 'compaction' | 'skill_act
 
 export type DataSource = 'local_sqlite' | 'local_codex' | 'mixed_sources' | 'unavailable';
 
-export type SourceHarness = 'unknown' | 'opencode' | 'codex';
+export type SourceHarness = 'unknown' | 'opencode' | 'codex' | 'claude';
 
 export type AgentRole = string;
 

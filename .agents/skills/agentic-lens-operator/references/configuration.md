@@ -24,9 +24,9 @@ The bootstrap reads a standard YAML mapping and validates its `agenticlens` fiel
 
 ## Sources, workspaces and identity
 
-Generation source order is explicit `--source`, then selected-local `telemetry.default_source`, otherwise an actionable error without extraction output. Invalid explicit input fails. OpenCode path order is `--db-path`, then local `telemetry.sources.opencode.database_path`; Codex uses supported `--codex-home`, then local `telemetry.sources.codex.home`. There is no automatic source/store search or switch after failure. Set actual paths explicitly; a sanitized local example is a candidate to review, not machine discovery.
+Generation source order is explicit `--source`, then selected-local `telemetry.default_source`, otherwise an actionable error without extraction output. Invalid explicit input fails. OpenCode path order is `--db-path`, then local `telemetry.sources.opencode.database_path`; Codex uses supported `--codex-home`, then local `telemetry.sources.codex.home`. Claude Code uses `--claude-home`, then local `telemetry.sources.claude.home`; `telemetry.default_source: claude` is valid locally. `CLAUDE_CONFIG_DIR` and `~/.claude` are never read implicitly. There is no automatic source/store search or switch after failure. Set actual paths explicitly; a sanitized local example is a candidate to review, not machine discovery.
 
-Direct OpenCode lookup uses exact `--session-id` roots or literal `--nonce` matches grouped by root. SQL wildcard characters are ordinary text. Both supplied selectors must resolve to the same root; unmatched/ambiguous selectors fail without output or newest-session selection. Codex also requires an explicit selector. Ticket text alone cannot choose a session. Explicit backfill heuristic recovery is separate and requires `--allow-fallbacks`; it must not replace known owners, choose ambiguous roots or hide incomplete exact recovery.
+Direct OpenCode lookup uses exact `--session-id` roots or literal `--nonce` matches grouped by root. SQL wildcard characters are ordinary text. Both supplied selectors must resolve to the same root; unmatched/ambiguous selectors fail without output or newest-session selection. Codex and Claude Code also require an explicit selector; a Claude Code subagent ID resolves to its root. Ticket text alone cannot choose a session. Explicit backfill heuristic recovery is separate and requires `--allow-fallbacks`; it must not replace known owners, choose ambiguous roots or hide incomplete exact recovery.
 
 Shared `workspaces.roots` is the only workspace-location policy, even for one directory. Every entry has an explicit `path`, `discovery.max_depth` and `discovery.max_directories`; optional per-root `artifacts` overrides the explicit shared artifact list. There is no root ID, minimum depth, scalar directory input or runtime `--workspaces` override. Relative configured paths belong to shared YAML. Writer initialization emits depth 0/budget 300; runtime never inserts missing settings. Depth zero checks the root ledger only; depth one also checks immediate children. A reached depth boundary completes selected scope; a directory-budget exhaustion reports partial results and recovery context. Invalid policy fails; unavailable roots or malformed individual ledgers preserve valid sibling results.
 
@@ -100,7 +100,7 @@ Completed portable-ledger reads need no state home. A small adjacent pending-pub
 
 ## Local capture policy
 
-Capture enablement, installation and manual generation are separate choices. `enabled: false` disables automatic collection. Manual generation requires source and project/metrics settings but does not read or modify the capture registry and needs no capture-only configuration. Never silently enable capture, install hooks or alter Git settings.
+Capture enablement, installation and manual generation are separate choices. `enabled: false` disables automatic collection. Automatic capture covers Codex and OpenCode only; Claude Code capture is pending in AL-99, and a local `default_source: claude` does not change automatic publication. Manual generation requires source and project/metrics settings but does not read or modify the capture registry and needs no capture-only configuration. Never silently enable capture, install hooks or alter Git settings.
 
 | `telemetry.capture` setting | When used and validity |
 | --- | --- |
@@ -109,7 +109,7 @@ Capture enablement, installation and manual generation are separate choices. `en
 | `debounce_ms` | Worker burst coalescing, integer 0..refresh_ms; zero means no debounce delay. |
 | `idle_ms`, `max_lifetime_ms` | Worker lifecycle: refresh <= idle <= lifetime <=86400000 ms. |
 | `pass_timeout_ms` | Bounded attempts, integer 100..300000; also bounded by worker lifetime. |
-| `max_sessions`, `max_source_bytes` | Positive budgets where consumed; supported explicit CLI overrides precede local values. Limits retain pending work and honest continuation/incomplete status. |
+| `max_sessions`, `max_source_bytes` | Positive budgets where consumed, including Claude Code backfill reads; supported explicit CLI overrides precede local values. Limits retain pending work and honest continuation/incomplete status. |
 | `commit_warning` | Explicit boolean when advisory checks are used. False suppresses work/output; hook installation is separate and never automatic. |
 
 Worker-free operations need no unused worker timing fields. Base-only setup preserves valid choices and fills missing approved values from `init --local-settings`; worktrees can share the base file. Review dry runs and validate both candidates before writes. `--local-only` completes local policy without replacing shared settings. `--update-capture-config --capture-state-dir PATH` is an explicit selected-local path update subject to retained-state guards; no state location is invented.

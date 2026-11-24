@@ -100,8 +100,12 @@ func selectedHarnesses(source string) []domain.SourceHarness {
 		return []domain.SourceHarness{domain.SourceOpenCode}
 	case "codex":
 		return []domain.SourceHarness{domain.SourceCodex}
-	case "both", "all":
+	case "claude":
+		return []domain.SourceHarness{domain.SourceClaude}
+	case "both":
 		return []domain.SourceHarness{domain.SourceOpenCode, domain.SourceCodex}
+	case "all":
+		return []domain.SourceHarness{domain.SourceOpenCode, domain.SourceCodex, domain.SourceClaude}
 	default:
 		return nil
 	}
@@ -192,13 +196,16 @@ func recoveredCoverage(harness domain.SourceHarness, stored []domain.SessionFact
 	return report
 }
 
-func sourceCoverage(source string, storedOpenCode, storedCodex []domain.SessionFact, openCode, codex sourceRecovery, changed map[string]bool) []HarnessRefreshCoverage {
+func sourceCoverage(source string, storedOpenCode, storedCodex, storedClaude []domain.SessionFact, openCode, codex, claude sourceRecovery, changed map[string]bool) []HarnessRefreshCoverage {
 	var coverage []HarnessRefreshCoverage
 	for _, harness := range selectedHarnesses(source) {
-		if harness == domain.SourceOpenCode {
+		switch harness {
+		case domain.SourceOpenCode:
 			coverage = append(coverage, recoveredCoverage(harness, storedOpenCode, openCode, changed))
-		} else {
+		case domain.SourceCodex:
 			coverage = append(coverage, recoveredCoverage(harness, storedCodex, codex, changed))
+		case domain.SourceClaude:
+			coverage = append(coverage, recoveredCoverage(harness, storedClaude, claude, changed))
 		}
 	}
 	return coverage

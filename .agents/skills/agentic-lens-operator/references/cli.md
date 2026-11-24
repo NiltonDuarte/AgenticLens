@@ -65,7 +65,7 @@ Review all candidate values before applying. Shared/local YAML candidates use `.
 - `--project-name NAME`: explicit candidate override for project label/capture namespace. Changing a populated namespace is not state relocation.
 - `--agenticlens-version EXACT_TAG`: approved exact pin override; otherwise retain the valid existing/candidate pin. Dev/unknown builds cannot invent a release.
 - `--output FILE`: default `.agenticlens-config.yaml`; an explicit directory may use either canonical basename. Blank/arbitrary basenames or conflicting canonical files fail before writes. The local file is beside the shared output.
-- `--capture-enabled true|false`, `--state-dir`, `--source`, `--codex-home`, `--db-path`: explicit local setup choices. Enabling workers requires their complete approved timing/budget policy; no integration is installed or activated by writing config.
+- `--capture-enabled true|false`, `--state-dir`, `--source`, `--codex-home`, `--claude-home`, `--db-path`: explicit local setup choices. `--source claude --claude-home PATH` writes `telemetry.default_source: claude` and `telemetry.sources.claude.home`. Enabling workers requires their complete approved timing/budget policy; no integration is installed or activated by writing config.
 - `--local-only`: complete missing local choices while preserving valid shared/local values; source/capture setup remains base-only, with narrow selected-checkout publication-state setup allowed independently.
 - `--complete-scaffold`: complete only an exact unchanged installer-owned scaffold; not combined with `--force`.
 - `--dry-run`: preview validated candidate outputs without writing.
@@ -83,7 +83,7 @@ agentic-lens generate --ticket-id ID --ticket-title TITLE --ticket-type TYPE [op
 - `--ticket-title TITLE` (required unless safely recovered from the existing target ledger): descriptive title.
 - `--ticket-type TYPE`: explicit value before recorded type, then agreeing configured prefix types; use `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, or `build`. Conflicts fail; an unavailable type stays unknown with a diagnostic unless `--strict-type` requires failure.
 - `--strict-type`: fail when no valid type is available from the explicit value, recorded type or agreeing configured mappings.
-- `--source opencode|codex`: choose telemetry harness. Otherwise use selected-local `telemetry.default_source`; missing or invalid selection fails without output. A failed selected source does not silently switch harnesses.
+- `--source opencode|codex|claude`: choose telemetry harness. Otherwise use selected-local `telemetry.default_source`; missing or invalid selection fails without output. A failed selected source does not silently switch harnesses.
 - `--nonce VALUE`: literal text identifying exactly one root; OpenCode groups matching records by root and does not treat SQL wildcards specially. Supply a literal unique value directly; do not use shell variable or command substitution.
 - `--session-id ID`: exact existing root identifier; source-proven children may be discovered. For OpenCode, both supplied selectors must resolve to the same root; no newest-session tie-break or title/workspace search occurs.
 - `--code-ref REF` (default `HEAD`): committed target measured from its merge base with configured `code_metrics.base_branch`; staged/uncommitted changes are excluded. Normal generation deliberately targets worktree HEAD.
@@ -93,6 +93,7 @@ agentic-lens generate --ticket-id ID --ticket-title TITLE --ticket-type TYPE [op
 - `--append FILE`: explicit summary request overriding shared enablement/destination; idempotently updates its metrics table. Otherwise shared generation.summary selects a safe filename beside the ledger, or in the configured ticket workspace when no ledger path is given.
 - `--db-path PATH`: explicit OpenCode SQLite source path.
 - `--codex-home PATH`: explicit Codex home; otherwise selected-local telemetry.sources.codex.home, with no automatic environment/home discovery.
+- `--claude-home PATH`: explicit Claude Code store; otherwise selected-local telemetry.sources.claude.home. `CLAUDE_CONFIG_DIR` and `~/.claude` are never read implicitly; a missing, non-directory or unreadable store fails before publication.
 - `--capture-dir DIR`: capture-state override for automatic publication only. Manual generation accepts this flag for compatibility but never accesses its path or the registry. Manual generation needs project/metrics/source configuration and supported source selection, without capture installation, enablement, state or worker settings. Explicit ticket selection does not change automatic bindings. Shared publication locking and journal recovery still protect the ledger and summary.
 - `--capture-auto`: automatic lifecycle publication from registered, ticket-bound owners only. Requires enabled capture configuration and valid worktree/registry ownership; cannot be combined with `--session-id` or `--nonce`.
 - `--max-sessions COUNT`, `--max-source-bytes BYTES`: explicit positive automatic reconciliation budgets, taking precedence over selected local capture settings. The worker forwards admitted effective budgets to its generation child. Manual generation does not consume capture budgets; supplied values must still be positive.
@@ -105,6 +106,8 @@ agentic-lens generate --source opencode --nonce A7F39B2C --ticket-id PAY-42 --ti
 ```
 
 Generation writes the requested ledger and/or summary. Confirm those destinations before execution. Use a literal nonce. For Codex, select a known session ID or literal nonce as required by that installed version's help; do not guess a session based only on ticket text.
+
+For Claude Code, `--session-id` takes the root session ID or a native subagent ID, which resolves to its root. A subagent becomes a child only when its `meta.json` `toolUseId` matches an `Agent` call in the same tree; unproven or unreadable subagents are reported and never given an inferred parent. Manual generation reads the store without capture budgets. Claude Code deletes transcripts after `cleanupPeriodDays`, so generate before cleanup; recorded facts of cleaned-up sessions are preserved. Automatic capture and `capture install --source claude` are not supported yet (AL-99). Engines older than Claude Code support reject ledgers containing a `claude` session.
 
 ## `capture` (native release handler)
 
@@ -177,15 +180,16 @@ Repeat the selected command without `--dry-run` when authorized. Both commands d
 ## `backfill`
 
 ```bash
-agentic-lens backfill --source opencode|codex|both [options]
+agentic-lens backfill --source opencode|codex|claude|both|all [options]
 ```
 
-- `--source` (required): `opencode`, `codex`, or `both` (`all` is accepted by the current CLI). Choose sources that actually own sessions in the target ledger.
+- `--source` (required): `opencode`, `codex`, `claude`, `both` (OpenCode plus Codex) or `all` (OpenCode, Codex and Claude Code). `all` fails before any read or publication when the Claude Code store is missing or unreadable; use `both` on a machine without one. Choose sources that actually own sessions in the target ledger.
 - Scan the explicit configured roots; there is no single-directory runtime override.
 - `--ticket-id ID`: restrict work to one workspace. Recommended for targeted recovery.
 - `--codex-home PATH`: local Codex rollout directory; otherwise the selected-local Codex home; missing/invalid selection fails.
+- `--claude-home PATH`: local Claude Code store; otherwise the selected-local `telemetry.sources.claude.home`; missing/invalid selection fails, with no environment or home-directory fallback.
 - `--db-path PATH`: local OpenCode SQLite DB; otherwise the selected-local OpenCode path; missing/invalid selection fails.
-- `--recompute-db`: verify exact recorded sessions from the selected harness even for completed ledgers. Run on the machine that has the original source records.
+- `--recompute-db`: verify exact recorded sessions from the selected harness (OpenCode database, Codex rollouts, Claude Code transcripts) even for completed ledgers. Run on the machine that has the original source records. Claude Code reads consume the selected-local `telemetry.capture.max_sessions` and `max_source_bytes`; an exhausted budget reports an incomplete refresh and preserves owners not read.
 - `--recompute-git`: recompute code facts and iterations from Git history. Requires both `--code-ref REF` and `--ticket-id ID`.
 - `--code-ref REF`: Git ref compared against configured base; required with `--recompute-git`.
 - `--migrate-schema`: upgrade ledger schema during backfill. This is an alternative combined workflow to running schema migration separately.
@@ -207,6 +211,7 @@ agentic-lens backfill --source opencode --ticket-id PAY-42 --recompute-db --dry-
 agentic-lens backfill --source opencode --ticket-id PAY-42 --recompute-db --update-summaries
 agentic-lens backfill --source codex --ticket-id PAY-42 --update-summaries
 agentic-lens backfill --source codex --codex-home ~/.codex --ticket-id PAY-42 --dry-run
+agentic-lens backfill --source claude --claude-home ~/.claude --ticket-id PAY-42 --recompute-db --dry-run
 agentic-lens backfill --source both --ticket-id PAY-42 --migrate-schema --dry-run
 ```
 
