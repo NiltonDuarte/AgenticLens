@@ -60,6 +60,12 @@ The first run stopped on one frontend integration test, `TicketComparisons`, whi
 
 **OpenSpec:** strict validation passes.
 
+**Telemetry:** the Claude Code ledger was generated with `--source claude` from root session `a27e309f-c6cf-4b8e-8a78-c7568c3fffdd`. It holds 37 sessions: the root and its 36 native subagents.
+- The subagents are 1 planner, 1 coder, 2 tester runs and 32 reviewer runs.
+- Every child links to the root, and all 36 root delegations carry their `child_session_id`.
+- Served models match the review profiles: 16 runs on claude-opus-5-5 and 16 on claude-sonnet-5-5. The root, planner, coder and testers ran on claude-opus-5-5.
+- Cost is unavailable for every invocation, because the Claude Code source records no price evidence.
+
 **Review.** The change went through four review rounds. Each round covered behavior, data integrity, architecture and test effectiveness on both configured profiles, claude-opus-5-5/medium and claude-sonnet-5-5/high: eight runs per round.
 
 | Round | Candidate | Result |
@@ -127,3 +133,62 @@ Two causes in the same area made the loss persistent:
 See [Limits](#limits) in this file. The follow-ups are the R2-P1 shared task-name resolution, unifying the exact lookups (ARCH-01) and narrowing the busy marker (R4-01).
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+<!-- agentic-lens:metrics:start -->
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 9
+- **Active Agent Duration:** 15h 34m (recorded duration including 53s provisional)
+- **Context Window Health:** BLOATED — Root agent peak 436.4k tokens (97% of 450k healthy ceiling, 0 compactions) | Subagents peak 794.3k (Tester)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
+- **Subagent Turn Velocity & Thrashing:** 1.6 avg turns/run (peak: 12 turns) | Planner 12.0, Coder 6.0, Tester 3.5, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Test-to-Production Code Ratio:** 2.1:1 (+4,703 test lines / +2,192 prod lines)
+- **Code Delivered:** +6,895 / -163 lines across 29 code files (excluding docs)
+- **Reasoning Effort:** 920,052 reasoning tokens (29.8% of generated output)
+- **Tool Health & Self-Correction:** 1,789 tool calls (11 self-corrections, 99.4% success rate)
+
+### Anomalies & Health Flags
+- **Status:** 19 execution anomalies detected (5 CRITICAL, 14 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.5k tokens) — Context tokens reached 450.5k, breaching the 450k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.4k tokens) — Context tokens reached 450.4k, breaching the 450k critical ceiling.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-behavior (5 cycles) — Subagent roles 'reviewer-data' and 'reviewer-behavior' alternated for 5 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (6 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (5 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 5 consecutive cycles.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (254.1k tokens) — Context tokens reached 254.1k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (250.6k tokens) — Context tokens reached 250.6k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (250.8k tokens) — Context tokens reached 250.8k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (260.5k tokens) — Context tokens reached 260.5k, breaching the 250k warning ceiling.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (4 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-tests <-> reviewer-behavior (3 cycles) — Subagent roles 'reviewer-tests' and 'reviewer-behavior' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (3 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-data (3 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-data' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> planner (4 cycles) — Subagent roles 'coder' and 'planner' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> planner (3 cycles) — Subagent roles 'tester' and 'planner' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-tests (3 cycles) — Subagent roles 'reviewer-data' and 'reviewer-tests' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-behavior (4 cycles) — Subagent roles 'reviewer-data' and 'reviewer-behavior' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> planner (3 cycles) — Subagent roles 'coder' and 'planner' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> planner (4 cycles) — Subagent roles 'tester' and 'planner' alternated for 4 consecutive cycles.
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **planner** | 1 | 220 | 126,950 | 19,536,456 | 100.0% | 345.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 352 | 219,657 | 48,350,400 | 100.0% | 486.1k | BLOATED (108%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 2 | 600 | 497,552 | 106,142,047 | 100.0% | 794.3k | BLOATED (177%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Unknown** | 1 | 466 | 150,354 | 41,946,166 | 100.0% | 436.4k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer-architecture** | 8 | 374 | 192,307 | 16,088,941 | 100.0% | 146.4k | HEALTHY | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
+| **reviewer-behavior** | 8 | 574 | 290,513 | 32,096,120 | 100.0% | 249.7k | ELEVATED | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
+| **reviewer-data** | 8 | 492 | 329,664 | 25,572,594 | 100.0% | 223.8k | HEALTHY | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
+| **reviewer-tests** | 8 | 600 | 363,558 | 33,216,824 | 100.0% | 196.6k | HEALTHY | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
+| **Total** | **37** | **3,678** | **2,170,555** | **322,949,548** | **100.0%** | **794.3k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 37 unavailable / 37 invocations)** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **claude-opus-5-5** | 21 | 2,504 | 1,526,479 | 255,664,791 | 100.0% | Unavailable (0 observed, 0 partial, 21 unavailable / 21 invocations) |
+| **claude-sonnet-5-5** | 16 | 1,174 | 644,076 | 67,284,757 | 100.0% | Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations) |
+| **Total** | **37** | **3,678** | **2,170,555** | **322,949,548** | **100.0%** | **Unavailable (0 observed, 0 partial, 37 unavailable / 37 invocations)** |
+<!-- agentic-lens:metrics:end -->

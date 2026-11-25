@@ -10,13 +10,15 @@
           "persona": "reviewer-data",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-data",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: retention applied at each owner snapshot commit; interrupted-annotation regression test."
@@ -30,13 +32,15 @@
           "persona": "reviewer-behavior",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: resumed sweeps keep their cursor and new sweeps that admit nothing write no cursor."
@@ -50,19 +54,22 @@
           "persona": "reviewer-data",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-data",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: refused links are reported with typed reasons and counted as unresolved child evidence."
@@ -76,19 +83,22 @@
           "persona": "reviewer-behavior",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-data",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: one capture entry point with busy-aware registry access."
@@ -102,13 +112,15 @@
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: single capture.RetainAcceptedChildLinks call."
@@ -122,13 +134,15 @@
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-data",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: gzip headers admitted only with the full 64 KiB bound."
@@ -142,13 +156,15 @@
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: shared exactSessionContext and conflictingNativeParent helpers."
@@ -162,13 +178,15 @@
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Accepted debt: recorded under Known limits; follow-up to unify without touching manual and live paths in this fix."
@@ -182,13 +200,15 @@
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: comments and enums corrected."
@@ -202,7 +222,8 @@
           "persona": "reviewer-data",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: dedup through the rollout file-name session ID as a counting hint only."
@@ -216,7 +237,8 @@
           "persona": "reviewer-data",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: registry snapshots passed as Known evidence."
@@ -230,13 +252,15 @@
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: regression test kills the deletion mutant."
@@ -250,7 +274,8 @@
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: exact two-run CLI case exercises the double-count guard."
@@ -264,7 +289,8 @@
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: capture-level sweep test with exact byte totals."
@@ -278,13 +304,15 @@
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: restored-session regression test."
@@ -298,13 +326,15 @@
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: fixture extended with exact sweep oracles."
@@ -318,25 +348,29 @@
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: assertions and guard tests added; worker test judged by outcome."
@@ -350,37 +384,43 @@
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-data",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-data",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed by user decision: key groups aligned by position with unique-delegation rules."
@@ -394,13 +434,15 @@
           "persona": "reviewer-behavior",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed by position alignment."
@@ -414,13 +456,15 @@
           "persona": "reviewer-behavior",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: reported as refused with reason unmatched; one-time report recorded as a limit."
@@ -434,25 +478,29 @@
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: dead outcome and evidence state removed."
@@ -466,7 +514,8 @@
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: wording depends on added unresolved links."
@@ -480,7 +529,8 @@
           "persona": "reviewer-behavior",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: classification owned by capture with a marked expiry."
@@ -494,7 +544,8 @@
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: artifacts updated."
@@ -508,7 +559,8 @@
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: separate retry context; repeated race runs pass."
@@ -522,7 +574,8 @@
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: interleaved and offset group tests."
@@ -536,7 +589,8 @@
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: regression case added."
@@ -550,7 +604,8 @@
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: registry trigger test."
@@ -564,7 +619,8 @@
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: header ancestry test."
@@ -578,7 +634,8 @@
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: queued resume test."
@@ -592,7 +649,8 @@
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: guard independent of the embed."
@@ -606,13 +664,15 @@
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: CLI alignment and guard tests added."
@@ -626,7 +686,8 @@
           "persona": "reviewer-data",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Pre-existing, not introduced by FIX-21: recorded under Known limits with a follow-up; FIX-21 keeps accepted links in this state."
@@ -640,25 +701,29 @@
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-data",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: duplicated fresh children never confirm a replacement; displaced unlinked children are reported."
@@ -672,25 +737,29 @@
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: capture marks expired registry waits and the CLI uses one predicate through a tested helper."
@@ -704,13 +773,15 @@
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: ReplacedChildID added, documentation and names corrected."
@@ -724,7 +795,8 @@
           "persona": "reviewer-data",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: no early return; only contradicted links are cleared."
@@ -738,19 +810,22 @@
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: artifacts updated."
@@ -764,7 +839,8 @@
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: unmatched-key rows kill both mutants."
@@ -778,13 +854,15 @@
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: pure outcome helper unit-tested."
@@ -798,13 +876,15 @@
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed."
@@ -818,43 +898,50 @@
           "persona": "reviewer-data",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-data",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Accepted limit: no data loss and both exits are non-zero; follow-up to mark only contention or deadline causes."
@@ -868,31 +955,36 @@
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-data",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-data",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Accepted limit, consequence of R2-P1; accepted links stay counted."
@@ -906,13 +998,15 @@
           "persona": "reviewer-architecture",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-behavior",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed: spec wording narrowed."
@@ -926,13 +1020,15 @@
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-opus-5-5",
           "effort": "medium",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Accepted test limit; the pure outcome helper is tested."
@@ -946,13 +1042,15 @@
           "persona": "reviewer-architecture",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         },
         {
           "persona": "reviewer-tests",
           "model": "claude-sonnet-5-5",
           "effort": "high",
-          "identity_basis": "acknowledged"
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
         }
       ],
       "disposition": "Fixed."

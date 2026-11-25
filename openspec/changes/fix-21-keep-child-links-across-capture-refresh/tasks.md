@@ -75,7 +75,7 @@
   - Review rounds: round 1 at `0f73f759` (base `133100bb`), round 2 at `86eb6dae` and round 3 at `5d4df7ee`. Each focus runs on both configured profiles, Opus 5.5 at medium effort and Sonnet 5.5 at high effort, giving eight discovery runs.
   - Four rounds were run, the last approved by all eight runs at `34068194`. The compact findings are in `evidence/REVIEW_SUMMARY.json`.
 - [x] Commit the candidate and merge main. Resolve any `main.go` overlap with PR #162 so both sides' behavior is kept. Run the integrated `make` gate, which covers the frontend build and embedded assets.
-- [ ] Write `delivery.md`, generate the final telemetry, then push and open the PR.
+- [x] Write `delivery.md`, generate the final telemetry, then push and open the PR.
 
 ## Workflow follow-up
 
