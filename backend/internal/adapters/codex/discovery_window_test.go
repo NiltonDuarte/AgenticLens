@@ -462,3 +462,48 @@ func TestHeaderCacheAdmitsCompressedHeaderOnlyWithTheWholeBound(t *testing.T) {
 		t.Fatalf("compressed header with the whole bound = %+v, %v, charged %d; want %d decompressed bytes", read, err, whole.SourceBytesRead, cost)
 	}
 }
+
+// FIX-21 R2-T5: the header path applies the same exact-owner rules as the
+// session-context path. Both ancestry spellings must agree when both exist.
+func TestHeaderSessionContextRejectsConflictingAncestry(t *testing.T) {
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name, direct, nested, parent string
+		conflict                     bool
+	}{
+		{name: "direct and nested parents disagree", direct: "parent-a", nested: "parent-b", conflict: true},
+		{name: "direct and nested parents agree", direct: "parent-a", nested: "parent-a", parent: "parent-a"},
+		{name: "nested parent only", nested: "parent-b", parent: "parent-b"},
+		{name: "direct parent only", direct: "parent-a", parent: "parent-a"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "child.jsonl")
+			source := `"cli"`
+			if tc.nested != "" {
+				source = fmt.Sprintf(`{"subagent":{"thread_spawn":{"parent_thread_id":%q,"depth":1}}}`, tc.nested)
+			}
+			direct := ""
+			if tc.direct != "" {
+				direct = fmt.Sprintf(`"parent_thread_id":%q,`, tc.direct)
+			}
+			body := fmt.Sprintf(`{"timestamp":"2026-11-24T09:00:00Z","type":"session_meta","payload":{"id":"child",%s"cwd":"/fixture/project","source":%s}}`+"\n", direct, source)
+			if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			read, err := codex.NewHeaderCache().ReadHeader(ctx, path, &codex.DiscoveryBudget{MaxSessions: 1, MaxSourceBytes: 1 << 20})
+			if err != nil || read.Header.ConflictingParent != tc.conflict {
+				t.Fatalf("header = %+v, %v; want conflict %t", read.Header, err, tc.conflict)
+			}
+			metadata, err := read.Header.SessionContext()
+			if tc.conflict {
+				if !errors.Is(err, codex.ErrSessionContextMismatch) {
+					t.Fatalf("conflicting ancestry accepted: %+v, %v", metadata, err)
+				}
+				return
+			}
+			if err != nil || metadata.ID != "child" || metadata.ParentID != tc.parent {
+				t.Fatalf("session context = %+v, %v; want parent %q", metadata, err, tc.parent)
+			}
+		})
+	}
+}

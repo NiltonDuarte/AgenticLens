@@ -28,38 +28,43 @@ The following are excluded:
 
 The stored `DelegationFact` has no call ID.
 
-**Pure domain rule.** `domain.RetainAcceptedChildLinks` in `backend/internal/domain/child_links.go` takes the accepted sessions, the fresh sessions and the target harness (Codex). It returns the reconciled fresh sessions and a typed report.
+**Pure domain rule.** `domain.RetainAcceptedChildLinks` in `backend/internal/domain/child_links.go` takes a `ChildLinkInput`. Its fields are `Harness` (Codex), `Accepted`, `Fresh` (rewritten), `Observed` (read in the same refresh, never rewritten) and `Known`. `Known` holds registry evidence, the accepted records of another store, and takes precedence over `Accepted` as child-parent evidence. The function returns the reconciled fresh sessions and a typed report.
 
 Child parent evidence has three typed states:
-- **confirmed:** the fresh child's `ParentID` is this parent. Without a fresh child, the accepted record's `ParentID` is this parent.
-- **contradicted:** a fresh child names another parent or none, or an accepted record names another parent.
-- **unobserved:** there is no record, or the accepted record has no parent.
+- **confirmed:** the fresh child's `ParentID` is this parent. Without a fresh child, the known or accepted record's `ParentID` is this parent.
+- **contradicted:** a fresh child names another parent or none, or a known or accepted record names another parent.
+- **unobserved:** there is no record, or the record has no parent.
 
 The rule applies these decisions:
-- A fresh link to a contradicted child is cleared.
-- A different fresh child replaces the accepted link only when that child is confirmed.
-- Accepted links are carried onto empty fresh delegations by key group. For one parent, the key is (agent type, description, invoked-at), with an unknown invoked-at as its own key value. The accepted and fresh groups are each taken in transcript order.
-  - When every fresh delegation in the group has an empty link and the fresh group is at least as large as the accepted group, accepted link i goes to fresh delegation i. Codex transcripts are append-only, so the accepted group is a prefix of the fresh group. A unique key is the one-element case.
-  - When any fresh delegation in the group has a link, or the fresh group is smaller, nothing in the group is carried, and the refused links are reported.
-  - Per-child guards still apply: a contradicted child is never carried, and neither is a child held by another final delegation of the parent.
+- **Grouping.** For one parent, delegations are grouped by key: agent type, description and invoked-at. An unknown invoked-at is its own key value. Accepted and fresh groups are each taken in transcript order, and accepted position i is paired with fresh position i. A unique key is a group of one.
+- **At each position, the unique-delegation rules apply:**
+  - an empty fresh link keeps the accepted link;
+  - an equal link confirms it;
+  - a different child whose parent is confirmed replaces it;
+  - a different child whose parent is unconfirmed keeps the accepted link;
+  - a contradicted child is cleared, and a contradicted accepted child is never kept.
+- **Held by another delegation.** A child held by another final delegation of the parent is not kept on a second one.
+- **Smaller fresh group.** When the fresh group is smaller than the accepted group, as with a truncated transcript, none of its accepted links is placed, and not even the overlapping positions are aligned. Each uncontradicted link is reported as refused, with reason `ambiguous` when the key has a known invoked-at and `unknown_provenance` when it does not. Only this refusal path emits those reasons. Complete groups emit no refusal decisions.
+- **No fresh counterpart.** An accepted key with no fresh delegation is reported as refused, with reason `unmatched`, and its link is not placed.
 
 Owners with nil delegations, owners from other harnesses and owners that were not refreshed are untouched, and delegation order is preserved. Applying the rule again changes nothing. Events never receive retained links.
 
-**Invocation.** The rule runs in two places only. Neither adds a fallback to `mergeSessions`.
+**Invocation.** None of these adds a fallback to `mergeSessions`.
 
-1. **Capture adapter.** `finishCaptureAnnotations` and `regroupArchiveFamily` apply it against the pass's `previousSnapshots`.
-2. **Generation.** `--capture-auto` applies it once, through a helper in `cmd/agentic-lens/capture.go` that `main.go` calls once, right after reconcile succeeds.
-   - It runs against `baseline.Current`, on `RefreshedSessions` and `RestoredSessions`.
+1. **Owner snapshot.** Each owner's first snapshot commit in `refreshTicketOwners` applies the rule against `previousSnapshots`, so a pass that stops before the family annotation never leaves fewer links than it started with.
+2. **Family annotation.** `finishCaptureAnnotations` and `regroupArchiveFamily` apply it again to the pass's grouped owners.
+3. **Generation.** `--capture-auto` applies it once, through the single entry point `capture.RetainAcceptedChildLinks`, called from a helper in `cmd/agentic-lens/capture.go` that `main.go` calls once, right after reconcile succeeds.
+   - It runs against `baseline.Current`, with the registry snapshots (`result.Sessions`) as `Known`, on `RefreshedSessions` and `RestoredSessions`.
    - It runs before pending sync, merge, restore acknowledgement and publication.
 
-**Coverage.** Each distinct (parent, child) pair adds 1 to `ReconcileResult.PendingChildren`. A pair counts when its accepted link was retained, including by ordinal group carry. It also counts when the rule refused to carry it, because its group failed the ordinal condition or another delegation holds the child, while the fresh link is empty and not contradicted. A refused link is never moved. No new counter or field is added.
+**Coverage.** Each distinct (parent, child) pair adds 1 to `ReconcileResult.PendingChildren`. A pair counts when an accepted link was kept without being re-proven. It also counts when an uncontradicted accepted link was refused: its fresh group is smaller, its key is unmatched, or another delegation holds the child. A refused link is never moved. No new counter or field is added.
 - **Deduplication.** A pair is not added again when one of these already counts it:
   - a `pending_starts` row with the same store, the same parent and `agent` equal to the child ID;
-  - a `pending_children` row for the same parent whose path equals the child's registered transcript path;
+  - a `pending_children` row for the same parent whose path equals the child's registered transcript path. For a child not yet registered, the session ID claimed by the file name (`codex.RolloutNameSessionID`) is used only as a deduplication hint for counting, never as identity;
   - an earlier retained pair in the same pass.
 - **When the count is added.**
   - The adapter adds its pairs after `pendingChildWork` sets the figure.
-  - The CLI helper adds its pairs through the deduplicating `ReconcileResult.AddRetainedChildLinks`, and records the updated partial reconciliation (from `ReconcileResult.ReconciliationDiagnostic`) through the existing diagnostic writer. Otherwise a machine whose registry never registered the children would show the pass as complete.
+  - In generation, `capture.RetainAcceptedChildLinks` adds its pairs under the same deduplication. When the count grows, it records the request's reconciliation again as partial through the existing diagnostic writer. Otherwise a machine whose registry never registered the children would show the pass as complete.
 - **What does not change.** `UnresolvedParentLinks` is never changed. A non-zero `PendingChildren` already marks the attempt as partial.
 
 ### Discovery budget
@@ -118,6 +123,8 @@ Manual `generate` and backfill use `DiscoverRolloutPaths` and stay unchanged. Th
 - **Coverage reported as partial too often.** When the parent and a child are read in different rounds of the same pass, coverage can be reported as partial even though both were read.
 - **Very small `max_source_bytes`.** A very small value can stall identification. It shows as pending.
 - **OpenCode child pages.** They still consume session slots. This predates FIX-21.
+- **Refused and unmatched links are reported only once.** They are counted when refused, but they are not placed on any delegation afterwards, so a later pass that cannot re-read them has nothing left to report.
+- **R2-P1, pre-existing.** When two delegations share a task name and only one child is read, `resolveSourceChildren` points both at that child. FIX-21 did not introduce this. A follow-up ticket should fix it.
 - **ARCH-01, accepted debt.** The capture exact lookup duplicates the manual and live lookup rules. A follow-up should unify them.
 
 ### Owners
@@ -216,3 +223,23 @@ Verification asserts that the link is cleared, not that a warning appears, and c
   - refusal and reporting when a fresh link is set or the fresh group is smaller;
   - a contradicted or already-held child skipped within a group;
   - idempotence.
+
+**Position alignment.** The user approved this on 2026-11-25 in the main conversation, choosing "Alinhar por posicao" over "Manter como esta", after review round 2 (R2-01, R2-02, R2-03; see [evidence/REVIEW.md](evidence/REVIEW.md)).
+- **Problem.** A group that was only partly re-read was refused as a whole, so its unread links were lost from the registry and the ledger.
+- **Superseded.** This replaces the all-empty precondition of the 2026-11-24 "Ordinal group retention" entry.
+- **Decision.**
+  - Accepted position i is now paired with fresh position i within each key group, applying the unique-delegation rules at each position. A unique key is a group of one.
+  - A group is refused and reported only when the fresh group is smaller.
+  - An accepted key with no fresh counterpart is reported as refused, with an unmatched reason, and counted as unresolved.
+- **Also fixed.** R2-02: an untimed unique delegation no longer accepts an unconfirmed different child.
+- **Artifacts.** The spec's ordinal requirement became "Align delegation key groups by position", with a separate requirement for unmatched keys. The design now matches the implementation (R2-07): the `capture.RetainAcceptedChildLinks` entry point, per-owner application, `Known` and the file-name deduplication hint. The one-time reporting of refused links and R2-P1 are recorded under Known limits.
+- **Verification.** It adds these cases:
+  - ambiguous groups with all positions unread;
+  - a partly re-read group;
+  - interleaved and offset groups;
+  - a smaller fresh group;
+  - an unmatched key;
+  - an untimed unique delegation against an unconfirmed child;
+  - CLI alignment end to end.
+
+**R2 implementation sync.** The coder's report on 2026-11-25 removed two values that could no longer occur: the evidence value `ChildParentNotEvaluated` and the outcome `ChildLinkRefusedAmbiguous`. Complete groups emit no refusal decisions. Child parent evidence therefore has three states. A smaller fresh group places none of its accepted links, not even the overlapping prefix, and reports them as `ambiguous` (known invoked-at) or `unknown_provenance`. A key with no fresh counterpart is reported as `unmatched`. There is no change to scope or approval.

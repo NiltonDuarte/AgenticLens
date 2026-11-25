@@ -14,9 +14,6 @@ const (
 	// ChildParentUnobserved means no record exists, or the accepted record has
 	// no parent.
 	ChildParentUnobserved ChildParentEvidence = "unobserved"
-	// ChildParentNotEvaluated means the rule evaluated no child, because the
-	// delegation's provenance is ambiguous.
-	ChildParentNotEvaluated ChildParentEvidence = "not_evaluated"
 )
 
 // ChildLinkOutcome is the decision taken for one delegation of a refreshed owner.
@@ -26,14 +23,12 @@ const (
 	// ChildLinkRetained carries an accepted link onto an empty fresh delegation
 	// whose agent type, description and known invocation time are unique.
 	ChildLinkRetained ChildLinkOutcome = "retained"
-	// ChildLinkRetainedByPosition carries an accepted link onto the fresh
-	// delegation at the same position among delegations that share agent type,
-	// description and invocation time, known or not, when every fresh link of
-	// that group is empty. Codex transcripts only append, so the accepted group
-	// is a prefix of the fresh one.
+	// ChildLinkRetainedByPosition carries an accepted link onto the empty fresh
+	// delegation at the same position of its key group, when the group has
+	// several delegations or an unknown invocation time.
 	ChildLinkRetainedByPosition ChildLinkOutcome = "retained_by_position"
 	// ChildLinkKeptPendingConfirmation keeps an accepted link over a different
-	// fresh child whose parent is not confirmed.
+	// fresh child, at the same group position, whose parent is not confirmed.
 	ChildLinkKeptPendingConfirmation ChildLinkOutcome = "kept_pending_confirmation"
 	// ChildLinkReplaced accepts a different fresh child whose parent is confirmed.
 	ChildLinkReplaced ChildLinkOutcome = "replaced"
@@ -42,27 +37,26 @@ const (
 	// ChildLinkRefusedContradicted keeps an accepted link off the delegation
 	// because the accepted child is contradicted.
 	ChildLinkRefusedContradicted ChildLinkOutcome = "refused_contradicted"
-	// ChildLinkRefusedAmbiguous keeps accepted links off a delegation whose
-	// agent type, description and invocation time are shared, when a fresh link
-	// of that group is already set or the fresh group is smaller.
-	ChildLinkRefusedAmbiguous ChildLinkOutcome = "refused_ambiguous"
 	// ChildLinkRefusedHeldBySibling keeps an accepted link off the delegation
 	// because another delegation of the same owner already holds the child.
 	ChildLinkRefusedHeldBySibling ChildLinkOutcome = "refused_held_by_sibling"
 )
 
 // ChildLinkRefusal is why an accepted link that no evidence contradicts was
-// not carried onto an empty fresh delegation.
+// not placed on the fresh owner.
 type ChildLinkRefusal string
 
 const (
-	// ChildLinkRefusalAmbiguous means delegations share the link's agent type,
-	// description and known invocation time, and the group could not be
-	// aligned by position: a fresh link is set or the fresh group is smaller.
+	// ChildLinkRefusalAmbiguous means the link's key group, with a known
+	// invocation time, has fewer fresh than accepted delegations, so positions
+	// cannot be aligned and none of the group's accepted links is placed.
 	ChildLinkRefusalAmbiguous ChildLinkRefusal = "ambiguous"
-	// ChildLinkRefusalUnknownProvenance means the accepted delegation has no
-	// known invocation time and its group could not be aligned by position.
+	// ChildLinkRefusalUnknownProvenance is ChildLinkRefusalAmbiguous for a key
+	// group whose invocation time is unknown.
 	ChildLinkRefusalUnknownProvenance ChildLinkRefusal = "unknown_provenance"
+	// ChildLinkRefusalUnmatched means no fresh delegation has the link's agent
+	// type, description and invocation time.
+	ChildLinkRefusalUnmatched ChildLinkRefusal = "unmatched"
 	// ChildLinkRefusalHeldBySibling means another delegation of the owner holds
 	// the accepted child.
 	ChildLinkRefusalHeldBySibling ChildLinkRefusal = "held_by_sibling"
@@ -160,14 +154,15 @@ type ChildLinkResult struct {
 }
 
 // RetainAcceptedChildLinks reconciles refreshed owners' delegation child links
-// with accepted facts. A refresh that could not re-read a child keeps the
-// accepted link on the delegation with the same agent type, description and
-// known invocation time, when that key is unique on both sides and no evidence
-// contradicts the child's parent. Delegations sharing a key, or with an
-// unknown invocation time, keep accepted links by position when every fresh
-// link of the group is empty and the fresh group is at least as large. A fresh link to a contradicted child is
-// cleared, and a different fresh child replaces an accepted link only when its
-// parent is confirmed. Owners of other harnesses and owners with nil
+// with accepted facts. Delegations are grouped by agent type, description and
+// invocation time, an unknown time being its own value, and accepted position
+// i of a group is paired with fresh position i in transcript order; a unique
+// key is a group of one. At each pair a refresh that could not re-read the
+// child keeps the accepted link unless evidence contradicts the child's
+// parent, a fresh link to a contradicted child is cleared, and a different
+// fresh child replaces the accepted link only when its parent is confirmed.
+// A group with fewer fresh than accepted delegations, or with no fresh
+// delegation, places none of its accepted links and reports them. Owners of other harnesses and owners with nil
 // delegations are returned unchanged. Inputs are never modified, and applying
 // the rule to its own result changes nothing.
 func RetainAcceptedChildLinks(input ChildLinkInput) ChildLinkResult {
@@ -268,16 +263,6 @@ func childLinkGroups(delegations []DelegationFact) (map[childLinkKey][]int, []ch
 	return groups, order
 }
 
-// childLinkAlignment is how one key group's accepted links were matched.
-type childLinkAlignment int
-
-const (
-	alignmentNone childLinkAlignment = iota
-	alignmentUnique
-	alignmentPosition
-	alignmentRefused
-)
-
 // reconcileOwnerChildLinks rewrites delegations in place. They are the
 // caller's private copy of one fresh owner's delegations.
 func reconcileOwnerChildLinks(parent string, delegations, prior []DelegationFact, hasPrior bool, evidence func(child, parent string) ChildParentEvidence) ([]ChildLinkDecision, []RefusedChildLink) {
@@ -295,30 +280,40 @@ func reconcileOwnerChildLinks(parent string, delegations, prior []DelegationFact
 	if !hasPrior {
 		return decisions, nil
 	}
-	freshGroups, order := childLinkGroups(delegations)
-	priorGroups, _ := childLinkGroups(prior)
-	// Match accepted links group by group, then decide the outcomes that do
-	// not depend on which children other delegations finally hold.
+	freshGroups, _ := childLinkGroups(delegations)
+	priorGroups, priorOrder := childLinkGroups(prior)
+	// Pair accepted position i with fresh position i in each key group, then
+	// decide the outcomes that do not depend on which children other
+	// delegations finally hold.
 	type candidate struct {
 		decision ChildLinkDecision
 		accepted string
+		grouped  bool
 		movable  bool
 	}
 	matches := make([]*candidate, len(delegations))
-	alignments := make(map[childLinkKey]childLinkAlignment, len(order))
-	for _, key := range order {
+	unplaced := map[childLinkKey]ChildLinkRefusal{}
+	for _, key := range priorOrder {
 		fresh, accepted := freshGroups[key], priorGroups[key]
-		if len(accepted) == 0 {
+		switch {
+		case len(fresh) == 0:
+			unplaced[key] = ChildLinkRefusalUnmatched
+			continue
+		case len(fresh) < len(accepted) && key.timed:
+			unplaced[key] = ChildLinkRefusalAmbiguous
+			continue
+		case len(fresh) < len(accepted):
+			unplaced[key] = ChildLinkRefusalUnknownProvenance
 			continue
 		}
-		if key.timed && len(fresh) == 1 && len(accepted) == 1 {
-			alignments[key] = alignmentUnique
-			j, match := fresh[0], prior[accepted[0]].ChildSession
+		grouped := !key.timed || len(fresh) > 1 || len(accepted) > 1
+		for position, i := range accepted {
+			j, match := fresh[position], prior[i].ChildSession
 			current := delegations[j].ChildSession
 			if match == "" || match == current {
 				continue
 			}
-			entry := &candidate{accepted: match, decision: ChildLinkDecision{ParentID: parent, ChildSessionID: match, FreshChildID: current, Delegation: j}}
+			entry := &candidate{accepted: match, grouped: grouped, decision: ChildLinkDecision{ParentID: parent, ChildSessionID: match, FreshChildID: current, Delegation: j}}
 			entry.decision.Evidence = evidence(match, parent)
 			switch {
 			case entry.decision.Evidence == ChildParentContradicted:
@@ -328,45 +323,6 @@ func reconcileOwnerChildLinks(parent string, delegations, prior []DelegationFact
 				entry.decision.Evidence = ChildParentConfirmed
 				entry.decision.ChildSessionID = current
 			default:
-				entry.movable = true
-			}
-			matches[j] = entry
-			continue
-		}
-		empty := true
-		for _, j := range fresh {
-			empty = empty && delegations[j].ChildSession == ""
-		}
-		if !empty || len(fresh) < len(accepted) {
-			alignments[key] = alignmentRefused
-			if !key.timed {
-				continue
-			}
-			// Report only accepted links this rule declined to move.
-			for _, j := range fresh {
-				current := delegations[j].ChildSession
-				for _, i := range accepted {
-					if child := prior[i].ChildSession; child != "" && child != current {
-						matches[j] = &candidate{decision: ChildLinkDecision{ParentID: parent, FreshChildID: current, Outcome: ChildLinkRefusedAmbiguous, Evidence: ChildParentNotEvaluated, Delegation: j}}
-						break
-					}
-				}
-			}
-			continue
-		}
-		// Transcripts only append: accepted position i is fresh position i.
-		alignments[key] = alignmentPosition
-		for position, i := range accepted {
-			match := prior[i].ChildSession
-			if match == "" {
-				continue
-			}
-			j := fresh[position]
-			entry := &candidate{accepted: match, decision: ChildLinkDecision{ParentID: parent, ChildSessionID: match, Delegation: j}}
-			entry.decision.Evidence = evidence(match, parent)
-			if entry.decision.Evidence == ChildParentContradicted {
-				entry.decision.Outcome = ChildLinkRefusedContradicted
-			} else {
 				entry.movable = true
 			}
 			matches[j] = entry
@@ -405,24 +361,24 @@ func reconcileOwnerChildLinks(parent string, delegations, prior []DelegationFact
 			switch {
 			case delegations[j].ChildSession != match.accepted:
 				match.decision.Outcome = ChildLinkRefusedHeldBySibling
-			case alignments[delegationLinkKey(delegations[j])] == alignmentPosition:
-				match.decision.Outcome = ChildLinkRetainedByPosition
-			case match.decision.FreshChildID == "":
-				match.decision.Outcome = ChildLinkRetained
-			default:
+			case match.decision.FreshChildID != "":
 				match.decision.Outcome = ChildLinkKeptPendingConfirmation
+			case match.grouped:
+				match.decision.Outcome = ChildLinkRetainedByPosition
+			default:
+				match.decision.Outcome = ChildLinkRetained
 			}
 		}
 		decisions = append(decisions, match.decision)
 	}
-	return decisions, refusedChildLinks(parent, delegations, prior, decisions, alignments, evidence)
+	return decisions, refusedChildLinks(parent, delegations, prior, decisions, unplaced, evidence)
 }
 
 // refusedChildLinks lists the accepted links, not contradicted, that the rule
-// declined to carry onto an empty fresh delegation: a child held by a sibling,
-// or a key group that could not be aligned by position. Unaligned links count
-// only while no final delegation links their child.
-func refusedChildLinks(parent string, delegations, prior []DelegationFact, decisions []ChildLinkDecision, alignments map[childLinkKey]childLinkAlignment, evidence func(child, parent string) ChildParentEvidence) []RefusedChildLink {
+// did not place: a child held by a sibling at an empty fresh delegation, or a
+// link of a key group that could not be paired. Unpaired links count only
+// while no final delegation links their child.
+func refusedChildLinks(parent string, delegations, prior []DelegationFact, decisions []ChildLinkDecision, unplaced map[childLinkKey]ChildLinkRefusal, evidence func(child, parent string) ChildParentEvidence) []RefusedChildLink {
 	refused := []RefusedChildLink{}
 	seen := map[ChildLink]bool{}
 	add := func(child string, reason ChildLinkRefusal) {
@@ -443,14 +399,9 @@ func refusedChildLinks(parent string, delegations, prior []DelegationFact, decis
 		linked[delegation.ChildSession] = true
 	}
 	for _, delegation := range prior {
-		key := delegationLinkKey(delegation)
-		if delegation.ChildSession == "" || linked[delegation.ChildSession] || alignments[key] != alignmentRefused {
-			continue
-		}
-		if key.timed {
-			add(delegation.ChildSession, ChildLinkRefusalAmbiguous)
-		} else {
-			add(delegation.ChildSession, ChildLinkRefusalUnknownProvenance)
+		reason, ok := unplaced[delegationLinkKey(delegation)]
+		if ok && delegation.ChildSession != "" && !linked[delegation.ChildSession] {
+			add(delegation.ChildSession, reason)
 		}
 	}
 	return refused

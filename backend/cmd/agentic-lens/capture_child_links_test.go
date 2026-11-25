@@ -318,3 +318,182 @@ func errorsJoin(errs ...error) error {
 func errorsJoinClose(err error, s *capture.Store) error {
 	return errorsJoin(err, s.Close())
 }
+
+// commitCLILedger commits the current ledger as machine A's publication.
+func commitCLILedger(t *testing.T, f captureGenerationFixture) {
+	t.Helper()
+	for _, args := range [][]string{{"add", "agentic_metrics.json"}, {"commit", "-qm", "committed ledger"}} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = f.project
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+}
+
+func latestCLIReconciliation(t *testing.T, f captureGenerationFixture) domain.CaptureReconciliationDiagnostic {
+	t.Helper()
+	s, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	diagnostics, err := s.Diagnostics(context.Background())
+	if err = errorsJoinClose(err, s); err != nil {
+		t.Fatal(err)
+	}
+	for i := len(diagnostics) - 1; i >= 0; i-- {
+		if diagnostics[i].TicketID == "TEST-100" && diagnostics[i].Reconciliation != nil {
+			return *diagnostics[i].Reconciliation
+		}
+	}
+	t.Fatal("no reconciliation diagnostic")
+	return domain.CaptureReconciliationDiagnostic{}
+}
+
+// FIX-21 R2-01 and R2-T8: three spawns share agent type, arguments and
+// timestamp, so their links can only be placed by position. On machine B the
+// registry stage reads children 1 and 2 with the parent and fills those
+// positions; the ledger stage then aligns the group with the committed ledger
+// and keeps child 3, on every run.
+func TestCaptureAutoAlignsAPartlyResolvedGroupWithTheCommittedLedger(t *testing.T) {
+	ctx := context.Background()
+	f := newCaptureGenerationFixture(t)
+	sessions := filepath.Join(f.store, "sessions")
+	children := []string{"group-child-1", "group-child-2", "group-child-3"}
+	writeParent := func(tokens int) {
+		t.Helper()
+		var body strings.Builder
+		fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:00Z","type":"session_meta","payload":{"id":"group-parent","timestamp":"2026-11-24T09:00:00Z","cwd":%q,"source":"cli"}}`+"\n", f.project)
+		fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:01Z","type":"turn_context","payload":{"model":"fixture","turn_id":"turn-one"}}`+"\n")
+		for i, child := range children {
+			fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:05Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn-%d","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\"}"}}`+"\n", i+1)
+			fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:06Z","type":"response_item","payload":{"type":"function_call_output","call_id":"spawn-%d","output":"{\"agent_id\":\"%s\"}"}}`+"\n", i+1, child)
+		}
+		fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:03:00Z","type":"token_usage_record","payload":{"thread_id":"group-parent","turn_id":"turn-one","usage":{"input_tokens":%d,"output_tokens":2}}}`+"\n", tokens)
+		if err := os.WriteFile(filepath.Join(sessions, "group-parent.jsonl"), []byte(body.String()), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeParent(11)
+	for i, child := range children {
+		text := "synthetic child output"
+		if i == 2 {
+			// Child 3 is larger than machine B's budget.
+			text = strings.Repeat("synthetic child output ", cliChildLinkLarge/23+1)
+		}
+		body := fmt.Sprintf(`{"timestamp":"2026-11-24T09:00:06Z","type":"session_meta","payload":{"id":%q,"parent_thread_id":"group-parent","timestamp":"2026-11-24T09:00:06Z","cwd":%q}}`+"\n"+
+			`{"timestamp":"2026-11-24T09:00:07Z","type":"turn_context","payload":{"model":"fixture","turn_id":"turn-one"}}`+"\n"+
+			`{"timestamp":"2026-11-24T09:00:08Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":%q}]}}`+"\n"+
+			`{"timestamp":"2026-11-24T09:00:09Z","type":"token_usage_record","payload":{"thread_id":%q,"turn_id":"turn-one","usage":{"input_tokens":5,"output_tokens":2}}}`+"\n", child, f.project, text, child)
+		if err := os.WriteFile(filepath.Join(sessions, child+".jsonl"), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Machine A links the whole group from a full manual read.
+	runCLIChildLinks(t, f.project, "generate", "--source", "codex", "--codex-home", f.store, "--capture-dir", filepath.Join(t.TempDir(), "machine-a"), "--session-id", "group-parent",
+		"--ticket-id", "TEST-100", "--ticket-title", "Capture regression", "--ticket-type", "fix", "--json-output", f.output)
+	committed := f.ledger(t)
+	if links := cliParentLinks(committed, "group-parent"); !slices.Equal(links, children) {
+		t.Fatalf("full manual generation links = %q, want %q", links, children)
+	}
+	commitCLILedger(t, f)
+
+	// Machine B registers the parent and the two small children.
+	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    max_source_bytes: 163840\n")); err != nil {
+		t.Fatal(err)
+	}
+	writeParent(41)
+	s, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"group-parent", children[0], children[1]} {
+		identity := domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: id}
+		row, registerErr := s.Register(ctx, identity, filepath.Join(sessions, id+".jsonl"), "SessionStart")
+		if registerErr == nil {
+			_, registerErr = s.Bind(ctx, identity, "TEST-100", row.Request)
+		}
+		err = errorsJoin(err, registerErr)
+	}
+	if err = errorsJoinClose(err, s); err != nil {
+		t.Fatal(err)
+	}
+	var previous []byte
+	for run := 1; run <= 2; run++ {
+		out := runCLIChildLinks(t, f.project, f.args(t)...)
+		published := f.ledger(t)
+		if links := cliParentLinks(published, "group-parent"); !slices.Equal(links, children) {
+			t.Fatalf("run %d published group links = %q, want %q\n%s", run, links, children, out)
+		}
+		if !strings.Contains(string(out), "Capture kept 1 accepted delegation child link(s)") || !strings.Contains(string(out), "could not place 0 accepted link(s)") {
+			t.Fatalf("run %d did not keep child 3 by position:\n%s", run, out)
+		}
+		if latest := latestCLIReconciliation(t, f); latest.Attempt != domain.CaptureAttemptPartial || latest.PendingChildren != 1 {
+			t.Fatalf("run %d latest reconciliation = %s with %d unresolved, want partial with child 3", run, latest.Attempt, latest.PendingChildren)
+		}
+		current := readCaptureFile(t, f.output)
+		if previous != nil && !bytes.Equal(previous, current) {
+			t.Fatalf("run %d changed the ledger", run)
+		}
+		previous = current
+	}
+}
+
+// FIX-21 R2-05: a run whose retention only clears a contradicted link adds no
+// unresolved evidence, so its line does not claim the reconciliation remains
+// partial because of it. Machine B lacks the child's rollout; the committed
+// ledger's record of the child names another parent.
+func TestCaptureAutoReportsOnlyClearedLinksWithoutPartial(t *testing.T) {
+	ctx := context.Background()
+	f := newCaptureGenerationFixture(t)
+	family := codexstoretest.NewTaskFamily(t, f.store, f.project, time.Date(2026, 11, 24, 9, 0, 0, 0, time.UTC), 1, 1, 0)
+	// The parent's result names the child explicitly, so the fresh link is
+	// set even when the child is not read.
+	explicit := map[int]string{0: fmt.Sprintf(`{"session_id":%q}`, family.ChildIDs[0])}
+	family.WriteParent(t, 11, explicit)
+	runCLIChildLinks(t, f.project, "generate", "--source", "codex", "--codex-home", f.store, "--capture-dir", filepath.Join(t.TempDir(), "machine-a"), "--session-id", family.ParentID,
+		"--ticket-id", "TEST-100", "--ticket-title", "Capture regression", "--ticket-type", "fix", "--json-output", f.output)
+	committed := f.ledger(t)
+	if links := cliParentLinks(committed, family.ParentID); !slices.Equal(links, family.ChildIDs) {
+		t.Fatalf("fixture links = %q", links)
+	}
+	elsewhere := "019abcde-0000-7000-8000-00000000ffff"
+	for i := range committed.Sessions {
+		if committed.Sessions[i].ID == family.ChildIDs[0] {
+			committed.Sessions[i].ParentID = &elsewhere
+		}
+	}
+	if err := adapters.SaveFactLedger(f.output, committed); err != nil {
+		t.Fatal(err)
+	}
+	commitCLILedger(t, f)
+	if err := os.Remove(family.Path(family.ChildIDs[0])); err != nil {
+		t.Fatal(err)
+	}
+	family.WriteParent(t, 41, explicit)
+	s, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: family.ParentID}
+	row, err := s.Register(ctx, identity, family.Path(family.ParentID), "SessionStart")
+	if err == nil {
+		_, err = s.Bind(ctx, identity, "TEST-100", row.Request)
+	}
+	if err = errorsJoinClose(err, s); err != nil {
+		t.Fatal(err)
+	}
+	out := string(runCLIChildLinks(t, f.project, f.args(t)...))
+	// The explicit result's discovery hint stays queued, so one child is
+	// already unresolved before retention; retention adds nothing.
+	if !strings.Contains(out, "Capture kept 0 accepted delegation child link(s)") || !strings.Contains(out, "could not place 0 accepted link(s)") ||
+		!strings.Contains(out, "and cleared 1 contradicted link(s); unresolved child evidence: 1.\n") || strings.Contains(out, "remains partial") {
+		t.Fatalf("cleared-only run reported:\n%s", out)
+	}
+	if links := cliParentLinks(f.ledger(t), family.ParentID); !slices.Equal(links, []string{""}) {
+		t.Fatalf("contradicted link was not cleared: %q", links)
+	}
+	if latest := latestCLIReconciliation(t, f); latest.PendingChildren != 1 {
+		t.Fatalf("retention changed the unresolved evidence: %+v", latest)
+	}
+}

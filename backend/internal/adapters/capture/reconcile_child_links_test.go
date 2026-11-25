@@ -403,12 +403,26 @@ BEGIN SELECT RAISE(ABORT, 'fixture interrupts the family annotation'); END`); er
 	}
 }
 
-// FIX-21 ordinal group retention: two spawns share agent type, description
-// and invocation time, so their accepted links can only be placed by position.
+// FIX-21 position alignment: two spawns share agent type, description and
+// invocation time, so their accepted links can only be placed by position.
 // Their agent_id results resolve only when the children are read. Two
 // consecutive partial passes keep both links in the registry and in the
-// published owners, and count them as unresolved each time.
+// published owners, and count the unread ones as unresolved each time: with
+// no child read, and with one child re-read each pass (R2-01).
 func TestReconcileAmbiguousGroupLinksSurviveRepeatedPartialPasses(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		// readable children are small enough to be re-read in each partial pass.
+		readable map[string]bool
+	}{
+		{name: "no child read"},
+		{name: "second child re-read", readable: map[string]bool{"group-child-2": true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) { ambiguousGroupPartialPasses(t, tc.readable) })
+	}
+}
+
+func ambiguousGroupPartialPasses(t *testing.T, readable map[string]bool) {
 	s := openStore(t, t.TempDir())
 	home, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
@@ -439,8 +453,11 @@ func TestReconcileAmbiguousGroupLinksSurviveRepeatedPartialPasses(t *testing.T) 
 	children := []string{"group-child-1", "group-child-2"}
 	for _, child := range children {
 		path := filepath.Join(active, child+".jsonl")
-		// Each child is larger than the partial budget.
+		// Unreadable children are larger than the partial budget.
 		text := strings.Repeat("synthetic child output ", childLinkLargeBytes/23+1)
+		if readable[child] {
+			text = "synthetic child output"
+		}
 		body := fmt.Sprintf(`{"timestamp":"2026-11-24T09:00:06Z","type":"session_meta","payload":{"id":%q,"parent_thread_id":"group-parent","timestamp":"2026-11-24T09:00:06Z","cwd":"/fixture/project"}}`+"\n"+
 			`{"timestamp":"2026-11-24T09:00:07Z","type":"turn_context","payload":{"model":"fixture","turn_id":"turn-one"}}`+"\n"+
 			`{"timestamp":"2026-11-24T09:00:08Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":%q}]}}`+"\n"+
@@ -459,17 +476,29 @@ func TestReconcileAmbiguousGroupLinksSurviveRepeatedPartialPasses(t *testing.T) 
 		writeParent(40 + pass)
 		partial := registry.reconcile(t, childLinkPartialBudget)
 		read := refreshedIDs(partial)
-		if !read["group-parent"] || read[children[0]] || read[children[1]] {
-			t.Fatalf("pass %d must read the parent without its children, read %v", pass, read)
+		unread := 0
+		for _, child := range children {
+			if read[child] != readable[child] {
+				t.Fatalf("pass %d read %v, want only the readable children with the parent", pass, read)
+			}
+			if !readable[child] {
+				unread++
+			}
+		}
+		if !read["group-parent"] {
+			t.Fatalf("pass %d did not read the parent", pass)
 		}
 		if links, _ := childLinkLinks(partial.RefreshedSessions, "group-parent"); !slices.Equal(links, children) {
+			t.Fatalf("pass %d refreshed group links = %q, want %q", pass, links, children)
+		}
+		if links, _ := childLinkLinks(partial.Sessions, "group-parent"); !slices.Equal(links, children) {
 			t.Fatalf("pass %d published group links = %q, want %q", pass, links, children)
 		}
 		if links, _ := childLinkLinks(registry.snapshots(t)["group-parent"], "group-parent"); !slices.Equal(links, children) {
 			t.Fatalf("pass %d registry group links = %q, want %q", pass, links, children)
 		}
-		if partial.PendingChildren != 2 {
-			t.Fatalf("pass %d unresolved child evidence = %d, want both carried links", pass, partial.PendingChildren)
+		if partial.PendingChildren != unread {
+			t.Fatalf("pass %d unresolved child evidence = %d, want the %d unread links", pass, partial.PendingChildren, unread)
 		}
 	}
 }

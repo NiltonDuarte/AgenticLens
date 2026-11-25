@@ -331,3 +331,59 @@ func TestBrandNewSweepAdmittingNothingWritesNoCursor(t *testing.T) {
 		t.Fatalf("the next sweep found %d of %d children", len(found), len(family.ChildIDs))
 	}
 }
+
+// FIX-21 R2-T6: queued child paths (pending_children) stop at the
+// identification ceiling with their cursor on the last admitted path, so the
+// refused path is read first in the next pass.
+func TestQueuedChildPathsResumeAtTheRefusedPath(t *testing.T) {
+	ctx := context.Background()
+	home, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Large children: each header needs 64 KiB of allowance to start and costs
+	// one 4 KiB read.
+	family := codexstoretest.NewTaskFamily(t, home, "/fixture/project", sweepCreated, 4, 0, 70<<10)
+	s := openSweepStore(t)
+	parent := bindSweepParent(t, s, home, family.ParentID, family.Path(family.ParentID))
+	paths := make([]string, len(family.ChildIDs))
+	for i, child := range family.ChildIDs {
+		paths[i] = family.Path(child)
+		if err := s.QueueChild(ctx, home, paths[i], family.ParentID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sort.Strings(paths)
+	childAt := map[string]string{}
+	for _, child := range family.ChildIDs {
+		childAt[family.Path(child)] = child
+	}
+	cursor := func() string {
+		t.Helper()
+		key, err := s.childCursor(ctx, "queued", IdentityKey(parent.Identity))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return key
+	}
+	// Two header reads fit; the third queued path is refused.
+	budget := identificationBudget(int64(MaxPayloadBytes) + 4096)
+	if _, err := s.recoverChildren(ctx, sweepTicket, budget, workStops); err != nil {
+		t.Fatal(err)
+	}
+	found := s.inheritedChildren(t, family.ParentID)
+	if !budget.discoveryPending || len(found) != 2 || !found[childAt[paths[0]]] || !found[childAt[paths[1]]] {
+		t.Fatalf("first pass found %v (pending %t), want the first two queued paths", found, budget.discoveryPending)
+	}
+	if got := cursor(); got != paths[1] {
+		t.Fatalf("queued cursor = %q, want the last admitted path %q", got, paths[1])
+	}
+	// One read fits now: it must be the refused path, not the one after it.
+	if _, err := s.recoverChildren(ctx, sweepTicket, identificationBudget(int64(MaxPayloadBytes)), workStops); err != nil {
+		t.Fatal(err)
+	}
+	found = s.inheritedChildren(t, family.ParentID)
+	if len(found) != 3 || !found[childAt[paths[2]]] {
+		t.Fatalf("second pass found %v, want the refused third path next", found)
+	}
+}

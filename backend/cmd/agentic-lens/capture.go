@@ -798,7 +798,8 @@ func retainCaptureChildLinks(project, directory, ticket string, accepted []domai
 	retention, err := capture.RetainAcceptedChildLinks(ctx, directory, project, result, accepted)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot record retained child links; publication not completed: %v\n", err)
-		if capture.IsRegistryContention(err) {
+		// The bounded wait expires only while the registry is held elsewhere.
+		if capture.IsRegistryContention(err) || errors.Is(err, context.DeadlineExceeded) {
 			os.Exit(capturePublicationBusyExit)
 		}
 		os.Exit(1)
@@ -806,7 +807,11 @@ func retainCaptureChildLinks(project, directory, ticket string, accepted []domai
 	if retention.Kept == 0 && retention.Refused == 0 && retention.Cleared == 0 {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "Capture kept %d accepted delegation child link(s) for ticket %s that this pass did not re-read, could not place %d accepted link(s) whose delegation is ambiguous, has no known invocation time or is held by a sibling, and cleared %d contradicted link(s); unresolved child evidence: %d, so the reconciliation remains partial.\n", retention.Kept, ticket, retention.Refused, retention.Cleared, result.PendingChildren)
+	partial := "."
+	if retention.Added > 0 {
+		partial = ", so the reconciliation remains partial."
+	}
+	fmt.Fprintf(os.Stderr, "Capture kept %d accepted delegation child link(s) for ticket %s that this pass did not re-read, could not place %d accepted link(s) whose delegation group is shorter than accepted, has no fresh match or whose child a sibling holds, and cleared %d contradicted link(s); unresolved child evidence: %d%s\n", retention.Kept, ticket, retention.Refused, retention.Cleared, result.PendingChildren, partial)
 }
 
 func recordGenerationPublication(project, directory, ticket, outcome, destination, summary string, owners []domain.SessionFact, detail string, refreshed ...[]domain.SessionFact) error {

@@ -51,3 +51,39 @@ Accepted limits, recorded in delivery and not blocking:
 - OpenCode child pages use session slots, which is pre-existing behavior.
 
 Reporters: behavior-opus O2, data-sonnet F5/F6, architecture-opus S5.
+
+## Round 2 (re_review) at `86eb6dae`
+
+**Corrections reviewed:** delta `0f73f759..86eb6dae`, which also adds ordinal group retention.
+
+**Consolidated verdict:** CHANGES_REQUESTED. All round-1 findings are resolved or dispositioned. R2-01 needed a user decision; on 2026-11-25 the user chose "Alinhar por posicao".
+
+| Focus | Model / effort | Verdict | Report |
+|---|---|---|---|
+| Behavior | claude-opus-5-5 / medium | CHANGES_REQUESTED | [behavior-opus-r2](review/behavior-opus-r2.md) |
+| Behavior | claude-sonnet-5-5 / high | APPROVED | [behavior-sonnet-r2](review/behavior-sonnet-r2.md) |
+| Data | claude-opus-5-5 / medium | CHANGES_REQUESTED | [data-opus-r2](review/data-opus-r2.md) |
+| Data | claude-sonnet-5-5 / high | APPROVED | [data-sonnet-r2](review/data-sonnet-r2.md) |
+| Architecture | claude-opus-5-5 / medium | CHANGES_REQUESTED | [architecture-opus-r2](review/architecture-opus-r2.md) |
+| Architecture | claude-sonnet-5-5 / high | APPROVED | [architecture-sonnet-r2](review/architecture-sonnet-r2.md) |
+| Tests | claude-opus-5-5 / medium | CHANGES_REQUESTED | [tests-opus-r2](review/tests-opus-r2.md) |
+| Tests | claude-sonnet-5-5 / high | CHANGES_REQUESTED | [tests-sonnet-r2](review/tests-sonnet-r2.md) |
+
+| ID | Sev | Issue | Reported by | Disposition |
+|---|---|---|---|---|
+| R2-01 | 4 | A partly re-read ambiguous group is refused as a whole. Its unread links are reported once and then lost from the registry and the ledger. This also happens in the CLI stage after the registry has already filled part of the group. | all six behavior, data and architecture runs | Confirmed, with reproductions. Decided by the user: align by position, applying the unique-delegation rules at each position. Refuse only when the fresh group is smaller than the accepted one. |
+| R2-02 | 3 | An untimed unique delegation lets an unconfirmed different fresh child replace the accepted link. | behavior-opus-r2, architecture-sonnet-r2 | Confirmed. R2-01 fixes it. |
+| R2-03 | 3 | An accepted delegation whose key has no fresh counterpart (for example, `invoked_at` was unknown and is now known) is dropped without a report. | behavior-sonnet-r2 N2, architecture-sonnet-r2 | Confirmed. Coder: report it as refused, with a typed unmatched reason, so it counts as unresolved. The later loss is recorded as a limit. |
+| R2-04 | 1 | Complete groups emit `refused_ambiguous` decisions, which contradicts the report contract. | architecture-opus-r2, architecture-sonnet-r2, behavior-sonnet-r2, behavior-opus-r2 | Coder fixes it as part of the R2-01 rewrite. |
+| R2-05 | 1 | The stderr line says "remains partial" when links were only cleared. | architecture-opus-r2 | Coder fixes the wording. |
+| R2-06 | 1 | When the 2 s retention deadline expires during contention, the exit is 1 rather than the busy exit. | behavior-sonnet-r2 | Coder maps deadline-on-contention to busy. |
+| R2-07 | 2 | `design.md` and `tasks.md` still name removed APIs and three evidence states. They also omit `Known`, the name-dedup hint and the per-owner application. | architecture-sonnet-r2 | Planner updates them. |
+| R2-T1 | 3 | The contention test reuses an almost-spent 2 s context and fails about 1 time in 9 under `-race`. | tests-opus-r2 | Tester gives the retry its own context and reruns capture under `-race`. |
+| R2-T2 | 2 | Group position versus absolute index is untested. | tests-opus-r2 | Tester adds interleaved and offset groups. |
+| R2-T3 | 2 | The contradicted-child filter in refused groups is unprotected. | tests-opus-r2 | Tester. |
+| R2-T4 | 3 | The `RecordDiagnostic` failure path is untested. | tests-sonnet-r2 | Tester. |
+| R2-T5 | 3 | The unified conflicting-parent check on the header path is untested. | tests-sonnet-r2 | Tester. |
+| R2-T6 | 3 | The queued-path cursor restore at the identification ceiling is unasserted. | tests-sonnet-r2 | Tester. |
+| R2-T7 | 2 | The import-guard test runs `go list ./...`, which needs the gitignored `web/dist`. | tests-sonnet-r2 | Tester makes the guard independent of the embed. |
+| R2-T8 | 1 | There is no CLI ordinal or alignment end-to-end case; the `delete(refused)` guard is unprotected; the `refused_ambiguous` decision has no assertion. | tests-sonnet-r2, tests-opus-r2 | Tester. |
+| R2-P1 | 3 | Pre-existing: when two delegations share a task name and only one child is read, `resolveSourceChildren` points both at that child. | data-opus-r2 | Not introduced by FIX-21. Recorded as a pre-existing limit with a follow-up. |

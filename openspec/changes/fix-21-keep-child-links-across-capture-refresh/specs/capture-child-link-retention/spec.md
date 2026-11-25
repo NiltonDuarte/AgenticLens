@@ -20,21 +20,37 @@ When automatic capture refreshes a Codex parent and the fresh read leaves a dele
 - **WHEN** the same partial pass is repeated with unchanged sources
 - **THEN** the ledger facts and capture snapshot are identical to the previous pass, and the ledger bytes and timestamps are kept
 
-### Requirement: Retain ambiguous groups by ordinal position
+### Requirement: Align delegation key groups by position
 
-When several of a parent's delegations share one key, the system SHALL compare the accepted group and the fresh group with that key, each in transcript order. If every fresh link in the group is empty and the fresh group is at least as large, the system SHALL carry accepted link i to fresh delegation i, subject to the per-child guards. Otherwise it SHALL carry none of the group and SHALL report the refused links.
+For one parent, the system SHALL group accepted and fresh delegations by key, each in transcript order, and pair accepted position i with fresh position i. A unique key is a group of one. At each position, the unique-delegation rules SHALL apply. Only when the fresh group is smaller SHALL the system refuse the group: it places none of its accepted links, not even at overlapping positions, and reports them.
 
-#### Scenario: Ambiguous delegation provenance, ordinal retention
-- **WHEN** the parent has several accepted delegations with the same agent type, description and invocation time (or unknown invocation time), the fresh read has at least as many with that key, and all of their links are empty because their children were not read
-- **THEN** each accepted link is carried to the fresh delegation at the same position, except a contradicted child or one held by another delegation of the parent, and the carried children count as unresolved child evidence
+#### Scenario: Ambiguous delegation provenance, unread group
+- **WHEN** the parent has several accepted delegations with the same agent type, description and invocation time (or unknown invocation time), and every fresh link of that group is empty because the children were not read
+- **THEN** each accepted link stays on the fresh delegation at the same position, except a contradicted child or one held by another delegation of the parent, and the kept children count as unresolved child evidence
 
-#### Scenario: Ambiguous delegation provenance, refusal
-- **WHEN** a fresh delegation in such a group already has a link, or the fresh group is smaller than the accepted group
-- **THEN** no accepted link is moved onto those delegations, and the pass reports them as unresolved
+#### Scenario: Partly re-read group
+- **WHEN** a fresh read of such a group resolves some positions and leaves others empty
+- **THEN** resolved positions follow fresh evidence, and the empty positions keep their accepted links and count as unresolved child evidence
 
-#### Scenario: Ordinal retention repeated
-- **WHEN** the same partial pass repeats after an ordinal carry
+#### Scenario: Ambiguous delegation provenance, smaller fresh group
+- **WHEN** the fresh group with a key is smaller than the accepted group, as in a truncated transcript
+- **THEN** no accepted link of that group is placed, including at positions both groups share, and the pass reports them as unresolved, refused as ambiguous when the invocation time is known and as unknown provenance when it is not
+
+#### Scenario: Untimed unique delegation against an unconfirmed child
+- **WHEN** a parent's only delegation with an unknown invocation time has an accepted link, and the fresh read reports a different child whose parent is not confirmed
+- **THEN** the accepted link is kept until a later read confirms the new child
+
+#### Scenario: Group alignment repeated
+- **WHEN** the same partial pass repeats after links were kept by position
 - **THEN** the group's links are unchanged, and no link is invented
+
+### Requirement: Report accepted keys without a fresh counterpart
+
+When an accepted delegation's key has no fresh delegation, the system SHALL NOT place its link anywhere. It SHALL report the link as refused with an unmatched reason, and SHALL count the child as unresolved child evidence.
+
+#### Scenario: Key changed between reads
+- **WHEN** an accepted delegation had an unknown invocation time and the fresh read records a known one, so its key has no fresh counterpart
+- **THEN** its accepted link is not placed, it is reported as refused and unmatched, and unresolved child evidence counts that child once
 
 ### Requirement: Retained links stay out of transcript events
 
@@ -68,8 +84,8 @@ A capture pass SHALL count in `pending_children` ("Unresolved child evidence") e
 - **WHEN** a pass refreshes a parent, retains links to registered children it did not read, and one of those children is already queued as pending child work for that parent
 - **THEN** unresolved child evidence increases by the number of distinct retained children not already queued, parent links are unchanged, and the reconciliation attempt is partial
 
-#### Scenario: Accepted link refused for ambiguity
-- **WHEN** a refreshed parent's accepted link cannot be carried, because its group fails the ordinal condition or another delegation of the parent already holds the child, and the fresh link is empty with no contradiction
+#### Scenario: Accepted link refused
+- **WHEN** a refreshed parent's accepted link that nothing contradicts cannot be kept, because its fresh group is smaller, its key has no fresh counterpart, or another delegation of the parent already holds the child
 - **THEN** the link is not moved, unresolved child evidence counts that child once, and the reconciliation attempt is partial
 
 #### Scenario: Children unknown to the local registry

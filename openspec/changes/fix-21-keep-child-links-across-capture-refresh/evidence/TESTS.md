@@ -117,20 +117,21 @@ The baseline section above is the historical "before". Its generator and measure
 
 ## Candidate verification
 
-**Result.** Every acceptance case, every review round 1 regression and the approved ordinal group retention pass on the current candidate. No data race is reported. The review findings are in [REVIEW.md](REVIEW.md), and the ordinal rule is the design's Steering entry "Ordinal group retention".
+**Result.** Every acceptance case, every review round 1 and round 2 regression, and the approved position alignment pass on the current candidate. No data race is reported, in four capture runs under `-race` and in 20 focused runs of the contention test. The review findings are in [REVIEW.md](REVIEW.md), and the alignment rule is the design's Steering entry "Position alignment".
 - **Mutations.** Each confirmed product fix and each test gap has a test that fails when its fix is removed in a scratch copy.
 - **No new product defect.**
 - **Incident scale.** The fixture now also holds unrelated sessions after the root. The whole family is extracted in pass 1 for 51,064,638 bytes, which is 9.5 % of 512 MiB, and pass 2 links 9 of 9 children. In the baseline, every pass spent the full 512 MiB and the root settled at 3 of 9 links.
 
 ### Revision and working tree
 
-- **Tested revision:** commit `0f73f759`, plus the coder's uncommitted round 1 fixes, the ordinal group retention in `domain/child_links.go`, and the tester's uncommitted tests. Since round 1, only `domain/child_links.go` changed among the product files.
-  - **Coder's fixes:** `domain/child_links.go`, `capture/reconcile.go`, `children.go` and `archive_projection.go`, `codex/context.go`, `discovery.go` and `discovery_budget.go`, `cmd/agentic-lens/capture.go` and `main.go`.
+- **Tested revision:** commit `86eb6dae`, plus the coder's uncommitted round 2 changes and the tester's uncommitted tests.
+  - **Coder's round 2 changes:** position alignment, R2-02, R2-03 and R2-04 in `domain/child_links.go`. R2-05 (wording) and R2-06 (busy exit on the retention deadline) in `cmd/agentic-lens/capture.go`.
   - **Product files untouched.** The tester did not edit the product files. Their SHA-256 hashes, taken before the mutations and the final runs, matched afterwards.
 - **Tester files:**
-  - New: `capture/retain_child_links_test.go`, `capture/children_sweep_internal_test.go` and `codex/codexstoretest/import_guard_test.go`.
+  - New in round 1: `capture/retain_child_links_test.go`, `capture/children_sweep_internal_test.go` and `codex/codexstoretest/import_guard_test.go`.
+  - Changed in round 2: `domain/child_links_test.go`, `capture/retain_child_links_test.go`, `capture/reconcile_child_links_test.go`, `capture/children_sweep_internal_test.go`, `codex/discovery_window_test.go`, `codex/codexstoretest/import_guard_test.go` and `cmd/agentic-lens/capture_child_links_test.go`.
   - Extended: `domain/child_links_test.go`, `capture/reconcile_child_links_test.go`, `capture/reconcile_archived_rollout_test.go`, `capture/reconcile_large_store_test.go`, `codex/discovery_window_test.go`, `codex/codexstoretest/store.go` and `store_test.go`, `cmd/agentic-lens/capture_child_links_test.go` and `capture_corrections_isolation_test.go`.
-  - `tasks.md` gains a DATA-02 tester task line and an ordinal-retention tester task line.
+  - `tasks.md` gains tester task lines for DATA-02, ordinal retention, and position alignment with the round 2 gaps.
 - **Toolchain:** Go 1.26.0, linux/amd64 (WSL2). All fixtures are under `t.TempDir()`.
 
 ### Commands
@@ -139,12 +140,14 @@ All commands run from `backend/`.
 
 | Command | Result | Time |
 |---|---|---|
-| `go test -count=1 ./internal/domain/` | PASS | under 1 s |
-| `go test -count=1 -timeout 30m ./internal/adapters/capture/` | PASS | 104 s |
-| `go test -count=1 -timeout 40m ./cmd/agentic-lens` | PASS | 365 s |
-| `go test -race -count=1 ./internal/domain/` | PASS, no data race | 8 s |
-
-The following round 1 runs are reused, because their packages' product code is unchanged since then: codex and codexstoretest (PASS), `-race` on codex and capture (PASS, capture 417 s), and the large-store test at divisor 1 (PASS: pass 1 is 51,064,638 bytes, 9.5 % of 512 MiB, and pass 2 links 9 of 9). Capture under `-race` was not rerun after the domain change. The domain package itself passes under `-race`.
+| `go test -count=1 ./internal/domain/ ./internal/adapters/codex/ ./internal/adapters/codex/codexstoretest/` | PASS | 3 s |
+| `go test -count=1 -timeout 30m ./internal/adapters/capture/` | PASS | 173 s (the host was loaded; round 1 took 121 s) |
+| `go test -count=1 -timeout 40m ./cmd/agentic-lens` | PASS | 388 s |
+| `go test -race -count=1 ./internal/domain/ ./internal/adapters/codex/` | PASS, no data race | 11 s |
+| `go test -race -count=3 -timeout 90m ./internal/adapters/capture/` (R2-T1) | PASS 3 of 3, no data race | 1,061 s |
+| `go test -race -count=20 -run TestRetainAcceptedChildLinksReportsRegistryContention ./internal/adapters/capture/` (R2-T1) | PASS 20 of 20 | 33 s |
+| `go test -count=1 -run TestLargeStore -v ./internal/adapters/capture/ -fix21.large-store-divisor=1` | PASS: pass 1 is 51,064,638 bytes, 9.5 % of 512 MiB, and pass 2 links 9 of 9 | 13 s |
+| The import guard on a scratch copy without `web/dist` (R2-T7) | PASS. A production import is still detected there. | |
 
 ### Review round 1: finding to test
 
@@ -168,6 +171,27 @@ The following round 1 runs are reused, because their packages' product code is u
 
 All CLI cases now assert exact per-run counts (kept, refused, unresolved) and ledger byte identity on the repeat. The CLI ambiguous case is unchanged by the ordinal rule, because its fresh group is smaller than the accepted group, which is still a refusal.
 
+### Review round 2: finding to test
+
+| Finding | Test | What it asserts |
+|---|---|---|
+| R2-01, domain | "a partly re-read group keeps the unread position" (refusal table); `TestRetainAcceptedChildLinksAlignsGroupsByPosition/a partly re-read group keeps the unread link on every pass` | Fresh `[C1 ""]` against accepted `[C1 C2]` gives `[C1 C2]`, with C2 the only unresolved link and nothing refused. This holds on three passes, each taking the previous output as its accepted ledger. |
+| R2-01, capture | `TestReconcileAmbiguousGroupLinksSurviveRepeatedPartialPasses/second child re-read` | One child of a same-key `agent_id` group is re-read each pass. In two consecutive partial passes, the registry, refreshed and published owners keep both links, with exactly 1 unresolved. |
+| R2-01, CLI second trigger; R2-T8 | `TestCaptureAutoAlignsAPartlyResolvedGroupWithTheCommittedLedger` | Machine B's registry stage freshly fills positions 1 and 2. The ledger stage keeps child 3 by position, with "Capture kept 1" and "could not place 0". On two runs: partial with 1 unresolved, and identical ledger bytes. |
+| R2-02 | `AlignsGroupsByPosition/an untimed unique delegation keeps the accepted link against an unconfirmed child`, plus the confirmed-child counterpart | An unconfirmed child is kept pending confirmation, and a confirmed child replaces the accepted link. |
+| R2-03 | "an accepted key without a fresh counterpart is reported as unmatched"; "an unmatched key whose child is linked elsewhere is not reported" | Reason `unmatched`, counted as unresolved, and the link is not placed. |
+| R2-04 | `AlignsGroupsByPosition/a complete group emits no refusal decisions`; "a smaller fresh group is refused without decisions" | There are no decisions. A smaller group is reported only through `Refused`. |
+| R2-05 | `TestCaptureAutoReportsOnlyClearedLinksWithoutPartial` | A run that only clears says "cleared 1 contradicted link(s); unresolved child evidence: 1." with no "remains partial", and its retention adds no unresolved evidence. |
+| R2-06 | None | No seam. See Limits. |
+| R2-T1 | `TestRetainAcceptedChildLinksReportsRegistryContention` | The retry now has its own context. The test passed 3 times within the capture package under `-race` and 20 times on its own under `-race`. |
+| R2-T2 | `AlignsGroupsByPosition`: "a group interleaved with another key and offset between sides" and "two interleaved groups each keep their own order" | `["" C1 C2]` and `[C3 C1 "" C2]`. |
+| R2-T3 | "a contradicted member of a refused group is not reported" | A smaller group reports only its uncontradicted C2. |
+| R2-T4 | `TestRetainAcceptedChildLinksReturnsDiagnosticWriteFailure` | A registry trigger rejects the partial diagnostic insert. The error is returned, and the latest recorded attempt stays completed. |
+| R2-T5 | `TestHeaderSessionContextRejectsConflictingAncestry` | On the header-cache path, disagreeing direct and nested parents set `ConflictingParent`, and `SessionContext` returns `ErrSessionContextMismatch`. The agreeing, nested-only and direct-only shapes pass with the right parent. |
+| R2-T6 | `TestQueuedChildPathsResumeAtTheRefusedPath` | At the ceiling the queued cursor is the last admitted path. The next one-read pass reads the refused path, not the one after it. |
+| R2-T7 | `TestNoProductionPackageImportsCodexStoreTest` | `go list -e` lists the dependencies without the frontend build. |
+| R2-T8 | `TestRetainAcceptedChildLinksReportsALinkKeptAndRefusedAsKept`, plus the CLI alignment case above | A link kept for refreshed owners and unmatched for restored owners counts as kept, not as refused, and once. |
+
 ### Accounting oracles
 
 A header read costs `min(size, ceil(header line / 4 KiB) × 4 KiB, 64 KiB)`, and decompressed bytes for `.gz`. Each header is read at most once per pass. Extraction costs the file size.
@@ -184,6 +208,10 @@ A header read costs `min(size, ceil(header line / 4 KiB) × 4 KiB, 64 KiB)`, and
 - **CLI cross-machine test:** `PendingChildren >= 2` became exact per-run counts (TEST-02), and five cases now cover the review findings.
 - **Worker isolation test:** the 8 s wall-clock bound was replaced by the outcome under a 30 s harness allowance (TEST-06).
 - **Large-store fixture:** it gains opt-in later and in-window rollouts. Existing identities are unchanged, because the new files are drawn after the family.
+- **Domain oracles changed by position alignment (design Steering "Position alignment").** Two cases in `TestRetainAcceptedChildLinksReportsRefusedLinks` change by design, and are renamed:
+  - "a fresh link set in the group refuses the whole group" became "an unconfirmed fresh link in a group keeps the accepted link at its position". It now gives `[C1 C2]`, with nothing refused and C1 and C2 unresolved.
+  - "an accepted link the fresh read re-proves elsewhere is not refused" became "a partly re-read group keeps the unread position". It now gives `[C1 C2]`, with nothing refused and C2 unresolved.
+  - A group is now refused only when the fresh group is smaller. Those cases are unchanged and gain a contradicted-member variant.
 - **Domain oracles changed by the ordinal rule (design Steering "Ordinal group retention").** They are renamed to their new meaning:
   - "duplicate provenance is carried by position", "a larger fresh group is carried by position" and "unknown invocation time is carried by position" were refusals. They are now carries, with the `retained_by_position` outcome.
   - In the refusal test, the three corresponding cases now assert no refusal and the carried links as unresolved.
@@ -212,20 +240,35 @@ Each mutation was applied in a fresh scratch copy of `backend/`, never in the ch
 | M16: the restored rewrite removed (TEST-04) | The restored-sessions test. |
 | M17: non-v7 names pruned by their UUID bits (TEST-05) | Large-store sweep and pass-1 oracles: 32,768 bytes short. |
 | M18: a production import of `codexstoretest` (TEST-06) | The import guard lists every dependent production package. |
-| M19: the ordinal branch disabled, so every non-unique group is refused | 11 domain subcases. The capture two-pass test: published group links `["" ""]` on pass 1. |
+| M19: the ordinal branch disabled, so every non-unique group is refused | 11 domain subcases. The capture two-pass test: published group links `["" ""]` on pass 1. Superseded by the alignment rewrite. |
+| M20: the whole-group refusal of round 2 reinstated when any fresh link is set (R2-01) | Domain: both renamed oracles and the alignment test. Capture "second child re-read": `["" group-child-2]` on pass 1. CLI alignment case: `[group-child-1 group-child-2 ""]`. |
+| M21b: the accepted absolute index used in place of the group position (R2-T2) | Both interleaved cases: `[C1 C2 ""]` and `[C1 C3 C2 ""]`. |
+| M22: an untimed unique delegation accepts an unconfirmed child (R2-02) | The untimed alignment case: `[C9]`. |
+| M23: an unmatched key is not reported (R2-03) | The unmatched case: refused `[]`. |
+| M24: the contradicted filter removed from refusals (R2-T3) | The contradicted-member case: C1 reported. |
+| M25: complete positions are decided (R2-04) | The complete-group case: three `kept_pending_confirmation` decisions. |
+| M26: the stderr line always claims partial (R2-05) | The cleared-only CLI case. |
+| M28: the `RecordDiagnostic` error is discarded (R2-T4) | The diagnostic-failure test: `nil` returned. |
+| M29: the header conflict flag is dropped (R2-T5) | The header ancestry test. |
+| M30: the queued cursor is not restored at the ceiling (R2-T6) | The queued-path test: cursor on the refused path. |
+| M31: the `delete(refused)` guard removed (R2-T8) | The kept-and-refused test: `Refused` 1. |
+| M18 without `web/dist` (R2-T7) | The guard still lists every dependent production package. |
 
 ### Defects
 
 - **D1 is resolved** (first round).
 - **Round 1 product findings DATA-01 to DATA-04, BEH-01, BEH-02, ARCH-03 and ARCH-04:** fixed by the coder and protected by the tests above.
+- **Round 2 product findings R2-01 to R2-05:** fixed by the coder and protected by the tests above.
+- **R2-06:** fixed by the coder, and verified by reading only (see Limits).
 - **No open product defect.**
 
 ### Limits
 
-- **BEH-02, end to end.** The busy exit code is asserted at the capture API boundary only. A lock that contends with the retention write also contends with the reconciliation that precedes it, and the product has no seam between them. The CLI maps contention to `capturePublicationBusyExit` in one branch, verified by reading.
+- **BEH-02 and R2-06, end to end.** The busy exit code, including the deadline-on-contention mapping, is asserted at the capture API boundary only. A lock that contends with the retention write also contends with the reconciliation that precedes it, and the product has no seam between them. The CLI maps contention and `context.DeadlineExceeded` to `capturePublicationBusyExit` in one branch, verified by reading.
 - **DATA-01 trigger.** The test interrupts the pass at the annotation write with a registry trigger, not with a cancelled context. A counting context, as the review probe used, depends on how many context checks the code makes, so it is not stable.
 - **Held by sibling counts even when the child stays linked.** A child confirmed on another delegation of the same parent is still counted once as unresolved, which is the documented "not linked from the delegation they had" rule. It over-reports for one pass.
-- **Refused links are reported once.** This now applies only to the refusal branch: a fresh link set in the group, or a smaller fresh group. A refused link is never moved, so the publication of that pass holds the fresh delegations, and later passes no longer see it. The ambiguous CLI case asserts this. Groups that the ordinal rule can align keep their links across passes.
+- **Refused links are reported once.** This now applies only to a smaller fresh group, or a key without a fresh counterpart (`unmatched`). A refused link is never moved, so the publication of that pass holds the fresh delegations, and later passes no longer see it. The ambiguous CLI case asserts this. A partly re-read group keeps its unread links across passes.
+- **R2-P1 (pre-existing).** When two delegations share a task name and only one child is read, `resolveSourceChildren` points both at that child. FIX-21 tests do not cover it; it is recorded in REVIEW.md as a follow-up.
 - **Small `max_source_bytes` (accepted limit).** With an identification quarter under 64 KiB, an in-window rollout larger than the quarter, and not cached by another consumer, can stop a sweep at its cursor indefinitely. It shows as pending. A 12 KiB probe stayed at 10 of 18 owners for 80 passes. The BEH-01 tests therefore keep the quarter above the largest in-window rollout.
 - **Shared dedup state.** A copied `ReconcileResult` shares its counted-links map, so a retention call on a copy affects the original's deduplication. Tests use a separate request for each call.
 - **Contradiction warning.** It is still not surfaced by capture (accepted, pre-existing).

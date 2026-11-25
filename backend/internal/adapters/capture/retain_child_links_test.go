@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -242,15 +243,68 @@ func TestRetainAcceptedChildLinksReportsRegistryContention(t *testing.T) {
 	if latest := latestTicketReconciliation(t, fx.store); latest.Attempt != domain.CaptureAttemptCompleted {
 		t.Fatalf("a contended write recorded %s", latest.Attempt)
 	}
-	// Once the writer releases, a new request records its partial state.
+	// Once the writer releases, a new request records its partial state. It
+	// has its own bounded context: the contended call above may have used
+	// most of the first one.
 	retry, err := fx.store.ReconcileAt(ctx, childLinkTicket, "tester", 20, childLinkPartialBudget, childLinkCreated.Add(24*time.Hour), fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := capture.RetainAcceptedChildLinks(bounded, fx.state, fx.project, &retry, fx.accepted); err != nil {
+	retryCtx, retryCancel := context.WithTimeout(ctx, 2*time.Second)
+	defer retryCancel()
+	if _, err := capture.RetainAcceptedChildLinks(retryCtx, fx.state, fx.project, &retry, fx.accepted); err != nil {
 		t.Fatal(err)
 	}
 	if latest := latestTicketReconciliation(t, fx.store); latest.Attempt != domain.CaptureAttemptPartial || latest.PendingChildren != 4 {
 		t.Fatalf("latest reconciliation = %+v, want partial with 4 unresolved children", latest)
+	}
+}
+
+// FIX-21 R2-T4: when recording the partial reconciliation fails after the
+// registry opened, the error is returned and nothing is recorded as partial
+// or complete in its place. A registry trigger rejects the diagnostic insert.
+func TestRetainAcceptedChildLinksReturnsDiagnosticWriteFailure(t *testing.T) {
+	fx := newRetentionFixture(t)
+	db, err := sql.Open("sqlite", filepath.Join(fx.store.RegistryDirectory(), "registry.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec(`CREATE TRIGGER reject_partial_diagnostic BEFORE INSERT ON capture_diagnostics
+WHEN NEW.phase = 'reconciliation' BEGIN SELECT RAISE(ABORT, 'fixture rejects the partial diagnostic'); END`); err != nil {
+		t.Fatal(err)
+	}
+	result := fx.result
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	retention, err := capture.RetainAcceptedChildLinks(ctx, fx.state, fx.project, &result, fx.accepted)
+	if err == nil || !strings.Contains(err.Error(), "fixture rejects the partial diagnostic") {
+		t.Fatalf("a failed diagnostic write must be returned, got %v", err)
+	}
+	if retention.Added != 4 || result.PendingChildren != 4 {
+		t.Fatalf("retention = %+v, unresolved %d; the request still counts its kept links", retention, result.PendingChildren)
+	}
+	if latest := latestTicketReconciliation(t, fx.store); latest.Attempt != domain.CaptureAttemptCompleted || latest.PendingChildren != 0 {
+		t.Fatalf("latest reconciliation changed despite the failed write: %+v", latest)
+	}
+}
+
+// FIX-21 R2-T8: a link kept for one owner list and refused for the other is
+// reported as kept, not as both.
+func TestRetainAcceptedChildLinksReportsALinkKeptAndRefusedAsKept(t *testing.T) {
+	const at1, at2 = "2026-11-24T09:00:07.000Z", "2026-11-24T09:00:30.000Z"
+	accepted := []domain.SessionFact{retentionOwner("P", "", retentionDelegation("task-01", at1, "C1"))}
+	// The refreshed parent keeps C1 at its delegation. The restored copy of
+	// the same parent has no delegation with that key, so C1 is unmatched.
+	result := capture.ReconcileResult{
+		RefreshedSessions: []domain.SessionFact{retentionOwner("P", "", retentionDelegation("task-01", at1, ""))},
+		RestoredSessions:  []domain.SessionFact{retentionOwner("P", "", retentionDelegation("task-02", at2, ""))},
+	}
+	retention, err := capture.RetainAcceptedChildLinks(context.Background(), t.TempDir(), t.TempDir(), &result, accepted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retention.Kept != 1 || retention.Refused != 0 || retention.Added != 1 || result.PendingChildren != 1 {
+		t.Fatalf("retention = %+v, unresolved %d; want one kept link, no refusal, counted once", retention, result.PendingChildren)
 	}
 }

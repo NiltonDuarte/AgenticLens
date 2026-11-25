@@ -9,7 +9,10 @@ import (
 
 // FIX-21 TEST-06: this package imports testing and embeds time zone data, so
 // no production package may depend on it. Test builds are not listed by
-// go list -deps, so only a production import fails this guard.
+// go list -deps, so only a production import fails this guard. With -e,
+// go list still lists every package's imports when a package has an error,
+// such as the web adapter's embed of the gitignored frontend build, so the
+// guard does not need that build (R2-T7).
 func TestNoProductionPackageImportsCodexStoreTest(t *testing.T) {
 	gomod, err := exec.Command("go", "env", "GOMOD").Output()
 	if err != nil {
@@ -21,7 +24,7 @@ func TestNoProductionPackageImportsCodexStoreTest(t *testing.T) {
 		t.Fatalf("go list .: %v", err)
 	}
 	guarded := strings.TrimSpace(string(self))
-	list := exec.Command("go", "list", "-f", `{{.ImportPath}} {{join .Deps " "}}`, "./...")
+	list := exec.Command("go", "list", "-e", "-f", `{{.ImportPath}} {{join .Deps " "}}`, "./...")
 	list.Dir = root
 	out, err := list.Output()
 	if err != nil {

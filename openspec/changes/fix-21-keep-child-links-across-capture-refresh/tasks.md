@@ -15,14 +15,14 @@
   - a child already held by a sibling delegation
   - nil delegations, a non-Codex owner and an owner that was not refreshed
   - idempotence
-- [x] **Coder:** apply the rule in `finishCaptureAnnotations` and `regroupArchiveFamily`. Add the deduplicated retained pairs to `PendingChildren` after `pendingChildWork` runs, through `ReconcileResult.AddRetainedChildLinks`.
+- [x] **Coder:** apply the rule in `finishCaptureAnnotations` and `regroupArchiveFamily`. Add the deduplicated retained pairs to `PendingChildren` after `pendingChildWork` runs, under the same deduplication, and apply the rule at each owner's first snapshot commit.
 - [x] **Tester:** add `capture/reconcile_child_links_test.go`. The fixture is one parent with four task-name-only `spawn_agent` delegations and four child rollouts. Cover these cases:
   - A full pass links all four.
   - The parent grows and a budget reads it with only two children. All four links are kept and unresolved child evidence rises by 2. One child already queued in `pending_starts` is counted once. Parent links are unchanged and the attempt is partial.
   - A repeated pass leaves the snapshot identical.
   - A contradicting child is read together with the parent. Its link is cleared, and source-level warning behavior is unchanged.
   - The spawn events of retained delegations in `SourceEvents` carry no child session ID.
-- [x] **Coder:** add the generation helper in `cmd/agentic-lens/capture.go` and its single call in `main.go`. It rewrites refreshed and restored sessions, adds their pairs with `AddRetainedChildLinks`, records the partial diagnostic from `ReconciliationDiagnostic` and prints a line to stderr.
+- [x] **Coder:** add the generation helper in `cmd/agentic-lens/capture.go` and its single call in `main.go`. It calls the single entry point `capture.RetainAcceptedChildLinks`, which rewrites refreshed and restored sessions, adds their pairs to the count and records the partial reconciliation. It also prints a line to stderr.
 - [x] **Tester:** add `cmd/agentic-lens/capture_child_links_test.go`, run through `generate --capture-auto`. Seed a committed ledger with all links and empty capture state. Read the parent and only some children. Assert all of the following:
   - every link is kept
   - other owners and other-harness facts are unchanged
@@ -32,6 +32,7 @@
 - [x] **Tester:** confirm that a full manual `generate --source codex` links task-name-only children. Add a case to `main_codex_test.go` only if no existing case covers this.
 - [x] **Tester (review DATA-02):** cover refused accepted links. In `domain/child_links_test.go`, each typed reason (ambiguous, unknown provenance, held by a sibling) is reported once, and no refused link is moved. Through `capture.RetainAcceptedChildLinks` and `generate --capture-auto`, refused links count once as unresolved child evidence beside queued work, the attempt is partial, and stderr reports "could not place N accepted link(s)".
 - [x] **Tester (ordinal group retention):** in `domain/child_links_test.go`, cover the ordinal carry for duplicate keys, a larger fresh group with appended delegations and unknown invoked_at. Cover refusal and reporting when a fresh link in the group is set or the fresh group is smaller. Cover a contradicted child and a child held by another final delegation within a group, idempotence, and repeated passes with the published output as the accepted ledger. In `capture/reconcile_child_links_test.go`, an ambiguous group's links survive two consecutive partial passes and stay counted as unresolved.
+- [x] **Tester (position alignment and review round 2):** in `domain/child_links_test.go`, cover a partly re-read group over repeated passes, interleaved and offset groups, an untimed unique delegation against an unconfirmed child, a smaller fresh group, an unmatched key, a contradicted member of a refused group, idempotence and feedback stability, and no decisions for complete groups. In capture, cover a partly re-read group over two partial passes, the `RecordDiagnostic` failure, the kept-and-refused guard, the contention retry with its own context, and the queued-path cursor at the ceiling. In codex, cover the header-path ancestry conflict. Through `--capture-auto`, cover alignment after the registry stage and the cleared-only stderr wording. The `codexstoretest` import guard must not need the frontend build.
 
 ## Discovery budget
 
