@@ -64,7 +64,7 @@ func NormalizeCodexSubagentStart(input HookInput, store, project string, policie
 	remainingBytes := policy.MaxSourceBytes - min(policy.MaxSourceBytes, int64(MaxPayloadBytes))
 	if policy.MaxSessions > 1 && remainingBytes > 0 {
 		budget := &codex.DiscoveryBudget{MaxSessions: policy.MaxSessions - 1, MaxSourceBytes: remainingBytes}
-		if parentPath, err := codex.DiscoverExactRolloutPathWithBudget(store, input.SessionID, budget); err == nil {
+		if parentPath, err := codex.DiscoverExactCaptureRolloutPath(store, input.SessionID, budget, nil); err == nil {
 			input.TranscriptPath = parentPath
 		}
 	}

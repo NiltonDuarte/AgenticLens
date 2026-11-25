@@ -23,7 +23,7 @@ Run on the final tree over main `9eeabb94`:
 ## Limits
 
 - No review ran under the new profiles in this change. The first review that uses them will confirm that real dispatch is accepted.
-- **Telemetry.** This session's telemetry is unavailable. It ran in Claude Code, which AgenticLens cannot yet read as a source; AL-98 adds that. No ledger was generated, and no other harness's session was substituted.
+- **Telemetry.** Telemetry was backfilled after AL-98 added the Claude Code source, using the pinned release `v3.0.0-rc.169+6c41095e`. The implementation session was selected by its session ID, and the ledger has one complete root session with no subagents. Cost is unavailable because Claude Code transcripts record no cost.
 
 ## Pull request
 
@@ -34,4 +34,36 @@ Switch the parallel review skill's reviewer models from GPT to Claude, as the us
 - Until AL-98 can read Claude Code sessions, a Claude reviewer's identity is at most `acknowledged`.
 - Existing review evidence keeps its real GPT attribution.
 
-These are documentation and configuration changes only, so integrated `make` was skipped. This session's telemetry is unavailable because it ran in Claude Code.
+These are documentation and configuration changes only, so integrated `make` was skipped. Telemetry was backfilled after AL-98 shipped.
+
+<!-- agentic-lens:metrics:start -->
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 1
+- **Active Agent Duration:** 3m 15s (recorded duration)
+- **Context Window Health:** HEALTHY — Root agent peak 85.7k tokens (19% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
+- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
+- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
+- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
+- **Reasoning Effort:** 1,621 reasoning tokens (10.6% of generated output)
+- **Tool Health & Self-Correction:** 31 tool calls (0 self-corrections, 100.0% success rate)
+
+### Anomalies & Health Flags
+- **Status:** No execution anomalies detected (clean session).
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **Unknown** | 1 | 60 | 13,711 | 1,964,596 | 100.0% | 85.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **60** | **13,711** | **1,964,596** | **100.0%** | **85.7k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **claude-opus-5-5** | 1 | 60 | 13,711 | 1,964,596 | 100.0% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **60** | **13,711** | **1,964,596** | **100.0%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+<!-- agentic-lens:metrics:end -->
