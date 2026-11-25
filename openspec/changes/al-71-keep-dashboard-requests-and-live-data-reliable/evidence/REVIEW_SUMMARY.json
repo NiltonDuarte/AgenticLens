@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 5,
+      "issue": "Fallback polling can hide the actual malformed-tree diagnostic.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. The error banner shows the diagnostic and a valid poll clears it."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 6,
+      "issue": "Malformed SSE trace warnings can be masked by source diagnostics or survive a valid replacement.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. Scoped payload warnings coexist with source diagnostics and clear on matching recovery."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 5,
+      "issue": "The preset anchor can silently accept an invalid offset or lose fractional seconds.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. The UTC parser rejects invalid offsets and preserves milliseconds."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 5,
+      "issue": "Malformed negative or unsafe token counters can replace accepted trace data.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. Both live trace transports require nonnegative safe integer counts."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 2,
+      "issue": "The Progression suite did not detect loss of incomplete-ledger anchor fallback.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. Start, update and no-anchor cases now protect the fallback."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 4,
+      "issue": "The dashboard suite did not exercise deferred settlement after unmount.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. Both hook settlement tests detect removed generation cleanup."
+    },
+    {
+      "finding_id": "BEH-03",
+      "severity": 5,
+      "issue": "An older REST trace can erase a newer same-session SSE validation warning.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. Identified malformed pushes retire older selected REST reads."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 5,
+      "issue": "A valid trace can erase another session's still-unresolved validation warning.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.2-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. Warnings are keyed by bounded session ownership and clear independently."
+    }
+  ]
+}

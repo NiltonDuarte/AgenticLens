@@ -1,17 +1,15 @@
 import { workspaceKey, selectWorkspace } from '../domain/workspaces';
 import { TagFilters } from '../components/TagFilters';
-import { tagChoices, filterLedgersByTags, reconcileTagCatalog, type TagFilter } from '../domain/tags';
+import { tagChoices, filterLedgersByTags, type TagFilter } from '../domain/tags';
 import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { durationLabel, durationDescription } from '../domain/duration';
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import type {
-  AgenticMetricsLedger,
   ComparisonSortField,
   ComparisonSortOrder,
-  WorkspaceDiagnostic,
 } from '../domain/types';
 import { compareSkillNames, skillNames } from '../domain/aggregations';
-import { fetchWorkspaceLedgers } from '../api/client';
+import { useWorkspaceLedgers } from '../hooks/useWorkspaceLedgers';
 import { WorkspaceLoadWarning } from '../components/WorkspaceLoadWarning';
 import {
   combineDistinctPrefixes,
@@ -53,10 +51,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
 }) => {
   const projectConfig = useProjectConfig();
   const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig), [projectConfig]);
-  const [tagCatalog, setTagCatalog] = useState<readonly AgenticMetricsLedger[]>([]);
   const [tagFilters, setTagFilters] = useState<readonly TagFilter[]>([]);
-  const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
-  const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
   const [selectedTicketTypes, setSelectedTicketTypes] = useState<readonly string[]>(['all']);
   const [selectedPrefixes, setSelectedPrefixes] = useState<readonly string[]>(['all']);
@@ -64,45 +59,11 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<ComparisonSortField | undefined>(undefined);
   const [sortOrder, setSortOrder] = useState<ComparisonSortOrder>('desc');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const hasLoadedRef = useRef(false);
-
-  const loadLedgers = useCallback(async () => {
-    if (!hasLoadedRef.current) {
-      setLoading(true);
-    }
-    setError(null);
-    try {
-      const typesParam =
-        selectedTicketTypes.length === 0 ||
-        (selectedTicketTypes.length === 1 && selectedTicketTypes[0] === 'all')
-          ? undefined
-          : selectedTicketTypes;
-      const prefixesParam =
-        selectedPrefixes.length === 0 ||
-        (selectedPrefixes.length === 1 && selectedPrefixes[0] === 'all')
-          ? undefined
-          : selectedPrefixes.map((prefix) => prefix.slice('prefix:'.length));
-
-      const res = typesParam || prefixesParam
-        ? await fetchWorkspaceLedgers('all', undefined, undefined, typesParam, prefixesParam)
-        : await fetchWorkspaceLedgers('all');
-      setLedgers(res.data);
-      setTagCatalog((previous) => typesParam || prefixesParam ? reconcileTagCatalog(previous, res.data) : res.data);
-      setDiagnostics(res.diagnostics ?? []);
-      hasLoadedRef.current = true;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch comparison workspaces';
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedTicketTypes, selectedPrefixes]);
-
-  useEffect(() => {
-    loadLedgers();
-  }, [loadLedgers]);
+  const { ledgers, tagCatalog, diagnostics, loading, error, loadLedgers } = useWorkspaceLedgers(
+    selectedTicketTypes,
+    selectedPrefixes,
+    'Failed to fetch comparison workspaces',
+  );
 
   // Keep track of all prefixes discovered across all loaded ledgers
   useEffect(() => {
@@ -221,7 +182,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
     );
   };
 
-  if (loading && !hasLoadedRef.current) {
+  if (loading) {
     return (
       <div className="loading-container">
         <div className="loading-spinner" />

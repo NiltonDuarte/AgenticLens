@@ -2,7 +2,7 @@ import { TagFilters } from '../components/TagFilters';
 import { tagChoices, type TagChoice, type TagFilter } from '../domain/tags';
 import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { durationDescription } from '../domain/duration';
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { FleetSummary, TicketComparisonRow, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
 import {
   formatPercentage,
@@ -71,7 +71,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
     }
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const requests = inspectionRequest;
     void loadInspection();
     return () => { requests.current++; };
@@ -142,7 +142,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
     }
   }, [windowPreset, customSince, customUntil, selectedTicketTypes, selectedPrefixes, tagFilters]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const requests = metricsRequest;
     void loadData();
     return () => { requests.current++; };

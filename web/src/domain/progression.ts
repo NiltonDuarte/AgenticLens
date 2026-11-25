@@ -1,6 +1,6 @@
 import { completeCost, emptyCostSummary, invocationCostSummary, mergeCostSummaries } from './cost';
 import type { CostSummary } from './types';
-import { sessionInvocations, type AgenticMetricsLedger, type TimeBucketMetric, type TimeGranularity } from './types';
+import { sessionInvocations, type AgenticMetricsLedger, type TimeBucketMetric, type TimeGranularity, type TimeWindowPreset } from './types';
 
 interface MutableBucketAccumulator {
  provisional_seconds: number;
@@ -26,8 +26,8 @@ export function parseIsoDateToUtc(ts: string | null | undefined): Date | null {
     return null;
   }
 
-  // Format: YYYY-MM-DD optionally followed by T or space and HH:mm[:ss[.sss]][Z|(+/-HH:mm)]
-  const match = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/.exec(clean);
+  // Format: YYYY-MM-DD optionally followed by T or space and HH:mm[:ss[.fraction]][Z|(+/-HH:mm)]
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?(Z|[+-]\d{2}:?\d{2})?)?$/.exec(clean);
   if (!match) {
     return null;
   }
@@ -49,7 +49,8 @@ export function parseIsoDateToUtc(ts: string | null | undefined): Date | null {
   const hourStr = match[4];
   const minuteStr = match[5];
   const secondStr = match[6];
-  const tzStr = match[7];
+  const fraction = match[7] ?? '';
+  const timezone = match[8];
 
   const hour = hourStr !== undefined ? Number(hourStr) : 0;
   const minute = minuteStr !== undefined ? Number(minuteStr) : 0;
@@ -59,14 +60,14 @@ export function parseIsoDateToUtc(ts: string | null | undefined): Date | null {
     return null;
   }
 
-  if (tzStr) {
-    const d = new Date(clean);
-    if (!Number.isNaN(d.getTime())) {
-      return d;
-    }
+  if (timezone) {
+    const normalized = clean.replace(' ', 'T').replace(/([+-]\d{2})(\d{2})$/, '$1:$2');
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
   }
 
-  return new Date(Date.UTC(year, month - 1, day, hour, minute, second, 0));
+  const milliseconds = Number(fraction.slice(0, 3).padEnd(3, '0'));
+  return new Date(Date.UTC(year, month - 1, day, hour, minute, second, milliseconds));
 }
 
 export function parseIsoBoundary(ts: string | null | undefined, isEnd: boolean): Date | null {
@@ -98,6 +99,46 @@ function formatUtcDate(d: Date): string {
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+interface ProgressionWindow {
+  readonly startDate: string | null;
+  readonly endDate: string | null;
+  readonly isInverted: boolean;
+}
+
+const UNBOUNDED_WINDOW: ProgressionWindow = { startDate: null, endDate: null, isInverted: false };
+const PRESET_DAYS = { '1d': 1, '7d': 7, '30d': 30, '90d': 90 } as const;
+
+export function progressionWindow(
+  ledgers: readonly AgenticMetricsLedger[],
+  preset: TimeWindowPreset,
+  customStart: string,
+  customEnd: string,
+): ProgressionWindow {
+  if (preset === 'all') return UNBOUNDED_WINDOW;
+
+  if (preset === 'custom') {
+    const startDate = customStart.trim() || null;
+    const endDate = customEnd.trim() || null;
+    const start = parseIsoBoundary(startDate, false);
+    const end = parseIsoBoundary(endDate, true);
+    return { startDate, endDate, isInverted: start !== null && end !== null && start > end };
+  }
+
+  let latest: Date | null = null;
+  for (const ledger of ledgers) {
+    const reference = parseIsoDateToUtc(ledger.completed_at) ??
+      parseIsoDateToUtc(ledger.started_at) ??
+      parseIsoDateToUtc(ledger.updated_at);
+    if (reference && (!latest || reference > latest)) latest = reference;
+  }
+  if (!latest) return UNBOUNDED_WINDOW;
+
+  const start = new Date(latest.getTime() - PRESET_DAYS[preset] * 86_400_000);
+  return preset === '1d'
+    ? { startDate: start.toISOString(), endDate: latest.toISOString(), isInverted: false }
+    : { startDate: formatUtcDate(start), endDate: formatUtcDate(latest), isInverted: false };
 }
 
 function formatUtcHour(d: Date): string {

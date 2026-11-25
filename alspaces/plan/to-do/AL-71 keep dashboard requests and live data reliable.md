@@ -29,6 +29,8 @@ Malformed nested live payloads pass unchecked casts and crash consumers; fallbac
 
 ## Implementation notes
 
+Execution change: [AL-71 OpenSpec proposal](../../../openspec/changes/al-71-keep-dashboard-requests-and-live-data-reliable/proposal.md).
+
 Related work: AL-69 owns source diagnostics and anomaly semantics; AL-70 owns configured ticket parsing/filter identity; AL-72 owns rendered UI behavior and benchmark arithmetic.
 
 Finding references: FE-02, FE-03, FE-04, FE-05, FE-D2

@@ -2,6 +2,7 @@ package live_test
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -9,14 +10,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	adaptershttp "agenticlens/internal/adapters/http"
 	"agenticlens/internal/adapters/live"
 	"agenticlens/internal/domain"
 )
 
-// This fixture is also consumed by the real frontend API validator and view.
-// Its only normalized field is the source-independent HTTP refresh timestamp.
+// These SQLite fixtures are also consumed by the frontend validators and view.
 func TestNativeLiveHTTPWireMatchesFrontendFixture(t *testing.T) {
 	path := createTestDBFile(t)
 	db, err := sql.Open("sqlite", path)
@@ -25,7 +26,8 @@ func TestNativeLiveHTTPWireMatchesFrontendFixture(t *testing.T) {
 	}
 	const stamp int64 = 4102444800000
 	if _, err := db.Exec(`INSERT INTO session(id,agent,model,title,time_created,time_updated) VALUES('wire-root','builder','wire-model','T-02 wire projection',?,?);
- INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES('wire-message','wire-root',?,?,'{"role":"assistant","agent":"builder","model":{"modelID":"wire-model"},"tokens":{"input":17,"output":3}}');`, stamp, stamp, stamp, stamp); err != nil {
+ INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES('wire-message','wire-root',?,?,'{"role":"assistant","agent":"builder","model":{"modelID":"wire-model"},"content":"Native execution turn","tokens":{"input":17,"output":3}}');
+ INSERT INTO part(id,session_id,message_id,time_created,time_updated,data) VALUES('wire-part','wire-root','wire-message',?,?,'{"type":"text","text":"Native trace payload"}');`, stamp, stamp, stamp, stamp, stamp, stamp); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Close(); err != nil {
@@ -38,6 +40,7 @@ func TestNativeLiveHTTPWireMatchesFrontendFixture(t *testing.T) {
 	cfg := testProjectConfig()
 	cfg.Ticket = domain.TicketConfig{Prefixes: []domain.TicketPrefix{{Prefix: "T-", Description: "Wire fixture"}}, CaseInsensitive: false}
 	cfg.RoleMappings = domain.RoleMappings{"builder": "planner", "planner": "other"}
+	cfg.Live.PollIntervalMs = 10
 	service := live.NewLiveService(hook, cfg)
 	defer service.Close()
 	recorder := httptest.NewRecorder()
@@ -60,11 +63,53 @@ func TestNativeLiveHTTPWireMatchesFrontendFixture(t *testing.T) {
 		t.Fatal("available source has no refresh observation")
 	}
 	actual := bytes.Replace(recorder.Body.Bytes(), []byte(tree.LastRefreshedAt), []byte("2100-01-01T00:00:00.000Z"), 1)
+	assertLiveWireFixture(t, "live-session-wire.json", actual)
+
+	traceRecorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/api/live/sessions/wire-root/trace", nil)
+	request.SetPathValue("id", "wire-root")
+	adaptershttp.LiveTraceHandler(service)(traceRecorder, request)
+	if traceRecorder.Code != http.StatusOK {
+		t.Fatalf("live trace HTTP: %d %s", traceRecorder.Code, traceRecorder.Body.String())
+	}
+	const restEmpty = `"recent_errors":[]`
+	restTrace := traceRecorder.Body.Bytes()
+	if !bytes.Contains(restTrace, []byte(restEmpty)) {
+		t.Fatalf("empty REST trace errors should be an array: %s", restTrace)
+	}
+	// REST normalizes this empty slice before encoding. SSE emits the native null.
+	assertLiveWireFixture(t, "live-trace-wire.json", bytes.Replace(restTrace, []byte(restEmpty), []byte(`"recent_errors":null`), 1))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	events, unsubscribe := service.Subscribe()
+	defer unsubscribe()
+	if err := service.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for {
+		select {
+		case event, ok := <-events:
+			if !ok {
+				t.Fatal("live subscription closed before the trace update")
+			}
+			if event.Type == live.LiveEventTraceUpdate {
+				assertLiveWireFixture(t, "live-trace-wire.json", event.Data)
+				return
+			}
+		case <-ctx.Done():
+			t.Fatal("timed out waiting for the native trace update")
+		}
+	}
+}
+
+func assertLiveWireFixture(t *testing.T, name string, actual []byte) {
+	t.Helper()
 	var actualCompact bytes.Buffer
 	if err := json.Compact(&actualCompact, actual); err != nil {
 		t.Fatal(err)
 	}
-	fixturePath := filepath.Join("..", "..", "..", "..", "web", "src", "test", "fixtures", "live-session-wire.json")
+	fixturePath := filepath.Join("..", "..", "..", "..", "web", "src", "test", "fixtures", name)
 	expected, err := os.ReadFile(fixturePath)
 	if err != nil {
 		t.Fatalf("shared frontend fixture: %v; producer JSON=%s", err, actualCompact.Bytes())
@@ -74,7 +119,7 @@ func TestNativeLiveHTTPWireMatchesFrontendFixture(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(actualCompact.Bytes(), expectedCompact.Bytes()) {
-		t.Fatalf("native HTTP differs from shared frontend fixture: actual=%s expected=%s", actualCompact.Bytes(), expectedCompact.Bytes())
+		t.Fatalf("native HTTP differs from %s: actual=%s expected=%s", name, actualCompact.Bytes(), expectedCompact.Bytes())
 	}
 }
 
