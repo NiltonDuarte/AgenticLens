@@ -528,7 +528,7 @@ func discoverExactRolloutPath(ctx context.Context, home, sessionID string, budge
 			continue
 		}
 		if selected != "" {
-			return "", fmt.Errorf("exact Codex owner %s has ambiguous rollout paths", sessionID)
+			return "", ambiguousOwnerError{sessionID: sessionID}
 		}
 		selected = path
 	}
@@ -576,4 +576,300 @@ func physicalRolloutPath(path string) (string, error) {
 		return "", errors.New("explicit Codex source path must be nonblank")
 	}
 	return filesystem.PhysicalPath(path)
+}
+
+// ErrOwnerAmbiguous distinguishes several rollouts proving one exact owner.
+var ErrOwnerAmbiguous = errors.New("Codex native session has ambiguous rollout paths")
+
+type ambiguousOwnerError struct {
+	sessionID string
+}
+
+func (e ambiguousOwnerError) Error() string {
+	return fmt.Sprintf("exact Codex owner %s has ambiguous rollout paths", e.sessionID)
+}
+
+func (e ambiguousOwnerError) Is(target error) bool {
+	return target == ErrOwnerAmbiguous
+}
+
+// ChildCreationTolerance is how much earlier than its parent a capture child
+// candidate's UUIDv7 creation instant may be and still be read. It covers
+// clock steps only; a child is created after its parent.
+const ChildCreationTolerance = 5 * time.Second
+
+// MaxLocalDayOffset bounds how far a machine-local rollout day directory can
+// end after the same calendar day read as UTC. It is the largest UTC offset.
+const MaxLocalDayOffset = 14 * time.Hour
+
+// rolloutName is what a conventional rollout file name claims. It is only a
+// pre-filter: identity and parent always come from session_meta.
+type rolloutName struct {
+	created time.Time
+	id      string
+	v7      bool
+}
+
+// parseRolloutName recognizes rollout-YYYY-MM-DDThh-mm-ss-<uuid>.jsonl and its
+// gzip-compressed form. Any other name reports false.
+func parseRolloutName(name string) (rolloutName, bool) {
+	base, found := strings.CutSuffix(name, ".jsonl.gz")
+	if !found {
+		base, found = strings.CutSuffix(name, ".jsonl")
+	}
+	if !found {
+		return rolloutName{}, false
+	}
+	stamp, found := strings.CutPrefix(base, "rollout-")
+	const stampLength = len("2006-01-02T15-04-05")
+	if !found || len(stamp) != stampLength+1+36 || stamp[stampLength] != '-' {
+		return rolloutName{}, false
+	}
+	if _, err := time.Parse("2006-01-02T15-04-05", stamp[:stampLength]); err != nil {
+		return rolloutName{}, false
+	}
+	id := stamp[stampLength+1:]
+	created, v7, ok := uuidCreation(id)
+	if !ok {
+		return rolloutName{}, false
+	}
+	return rolloutName{id: id, created: created, v7: v7}, true
+}
+
+// RolloutNameSessionID returns the session ID a conventional rollout file name
+// claims. A name is only a hint: identity always comes from session_meta.
+func RolloutNameSessionID(name string) (string, bool) {
+	parsed, ok := parseRolloutName(name)
+	return parsed.id, ok
+}
+
+// uuidCreation validates a canonical UUID and, for an RFC 9562 version 7
+// UUID, returns the UTC creation instant in its first 48 bits.
+func uuidCreation(id string) (time.Time, bool, bool) {
+	if len(id) != 36 {
+		return time.Time{}, false, false
+	}
+	var millis int64
+	for i := 0; i < len(id); i++ {
+		c := id[i]
+		if i == 8 || i == 13 || i == 18 || i == 23 {
+			if c != '-' {
+				return time.Time{}, false, false
+			}
+			continue
+		}
+		value, ok := hexValue(c)
+		if !ok {
+			return time.Time{}, false, false
+		}
+		if i < 13 {
+			millis = millis<<4 | int64(value)
+		}
+	}
+	variant, _ := hexValue(id[19])
+	if id[14] != '7' || variant < 8 || variant > 11 {
+		return time.Time{}, false, true
+	}
+	return time.UnixMilli(millis).UTC(), true, true
+}
+
+func hexValue(c byte) (byte, bool) {
+	switch {
+	case c >= '0' && c <= '9':
+		return c - '0', true
+	case c >= 'a' && c <= 'f':
+		return c - 'a' + 10, true
+	case c >= 'A' && c <= 'F':
+		return c - 'A' + 10, true
+	}
+	return 0, false
+}
+
+// CreationWindow prunes capture child candidates by creation instant. The
+// zero value prunes nothing.
+type CreationWindow struct {
+	parent time.Time
+}
+
+// NewCreationWindow uses the parent's own UUIDv7 creation instant, or else its
+// session_meta timestamp. Without either it prunes nothing.
+func NewCreationWindow(parentID string, header RolloutHeader) CreationWindow {
+	if created, v7, ok := uuidCreation(parentID); ok && v7 {
+		return CreationWindow{parent: created}
+	}
+	return CreationWindow{parent: header.CreatedAt}
+}
+
+// Prunes reports whether the window has a parent instant.
+func (window CreationWindow) Prunes() bool {
+	return !window.parent.IsZero()
+}
+
+// SkipsFile reports a conventional, version 7 rollout name created more than
+// ChildCreationTolerance before the parent. Such a file cannot be its child.
+func (window CreationWindow) SkipsFile(name string) bool {
+	if !window.Prunes() {
+		return false
+	}
+	parsed, ok := parseRolloutName(name)
+	return ok && parsed.v7 && window.parent.Sub(parsed.created) > ChildCreationTolerance
+}
+
+// SkipsDirectory reports a sessions/YYYY, sessions/YYYY/MM or sessions/YYYY/MM/DD
+// directory of home whose machine-local period, read as UTC, ends more than
+// MaxLocalDayOffset plus ChildCreationTolerance before the parent instant.
+// Other directories, including archived_sessions, are always listed.
+func (window CreationWindow) SkipsDirectory(home, path string) bool {
+	if !window.Prunes() {
+		return false
+	}
+	relative, err := filepath.Rel(filepath.Join(home, "sessions"), path)
+	if err != nil || !filepath.IsLocal(relative) {
+		return false
+	}
+	parts := strings.Split(filepath.ToSlash(relative), "/")
+	if len(parts) > 3 || len(parts[0]) != 4 {
+		return false
+	}
+	layouts := []string{"2006", "2006/01", "2006/01/02"}
+	start, err := time.Parse(layouts[len(parts)-1], strings.Join(parts, "/"))
+	if err != nil {
+		return false
+	}
+	var end time.Time
+	switch len(parts) {
+	case 1:
+		end = start.AddDate(1, 0, 0)
+	case 2:
+		if len(parts[1]) != 2 {
+			return false
+		}
+		end = start.AddDate(0, 1, 0)
+	default:
+		if len(parts[1]) != 2 || len(parts[2]) != 2 {
+			return false
+		}
+		end = start.AddDate(0, 0, 1)
+	}
+	return window.parent.Sub(end) > MaxLocalDayOffset+ChildCreationTolerance
+}
+
+// DiscoverExactCaptureRolloutPath resolves one unambiguous owner for automatic
+// capture. Files whose conventional name carries a different UUID are skipped
+// without a claim or a read. Every other rollout, including each copy named
+// with the requested UUID and every name outside the convention, is claimed
+// and its header read through headers, so duplicate copies remain ambiguous.
+// Identity always comes from session_meta. headers may be nil.
+func DiscoverExactCaptureRolloutPath(home, sessionID string, budget *DiscoveryBudget, headers *HeaderCache) (string, error) {
+	ctx := budget.readContext()
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return "", errors.New("exact Codex session ID is required")
+	}
+	paths, err := listFilteredRolloutPaths(ctx, home, budget, func(name string) bool {
+		parsed, conventional := parseRolloutName(name)
+		return !conventional || strings.EqualFold(parsed.id, sessionID)
+	})
+	if errors.Is(err, errNoRolloutFiles) {
+		return "", fmt.Errorf("exact Codex owner %s unavailable: %w: %w", sessionID, err, ErrOwnerUnavailable)
+	}
+	if err != nil {
+		return "", err
+	}
+	selected := ""
+	for _, path := range paths {
+		if err := budget.claim(path); err != nil {
+			return "", err
+		}
+		read, e := headers.ReadHeader(ctx, path, budget)
+		threadID := strings.TrimSpace(read.Header.ID)
+		if errors.Is(e, errHeaderBound) {
+			// Keep the historical tolerance for an oversized first record.
+			threadID, e = headers.oversizedThreadID(ctx, path, budget)
+		}
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		if e != nil {
+			if errors.Is(e, ErrDiscoveryBudget) {
+				return "", e
+			}
+			if threadID == sessionID {
+				return "", fmt.Errorf("incomplete Codex discovery for exact owner %s at %s: %w", sessionID, path, e)
+			}
+			continue
+		}
+		if threadID != sessionID {
+			continue
+		}
+		if selected != "" {
+			return "", ambiguousOwnerError{sessionID: sessionID}
+		}
+		selected = path
+	}
+	if selected == "" {
+		return "", fmt.Errorf("exact Codex owner %s unavailable: %w", sessionID, ErrOwnerUnavailable)
+	}
+	return selected, nil
+}
+
+var errNoRolloutFiles = errors.New("no rollout files found")
+
+// listFilteredRolloutPaths lists rollouts whose file name keep accepts,
+// without claiming them. It reports errNoRolloutFiles when the store holds no
+// rollout at all, and an empty list when none is kept.
+func listFilteredRolloutPaths(ctx context.Context, home string, budget *DiscoveryBudget, keep func(name string) bool) ([]string, error) {
+	if strings.TrimSpace(home) == "" {
+		return nil, errors.New("Codex home is required: supply --codex-home or telemetry.sources.codex.home in the selected local YAML")
+	}
+	if err := budget.validate(); err != nil {
+		return nil, err
+	}
+	home, err := physicalRolloutPath(home)
+	if err != nil {
+		return nil, err
+	}
+	var paths []string
+	total := 0
+	for _, directory := range []string{"sessions", "archived_sessions"} {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		root := filepath.Join(home, directory)
+		if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
+			continue
+		} else if err != nil {
+			return nil, fmt.Errorf("accessing Codex %s directory: %w", directory, err)
+		}
+		err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if walkErr != nil {
+				return walkErr
+			}
+			if entry.IsDir() || (!strings.HasSuffix(entry.Name(), ".jsonl") && !strings.HasSuffix(entry.Name(), ".jsonl.gz")) {
+				return nil
+			}
+			total++
+			if keep(entry.Name()) {
+				paths = append(paths, path)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("scanning Codex %s directory: %w", directory, err)
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if total == 0 {
+		return nil, fmt.Errorf("%w under %s/sessions or %s/archived_sessions", errNoRolloutFiles, home, home)
+	}
+	sort.Strings(paths)
+	return paths, nil
 }
