@@ -1,0 +1,1059 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "DATA-01",
+      "severity": 6,
+      "issue": "An interrupted pass could leave the parent's registry snapshot without its accepted child links.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: retention applied at each owner snapshot commit; interrupted-annotation regression test."
+    },
+    {
+      "finding_id": "BEH-01",
+      "severity": 4,
+      "issue": "A resumed child sweep that admitted nothing at the identification ceiling was closed instead of left pending.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: resumed sweeps keep their cursor and new sweeps that admit nothing write no cursor."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 3,
+      "issue": "Accepted links the rule refused to carry were dropped without any incompleteness signal.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: refused links are reported with typed reasons and counted as unresolved child evidence."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 2,
+      "issue": "A contended registry during retention exited 1 instead of the busy exit.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: one capture entry point with busy-aware registry access."
+    },
+    {
+      "finding_id": "ARCH-03",
+      "severity": 2,
+      "issue": "The CLI drove a public result API in sequence and could record a completed diagnostic out of order.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: single capture.RetainAcceptedChildLinks call."
+    },
+    {
+      "finding_id": "ARCH-04",
+      "severity": 2,
+      "issue": "Gzip header admission checked compressed size and could abandon a header read partway.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: gzip headers admitted only with the full 64 KiB bound."
+    },
+    {
+      "finding_id": "ARCH-02",
+      "severity": 3,
+      "issue": "Session ancestry and required-field rules were duplicated between two header readers.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: shared exactSessionContext and conflictingNativeParent helpers."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 3,
+      "issue": "The capture exact lookup duplicates the manual and live lookup rules.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Accepted debt: recorded under Known limits; follow-up to unify without touching manual and live paths in this fix."
+    },
+    {
+      "finding_id": "ARCH-05",
+      "severity": 1,
+      "issue": "Several comments and one enum value did not match the code.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: comments and enums corrected."
+    },
+    {
+      "finding_id": "DATA-03",
+      "severity": 2,
+      "issue": "A queued path for an unregistered child could be counted twice.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: dedup through the rollout file-name session ID as a counting hint only."
+    },
+    {
+      "finding_id": "DATA-04",
+      "severity": 2,
+      "issue": "The CLI retention ignored registry child evidence, so an older ledger link could win over a locally proven one.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: registry snapshots passed as Known evidence."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 5,
+      "issue": "The retention call in archive family regrouping had no protecting test.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: regression test kills the deletion mutant."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 4,
+      "issue": "The CLI partial-children case did not reach fresh-plus-retained links.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: exact two-run CLI case exercises the double-count guard."
+    },
+    {
+      "finding_id": "TEST-03",
+      "severity": 3,
+      "issue": "The non-UUIDv7 parent instant fallback was only unit-tested.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: capture-level sweep test with exact byte totals."
+    },
+    {
+      "finding_id": "TEST-04",
+      "severity": 3,
+      "issue": "The restored-session rewrite in the CLI helper was unprotected.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: restored-session regression test."
+    },
+    {
+      "finding_id": "TEST-05",
+      "severity": 2,
+      "issue": "The large-store fixture lacked later unrelated rollouts and irregular names outside pruned directories.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: fixture extended with exact sweep oracles."
+    },
+    {
+      "finding_id": "TEST-06",
+      "severity": 1,
+      "issue": "Minor test gaps: exact idempotence result, import guard, wall-clock worker bound, manual missing-child and contradiction through capture-auto.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: assertions and guard tests added; worker test judged by outcome."
+    },
+    {
+      "finding_id": "R2-01",
+      "severity": 4,
+      "issue": "A partly re-read ambiguous delegation group was refused as a whole and its unread links were lost after one report.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed by user decision: key groups aligned by position with unique-delegation rules."
+    },
+    {
+      "finding_id": "R2-02",
+      "severity": 3,
+      "issue": "An untimed unique delegation let an unconfirmed different fresh child replace the accepted link.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed by position alignment."
+    },
+    {
+      "finding_id": "R2-03",
+      "severity": 3,
+      "issue": "An accepted delegation key with no fresh counterpart was dropped without a report.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: reported as refused with reason unmatched; one-time report recorded as a limit."
+    },
+    {
+      "finding_id": "R2-04",
+      "severity": 1,
+      "issue": "Complete groups emitted refusal decisions contrary to the report contract.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: dead outcome and evidence state removed."
+    },
+    {
+      "finding_id": "R2-05",
+      "severity": 1,
+      "issue": "The stderr line claimed the reconciliation remained partial when links were only cleared.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: wording depends on added unresolved links."
+    },
+    {
+      "finding_id": "R2-06",
+      "severity": 1,
+      "issue": "An expired retention deadline under contention exited 1 instead of busy.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: classification owned by capture with a marked expiry."
+    },
+    {
+      "finding_id": "R2-07",
+      "severity": 2,
+      "issue": "Design and tasks named removed APIs and omitted new evidence sources.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: artifacts updated."
+    },
+    {
+      "finding_id": "R2-T1",
+      "severity": 3,
+      "issue": "The contention test reused an almost spent context and was flaky under race.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: separate retry context; repeated race runs pass."
+    },
+    {
+      "finding_id": "R2-T2",
+      "severity": 2,
+      "issue": "Group position versus absolute index was untested.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: interleaved and offset group tests."
+    },
+    {
+      "finding_id": "R2-T3",
+      "severity": 2,
+      "issue": "The contradicted-child filter in refused groups was unprotected.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: regression case added."
+    },
+    {
+      "finding_id": "R2-T4",
+      "severity": 3,
+      "issue": "The diagnostic-write failure path was untested.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: registry trigger test."
+    },
+    {
+      "finding_id": "R2-T5",
+      "severity": 3,
+      "issue": "The unified conflicting-parent check on the header path was untested.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: header ancestry test."
+    },
+    {
+      "finding_id": "R2-T6",
+      "severity": 3,
+      "issue": "The queued-path cursor restore at the identification ceiling was unasserted.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: queued resume test."
+    },
+    {
+      "finding_id": "R2-T7",
+      "severity": 2,
+      "issue": "The import guard depended on gitignored embedded web assets.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: guard independent of the embed."
+    },
+    {
+      "finding_id": "R2-T8",
+      "severity": 1,
+      "issue": "No CLI alignment case and an unprotected refused-link guard.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: CLI alignment and guard tests added."
+    },
+    {
+      "finding_id": "R2-P1",
+      "severity": 3,
+      "issue": "When two delegations share a task name and one child is read, the source resolver points both at that child.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Pre-existing, not introduced by FIX-21: recorded under Known limits with a follow-up; FIX-21 keeps accepted links in this state."
+    },
+    {
+      "finding_id": "R3-01",
+      "severity": 3,
+      "issue": "A replacement could silently drop an accepted child through a duplicated fresh child or a confirmed child moving position.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: duplicated fresh children never confirm a replacement; displaced unlinked children are reported."
+    },
+    {
+      "finding_id": "R3-02",
+      "severity": 2,
+      "issue": "Busy classification had two owners between capture and the CLI.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: capture marks expired registry waits and the CLI uses one predicate through a tested helper."
+    },
+    {
+      "finding_id": "R3-03",
+      "severity": 1,
+      "issue": "Decision child fields were ambiguous per outcome and names said retained for unresolved links.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: ReplacedChildID added, documentation and names corrected."
+    },
+    {
+      "finding_id": "R3-04",
+      "severity": 1,
+      "issue": "The CLI skipped clearing contradicted registry evidence when the accepted ledger was empty.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: no early return; only contradicted links are cleared."
+    },
+    {
+      "finding_id": "R3-05",
+      "severity": 2,
+      "issue": "Spec, design, tasks and test evidence wording was stale.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: artifacts updated."
+    },
+    {
+      "finding_id": "R3-T1",
+      "severity": 3,
+      "issue": "Agent type and invoked-at in the group key were unprotected by tests.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: unmatched-key rows kill both mutants."
+    },
+    {
+      "finding_id": "R3-T2",
+      "severity": 2,
+      "issue": "The busy-exit mapping and the partial wording had no test.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: pure outcome helper unit-tested."
+    },
+    {
+      "finding_id": "R3-T3",
+      "severity": 1,
+      "issue": "Stale test comments and an unexplained mutation gap.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed."
+    },
+    {
+      "finding_id": "R4-01",
+      "severity": 1,
+      "issue": "After the retention deadline any registry error is marked busy, so a permanent error exits 75 instead of 1.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Accepted limit: no data loss and both exits are non-zero; follow-up to mark only contention or deadline causes."
+    },
+    {
+      "finding_id": "R4-02",
+      "severity": 1,
+      "issue": "A never-accepted fresh child duplicated across delegations is not placed or reported.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Accepted limit, consequence of R2-P1; accepted links stay counted."
+    },
+    {
+      "finding_id": "R4-03",
+      "severity": 1,
+      "issue": "The spec overstated that the accepted link is kept for duplicated fresh children.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed: spec wording narrowed."
+    },
+    {
+      "finding_id": "R4-04",
+      "severity": 2,
+      "issue": "No test proves the process exit wiring of the retention helper.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Accepted test limit; the pure outcome helper is tested."
+    },
+    {
+      "finding_id": "R4-05",
+      "severity": 1,
+      "issue": "Test evidence and one design note had stale revision and reason text.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "identity_basis": "acknowledged",
+          "identity_note": "Model observed in the FIX-21 Claude Code ledger; effort as acknowledged at dispatch."
+        }
+      ],
+      "disposition": "Fixed."
+    }
+  ]
+}
