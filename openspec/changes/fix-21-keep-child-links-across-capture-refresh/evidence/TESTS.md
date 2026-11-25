@@ -117,14 +117,14 @@ The baseline section above is the historical "before". Its generator and measure
 
 ## Candidate verification
 
-**Result.** Every acceptance case, every review round 1, 2 and 3 regression, and the approved position alignment pass on the current candidate. No data race is reported. The review findings are in [REVIEW.md](REVIEW.md), and the alignment rule is the design's Steering entry "Position alignment".
+**Result.** Every acceptance case, every review round 1, 2 and 3 regression, and the approved position alignment pass on the current candidate. No data race is reported. The review findings are in [REVIEW_SUMMARY.json](REVIEW_SUMMARY.json), and the alignment rule is the design's Steering entry "Position alignment".
 - **Mutations.** Each confirmed product fix and each test gap has a test that fails when its fix is removed in a scratch copy.
 - **No new product defect.**
 - **Incident scale.** The fixture now also holds unrelated sessions after the root. The whole family is extracted in pass 1 for 51,064,638 bytes, which is 9.5 % of 512 MiB, and pass 2 links 9 of 9 children. In the baseline, every pass spent the full 512 MiB and the root settled at 3 of 9 links.
 
 ### Revision and working tree
 
-- **Tested revision:** `5d4df7ee` plus the uncommitted round-3 diff, which holds the coder's round 3 changes and the tester's uncommitted tests.
+- **Tested revision:** `34068194`. The round-3 changes were tested before commit, and the committed tree is identical to the tested working tree.
   - **Coder's round 3 changes:**
     - R3-01 (duplicated fresh child; displaced child) and R3-03 (`ReplacedChildID`, docs) in `domain/child_links.go`.
     - R3-02 (`errRegistryWaitExpired`) in `capture/store.go` and `reconcile.go`, and the pure helper `childLinkRetentionOutcome` in `cmd/agentic-lens/capture.go`.
@@ -312,7 +312,7 @@ Each mutation was applied in a fresh scratch copy of `backend/`, never in the ch
 - **DATA-01 trigger.** The test interrupts the pass at the annotation write with a registry trigger, not with a cancelled context. A counting context, as the review probe used, depends on how many context checks the code makes, so it is not stable.
 - **Held by sibling (resolved in round 3).** A child that another final delegation holds is no longer reported or counted, because it stays linked.
 - **Refused links are reported once.** This applies to a smaller fresh group, a key without a fresh counterpart (`unmatched`), and a child displaced by a confirmed replacement (`displaced`). A refused link is never moved, so the publication of that pass holds the fresh delegations, and later passes no longer see it. The ambiguous CLI case asserts this. A partly re-read group keeps its unread links across passes.
-- **R2-P1 (pre-existing).** When two delegations share a task name and only one child is read, `resolveSourceChildren` points both at that child. FIX-21 tests do not cover it; it is recorded in REVIEW.md as a follow-up.
+- **R2-P1 (pre-existing).** When two delegations share a task name and only one child is read, `resolveSourceChildren` points both at that child. FIX-21 tests do not cover it; it is recorded in REVIEW_SUMMARY.json as a follow-up.
 - **Small `max_source_bytes` (accepted limit).** With an identification quarter under 64 KiB, an in-window rollout larger than the quarter, and not cached by another consumer, can stop a sweep at its cursor indefinitely. It shows as pending. A 12 KiB probe stayed at 10 of 18 owners for 80 passes. The BEH-01 tests therefore keep the quarter above the largest in-window rollout.
 - **Shared dedup state.** A copied `ReconcileResult` shares its counted-links map, so a retention call on a copy affects the original's deduplication. Tests use a separate request for each call.
 - **Contradiction warning.** It is still not surfaced by capture (accepted, pre-existing).

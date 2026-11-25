@@ -57,7 +57,7 @@ Owners with nil delegations, owners from other harnesses and owners that were no
 3. **Generation.** `--capture-auto` applies it once, through the single entry point `capture.RetainAcceptedChildLinks`, called from a helper in `cmd/agentic-lens/capture.go` that `main.go` calls once, right after reconcile succeeds.
    - It runs against `baseline.Current`, with the registry snapshots (`result.Sessions`) as `Known`, on `RefreshedSessions` and `RestoredSessions`.
    - **Busy classification.** Capture alone decides whether a failure counts as registry contention.
-     - When the bounded registry open and diagnostic write in `capture.RetainAcceptedChildLinks` fail after its deadline expires, capture wraps the error with the sentinel `errRegistryWaitExpired`.
+     - When the 2-second bounded registry open, diagnostic write or close in `capture.RetainAcceptedChildLinks` fails after its deadline has expired, capture wraps the error with the sentinel `errRegistryWaitExpired`, whatever the underlying cause.
      - `capture.IsRegistryContention` recognises that sentinel, as well as the SQLite busy and locked codes.
      - An ordinary expired context without the sentinel is not contention.
      - The CLI's pure helper `childLinkRetentionOutcome` maps the result to the busy exit only through `IsRegistryContention`.
@@ -131,6 +131,9 @@ Manual `generate` and backfill use `DiscoverRolloutPaths` and stay unchanged. Th
 - **OpenCode child pages.** They still consume session slots. This predates FIX-21.
 - **Refused and unmatched links are reported only once.** They are counted when refused, but they are not placed on any delegation afterwards, so a later pass that cannot re-read them has nothing left to report.
 - **R2-P1, pre-existing.** When two delegations share a task name and only one child is read, `resolveSourceChildren` points both at that child. FIX-21 did not introduce this. Since R3-01, a duplicated fresh child never confirms a replacement, so FIX-21 keeps the accepted links in that case. The resolver flaw itself remains for a follow-up ticket.
+- **R4-01, errors at the retention deadline.** Once the 2-second retention deadline has expired, any registry error from the open, write or close is marked busy, including a permanent error that arrives at the same moment. Such an error exits with 75, and the worker retries, rather than 1. No data is lost. A follow-up should mark only a contention or deadline cause.
+- **R4-02, a duplicated child that was never accepted.** When a fresh child that was never accepted is linked from several delegations (accepted `[A C]`, fresh `[B B]`), the duplicate is neither placed nor reported, while `A` and `C` stay counted as unresolved. This follows from R2-P1.
+- **R4-04, exit wiring.** The process exit wiring in `retainCaptureChildLinks` is verified by reading only. The pure helper `childLinkRetentionOutcome` is tested.
 - **ARCH-01, accepted debt.** The capture exact lookup duplicates the manual and live lookup rules. A follow-up should unify them.
 
 ### Owners
@@ -215,7 +218,7 @@ The discovery-budget spec and tasks were aligned with these. Verification adds a
 Verification asserts that the link is cleared, not that a warning appears, and covers both permitted exclusions.
 
 **Review DATA-02.** Reported by reviewer-data and reviewer-behavior in review round 1. The orchestrator decided it to restore the user's approved acceptance criterion 3, with no new scope. The "Ambiguous delegation provenance" scenario had lost "and the pass reports them as unresolved".
-- **Change.** An accepted link that the rule refuses to carry now counts as unresolved child evidence, deduplicated like retained pairs, which keeps the pass partial. This applies to an ambiguous key, an unknown invoked_at, or a child held by a sibling, when the accepted link existed, the fresh link is empty and there is no contradiction. The link is never moved.
+- **Change.** An accepted link that the rule refuses to carry now counts as unresolved child evidence, deduplicated like retained pairs, which keeps the pass partial. This applies to an ambiguous key, an unknown invoked_at, or a child held by a sibling, when the accepted link existed, the fresh link is empty and there is no contradiction. The link is never moved. *Superseded in part: a child held by a sibling is no longer a reported cause (see "R3 implementation sync").*
 - **Artifacts.** The scenario's THEN clause is restored, and the coverage requirement now names refused links. The other accepted review limits are listed under Known limits.
 - **Verification.** It adds a refused-link case that asserts the count, the deduplication and the partial attempt.
 
@@ -230,7 +233,7 @@ Verification asserts that the link is cleared, not that a warning appears, and c
   - a contradicted or already-held child skipped within a group;
   - idempotence.
 
-**Position alignment.** The user approved this on 2026-11-25 in the main conversation, choosing "Alinhar por posicao" over "Manter como esta", after review round 2 (R2-01, R2-02, R2-03; see [evidence/REVIEW.md](evidence/REVIEW.md)).
+**Position alignment.** The user approved this on 2026-11-25 in the main conversation, choosing "Alinhar por posicao" over "Manter como esta", after review round 2 (R2-01, R2-02, R2-03; see [evidence/REVIEW_SUMMARY.json](evidence/REVIEW_SUMMARY.json)).
 - **Problem.** A group that was only partly re-read was refused as a whole, so its unread links were lost from the registry and the ledger.
 - **Superseded.** This replaces the all-empty precondition of the 2026-11-24 "Ordinal group retention" entry.
 - **Decision.**
@@ -250,7 +253,7 @@ Verification asserts that the link is cleared, not that a warning appears, and c
 
 **R2 implementation sync.** The coder's report on 2026-11-25 removed two values that could no longer occur: the evidence value `ChildParentNotEvaluated` and the outcome `ChildLinkRefusedAmbiguous`. Complete groups emit no `ambiguous`, `unknown_provenance` or `unmatched` refusals; R3-05 narrowed this claim. Child parent evidence therefore has three states. A smaller fresh group places none of its accepted links, not even the overlapping prefix, and reports them as `ambiguous` (known invoked-at) or `unknown_provenance`. A key with no fresh counterpart is reported as `unmatched`. There is no change to scope or approval.
 
-**Review round 3 corrections.** The orchestrator made these within the approved acceptance: AC1 and AC3, no silent loss of accepted facts. The source is review round 3 (R3-01, R3-02, R3-05; see [evidence/REVIEW.md](evidence/REVIEW.md)).
+**Review round 3 corrections.** The orchestrator made these within the approved acceptance: AC1 and AC3, no silent loss of accepted facts. The source is review round 3 (R3-01, R3-02, R3-05; see [evidence/REVIEW_SUMMARY.json](evidence/REVIEW_SUMMARY.json)).
 - **R3-01.** A replacement could silently drop an accepted child: accepted `[A B]` with fresh `[B B]`, or accepted `[A B]` with fresh `["" A]`.
   - A fresh child linked from more than one fresh delegation of the parent never confirms a replacement.
   - An accepted child displaced by a replacement and left unlinked in the owner's final result is reported as refused, with reason `displaced`, so it counts as unresolved.
@@ -268,3 +271,8 @@ Verification asserts that the link is cleared, not that a warning appears, and c
 - **Held-by-sibling children.** They are never reported as refused, because another final delegation holds them by construction. The refusal reason `ChildLinkRefusalHeldBySibling` was removed, and the decision outcome `refused_held_by_sibling` remains. The spec's refusal causes and the coverage text no longer list it, and the Known limit about it counting as unresolved is withdrawn.
 - **Busy classification.** R3-02 is implemented through the `errRegistryWaitExpired` sentinel, `IsRegistryContention` and the `childLinkRetentionOutcome` helper.
 - **Displaced child.** `ChildLinkDecision.ReplacedChildID` records it.
+
+**Review round 4.** All eight runs approved (see [evidence/REVIEW_SUMMARY.json](evidence/REVIEW_SUMMARY.json)). Only documentation changed.
+- **R4-03.** The duplicated-child scenario no longer overstates retention. An accepted link is kept unless another final delegation holds that child, and an unlinked accepted child is reported as displaced. A probe of the current rule confirmed that `[A B C]` against fresh `[B B A]` yields `[B B A]`, with `C` displaced.
+- **R4-01, R4-02 and R4-04.** These are recorded under Known limits, and the busy-classification description now matches R4-01.
+- **R4-05.** The DATA-02 entry carries a superseding note.

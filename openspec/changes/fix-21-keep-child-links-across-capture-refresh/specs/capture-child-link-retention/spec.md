@@ -73,8 +73,9 @@ A refreshed link SHALL change only when the fresh read resolves the delegation t
 - **THEN** the fresh child replaces the accepted link
 
 #### Scenario: Fresh child duplicated across delegations
-- **WHEN** the fresh read links the same child from more than one delegation of the parent, for example accepted `[A, B]` and fresh `[B, B]`
-- **THEN** that duplicated child does not confirm a replacement, and the accepted link at each such position is kept
+- **WHEN** the fresh read links the same child from more than one delegation of the parent, for example accepted `[A, B, C]` and fresh `[B, B, A]`
+- **THEN** the duplicated fresh child does not confirm a replacement, and at each such position the accepted link is kept unless another final delegation holds that child
+- **AND THEN** any accepted child left unlinked is reported as displaced: the result is `[B, B, A]`, `A` stays on its confirmed replacement position, and `C` is reported as displaced
 
 #### Scenario: Different child without confirming metadata
 - **WHEN** the fresh read reports a different child, this pass did not read that child, and no accepted metadata for it names this parent
