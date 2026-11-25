@@ -107,7 +107,7 @@ func (result *ReconcileResult) regroupArchiveFamily(group archiveReadGroup, regi
 	// Regrouping follows the same retention rule as the original annotation.
 	retention := domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: group.previous, Fresh: owners})
 	owners = retention.Sessions
-	result.retainedChildLinks = append(result.retainedChildLinks, retention.Report.UnresolvedLinks()...)
+	result.unresolvedChildLinks = append(result.unresolvedChildLinks, retention.Report.UnresolvedLinks()...)
 	result.SourceEvents = domain.MergeSourceEvents(result.SourceEvents, domain.SourceEvents{
 		Events: combined.Events, CheckpointEvidence: combined.CheckpointEvidence, CompleteSessionIDs: transcriptSessionIDs(transcripts),
 	})

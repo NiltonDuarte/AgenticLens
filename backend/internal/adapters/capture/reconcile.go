@@ -36,7 +36,7 @@ func (s *Store) QueueChild(ctx context.Context, store, path, parent string) erro
 
 type ReconcileResult struct {
 	archiveReadGroups     []archiveReadGroup
-	retainedChildLinks    []domain.ChildLink
+	unresolvedChildLinks  []domain.ChildLink
 	countedChildLinks     map[domain.ChildLink]bool
 	reconciliation        *domain.CaptureDiagnostic
 	IsolatedSources       []IsolatedSource                    `json:"-"`
@@ -130,7 +130,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 		if err := s.RecordDiagnostic(diagnosticCtx, diagnostic); err != nil {
 			returnErr = errors.Join(returnErr, fmt.Errorf("persisting reconciliation diagnostics: %w", err))
 		}
-		result.retainedChildLinks = nil
+		result.unresolvedChildLinks = nil
 		result.reconciliation = &diagnostic
 	}()
 	// Alternate ordinary and restore-prioritized rounds. The first eligible
@@ -310,7 +310,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	result.PendingChildren = pending
 	// Links kept without re-proof are unresolved child evidence, counted once
 	// beside pending child work for the same parent.
-	result.addUnresolvedChildLinks(result.retainedChildLinks)
+	result.addUnresolvedChildLinks(result.unresolvedChildLinks)
 	result.DiscoveryPending = budget.discoveryPending || discoveryPending
 	owners := map[string]string{}
 	for _, r := range registrations {
@@ -407,11 +407,14 @@ type ChildLinkRetention struct {
 // ledger. The request's registry snapshots are child evidence ahead of those
 // facts. Kept and refused links count as unresolved child evidence. When that
 // count grows, the request's reconciliation is recorded again as partial in
-// the project registry, which is opened only then. Transcript events are
-// unchanged.
+// the project registry, which is opened only then. With no accepted facts the
+// rule only clears fresh links that registry or fresh child records
+// contradict. Transcript events are unchanged. ctx must bound only this call:
+// when it expires during the registry open or write, the error satisfies
+// IsRegistryContention.
 func RetainAcceptedChildLinks(ctx context.Context, directory, project string, result *ReconcileResult, accepted []domain.SessionFact) (ChildLinkRetention, error) {
 	var retention ChildLinkRetention
-	if result == nil || len(accepted) == 0 {
+	if result == nil {
 		return retention, nil
 	}
 	refreshed := domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: accepted, Known: result.Sessions, Fresh: result.RefreshedSessions, Observed: result.RestoredSessions})
@@ -446,10 +449,15 @@ func RetainAcceptedChildLinks(ctx context.Context, directory, project string, re
 		return retention, nil
 	}
 	store, err := OpenProjectContext(ctx, directory, project)
-	if err != nil {
-		return retention, err
+	if err == nil {
+		err = errors.Join(store.RecordDiagnostic(ctx, diagnostic), store.Close())
 	}
-	return retention, errors.Join(store.RecordDiagnostic(ctx, diagnostic), store.Close())
+	if err != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		// The caller bounds only this registry open and diagnostic write. Its
+		// deadline expires while another process holds the registry.
+		err = fmt.Errorf("%w: %w", errRegistryWaitExpired, err)
+	}
+	return retention, err
 }
 
 // sourceRead never enters registry serialization or diagnostic publication.
@@ -985,7 +993,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			if discarded {
 				budget.refreshCursorHeld = true
 			}
-			retained, annotationErr := s.finishCaptureAnnotations(ctx, ticket, registrations, previousSnapshots, refreshed, &source, func(ctx context.Context, identity domain.CaptureIdentity, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
+			unresolved, annotationErr := s.finishCaptureAnnotations(ctx, ticket, registrations, previousSnapshots, refreshed, &source, func(ctx context.Context, identity domain.CaptureIdentity, apply func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error) {
 				if err := identity.Validate(); err != nil {
 					return domain.CaptureRegistration{}, err
 				}
@@ -996,7 +1004,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 				return s.changeRegistration(ctx, conn, id, apply)
 			}, policies)
 			if annotationErr == nil {
-				result.retainedChildLinks = append(result.retainedChildLinks, retained...)
+				result.unresolvedChildLinks = append(result.unresolvedChildLinks, unresolved...)
 			}
 			return annotationErr
 		})
@@ -1060,12 +1068,13 @@ func keepCurrentCaptureReads(registrations, current []domain.CaptureRegistration
 
 type captureAnnotationWriter func(context.Context, domain.CaptureIdentity, func(domain.CaptureRegistration) (domain.CaptureRegistration, error)) (domain.CaptureRegistration, error)
 
-// finishCaptureAnnotations returns the accepted child links it kept on
-// refreshed owners without re-proving them in this read.
+// finishCaptureAnnotations returns the accepted child links of refreshed
+// owners that this read did not re-prove: those it kept and those it refused
+// to place.
 func (s *Store) finishCaptureAnnotations(ctx context.Context, ticket string, registrations []domain.CaptureRegistration, previous []domain.SessionFact, refreshed map[string]bool, source *sourceRead, write captureAnnotationWriter, policies []domain.GenerationPolicy) ([]domain.ChildLink, error) {
 	// Native child metadata is request-local. Resolve only successfully read
 	// owners before saving the final lean snapshots; budgets bound these reads.
-	var retained []domain.ChildLink
+	var unresolved []domain.ChildLink
 	if len(source.transcripts) > 0 {
 		seenTranscriptOwners := make(map[string]bool)
 		for _, transcript := range source.transcripts {
@@ -1091,7 +1100,7 @@ func (s *Store) finishCaptureAnnotations(ctx context.Context, ticket string, reg
 		// accepted links it cannot re-prove; transcript events stay as read.
 		retention := domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: previous, Fresh: owners})
 		owners = retention.Sessions
-		retained = retention.Report.UnresolvedLinks()
+		unresolved = retention.Report.UnresolvedLinks()
 		byID := make(map[string]domain.SessionFact)
 		for _, owner := range owners {
 			byID[owner.ID] = owner
@@ -1153,7 +1162,7 @@ func (s *Store) finishCaptureAnnotations(ctx context.Context, ticket string, reg
 		}
 		registrations[i] = updated
 	}
-	return retained, nil
+	return unresolved, nil
 }
 
 func transcriptSessionIDs(transcripts []codex.Transcript) []string {

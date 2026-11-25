@@ -87,3 +87,30 @@ Reporters: behavior-opus O2, data-sonnet F5/F6, architecture-opus S5.
 | R2-T7 | 2 | The import-guard test runs `go list ./...`, which needs the gitignored `web/dist`. | tests-sonnet-r2 | Tester makes the guard independent of the embed. |
 | R2-T8 | 1 | There is no CLI ordinal or alignment end-to-end case; the `delete(refused)` guard is unprotected; the `refused_ambiguous` decision has no assertion. | tests-sonnet-r2, tests-opus-r2 | Tester. |
 | R2-P1 | 3 | Pre-existing: when two delegations share a task name and only one child is read, `resolveSourceChildren` points both at that child. | data-opus-r2 | Not introduced by FIX-21. Recorded as a pre-existing limit with a follow-up. |
+
+## Round 3 (re_review) at `5d4df7ee`
+
+- **Corrections reviewed:** delta `86eb6dae..5d4df7ee` (position alignment).
+- **Consolidated verdict:** CHANGES_REQUESTED on one silent-loss case (R3-01). Every R2 finding is verified as resolved.
+
+| Focus | Model / effort | Verdict | Report |
+|---|---|---|---|
+| Behavior | claude-opus-5-5 / medium | APPROVED | [behavior-opus-r3](review/behavior-opus-r3.md) |
+| Behavior | claude-sonnet-5-5 / high | APPROVED | [behavior-sonnet-r3](review/behavior-sonnet-r3.md) |
+| Data | claude-opus-5-5 / medium | APPROVED | [data-opus-r3](review/data-opus-r3.md) |
+| Data | claude-sonnet-5-5 / high | APPROVED | [data-sonnet-r3](review/data-sonnet-r3.md) |
+| Architecture | claude-opus-5-5 / medium | CHANGES_REQUESTED | [architecture-opus-r3](review/architecture-opus-r3.md) |
+| Architecture | claude-sonnet-5-5 / high | APPROVED | [architecture-sonnet-r3](review/architecture-sonnet-r3.md) |
+| Tests | claude-opus-5-5 / medium | APPROVED | [tests-opus-r3](review/tests-opus-r3.md) |
+| Tests | claude-sonnet-5-5 / high | APPROVED | [tests-sonnet-r3](review/tests-sonnet-r3.md) |
+
+| ID | Sev | Issue | Reported by | Disposition |
+|---|---|---|---|---|
+| R3-01 | 3 | A replacement can silently drop an accepted child. Two triggers: (a) a fresh child duplicated across delegations of the same parent, which comes from R2-P1 mis-resolution, is treated as a confirmed replacement (accepted `[A B]`, fresh `[B B]`); (b) a confirmed child that moves position (accepted `[A B]`, fresh `["" A]`) drops B unreported and reports A, which is still linked. | architecture-opus-r3 (A3-01), data-sonnet-r3 (N1), behavior-sonnet-r3 (BEH3-01), behavior-opus-r3 (OBS-1) | Confirmed. Relative to main the loss is pre-existing (behavior-sonnet-r3); relative to round 2 the reporting regressed (architecture-opus-r3). Coder: a fresh child linked from more than one fresh delegation of the parent never confirms a replacement; an accepted child displaced by a replacement and left unlinked is reported as refused with a typed `displaced` reason, so it counts as unresolved. |
+| R3-02 | 2 | The busy classification has two owners: the CLI's `DeadlineExceeded` check duplicates `IsRegistryContention`, and the comment overclaims. | architecture-sonnet-r3, architecture-opus-r3 (A3-05), behavior-opus-r3 (OBS-2), tests-opus-r3 | Coder: classify inside `capture.RetainAcceptedChildLinks`; the CLI uses one predicate. |
+| R3-03 | 1 | `ChildSessionID` means different things per outcome, and the replaced child is not recorded. Doc-comment order is wrong. The variable names say "retained" but hold unresolved links. | architecture-opus-r3, architecture-sonnet-r3 | Coder. |
+| R3-04 | 1 | The CLI stage returns early on an empty accepted ledger, so it skips clearing contradicted `Known` links. | data-sonnet-r3 (N3) | Coder evaluates; the registry stages already clear these links. |
+| R3-05 | 1-2 | Spec, design, tasks and `TESTS.md` text is stale: the refusal wording, Owners, the "complete groups" claim, the review range, the tested revision, and the held-by-sibling limit. | architecture-sonnet-r3, architecture-opus-r3 (A3-04), behavior-sonnet-r3 (BEH3-02) | Planner and tester. |
+| R3-T1 | 3 | No test protects the agent-type or invoked-at fields of the group key. | tests-sonnet-r3 | Tester. |
+| R3-T2 | 1-2 | No test covers the busy-exit mapping or the positive "remains partial" wording. | tests-sonnet-r3, tests-opus-r3 | Tester, through a pure helper seam if the coder exposes one. |
+| R3-T3 | 1 | Stale test comments; M27 is not explained. | tests-opus-r3, tests-sonnet-r3 | Tester. |

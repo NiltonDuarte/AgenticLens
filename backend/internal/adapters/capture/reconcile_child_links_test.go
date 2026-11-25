@@ -3,6 +3,7 @@ package capture_test
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -500,5 +501,67 @@ func ambiguousGroupPartialPasses(t *testing.T, readable map[string]bool) {
 		if partial.PendingChildren != unread {
 			t.Fatalf("pass %d unresolved child evidence = %d, want the %d unread links", pass, partial.PendingChildren, unread)
 		}
+	}
+}
+
+// FIX-21 R3-01(b): a re-read parent whose result now names child A for its
+// second delegation, and nothing for its first, replaces the accepted child B
+// there with the confirmed A. A stays linked and is not reported; B is linked
+// nowhere, so the pass counts it once as unresolved child evidence.
+func TestReconcileConfirmedChildMovingPositionCountsTheDisplacedChild(t *testing.T) {
+	s := openStore(t, t.TempDir())
+	home, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	active := filepath.Join(home, "sessions")
+	if err := os.MkdirAll(active, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	parentPath := filepath.Join(active, "move-parent.jsonl")
+	writeParent := func(outputs [2]string, tokens int) {
+		t.Helper()
+		var body strings.Builder
+		fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:00Z","type":"session_meta","payload":{"id":"move-parent","timestamp":"2026-11-24T09:00:00Z","cwd":"/fixture/project","source":"cli"}}`+"\n")
+		fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:01Z","type":"turn_context","payload":{"model":"fixture","turn_id":"turn-one"}}`+"\n")
+		for i, agent := range []string{"tester", "reviewer"} {
+			fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:0%dZ","type":"response_item","payload":{"type":"function_call","call_id":"spawn-%d","name":"spawn_agent","arguments":"{\"agent_type\":\"%s\"}"}}`+"\n", 5+2*i, i+1, agent)
+			encoded, err := json.Marshal(outputs[i])
+			if err != nil {
+				t.Fatal(err)
+			}
+			fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:00:0%dZ","type":"response_item","payload":{"type":"function_call_output","call_id":"spawn-%d","output":%s}}`+"\n", 6+2*i, i+1, encoded)
+		}
+		fmt.Fprintf(&body, `{"timestamp":"2026-11-24T09:03:00Z","type":"token_usage_record","payload":{"thread_id":"move-parent","turn_id":"turn-one","usage":{"input_tokens":%d,"output_tokens":2}}}`+"\n", tokens)
+		if err := os.WriteFile(parentPath, []byte(body.String()), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeParent([2]string{`{"agent_id":"move-child-a"}`, `{"agent_id":"move-child-b"}`}, 11)
+	registerBound(t, s, home, parentPath, "move-parent", childLinkTicket)
+	for _, child := range []string{"move-child-a", "move-child-b"} {
+		path := filepath.Join(active, child+".jsonl")
+		body := fmt.Sprintf(`{"timestamp":"2026-11-24T09:00:06Z","type":"session_meta","payload":{"id":%q,"parent_thread_id":"move-parent","timestamp":"2026-11-24T09:00:06Z","cwd":"/fixture/project"}}`+"\n"+
+			`{"timestamp":"2026-11-24T09:00:09Z","type":"token_usage_record","payload":{"thread_id":%q,"turn_id":"turn-one","usage":{"input_tokens":5,"output_tokens":2}}}`+"\n", child, child)
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		registerBound(t, s, home, path, child, childLinkTicket)
+	}
+	registry := childLinkRegistry{store: s}
+	full := registry.reconcile(t, fixtureByteBudget)
+	if links, _ := childLinkLinks(full.RefreshedSessions, "move-parent"); !slices.Equal(links, []string{"move-child-a", "move-child-b"}) {
+		t.Fatalf("fixture must accept [a b], got %q", links)
+	}
+	writeParent([2]string{`{"status":"started"}`, `{"agent_id":"move-child-a"}`}, 41)
+	moved := registry.reconcile(t, fixtureByteBudget)
+	want := []string{"", "move-child-a"}
+	for name, sessions := range map[string][]domain.SessionFact{"refreshed": moved.RefreshedSessions, "published": moved.Sessions, "registry": registry.snapshots(t)["move-parent"]} {
+		if links, _ := childLinkLinks(sessions, "move-parent"); !slices.Equal(links, want) {
+			t.Fatalf("%s links = %q, want %q", name, links, want)
+		}
+	}
+	if moved.PendingChildren != 1 || moved.UnresolvedParentLinks != 0 {
+		t.Fatalf("unresolved child evidence = %d, parent links = %d; want the displaced b once", moved.PendingChildren, moved.UnresolvedParentLinks)
 	}
 }

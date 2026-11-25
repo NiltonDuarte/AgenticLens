@@ -445,23 +445,86 @@ func TestRetainAcceptedChildLinksReportsRefusedLinks(t *testing.T) {
 			unresolved: []domain.ChildLink{link("C1"), link("C2")},
 		},
 		{
-			// The ordinal carry skips a child another final delegation holds.
-			name:       "a child held by another final delegation is refused within an ordinal group",
+			// Position alignment skips a child another final delegation holds.
+			// That child stays linked, so it is not reported as refused.
+			name:       "a child held by another final delegation is not duplicated or reported",
 			accepted:   []domain.SessionFact{linkOwner("P", "", first("C1"), first("C2"))},
 			fresh:      []domain.SessionFact{linkOwner("P", "", first(""), first(""), second("C1")), linkOwner("C1", "P")},
 			wantLinks:  []string{"", "C2", "C1"},
-			refused:    []domain.RefusedChildLink{{Link: link("C1"), Reason: domain.ChildLinkRefusalHeldBySibling}},
-			unresolved: []domain.ChildLink{link("C2"), link("C1")},
+			refused:    []domain.RefusedChildLink{},
+			unresolved: []domain.ChildLink{link("C2")},
 		},
 		{
-			name: "held by a confirmed sibling",
-			// The fresh read links C1 on the second delegation and confirms
-			// it; the first delegation's accepted C1 cannot move there. The
-			// refusal is reported because the delegation that had C1 lost it.
+			// R3-01(b): the fresh read moves the confirmed C1 to the second
+			// delegation, replacing the accepted C2 there. C1 stays linked and
+			// is not reported; C2 is linked nowhere, so it is displaced.
+			name:       "a confirmed child moving position displaces the accepted child",
 			accepted:   []domain.SessionFact{linkOwner("P", "", first("C1"), second("C2"))},
 			fresh:      []domain.SessionFact{linkOwner("P", "", first(""), second("C1")), linkOwner("C1", "P")},
 			wantLinks:  []string{"", "C1"},
-			refused:    []domain.RefusedChildLink{{Link: link("C1"), Reason: domain.ChildLinkRefusalHeldBySibling}},
+			refused:    []domain.RefusedChildLink{{Link: link("C2"), Reason: domain.ChildLinkRefusalDisplaced}},
+			unresolved: []domain.ChildLink{link("C2")},
+		},
+		{
+			name:       "a swap of confirmed children displaces nothing",
+			accepted:   []domain.SessionFact{linkOwner("P", "", first("C1"), second("C2"))},
+			fresh:      []domain.SessionFact{linkOwner("P", "", first("C2"), second("C1")), linkOwner("C1", "P"), linkOwner("C2", "P")},
+			wantLinks:  []string{"C2", "C1"},
+			refused:    []domain.RefusedChildLink{},
+			unresolved: []domain.ChildLink{},
+		},
+		{
+			name:       "a contradicted displaced child is not reported",
+			accepted:   []domain.SessionFact{linkOwner("P", "", first("C1"), second("C2")), linkOwner("C2", "Q")},
+			fresh:      []domain.SessionFact{linkOwner("P", "", first(""), second("C1")), linkOwner("C1", "P")},
+			wantLinks:  []string{"", "C1"},
+			refused:    []domain.RefusedChildLink{},
+			unresolved: []domain.ChildLink{},
+		},
+		{
+			// R3-01(a): one child resolved for two delegations, as task-name
+			// resolution does when only one of two same-named children is read,
+			// proves no position. It never confirms a replacement.
+			name:       "a fresh child linked from two delegations does not replace the accepted link",
+			accepted:   []domain.SessionFact{linkOwner("P", "", first("C1"), second("C2"))},
+			fresh:      []domain.SessionFact{linkOwner("P", "", first("C2"), second("C2")), linkOwner("C2", "P")},
+			wantLinks:  []string{"C1", "C2"},
+			refused:    []domain.RefusedChildLink{},
+			unresolved: []domain.ChildLink{link("C1")},
+		},
+		{
+			name:       "a fresh child duplicated within one key group does not replace the accepted link",
+			accepted:   []domain.SessionFact{linkOwner("P", "", first("C1"), first("C2"))},
+			fresh:      []domain.SessionFact{linkOwner("P", "", first("C2"), first("C2")), linkOwner("C2", "P")},
+			wantLinks:  []string{"C1", "C2"},
+			refused:    []domain.RefusedChildLink{},
+			unresolved: []domain.ChildLink{link("C1")},
+		},
+		{
+			// R3-T1: the agent type is part of the key, so a delegation of
+			// another agent type is no counterpart.
+			name:       "a different agent type is an unmatched key",
+			accepted:   []domain.SessionFact{linkOwner("P", "", linkDelegation("reviewer", "task-01", at1, "C1"))},
+			fresh:      []domain.SessionFact{linkOwner("P", "", first(""))},
+			wantLinks:  []string{""},
+			refused:    []domain.RefusedChildLink{{Link: link("C1"), Reason: domain.ChildLinkRefusalUnmatched}},
+			unresolved: []domain.ChildLink{link("C1")},
+		},
+		{
+			// R3-T1: a known invocation time is part of the key.
+			name:       "a different known invocation time is an unmatched key",
+			accepted:   []domain.SessionFact{linkOwner("P", "", linkDelegation("worker", "task-01", at2, "C1"))},
+			fresh:      []domain.SessionFact{linkOwner("P", "", first(""))},
+			wantLinks:  []string{""},
+			refused:    []domain.RefusedChildLink{{Link: link("C1"), Reason: domain.ChildLinkRefusalUnmatched}},
+			unresolved: []domain.ChildLink{link("C1")},
+		},
+		{
+			name:       "a different description is an unmatched key",
+			accepted:   []domain.SessionFact{linkOwner("P", "", linkDelegation("worker", "task-09", at1, "C1"))},
+			fresh:      []domain.SessionFact{linkOwner("P", "", first(""))},
+			wantLinks:  []string{""},
+			refused:    []domain.RefusedChildLink{{Link: link("C1"), Reason: domain.ChildLinkRefusalUnmatched}},
 			unresolved: []domain.ChildLink{link("C1")},
 		},
 		{
@@ -473,9 +536,9 @@ func TestRetainAcceptedChildLinksReportsRefusedLinks(t *testing.T) {
 			unresolved: []domain.ChildLink{link("C2")},
 		},
 		{
-			// Within an ordinal group the contradicted child is skipped and is
-			// not a refusal; its sibling is still carried.
-			name:       "contradicted child in an ordinal group is skipped, not refused",
+			// Within a group aligned by position the contradicted child is
+			// skipped and is not a refusal; its sibling is still kept.
+			name:       "contradicted child in an aligned group is skipped, not refused",
 			accepted:   []domain.SessionFact{linkOwner("P", "", first("C1"), first("C2")), linkOwner("C1", "Q")},
 			fresh:      []domain.SessionFact{linkOwner("P", "", first(""), first(""))},
 			wantLinks:  []string{"", "C2"},
@@ -533,8 +596,9 @@ func TestRetainAcceptedChildLinksReportsRefusedLinks(t *testing.T) {
 				t.Fatalf("unresolved = %+v, want %+v", got, tc.unresolved)
 			}
 			// Idempotence is about facts. The report of a second application
-			// can differ: an ordinal group the rule filled is then partly
-			// linked, so it is refused as a whole with nothing left to report.
+			// can differ: an accepted link the first application refused,
+			// displaced or kept is then judged against the rule's own output,
+			// where a refused or displaced child is already absent.
 			again := domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: tc.accepted, Fresh: result.Sessions})
 			if !reflect.DeepEqual(again.Sessions, result.Sessions) {
 				t.Fatalf("second application changed links: %q", ownerLinks(again.Sessions, "P"))
@@ -581,10 +645,10 @@ func TestRetainAcceptedChildLinksPrefersKnownChildEvidence(t *testing.T) {
 	}
 }
 
-// FIX-21 ordinal group retention: accepted link i of a key group is carried to
-// fresh delegation i when every fresh link of the group is empty and the fresh
-// group is at least as large.
-func TestRetainAcceptedChildLinksOrdinalGroups(t *testing.T) {
+// FIX-21 position alignment of unread groups: accepted link i of a key group
+// is kept on fresh delegation i when the fresh group is at least as large and
+// its children were not read.
+func TestRetainAcceptedChildLinksKeepsUnreadGroupsByPosition(t *testing.T) {
 	group := func(child string) domain.DelegationFact { return linkDelegation("tester", "", at1, child) }
 	accepted := []domain.SessionFact{linkOwner("P", "", group("C1"), group("C2")), linkOwner("C1", "P"), linkOwner("C2", "P")}
 	apply := func(accepted, fresh []domain.SessionFact) domain.ChildLinkResult {
@@ -693,12 +757,14 @@ func TestRetainAcceptedChildLinksAlignsGroupsByPosition(t *testing.T) {
 			refused:   []domain.RefusedChildLink{},
 		},
 		{
-			name:      "an untimed unique delegation takes a confirmed different child",
+			// The replaced C1 is linked nowhere afterwards, so it is reported
+			// as displaced (R3-01(b)).
+			name:      "an untimed unique delegation takes a confirmed different child and reports the displaced one",
 			accepted:  []domain.SessionFact{linkOwner("P", "", untimed("C1")), linkOwner("C9", "P")},
 			fresh:     []domain.SessionFact{linkOwner("P", "", untimed("C9"))},
 			wantLinks: []string{"C9"},
 			want:      []domain.ChildLinkOutcome{domain.ChildLinkReplaced},
-			refused:   []domain.RefusedChildLink{},
+			refused:   []domain.RefusedChildLink{{Link: domain.ChildLink{ParentID: "P", ChildSessionID: "C1"}, Reason: domain.ChildLinkRefusalDisplaced}},
 		},
 		{
 			name:      "a smaller fresh group is refused without decisions",
@@ -753,6 +819,84 @@ func TestRetainAcceptedChildLinksAlignsGroupsByPosition(t *testing.T) {
 				t.Fatalf("pass %d unresolved = %+v refused = %+v, want only C2 kept", pass, got, result.Report.Refused)
 			}
 			ledger = result.Sessions[:1]
+		}
+	})
+}
+
+// FIX-21 R3-01: a replacement records the child it replaced; a displaced
+// child is reported once and counted once; a duplicated fresh child never
+// confirms a replacement. Both shapes are idempotent and stable when the
+// output is fed back as the accepted ledger.
+func TestRetainAcceptedChildLinksReplacementsAndDisplacedChildren(t *testing.T) {
+	first := func(child string) domain.DelegationFact { return linkDelegation("worker", "task-01", at1, child) }
+	second := func(child string) domain.DelegationFact { return linkDelegation("worker", "task-02", at2, child) }
+	apply := func(accepted, fresh []domain.SessionFact) domain.ChildLinkResult {
+		return domain.RetainAcceptedChildLinks(domain.ChildLinkInput{Harness: domain.SourceCodex, Accepted: accepted, Fresh: fresh})
+	}
+	t.Run("displaced", func(t *testing.T) {
+		accepted := []domain.SessionFact{linkOwner("P", "", first("A"), second("B"))}
+		fresh := []domain.SessionFact{linkOwner("P", "", first(""), second("A")), linkOwner("A", "P")}
+		result := apply(accepted, fresh)
+		var replaced, held *domain.ChildLinkDecision
+		for i := range result.Report.Decisions {
+			switch decision := &result.Report.Decisions[i]; decision.Outcome {
+			case domain.ChildLinkReplaced:
+				replaced = decision
+			case domain.ChildLinkRefusedHeldBySibling:
+				held = decision
+			}
+		}
+		if replaced == nil || replaced.Delegation != 1 || replaced.ChildSessionID != "A" || replaced.ReplacedChildID != "B" {
+			t.Fatalf("replacement decision = %+v, want delegation 1 keeping A and replacing B", replaced)
+		}
+		if held == nil || held.Delegation != 0 || held.ChildSessionID != "A" {
+			t.Fatalf("held decision = %+v, want delegation 0 refused because A is held", held)
+		}
+		want := []domain.RefusedChildLink{{Link: domain.ChildLink{ParentID: "P", ChildSessionID: "B"}, Reason: domain.ChildLinkRefusalDisplaced}}
+		if !reflect.DeepEqual(result.Report.Refused, want) {
+			t.Fatalf("refused = %+v, want only B displaced", result.Report.Refused)
+		}
+		unresolved := 0
+		for _, link := range result.Report.UnresolvedLinks() {
+			if link.ChildSessionID == "A" {
+				t.Fatal("A is still linked and must not be unresolved")
+			}
+			if link.ChildSessionID == "B" {
+				unresolved++
+			}
+		}
+		if unresolved != 1 {
+			t.Fatalf("B counted %d times as unresolved, want once", unresolved)
+		}
+		if again := apply(accepted, result.Sessions); !reflect.DeepEqual(again.Sessions, result.Sessions) {
+			t.Fatalf("f(f(x)) links = %q", ownerLinks(again.Sessions, "P"))
+		}
+		// Fed back as accepted, the published ["" A] has no B left to report.
+		fedBack := apply(append(append([]domain.SessionFact(nil), result.Sessions[:1]...), linkOwner("A", "P")), fresh)
+		if !reflect.DeepEqual(fedBack.Sessions, result.Sessions) || len(fedBack.Report.Refused) != 0 {
+			t.Fatalf("fed back: links %q refused %+v", ownerLinks(fedBack.Sessions, "P"), fedBack.Report.Refused)
+		}
+	})
+	t.Run("duplicated fresh child", func(t *testing.T) {
+		accepted := []domain.SessionFact{linkOwner("P", "", first("A"), second("B"))}
+		fresh := []domain.SessionFact{linkOwner("P", "", first("B"), second("B")), linkOwner("B", "P")}
+		result := apply(accepted, fresh)
+		if got := ownerLinks(result.Sessions, "P"); !reflect.DeepEqual(got, []string{"A", "B"}) {
+			t.Fatalf("links = %q, want [A B]", got)
+		}
+		for _, decision := range result.Report.Decisions {
+			if decision.Outcome == domain.ChildLinkReplaced || decision.ReplacedChildID != "" {
+				t.Fatalf("a duplicated fresh child confirmed a replacement: %+v", decision)
+			}
+		}
+		if got := outcomes(result.Report); !reflect.DeepEqual(got, []domain.ChildLinkOutcome{domain.ChildLinkKeptPendingConfirmation}) || len(result.Report.Refused) != 0 {
+			t.Fatalf("outcomes = %v refused = %+v, want A kept pending confirmation", got, result.Report.Refused)
+		}
+		if again := apply(accepted, result.Sessions); !reflect.DeepEqual(again.Sessions, result.Sessions) {
+			t.Fatalf("f(f(x)) links = %q", ownerLinks(again.Sessions, "P"))
+		}
+		if fedBack := apply(result.Sessions[:1], fresh); !reflect.DeepEqual(fedBack.Sessions, result.Sessions) {
+			t.Fatalf("fed back links = %q", ownerLinks(fedBack.Sessions, "P"))
 		}
 	})
 }

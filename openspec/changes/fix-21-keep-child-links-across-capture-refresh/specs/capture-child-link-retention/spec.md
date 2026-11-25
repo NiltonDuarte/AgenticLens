@@ -62,7 +62,7 @@ Request-local transcript events SHALL keep only the child links that the current
 
 ### Requirement: Fresh source evidence decides changed links
 
-A refreshed link SHALL change only when the fresh read resolves the delegation to a different child whose native parent metadata names this parent. When fresh child metadata names a different parent or none, the link SHALL be cleared, even if it was accepted earlier. Source-level contradiction warnings SHALL behave as they do today; this change adds no new warning surface.
+A refreshed link SHALL change only when the fresh read resolves the delegation to a different child whose native parent metadata names this parent, and which no other fresh delegation of the parent also links. When fresh child metadata names a different parent or none, the link SHALL be cleared, even if it was accepted earlier. Source-level contradiction warnings SHALL behave as they do today; this change adds no new warning surface.
 
 #### Scenario: Fresh child contradicts the accepted link
 - **WHEN** a pass reads the parent and a linked child whose own metadata now names another parent
@@ -72,21 +72,33 @@ A refreshed link SHALL change only when the fresh read resolves the delegation t
 - **WHEN** the fresh read resolves a delegation to a different child whose metadata names this parent
 - **THEN** the fresh child replaces the accepted link
 
+#### Scenario: Fresh child duplicated across delegations
+- **WHEN** the fresh read links the same child from more than one delegation of the parent, for example accepted `[A, B]` and fresh `[B, B]`
+- **THEN** that duplicated child does not confirm a replacement, and the accepted link at each such position is kept
+
 #### Scenario: Different child without confirming metadata
 - **WHEN** the fresh read reports a different child, this pass did not read that child, and no accepted metadata for it names this parent
 - **THEN** the accepted link remains until a later read confirms the new child
 
 ### Requirement: Report retained and refused links as unresolved child evidence
 
-A capture pass SHALL count in `pending_children` ("Unresolved child evidence") each accepted link it retained without re-proving, and each accepted link it refused to carry onto an empty, uncontradicted fresh delegation. A child already counted for the same parent SHALL be counted once. Neither kind SHALL change parent links. A non-zero figure SHALL keep the reconciliation partial.
+A capture pass SHALL count in `pending_children` ("Unresolved child evidence") each accepted link it kept without re-proving, and each uncontradicted accepted link it refused: smaller fresh group, unmatched key, or child displaced by a replacement. A child still linked elsewhere in the owner's final result SHALL NOT be reported as refused. Each child counts once per parent. Parent links SHALL NOT change. A non-zero figure SHALL keep the reconciliation partial.
 
 #### Scenario: Registered children left unread
 - **WHEN** a pass refreshes a parent, retains links to registered children it did not read, and one of those children is already queued as pending child work for that parent
 - **THEN** unresolved child evidence increases by the number of distinct retained children not already queued, parent links are unchanged, and the reconciliation attempt is partial
 
 #### Scenario: Accepted link refused
-- **WHEN** a refreshed parent's accepted link that nothing contradicts cannot be kept, because its fresh group is smaller, its key has no fresh counterpart, or another delegation of the parent already holds the child
+- **WHEN** a refreshed parent's accepted link that nothing contradicts cannot be kept, because its fresh group is smaller, its key has no fresh counterpart, or a replacement displaced the child
 - **THEN** the link is not moved, unresolved child evidence counts that child once, and the reconciliation attempt is partial
+
+#### Scenario: Child held by another delegation
+- **WHEN** an accepted link cannot be kept at its position because another final delegation of the parent already holds that child
+- **THEN** the link is not duplicated, and the child is not reported as refused, because it remains linked
+
+#### Scenario: Child displaced by a replacement
+- **WHEN** a confirmed replacement takes a delegation whose accepted child is then linked nowhere in the owner's final result, for example accepted `[A, B]` and fresh `["", A]`
+- **THEN** the displaced child is reported as refused with reason `displaced` and counted once as unresolved, while a child still linked elsewhere, such as `A`, is not reported
 
 #### Scenario: Children unknown to the local registry
 - **WHEN** generation retains links from the accepted ledger for children that this machine's capture registry has never registered

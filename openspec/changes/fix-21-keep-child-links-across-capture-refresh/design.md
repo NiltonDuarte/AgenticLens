@@ -40,12 +40,13 @@ The rule applies these decisions:
 - **At each position, the unique-delegation rules apply:**
   - an empty fresh link keeps the accepted link;
   - an equal link confirms it;
-  - a different child whose parent is confirmed replaces it;
+  - a different child whose parent is confirmed replaces it, unless that child is linked from more than one fresh delegation of the parent, which never confirms a replacement;
   - a different child whose parent is unconfirmed keeps the accepted link;
   - a contradicted child is cleared, and a contradicted accepted child is never kept.
-- **Held by another delegation.** A child held by another final delegation of the parent is not kept on a second one.
-- **Smaller fresh group.** When the fresh group is smaller than the accepted group, as with a truncated transcript, none of its accepted links is placed, and not even the overlapping positions are aligned. Each uncontradicted link is reported as refused, with reason `ambiguous` when the key has a known invoked-at and `unknown_provenance` when it does not. Only this refusal path emits those reasons. Complete groups emit no refusal decisions.
+- **Held by another delegation.** A child held by another final delegation of the parent is not kept on a second one. The decision outcome `refused_held_by_sibling` records this, but the child is never reported as a refusal, because by construction it stays linked.
+- **Smaller fresh group.** When the fresh group is smaller than the accepted group, as with a truncated transcript, none of its accepted links is placed, and not even the overlapping positions are aligned. Each uncontradicted link is reported as refused, with reason `ambiguous` when the key has a known invoked-at and `unknown_provenance` when it does not. Only this refusal path emits those reasons. Complete groups never emit `ambiguous`, `unknown_provenance` or `unmatched`. They can still emit the decision outcomes `refused_contradicted` and `refused_held_by_sibling`. The refusal reasons that count as unresolved are `ambiguous`, `unknown_provenance`, `unmatched` and `displaced`.
 - **No fresh counterpart.** An accepted key with no fresh delegation is reported as refused, with reason `unmatched`, and its link is not placed.
+- **Displaced child.** An accepted child displaced by a replacement and left unlinked in the owner's final result is reported as refused, with reason `displaced`. The replacement decision records the displaced child in `ChildLinkDecision.ReplacedChildID`. No refusal is reported for a child still linked elsewhere in that result.
 
 Owners with nil delegations, owners from other harnesses and owners that were not refreshed are untouched, and delegation order is preserved. Applying the rule again changes nothing. Events never receive retained links.
 
@@ -55,9 +56,14 @@ Owners with nil delegations, owners from other harnesses and owners that were no
 2. **Family annotation.** `finishCaptureAnnotations` and `regroupArchiveFamily` apply it again to the pass's grouped owners.
 3. **Generation.** `--capture-auto` applies it once, through the single entry point `capture.RetainAcceptedChildLinks`, called from a helper in `cmd/agentic-lens/capture.go` that `main.go` calls once, right after reconcile succeeds.
    - It runs against `baseline.Current`, with the registry snapshots (`result.Sessions`) as `Known`, on `RefreshedSessions` and `RestoredSessions`.
+   - **Busy classification.** Capture alone decides whether a failure counts as registry contention.
+     - When the bounded registry open and diagnostic write in `capture.RetainAcceptedChildLinks` fail after its deadline expires, capture wraps the error with the sentinel `errRegistryWaitExpired`.
+     - `capture.IsRegistryContention` recognises that sentinel, as well as the SQLite busy and locked codes.
+     - An ordinary expired context without the sentinel is not contention.
+     - The CLI's pure helper `childLinkRetentionOutcome` maps the result to the busy exit only through `IsRegistryContention`.
    - It runs before pending sync, merge, restore acknowledgement and publication.
 
-**Coverage.** Each distinct (parent, child) pair adds 1 to `ReconcileResult.PendingChildren`. A pair counts when an accepted link was kept without being re-proven. It also counts when an uncontradicted accepted link was refused: its fresh group is smaller, its key is unmatched, or another delegation holds the child. A refused link is never moved. No new counter or field is added.
+**Coverage.** Each distinct (parent, child) pair adds 1 to `ReconcileResult.PendingChildren`. A pair counts when an accepted link was kept without being re-proven. It also counts when an uncontradicted accepted link was refused: its fresh group is smaller (`ambiguous` or `unknown_provenance`), its key is unmatched (`unmatched`), or a replacement displaced it (`displaced`). A child still linked elsewhere in the owner's final result, including one held by a sibling delegation, is not reported. A refused link is never moved. No new counter or field is added.
 - **Deduplication.** A pair is not added again when one of these already counts it:
   - a `pending_starts` row with the same store, the same parent and `agent` equal to the child ID;
   - a `pending_children` row for the same parent whose path equals the child's registered transcript path. For a child not yet registered, the session ID claimed by the file name (`codex.RolloutNameSessionID`) is used only as a deduplication hint for counting, never as identity;
@@ -124,7 +130,7 @@ Manual `generate` and backfill use `DiscoverRolloutPaths` and stay unchanged. Th
 - **Very small `max_source_bytes`.** A very small value can stall identification. It shows as pending.
 - **OpenCode child pages.** They still consume session slots. This predates FIX-21.
 - **Refused and unmatched links are reported only once.** They are counted when refused, but they are not placed on any delegation afterwards, so a later pass that cannot re-read them has nothing left to report.
-- **R2-P1, pre-existing.** When two delegations share a task name and only one child is read, `resolveSourceChildren` points both at that child. FIX-21 did not introduce this. A follow-up ticket should fix it.
+- **R2-P1, pre-existing.** When two delegations share a task name and only one child is read, `resolveSourceChildren` points both at that child. FIX-21 did not introduce this. Since R3-01, a duplicated fresh child never confirms a replacement, so FIX-21 keeps the accepted links in that case. The resolver flaw itself remains for a follow-up ticket.
 - **ARCH-01, accepted debt.** The capture exact lookup duplicates the manual and live lookup rules. A follow-up should unify them.
 
 ### Owners
@@ -132,7 +138,7 @@ Manual `generate` and backfill use `DiscoverRolloutPaths` and stay unchanged. Th
 The coder owns these product files:
 - `domain/child_links.go`
 - `capture/reconcile.go`, `capture/archive_projection.go`, `capture/children.go`, `capture/source_database.go` and `capture/codex_context.go`
-- `codex/discovery.go` and `codex/discovery_budget.go`
+- `codex/discovery.go`, `codex/discovery_budget.go` and `codex/context.go`
 - `cmd/agentic-lens/capture.go`, `capture_worker.go` and the single call in `main.go`
 
 The tester owns the new and updated test files named in [tasks](tasks.md). The orchestrator owns integration, evidence, telemetry and the PR.
@@ -242,4 +248,23 @@ Verification asserts that the link is cleared, not that a warning appears, and c
   - an untimed unique delegation against an unconfirmed child;
   - CLI alignment end to end.
 
-**R2 implementation sync.** The coder's report on 2026-11-25 removed two values that could no longer occur: the evidence value `ChildParentNotEvaluated` and the outcome `ChildLinkRefusedAmbiguous`. Complete groups emit no refusal decisions. Child parent evidence therefore has three states. A smaller fresh group places none of its accepted links, not even the overlapping prefix, and reports them as `ambiguous` (known invoked-at) or `unknown_provenance`. A key with no fresh counterpart is reported as `unmatched`. There is no change to scope or approval.
+**R2 implementation sync.** The coder's report on 2026-11-25 removed two values that could no longer occur: the evidence value `ChildParentNotEvaluated` and the outcome `ChildLinkRefusedAmbiguous`. Complete groups emit no `ambiguous`, `unknown_provenance` or `unmatched` refusals; R3-05 narrowed this claim. Child parent evidence therefore has three states. A smaller fresh group places none of its accepted links, not even the overlapping prefix, and reports them as `ambiguous` (known invoked-at) or `unknown_provenance`. A key with no fresh counterpart is reported as `unmatched`. There is no change to scope or approval.
+
+**Review round 3 corrections.** The orchestrator made these within the approved acceptance: AC1 and AC3, no silent loss of accepted facts. The source is review round 3 (R3-01, R3-02, R3-05; see [evidence/REVIEW.md](evidence/REVIEW.md)).
+- **R3-01.** A replacement could silently drop an accepted child: accepted `[A B]` with fresh `[B B]`, or accepted `[A B]` with fresh `["" A]`.
+  - A fresh child linked from more than one fresh delegation of the parent never confirms a replacement.
+  - An accepted child displaced by a replacement and left unlinked in the owner's final result is reported as refused, with reason `displaced`, so it counts as unresolved.
+  - The spec adds scenarios for the duplicated child and the displaced child, and the refusal causes now include displacement.
+  - Verification adds both reproductions.
+- **R3-02.** Busy classification now has a single owner in capture. `capture.RetainAcceptedChildLinks` classifies registry contention, and the CLI uses that one predicate.
+- **R3-05.** Stale text is corrected:
+  - the coverage requirement now lists every refusal cause, plus the exemption for a child linked elsewhere;
+  - "complete groups" is narrowed;
+  - the Owners list gains `codex/context.go`;
+  - the R2-P1 limit is updated;
+  - `tasks.md` marks superseded text instead of deleting it.
+
+**R3 implementation sync.** The coder's report on 2026-11-25 recorded these changes. There is no change to scope or approval.
+- **Held-by-sibling children.** They are never reported as refused, because another final delegation holds them by construction. The refusal reason `ChildLinkRefusalHeldBySibling` was removed, and the decision outcome `refused_held_by_sibling` remains. The spec's refusal causes and the coverage text no longer list it, and the Known limit about it counting as unresolved is withdrawn.
+- **Busy classification.** R3-02 is implemented through the `errRegistryWaitExpired` sentinel, `IsRegistryContention` and the `childLinkRetentionOutcome` helper.
+- **Displaced child.** `ChildLinkDecision.ReplacedChildID` records it.

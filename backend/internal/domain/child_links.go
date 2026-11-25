@@ -57,9 +57,9 @@ const (
 	// ChildLinkRefusalUnmatched means no fresh delegation has the link's agent
 	// type, description and invocation time.
 	ChildLinkRefusalUnmatched ChildLinkRefusal = "unmatched"
-	// ChildLinkRefusalHeldBySibling means another delegation of the owner holds
-	// the accepted child.
-	ChildLinkRefusalHeldBySibling ChildLinkRefusal = "held_by_sibling"
+	// ChildLinkRefusalDisplaced means a confirmed fresh child replaced the
+	// accepted link and no delegation of the owner links the accepted child.
+	ChildLinkRefusalDisplaced ChildLinkRefusal = "displaced"
 )
 
 // RefusedChildLink is an accepted link the rule declined to carry. It is never
@@ -76,20 +76,32 @@ type ChildLink struct {
 }
 
 // ChildLinkDecision records one non-trivial decision. Delegation is the index
-// of the delegation within the fresh owner, whose order is preserved.
+// of the delegation within the fresh owner, whose order is preserved, and
+// FreshChildID is the link that delegation had as read. ChildSessionID is:
+//   - retained, retained by position or kept pending confirmation: the
+//     accepted child now on the delegation;
+//   - replaced: the confirmed fresh child that stays, with ReplacedChildID the
+//     accepted child it replaced;
+//   - refused as contradicted or held by a sibling: the accepted child that
+//     was not placed;
+//   - cleared: empty, FreshChildID being the cleared child.
 type ChildLinkDecision struct {
-	ParentID       string
-	ChildSessionID string
-	FreshChildID   string
-	Outcome        ChildLinkOutcome
-	Evidence       ChildParentEvidence
-	Delegation     int
+	ParentID        string
+	ChildSessionID  string
+	FreshChildID    string
+	ReplacedChildID string
+	Outcome         ChildLinkOutcome
+	Evidence        ChildParentEvidence
+	Delegation      int
 }
 
-// ChildLinkReport lists the decisions of one reconciliation, in owner and
-// delegation order. Delegations whose fresh link is kept as read are omitted.
-// Refused lists the accepted links, not contradicted, that the rule declined
-// to carry while their child is not linked from the delegation they had.
+// ChildLinkReport lists the decisions of one reconciliation in owner order.
+// For each owner, cleared links come first in delegation order, followed by
+// the decisions on paired accepted links in delegation order. Delegations
+// whose fresh link is kept as read are omitted. Refused lists, per owner, the
+// accepted links, not contradicted, that the rule did not place and that no
+// final delegation of the owner links: first those displaced by a replacement,
+// then those of key groups that could not be paired.
 type ChildLinkReport struct {
 	Decisions []ChildLinkDecision
 	Refused   []RefusedChildLink
@@ -162,8 +174,10 @@ type ChildLinkResult struct {
 // parent, a fresh link to a contradicted child is cleared, and a different
 // fresh child replaces the accepted link only when its parent is confirmed.
 // A group with fewer fresh than accepted delegations, or with no fresh
-// delegation, places none of its accepted links and reports them. Owners of other harnesses and owners with nil
-// delegations are returned unchanged. Inputs are never modified, and applying
+// delegation, places none of its accepted links and reports them. A fresh
+// child linked from several delegations of the owner never confirms a
+// replacement. Owners of other harnesses and owners with nil delegations are
+// returned unchanged. Inputs are never modified, and applying
 // the rule to its own result changes nothing.
 func RetainAcceptedChildLinks(input ChildLinkInput) ChildLinkResult {
 	result := ChildLinkResult{Sessions: append([]SessionFact(nil), input.Fresh...), Report: ChildLinkReport{Decisions: []ChildLinkDecision{}, Refused: []RefusedChildLink{}}}
@@ -281,6 +295,14 @@ func reconcileOwnerChildLinks(parent string, delegations, prior []DelegationFact
 		return decisions, nil
 	}
 	freshGroups, _ := childLinkGroups(delegations)
+	// A child linked from several fresh delegations was resolved by task name
+	// alone and proves no single position, so it never confirms a replacement.
+	linkedFrom := make(map[string]int, len(delegations))
+	for _, delegation := range delegations {
+		if delegation.ChildSession != "" {
+			linkedFrom[delegation.ChildSession]++
+		}
+	}
 	priorGroups, priorOrder := childLinkGroups(prior)
 	// Pair accepted position i with fresh position i in each key group, then
 	// decide the outcomes that do not depend on which children other
@@ -318,10 +340,11 @@ func reconcileOwnerChildLinks(parent string, delegations, prior []DelegationFact
 			switch {
 			case entry.decision.Evidence == ChildParentContradicted:
 				entry.decision.Outcome = ChildLinkRefusedContradicted
-			case current != "" && evidence(current, parent) == ChildParentConfirmed:
+			case current != "" && linkedFrom[current] == 1 && evidence(current, parent) == ChildParentConfirmed:
 				entry.decision.Outcome = ChildLinkReplaced
 				entry.decision.Evidence = ChildParentConfirmed
 				entry.decision.ChildSessionID = current
+				entry.decision.ReplacedChildID = match
 			default:
 				entry.movable = true
 			}
@@ -375,9 +398,9 @@ func reconcileOwnerChildLinks(parent string, delegations, prior []DelegationFact
 }
 
 // refusedChildLinks lists the accepted links, not contradicted, that the rule
-// did not place: a child held by a sibling at an empty fresh delegation, or a
-// link of a key group that could not be paired. Unpaired links count only
-// while no final delegation links their child.
+// did not place and that no final delegation links: a child displaced by a
+// confirmed replacement, or a link of a key group that could not be paired.
+// A child held by a sibling is linked, so it is never listed.
 func refusedChildLinks(parent string, delegations, prior []DelegationFact, decisions []ChildLinkDecision, unplaced map[childLinkKey]ChildLinkRefusal, evidence func(child, parent string) ChildParentEvidence) []RefusedChildLink {
 	refused := []RefusedChildLink{}
 	seen := map[ChildLink]bool{}
@@ -389,14 +412,14 @@ func refusedChildLinks(parent string, delegations, prior []DelegationFact, decis
 		seen[link] = true
 		refused = append(refused, RefusedChildLink{Link: link, Reason: reason})
 	}
-	for _, decision := range decisions {
-		if decision.Outcome == ChildLinkRefusedHeldBySibling && decision.FreshChildID == "" {
-			add(decision.ChildSessionID, ChildLinkRefusalHeldBySibling)
-		}
-	}
 	linked := make(map[string]bool, len(delegations))
 	for _, delegation := range delegations {
 		linked[delegation.ChildSession] = true
+	}
+	for _, decision := range decisions {
+		if decision.Outcome == ChildLinkReplaced && !linked[decision.ReplacedChildID] {
+			add(decision.ReplacedChildID, ChildLinkRefusalDisplaced)
+		}
 	}
 	for _, delegation := range prior {
 		reason, ok := unplaced[delegationLinkKey(delegation)]

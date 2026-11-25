@@ -3,6 +3,8 @@ package capture_test
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -306,5 +308,80 @@ func TestRetainAcceptedChildLinksReportsALinkKeptAndRefusedAsKept(t *testing.T) 
 	}
 	if retention.Kept != 1 || retention.Refused != 0 || retention.Added != 1 || result.PendingChildren != 1 {
 		t.Fatalf("retention = %+v, unresolved %d; want one kept link, no refusal, counted once", retention, result.PendingChildren)
+	}
+}
+
+// FIX-21 R3-01(a): one fresh child linked from two delegations, as task-name
+// resolution produces when only one of two same-named children is read, does
+// not replace the ledger's link on the other delegation.
+func TestRetainAcceptedChildLinksIgnoresADuplicatedFreshChild(t *testing.T) {
+	const at1, at2 = "2026-11-24T09:00:07.000Z", "2026-11-24T09:00:30.000Z"
+	accepted := []domain.SessionFact{retentionOwner("P", "", retentionDelegation("task-01", at1, "A"), retentionDelegation("task-02", at2, "B"))}
+	result := capture.ReconcileResult{RefreshedSessions: []domain.SessionFact{
+		retentionOwner("P", "", retentionDelegation("task-01", at1, "B"), retentionDelegation("task-02", at2, "B")),
+		retentionOwner("B", "P"),
+	}}
+	retention, err := capture.RetainAcceptedChildLinks(context.Background(), t.TempDir(), t.TempDir(), &result, accepted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := retentionLinks(result.RefreshedSessions, "P"); !slices.Equal(got, []string{"A", "B"}) {
+		t.Fatalf("links = %q, want the ledger's A kept pending confirmation", got)
+	}
+	if retention.Kept != 1 || retention.Refused != 0 || retention.Added != 1 || result.PendingChildren != 1 {
+		t.Fatalf("retention = %+v, unresolved %d; want A kept and counted once", retention, result.PendingChildren)
+	}
+}
+
+// FIX-21 R3-04: with no accepted ledger facts, generation still clears a
+// fresh link that the registry's newer child record contradicts.
+func TestRetainAcceptedChildLinksClearsContradictedLinksWithoutALedger(t *testing.T) {
+	const at1 = "2026-11-24T09:00:07.000Z"
+	result := capture.ReconcileResult{
+		RefreshedSessions: []domain.SessionFact{retentionOwner("P", "", retentionDelegation("task-01", at1, "C1"))},
+		Sessions:          []domain.SessionFact{retentionOwner("C1", "Q")},
+	}
+	retention, err := capture.RetainAcceptedChildLinks(context.Background(), t.TempDir(), t.TempDir(), &result, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := retentionLinks(result.RefreshedSessions, "P"); !slices.Equal(got, []string{""}) || retention.Cleared != 1 || retention.Added != 0 {
+		t.Fatalf("links = %q retention = %+v, want the contradicted link cleared and nothing counted", got, retention)
+	}
+}
+
+// FIX-21 R3-02: a bounded wait that expires while another connection holds
+// the registry is contention. An expired or cancelled context that capture
+// did not mark is not.
+func TestRetainAcceptedChildLinksMarksAnExpiredRegistryWaitAsContention(t *testing.T) {
+	fx := newRetentionFixture(t)
+	ctx := context.Background()
+	expiredRequest := fx.result
+	db, err := sql.Open("sqlite", filepath.Join(fx.store.RegistryDirectory(), "registry.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	holder, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer holder.Close()
+	if _, err := holder.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _, _ = holder.ExecContext(ctx, "ROLLBACK") }()
+	// The deadline is shorter than the registry's own busy allowance, so the
+	// wait ends by expiry rather than by a SQLite busy error.
+	expiring, cancel := context.WithTimeout(ctx, 150*time.Millisecond)
+	defer cancel()
+	_, err = capture.RetainAcceptedChildLinks(expiring, fx.state, fx.project, &expiredRequest, fx.accepted)
+	if err == nil || !errors.Is(err, context.DeadlineExceeded) || !capture.IsRegistryContention(err) {
+		t.Fatalf("an expired wait on a held registry = %v (contention %t), want a deadline marked as contention", err, capture.IsRegistryContention(err))
+	}
+	for _, unmarked := range []error{context.DeadlineExceeded, fmt.Errorf("opening registry: %w", context.DeadlineExceeded), context.Canceled} {
+		if capture.IsRegistryContention(unmarked) {
+			t.Fatalf("an unmarked context error was classified as contention: %v", unmarked)
+		}
 	}
 }
