@@ -92,9 +92,19 @@ func openRegistryContext(ctx context.Context, directory, name, project string, r
 	return openRegistryModeContext(ctx, directory, name, project, readOnly, "")
 }
 
-// IsRegistryContention identifies exclusively temporary SQLite lock errors.
-// A joined permanent error or expired context retains ordinary failure policy.
+// errRegistryWaitExpired marks a registry operation whose bounded wait
+// expired while another process held the registry. IsRegistryContention
+// reports it as contention.
+var errRegistryWaitExpired = errors.New("capture registry wait expired while the registry was held")
+
+// IsRegistryContention identifies exclusively temporary SQLite lock errors,
+// and a bounded registry wait that its owner marked as expired while the
+// registry was held. A joined permanent error or an unmarked expired context
+// retains ordinary failure policy.
 func IsRegistryContention(err error) bool {
+	if errors.Is(err, errRegistryWaitExpired) {
+		return true
+	}
 	switch cause := err.(type) {
 	case *sqlite.Error:
 		code := cause.Code() & 255

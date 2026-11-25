@@ -40,7 +40,11 @@ func TestReconcileCodexRecoversNestedSpawnWithoutChildCallbacks(t *testing.T) {
 			}
 			defer store.Close()
 			home := t.TempDir()
-			active := filepath.Join(home, "sessions", "2026", "01", "01")
+			// Every fixture ID is a UUIDv7 whose first 48 bits, 0x019c00000000,
+			// encode 2026-01-27T15:00:18.048Z. Directory, name and record times
+			// agree with that instant, as Codex writes them, so the capture
+			// creation-window pre-filter sees the same evidence as a real store.
+			active := filepath.Join(home, "sessions", "2026", "01", "27")
 			cache := filepath.Join(home, ".tmp", "plugins")
 			for _, directory := range []string{active, cache} {
 				if err := os.MkdirAll(directory, 0700); err != nil {
@@ -53,17 +57,17 @@ func TestReconcileCodexRecoversNestedSpawnWithoutChildCallbacks(t *testing.T) {
 				if parent != "" {
 					source = fmt.Sprintf(`{"subagent":{"thread_spawn":{"parent_thread_id":%q,"depth":%d}}}`, parent, depth)
 				}
-				body := fmt.Sprintf(`{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":%q,"cwd":%q,"source":%s}}
-{"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"fixture","turn_id":"turn-one"}}
-{"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"thread_id":%q,"turn_id":"turn-one","usage":{"input_tokens":%d,"output_tokens":2}}}
+				body := fmt.Sprintf(`{"timestamp":"2026-01-27T15:00:18.048Z","type":"session_meta","payload":{"id":%q,"cwd":%q,"source":%s}}
+{"timestamp":"2026-01-27T15:00:19Z","type":"turn_context","payload":{"model":"fixture","turn_id":"turn-one"}}
+{"timestamp":"2026-01-27T15:00:20Z","type":"token_usage_record","payload":{"thread_id":%q,"turn_id":"turn-one","usage":{"input_tokens":%d,"output_tokens":2}}}
 `, id, project, source, id, tokens)
 				if spawn != "" {
 					result := fmt.Sprintf(`{"agent_id":%q}`, spawn)
-					body += fmt.Sprintf(`{"timestamp":"2026-01-01T00:00:03Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn-nested","name":"spawn_agent","arguments":"{}"}}
-{"timestamp":"2026-01-01T00:00:04Z","type":"response_item","payload":{"type":"function_call_output","call_id":"spawn-nested","output":%q}}
+					body += fmt.Sprintf(`{"timestamp":"2026-01-27T15:00:21Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn-nested","name":"spawn_agent","arguments":"{}"}}
+{"timestamp":"2026-01-27T15:00:22Z","type":"response_item","payload":{"type":"function_call_output","call_id":"spawn-nested","output":%q}}
 `, result)
 				}
-				path := filepath.Join(directory, "rollout-2026-01-01T00-00-00-"+id+".jsonl")
+				path := filepath.Join(directory, "rollout-2026-01-27T15-00-18-"+id+".jsonl")
 				if err := os.WriteFile(path, []byte(body), 0600); err != nil {
 					t.Fatal(err)
 				}

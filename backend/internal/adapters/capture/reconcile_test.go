@@ -345,58 +345,84 @@ func TestReconcileRecoversSourceProvenChildAfterStartWithoutStop(t *testing.T) {
 }
 
 func TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities(t *testing.T) {
-	ctx := context.Background()
-	s := openStore(t, t.TempDir())
-	store := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
-		t.Fatal(err)
-	}
-	boundID := domain.CaptureIdentity{Source: domain.SourceCodex, Store: store}
-	for n := 0; ; n++ {
-		boundID.SessionID = fmt.Sprintf("bound-%d", n)
-		if strings.HasPrefix(capture.IdentityKey(boundID), "f") {
-			break
-		}
-	}
-	path := filepath.Join(store, "sessions", "bound.jsonl")
-	contents := writeRollout(t, path, boundID.SessionID, "", 10)
-	registerBound(t, s, store, path, boundID.SessionID, "TEST-100")
-	// All candidates must be inspected for exact uniqueness, but only the
-	// bound owner consumes a ticket refresh attempt or contributes facts.
-	discoveryBytes := int64(len(contents))
-	unassigned := []string{}
-	for n := 0; len(unassigned) < 4; n++ {
-		id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: store, SessionID: fmt.Sprintf("unassigned-%d", n)}
-		if capture.IdentityKey(id) >= capture.IdentityKey(boundID) {
-			continue
-		}
-		path := filepath.Join(store, "sessions", id.SessionID+".jsonl")
-		discoveryBytes += int64(len(writeRollout(t, path, id.SessionID, "", 99)))
-		if _, err := s.Register(ctx, id, path, "SessionStart"); err != nil {
-			t.Fatal(err)
-		}
-		unassigned = append(unassigned, id.SessionID)
-	}
-	allowance := discoveryBytes + int64(len(contents))
-	result, err := s.Reconcile(ctx, "TEST-100", "tester", 1, allowance, fixtureGenerationPolicy())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(result.Sessions) != 1 || result.Sessions[0].ID != boundID.SessionID || len(result.Registrations) != 1 || result.Registrations[0].State != domain.CaptureCurrent {
-		t.Fatalf("unassigned roots starved ticket: %+v", result)
-	}
-	if result.SourceAttempts != 1 || result.SourceBytes != allowance {
-		t.Fatalf("unassigned candidates consumed ticket attempts or escaped discovery accounting: %+v", result)
-	}
-	summary := capture.CoverageSummary(result)
-	for _, id := range unassigned {
-		if strings.Contains(summary, id) {
-			t.Fatalf("ticket summary disclosed unrelated unassigned session %q", id)
-		}
-	}
-	local, err := s.List(ctx)
-	if err != nil || len(local) != 5 {
-		t.Fatalf("local discovery lost unassigned roots: %+v %v", local, err)
+	// FIX-21 accounting oracle. Every candidate header is read once per pass
+	// and charged the bytes actually read; these rollouts are smaller than one
+	// header read chunk, so a header read consumes the whole file. The bound
+	// owner's exact lookup inspects all five candidates, because none is named
+	// by the rollout convention, and only the bound owner is extracted. The
+	// pass therefore charges every file once plus the bound owner's
+	// extraction, whatever the allowance. The tight allowance equals that sum,
+	// so the lookup exceeds extraction's three quarters during the rotating
+	// rounds and completes in the final leftover refresh. The roomy allowance
+	// shows that the figure is the work done, not the cap.
+	for _, tc := range []struct {
+		name  string
+		slack int64
+	}{
+		{"tight allowance", 1},
+		{"roomy allowance", 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			s := openStore(t, t.TempDir())
+			store := t.TempDir()
+			if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+				t.Fatal(err)
+			}
+			boundID := domain.CaptureIdentity{Source: domain.SourceCodex, Store: store}
+			for n := 0; ; n++ {
+				boundID.SessionID = fmt.Sprintf("bound-%d", n)
+				if strings.HasPrefix(capture.IdentityKey(boundID), "f") {
+					break
+				}
+			}
+			path := filepath.Join(store, "sessions", "bound.jsonl")
+			contents := writeRollout(t, path, boundID.SessionID, "", 10)
+			registerBound(t, s, store, path, boundID.SessionID, "TEST-100")
+			// All candidates must be inspected for exact uniqueness, but only the
+			// bound owner consumes a ticket refresh attempt or contributes facts.
+			headerBytes := int64(len(contents))
+			unassigned := []string{}
+			for n := 0; len(unassigned) < 4; n++ {
+				id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: store, SessionID: fmt.Sprintf("unassigned-%d", n)}
+				if capture.IdentityKey(id) >= capture.IdentityKey(boundID) {
+					continue
+				}
+				path := filepath.Join(store, "sessions", id.SessionID+".jsonl")
+				size := int64(len(writeRollout(t, path, id.SessionID, "", 99)))
+				if size >= 4096 {
+					t.Fatalf("fixture rollout %d bytes is not below one header read chunk", size)
+				}
+				headerBytes += size
+				if _, err := s.Register(ctx, id, path, "SessionStart"); err != nil {
+					t.Fatal(err)
+				}
+				unassigned = append(unassigned, id.SessionID)
+			}
+			work := headerBytes + int64(len(contents))
+			allowance := work * tc.slack
+			result, err := s.Reconcile(ctx, "TEST-100", "tester", 1, allowance, fixtureGenerationPolicy())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(result.Sessions) != 1 || result.Sessions[0].ID != boundID.SessionID || len(result.Registrations) != 1 || result.Registrations[0].State != domain.CaptureCurrent {
+				t.Fatalf("unassigned roots starved ticket: %+v", result)
+			}
+			if result.SourceAttempts != 1 || result.SourceBytes != work {
+				t.Fatalf("unassigned candidates consumed ticket attempts or escaped discovery accounting: attempts=%d bytes=%d, want 1 and %d (%d header bytes + %d extracted)",
+					result.SourceAttempts, result.SourceBytes, work, headerBytes, len(contents))
+			}
+			summary := capture.CoverageSummary(result)
+			for _, id := range unassigned {
+				if strings.Contains(summary, id) {
+					t.Fatalf("ticket summary disclosed unrelated unassigned session %q", id)
+				}
+			}
+			local, err := s.List(ctx)
+			if err != nil || len(local) != 5 {
+				t.Fatalf("local discovery lost unassigned roots: %+v %v", local, err)
+			}
+		})
 	}
 }
 
