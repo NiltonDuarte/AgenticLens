@@ -221,6 +221,33 @@ func syncDirectory(path string) error {
 	return errors.Join(f.Sync(), f.Close())
 }
 func durableReplace(path string, data []byte) error {
+	return durableReplaceWithMode(path, data, 0600)
+}
+
+func durableReplaceWithMode(path string, data []byte, mode os.FileMode) error {
+	if err := replacePublicationFile(path, data, mode); err != nil {
+		return err
+	}
+	return syncDirectory(filepath.Dir(capture.PublicationPath(path)))
+}
+
+// ReplaceOwnedPublicationFile atomically replaces an existing file through its
+// held workspace directory. The stage is unique and preserves the member mode.
+func ReplaceOwnedPublicationFile(path string, data []byte) error {
+	if capture.PublicationOwner(path) == nil {
+		return fmt.Errorf("replacement requires ownership of the resolved ledger directory")
+	}
+	info, err := capture.LstatPublicationFile(path)
+	if err != nil {
+		return fmt.Errorf("inspecting the publication member: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("publication member must be a regular file")
+	}
+	return replacePublicationFile(path, data, info.Mode().Perm())
+}
+
+func replacePublicationFile(path string, data []byte, mode os.FileMode) error {
 	path = capture.PublicationPath(path)
 	f, err := capture.CreatePublicationTemp(filepath.Dir(path), ".publication-stage-")
 	if err != nil {
@@ -232,7 +259,7 @@ func durableReplace(path string, data []byte) error {
 			fmt.Fprintln(os.Stderr, "publication staging cleanup:", e)
 		}
 	}()
-	if err = f.Chmod(0600); err == nil {
+	if err = f.Chmod(mode.Perm()); err == nil {
 		_, err = f.Write(data)
 	}
 	if err = errors.Join(err, f.Sync(), f.Close()); err != nil {
@@ -241,19 +268,23 @@ func durableReplace(path string, data []byte) error {
 	if err = capture.RenamePublicationFile(name, path); err != nil {
 		return err
 	}
-	return syncDirectory(filepath.Dir(path))
+	return nil
 }
 
 // restorePublicationArtifact keeps an already-restored file in place while
 // repeating the durability barriers required to finish recovery.
 func restorePublicationArtifact(path string, data []byte) error {
 	info, err := capture.LstatPublicationFile(path)
-	if err != nil || !info.Mode().IsRegular() || info.Size() != int64(len(data)) {
+	if err != nil || !info.Mode().IsRegular() {
 		return durableReplace(path, data)
+	}
+	mode := info.Mode().Perm()
+	if info.Size() != int64(len(data)) {
+		return durableReplaceWithMode(path, data, mode)
 	}
 	f, err := capture.OpenPublicationFile(path, os.O_RDONLY, 0)
 	if err != nil {
-		return durableReplace(path, data)
+		return durableReplaceWithMode(path, data, mode)
 	}
 	if publicationArtifactMatches(f, data) {
 		if err := errors.Join(f.Sync(), f.Close()); err != nil {
@@ -264,7 +295,7 @@ func restorePublicationArtifact(path string, data []byte) error {
 	if err := f.Close(); err != nil {
 		return err
 	}
-	return durableReplace(path, data)
+	return durableReplaceWithMode(path, data, mode)
 }
 
 func publicationArtifactMatches(file *os.File, data []byte) bool {

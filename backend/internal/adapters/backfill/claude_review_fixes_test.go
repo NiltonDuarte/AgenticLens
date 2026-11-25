@@ -246,6 +246,9 @@ func TestBackfillClaudeReadsEachUnrecoverableTreeOnce(t *testing.T) {
 	if got := reviewSessions(t, workspace)[reviewRoot]; got.Invocations[0].Tokens.Input != 5 {
 		t.Fatalf("an incomplete root keeps its stored snapshot: %+v", got)
 	}
+	if owner := claudeCoverageOwner(t, report.Results[0], reviewRoot); owner.Status != OwnerRetained || !strings.Contains(owner.Reason, "source session incomplete") {
+		t.Fatalf("an incomplete root must be retained with its reason: %+v", owner)
+	}
 }
 
 func TestBackfillClaudeAdoptsUnrecordedRootOnlyInsideProject(t *testing.T) {

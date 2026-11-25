@@ -186,6 +186,31 @@ func LoadTicketWorkspace(ticketID, project string, selection ...string) (result 
 // UpdateSummaryFile replaces only the managed metrics block, preserving other evidence.
 func UpdateSummaryFile(destPath, tableMD string) error {
 	destPath = capture.PublicationPath(destPath)
+	updated, _, err := PrepareSummaryUpdate(destPath, tableMD)
+	if err != nil {
+		return err
+	}
+	return WriteSummaryContents(destPath, updated)
+}
+
+// PrepareSummaryUpdate renders the managed metrics block against existing bytes.
+// A maintenance caller must hold publication ownership through the resulting write.
+func PrepareSummaryUpdate(destPath, tableMD string) ([]byte, bool, error) {
+	data, err := capture.ReadPublicationFile(destPath)
+	missing := errors.Is(err, os.ErrNotExist)
+	if err != nil && !missing {
+		return nil, false, fmt.Errorf("reading summary %s: %w", destPath, err)
+	}
+	existing := string(data)
+	updated, err := replaceSummaryMetrics(existing, tableMD)
+	if err != nil {
+		return nil, false, fmt.Errorf("updating summary %s: %w", destPath, err)
+	}
+	return []byte(updated), missing || updated != existing, nil
+}
+
+// WriteSummaryContents writes a summary already rendered under publication ownership.
+func WriteSummaryContents(destPath string, updated []byte) error {
 	parent := filepath.Dir(destPath)
 	// A held root permits creating descendants without recreating a moved or
 	// deleted workspace through its former path.
@@ -196,15 +221,7 @@ func UpdateSummaryFile(destPath, tableMD string) error {
 	} else if _, err := capture.StatPublicationFile(parent); err != nil {
 		return fmt.Errorf("creating summary directory: %w", err)
 	}
-	data, err := capture.ReadPublicationFile(destPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("reading summary %s: %w", destPath, err)
-	}
-	updated, err := replaceSummaryMetrics(string(data), tableMD)
-	if err != nil {
-		return fmt.Errorf("updating summary %s: %w", destPath, err)
-	}
-	if err := capture.WritePublicationFile(destPath, []byte(updated), 0644); err != nil {
+	if err := capture.WritePublicationFile(destPath, updated, 0644); err != nil {
 		return fmt.Errorf("writing summary %s: %w", destPath, err)
 	}
 	return nil

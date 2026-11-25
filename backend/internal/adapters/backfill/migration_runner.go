@@ -263,12 +263,19 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, location adapter
 		res.BackupPath = canonicalPath + ".bak"
 	}
 
-	var tableMD string
+	var summary []byte
 	if summaryPath != "" {
 		derivedLedger := domain.DeriveMetricsLedger(migrated, cfg)
-		tableMD = adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
+		tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
+		summary, _, err = adapters.PrepareSummaryUpdate(summaryPath, tableMD)
+		if err != nil {
+			res.Status = "error"
+			res.Error = err
+			issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, err))
+			return res, issues
+		}
 	}
-	if err := publishBackfillArtifacts(metricPath, data, summaryPath, tableMD, true); err != nil {
+	if err := publishBackfillArtifacts(metricPath, data, summaryPath, summary, true); err != nil {
 		res.Status = "error"
 		res.Error = err
 		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, err))
