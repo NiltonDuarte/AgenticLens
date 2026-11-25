@@ -47,22 +47,22 @@
   <li>
 <strong>Counting usage once.</strong> Each API response contributes its usage exactly once, even when it is split across content blocks, copied into forked or resumed transcripts, or seen again on refresh. Missing usage categories stay unknown rather than zero. Native model and effort values are kept as they are, including requested versus served models.</li>
   <li>
-<strong>Subagents and delegations.</strong> A native subagent becomes a child session only when the source proves its parentage. Its role comes from its native agent type through <code class="language-plaintext highlighter-rouge">role_mappings</code>. Skill and delegation occurrences are owned by the session that recorded them, following the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/133100bb04bc39b78b35ae194bd08ce221815d59/docs/OWNED_OCCURRENCES.md">owned-occurrence rules</a>. Children that cannot be read, and sessions launched independently, stay explicitly unresolved and never get an inferred parent.</li>
+<strong>Subagents and delegations.</strong> A native subagent becomes a child session only when the source proves its parentage. Its role comes from its native agent type through <code class="language-plaintext highlighter-rouge">role_mappings</code>. Skill and delegation occurrences are owned by the session that recorded them, following the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/be630e36202f5b3eba27962cc9e43dbbd2040ee1/docs/OWNED_OCCURRENCES.md">owned-occurrence rules</a>. Children that cannot be read, and sessions launched independently, stay explicitly unresolved and never get an inferred parent.</li>
   <li>
 <strong>Duration.</strong> Duration follows AL-64: completed turns are measured; an open turn counts as provisional time up to the snapshot cutoff and is replaced on refresh. Time between turns is never counted.</li>
   <li>
 <strong>Cost.</strong> Invocation cost is reported as unavailable. The <code class="language-plaintext highlighter-rouge">cost-state</code> estimate is not treated as observed spend (see open questions).</li>
   <li>
-<strong>Shared ledgers stay intact.</strong> Refresh replaces only owners whose sources are complete. It keeps Codex, OpenCode and other-machine sessions, owners whose transcripts are unavailable or were cleaned up, and unchanged repeat runs. The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/133100bb04bc39b78b35ae194bd08ce221815d59/TECHNICAL_GUIDELINES.md#portable-ledger-contract">portable ledger contract</a> applies.</li>
+<strong>Shared ledgers stay intact.</strong> Refresh replaces only owners whose sources are complete. It keeps Codex, OpenCode and other-machine sessions, owners whose transcripts are unavailable or were cleaned up, and unchanged repeat runs. The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/be630e36202f5b3eba27962cc9e43dbbd2040ee1/TECHNICAL_GUIDELINES.md#portable-ledger-contract">portable ledger contract</a> applies.</li>
   <li>
-<strong>Capability matrix.</strong> The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/133100bb04bc39b78b35ae194bd08ce221815d59/openspec/changes/al-63-verify-source-capabilities-across-harnesses/CAPABILITIES.md">source capability matrix</a> gains a Claude Code entry with the tested version, the evidence behind each claim and any unsupported cells.</li>
+<strong>Capability matrix.</strong> The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/be630e36202f5b3eba27962cc9e43dbbd2040ee1/openspec/changes/al-63-verify-source-capabilities-across-harnesses/CAPABILITIES.md">source capability matrix</a> gains a Claude Code entry with the tested version, the evidence behind each claim and any unsupported cells.</li>
   <li>
 <strong>Guidance.</strong> Setup, operator and developer guidance, the AGENTS.md rule 7 command and source references in <code class="language-plaintext highlighter-rouge">docs/OPENSPEC_WORKFLOW.md</code> name the <code class="language-plaintext highlighter-rouge">claude</code> source and its retention caveat.</li>
   <li>
 <strong>Real verification.</strong> Run against an installed Claude Code with a real root session and a native subagent. Record the version, source IDs, the deduplicated totals checked against the records, and the limits. Synthetic fixtures do not count as native evidence.</li>
 </ul>
 
-<p>Note: on 2026-11-24 the user removed keeping effort values and preserving requested versus served models from this ticket’s scope. Ledgers record only the served model. See the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/133100bb04bc39b78b35ae194bd08ce221815d59/openspec/changes/al-98-generate-ticket-metrics-from-claude-code-sessions/design.md#effort-and-requested-model-removed-from-scope">change design’s steering record</a>.</p>
+<p>Note: on 2026-11-24 the user removed keeping effort values and preserving requested versus served models from this ticket’s scope. Ledgers record only the served model. See the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/be630e36202f5b3eba27962cc9e43dbbd2040ee1/openspec/changes/al-98-generate-ticket-metrics-from-claude-code-sessions/design.md#effort-and-requested-model-removed-from-scope">change design’s steering record</a>.</p>
 
 <p>Out of scope: automatic capture (AL-99), live trace or observability services, API-equivalent pricing (AL2-6), effort display (AL2-8), and this repository’s own Claude Code instructions (GEN-30, related but not a dependency).</p>
 
@@ -79,7 +79,7 @@
 
 <p>Coordinate the shared backfill and CLI paths with AL-94 and AL-78.</p>
 
-<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/133100bb04bc39b78b35ae194bd08ce221815d59/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/133100bb04bc39b78b35ae194bd08ce221815d59/docs/REGRESSION_PREVENTION.md">regression boundaries</a> apply.</p>
+<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/be630e36202f5b3eba27962cc9e43dbbd2040ee1/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/be630e36202f5b3eba27962cc9e43dbbd2040ee1/docs/REGRESSION_PREVENTION.md">regression boundaries</a> apply.</p>
 </main>
   <footer>Published from the repository's ticket Markdown.</footer>
 </body>

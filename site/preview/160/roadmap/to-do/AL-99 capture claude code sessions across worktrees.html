@@ -32,7 +32,7 @@
   <li>
 <strong>Routing and source checks.</strong> Routing uses the validated session cwd, not the hook process directory. Configuration resolution, required local enablement and first-event initialization follow AL-79. A mismatch between the configured store and the runtime store is reported, and capture stops without reading another store.</li>
   <li>
-<strong>Binding.</strong> Binding to a ticket and publication follow AL-79 and the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/0de5f8bad5c3b9142db05e53664292e53d9b4289/openspec/changes/al-96-verify-automatic-ticket-metrics-capture-end-to-end-for-v3/specs/automatic-ticket-publication/spec.md">AL-96 pending snapshot contract</a>. A native subagent with proven parentage inherits its parent’s ticket unless it was bound explicitly. Sessions launched independently bind independently. Unbound sessions stay local and unassigned.</li>
+<strong>Binding.</strong> Binding to a ticket and publication follow AL-79 and the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/cc71eb4de197c43b7fcb0dca09e737d764d52aa7/openspec/changes/al-96-verify-automatic-ticket-metrics-capture-end-to-end-for-v3/specs/automatic-ticket-publication/spec.md">AL-96 pending snapshot contract</a>. A native subagent with proven parentage inherits its parent’s ticket unless it was bound explicitly. Sessions launched independently bind independently. Unbound sessions stay local and unassigned.</li>
   <li>
 <strong>Publication.</strong> Turn, subagent and session checkpoints publish coalesced, honest provisional snapshots without double counting. Retry is bounded, unresolved work is kept, and other harnesses and contributors are preserved.</li>
   <li>
@@ -52,7 +52,7 @@
 
 <p>Reuse the AL-79 runtime. Do not reimplement it per harness.</p>
 
-<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/0de5f8bad5c3b9142db05e53664292e53d9b4289/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/0de5f8bad5c3b9142db05e53664292e53d9b4289/docs/REGRESSION_PREVENTION.md">regression boundaries</a> apply.</p>
+<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/cc71eb4de197c43b7fcb0dca09e737d764d52aa7/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/cc71eb4de197c43b7fcb0dca09e737d764d52aa7/docs/REGRESSION_PREVENTION.md">regression boundaries</a> apply.</p>
 </main>
   <footer>Published from the repository's ticket Markdown.</footer>
 </body>
