@@ -52,12 +52,13 @@ def require_package(release, version):
 
 
 class Project:
-    def __init__(self, parent, source, version, binary, repository, prepared=False):
+    def __init__(self, parent, source, version, binary, repository, prepared=False, completion_feedback=False):
         self.source = source
         self.version = version
         self.runtime = binary
         self.repository = repository
         self.prepared = prepared
+        self.completion_feedback = completion_feedback
         self.root = parent
         self.checkout = parent / "project"
         self.home = parent / "home"
@@ -92,11 +93,11 @@ class Project:
         self.run("git", "add", ".gitignore", "fixture.py")
         self.run("git", "commit", "-qm", "Initial test project")
         self.run("git", "update-ref", "refs/remotes/origin/main", "HEAD")
-        if not prepared:
+        if not prepared or completion_feedback:
             (self.checkout / "staged-fixture.txt").write_text("Unrelated staged work.\n")
             self.run("git", "add", "--", "staged-fixture.txt")
         entrypoint = {"version": version}
-        if not prepared:
+        if not prepared or completion_feedback:
             entrypoint["pending_dir"] = str(self.pending.relative_to(self.checkout))
         write_json(self.checkout / ".agenticlens-config.yaml", {
             "agenticlens": entrypoint,
@@ -112,7 +113,7 @@ class Project:
             "generation": {
                 "metrics": {"skills": True, "delegations": True, "anomalies": False},
                 "summary": {"enabled": True, "filename": "delivery.md", "capture_observation": False},
-                "feedback": {"provisional_threshold_seconds": 0},
+                "feedback": {"provisional_threshold_seconds": 180 if completion_feedback else 0},
             },
             "code_metrics": {
                 "base_branch": "origin/main",
@@ -144,7 +145,8 @@ class Project:
                     # The second destination-block backoff is 40s at this cadence.
                     # Leave time in the 60s first-publication window for the native repair and commit.
                     "refresh_ms": 10000, "debounce_ms": 500, "idle_ms": 11000,
-                    "max_lifetime_ms": 180000, "pass_timeout_ms": 10000,
+                    "max_lifetime_ms": 360000 if completion_feedback else 180000,
+                    "pass_timeout_ms": 30000 if completion_feedback else 10000,
                     "max_sessions": 32, "max_source_bytes": 16777216, "commit_warning": False,
                 },
             },
@@ -160,6 +162,9 @@ class Project:
 
     def configure_client(self, port):
         if self.source == "codex":
+            # The opt-in probe verifies this exact client and should not launch
+            # a durable app-server auto-updater from an isolated test home.
+            features = "\n[features]\ndaemon_auto_start = false\nin_app_updates = false\n" if self.completion_feedback else ""
             (self.codex_home / "config.toml").write_text(f"""model = "{MODEL}"
 model_provider = "gate"
 approval_policy = "never"
@@ -177,7 +182,7 @@ wire_api = "responses"
 request_max_retries = 0
 stream_max_retries = 0
 supports_websockets = false
-""")
+{features}""")
         else:
             write_json(self.checkout / "opencode.json", {
                 "model": "al96local/mock-model",
@@ -253,7 +258,7 @@ supports_websockets = false
             )
             return [dict(json.loads(record), sequence=sequence) for sequence, record in rows]
 
-    def trust_codex_hooks(self):
+    def trust_codex_hooks(self, timeout=20):
         # The normal first-launch screen saves native trust for the inspected
         # hooks in the isolated home. The fixture never writes trust hashes.
         hooks_path = self.codex_home / "hooks.json"
@@ -273,9 +278,10 @@ supports_websockets = false
 
         screen = ""
         folder_response_at = float("-inf")
+        hooks_response_at = float("-inf")
         hooks_approved = False
         config_path = self.codex_home / "config.toml"
-        deadline = time.monotonic() + 20
+        deadline = time.monotonic() + timeout
         try:
             while time.monotonic() < deadline:
                 screen = self.run(*tmux, "capture-pane", "-p")
@@ -283,11 +289,15 @@ supports_websockets = false
                     require("› 1. Trust and continue" in screen, "Codex workspace trust selection changed")
                     self.run(*tmux, "send-keys", "Enter")
                     folder_response_at = time.monotonic()
-                if not hooks_approved and "hooks are new or changed." in screen:
+                if "hooks are new or changed." in screen and time.monotonic() - hooks_response_at >= 1:
                     require(f"{len(expected)} hooks are new or changed." in screen and "Trust all and continue" in screen,
                             "Codex reported an unexpected hook trust prompt")
-                    self.run(*tmux, "send-keys", "Down", "Enter")
-                    hooks_approved = True
+                    if "› 1. Review hooks" in screen:
+                        self.run(*tmux, "send-keys", "Down")
+                    elif "› 2. Trust all and continue" in screen:
+                        self.run(*tmux, "send-keys", "Enter")
+                        hooks_approved = True
+                    hooks_response_at = time.monotonic()
                 trust = tomllib.loads(config_path.read_text()).get("hooks", {}).get("state", {})
                 if hooks_approved and len(trust) == len(expected) and all(
                     key.startswith(str(hooks_path) + ":") and record.get("trusted_hash", "").startswith("sha256:")
@@ -305,6 +315,11 @@ supports_websockets = false
     def native_command(self, stage, session=None):
         if self.source == "codex":
             args = [self.runtime, "exec", "--trust", "--json"]
+            if stage == "COMPLETION":
+                # Codex protects .git in workspace-write. This single run
+                # explicitly permits writes in the isolated checkout while
+                # retaining the normal hook approval from trust_codex_hooks.
+                args.extend(("--sandbox", "danger-full-access"))
             if session:
                 args.extend(("resume", session))
             else:
@@ -326,5 +341,6 @@ supports_websockets = false
             "DURING_DISCARD_BOUND": "AL96:DURING_DISCARD_BOUND Verify the edited fixture.py while the bound capture is discarded.",
             "RESTORE_BOUND": "AL96:RESTORE_BOUND Restore this bound capture using the native capture control.",
             "RESUME": "AL96:RESUME Verify the edited fixture.py on this normal continuation.",
+            "COMPLETION": "AL96:COMPLETION Finish the long fixture work, commit it, and check the metrics before returning.",
         }[stage])
         return args

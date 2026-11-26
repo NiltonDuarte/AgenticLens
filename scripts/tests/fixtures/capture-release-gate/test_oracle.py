@@ -1,14 +1,21 @@
 """Focused regressions for native release gate assertions."""
 
 from collections import Counter
+import fcntl
 import json
 from pathlib import Path
 from shlex import join
+import subprocess
+import sys
 from tempfile import TemporaryDirectory
+import time
 from types import SimpleNamespace
 import unittest
 
-from gate import assert_canonical_unchanged, birth_commit, canonical_discard_baseline, first_completion_commit
+from gate import (
+    FixtureProcess, assert_canonical_unchanged, birth_commit, canonical_discard_baseline, checkpoint_seen,
+    event_until, first_completion_commit, first_eligible_completion_publication,
+)
 from oracle import (
     Owner, artifact_matches_commit, capture_id, check_birth, check_complete, check_held, check_pending_identity,
     check_rollup, snapshot_matches_pending_record, unix_time,
@@ -76,6 +83,78 @@ class TicketDurationOracleTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "published duplicate tool rows"):
             check_complete((ledger, summary), "opencode", {"root": owner}, "root", "unrelated")
 
+
+class CompletionPublicationOracleTest(unittest.TestCase):
+    def test_later_success_cannot_hide_stale_first_independently_eligible_commit(self):
+        def reconciliation(sequence, started, cutoff):
+            return {"ticket_id": TICKET, "sequence": sequence, "phase": "reconciliation",
+                    "reconciliation": {"started_at": started, "cutoff": cutoff}}
+
+        def commit(sequence, checkpoint):
+            return {"ticket_id": TICKET, "sequence": sequence, "phase": "publication", "outcome": "committed",
+                    "owners": [{"session_id": "root", "checkpoint": checkpoint}]}
+
+        native_terminal = "2026-11-19T19:31:00Z"
+        source_read = "2026-11-19T19:31:00.5Z"
+        stale = "2026-11-19T19:30:59Z"
+        rows = [
+            reconciliation(2, "2026-11-19T19:30:58Z", source_read), commit(3, stale),
+            reconciliation(4, "2026-11-19T19:31:01Z", "2026-11-19T19:31:02Z"), commit(5, stale),
+            reconciliation(6, "2026-11-19T19:31:02Z", "2026-11-19T19:31:03Z"), commit(7, native_terminal),
+        ]
+        selected, _, basis = first_eligible_completion_publication(
+            rows, "root", unix_time(native_terminal), unix_time(source_read), 1,
+        )
+        self.assertEqual(selected["sequence"], 5)
+        self.assertEqual(basis, "source_visible_before_reconciliation")
+        self.assertFalse(checkpoint_seen(selected, "root", unix_time(native_terminal)))
+
+        rows[1] = commit(3, native_terminal)
+        selected, _, basis = first_eligible_completion_publication(
+            rows, "root", unix_time(native_terminal), unix_time(source_read), 1,
+        )
+        self.assertEqual(selected["sequence"], 3)
+        self.assertEqual(basis, "overlapping_native_observation")
+
+
+class CompletionFixtureCleanupTest(unittest.TestCase):
+    def test_stops_group_after_native_client_exits(self):
+        child = """\
+import fcntl, sys, time
+with open(sys.argv[1], 'w') as lease:
+    fcntl.flock(lease, fcntl.LOCK_EX)
+    print('ready', flush=True)
+    time.sleep(60)
+"""
+        leader = """\
+import subprocess, sys
+with subprocess.Popen((sys.executable, '-B', '-c', sys.argv[1], sys.argv[2]), stdout=subprocess.PIPE) as process:
+    assert process.stdout.readline().strip() == b'ready'
+    # Exit the native client independently of its still-running descendant.
+    import os
+    os._exit(0)
+"""
+        with TemporaryDirectory() as temporary:
+            lease_path = Path(temporary) / "lease"
+            process = FixtureProcess((sys.executable, "-B", "-c", leader, child, str(lease_path)),
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                self.assertEqual(process.wait(timeout=5), 0)
+                with lease_path.open("rb") as lease:
+                    with self.assertRaises(BlockingIOError):
+                        fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            finally:
+                process.stop()
+
+            def lease_released():
+                with lease_path.open("rb") as lease:
+                    try:
+                        fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    except BlockingIOError:
+                        return False
+                return True
+
+            event_until(time.monotonic() + 3, lease_released, "Exited client's descendant still owns its fixture lease")
 
 class NativeCaptureControlOracleTest(unittest.TestCase):
     def setUp(self):

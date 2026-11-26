@@ -185,17 +185,33 @@ Integrating AgenticLens into your repository requires zero changes to agent reas
 
 ### 4.1 Automatic publication and manual recovery
 
-Verify automatic publication and visible coverage before staging task-owned deliverables and telemetry. If native publication is unavailable, recover with manual generation after implementation, testing and review, close to the final commit so the snapshot includes the available work.
+An agent can commit code while its native interval is still open. The ledger can already record available usage and provisional duration. Once the work is complete, the agent can finish normally. On a supported installation, automatic capture refreshes the selected ticket after the harness records completion and the source exposes the facts. A metrics-only model turn is unnecessary.
+
+Verify settled publication and visible coverage before staging final telemetry. When the facts arrive after the code commit, record final metrics in a later telemetry commit.
+
+If automatic publication is unavailable, wait until native completion and the available usage are readable. From a separate shell in the selected checkout, run `generate` using the actual harness and exact root session ID. Use the selected ledger and summary paths for the ticket.
+
+```bash
+agentic-lens generate \
+  --source "<opencode|codex|claude>" \
+  --session-id "<EXACT_ROOT_SESSION_ID>" \
+  --ticket-id "<TICKET_ID>" \
+  --ticket-title "<TICKET_TITLE>" \
+  --ticket-type "<CONVENTIONAL_TYPE>" \
+  --json-output "<SELECTED_CHANGE_DIR>/agentic_metrics.json" \
+  --append "<SELECTED_CHANGE_DIR>/delivery.md"
+```
 
 ### 4.2 Nonce Generation and Ingestion Command (`generate`)
 
-For manual recovery, select the actual harness and exact root session ID or pass a unique execution nonce directly to `generate`:
+An agent running `generate` inside its own native session can select the extraction root by passing a unique execution nonce directly to `generate`.
 
 ```bash
 agentic-lens generate \
   --source "<opencode|codex|claude>" \
   --nonce "<GENERATED_NONCE>" \
   --ticket-id "<TICKET_ID>" \
+  --ticket-title "<TICKET_TITLE>" \
   --ticket-type "<CONVENTIONAL_TYPE>" \
   --json-output "<SELECTED_CHANGE_DIR>/agentic_metrics.json" \
   --append "<SELECTED_CHANGE_DIR>/delivery.md"
@@ -496,7 +512,7 @@ The explicit nonnegative integer is required when manual feedback is used: zero 
 
 Fresh native interval age is compared before rounding: 179999ms does not qualify, and 180000ms does. Individually known short intervals produce no feedback when only their sum reaches the threshold. Retained or unavailable native evidence may instead produce qualified invocation-subtotal guidance. Each diagnostic identifies the owning source/session/invocation, and source-open evidence does not establish that the invoking caller owns the interval or that a process remains executing.
 
-Installed generic command transports do not currently verify the caller's exact native interval. The command therefore uses qualified source-open or unavailable-evidence wording. It never ends a turn, schedules continuation or resumes itself. After the owner completes naturally, a user or supported harness action must initiate the next turn before refreshing telemetry. Diagnostics never enter ledgers, summaries, APIs or the dashboard, and optional feedback failures do not invalidate successful publication. Automatic lifecycle generation, backfill and ordinary reads do not emit these checkpoint diagnostics.
+Installed generic command transports do not currently verify the caller's exact native interval. The command therefore uses qualified source-open or unavailable-evidence wording. It leaves turn completion to the harness. After the owner completes naturally and the source exposes the facts, use [automatic publication or manual recovery](#41-automatic-publication-and-manual-recovery). Diagnostics never enter ledgers, summaries, APIs or the dashboard, and optional feedback failures do not invalidate successful publication. Automatic lifecycle generation, backfill and ordinary reads do not emit these checkpoint diagnostics.
 
 ### User capture installation and development output
 

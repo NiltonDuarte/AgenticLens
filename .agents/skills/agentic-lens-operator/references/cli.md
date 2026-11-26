@@ -99,13 +99,15 @@ agentic-lens generate --ticket-id ID --ticket-title TITLE --ticket-type TYPE [op
 - `--max-sessions COUNT`, `--max-source-bytes BYTES`: explicit positive automatic reconciliation budgets, taking precedence over selected local capture settings. The worker forwards admitted effective budgets to its generation child. Manual generation does not consume capture budgets; supplied values must still be positive.
 - `--anomalies`: print and record anomaly results for the target ticket.
 
-Example:
+Inside a native agent session, a literal nonce in the generation tool call can select the extraction root.
 
 ```bash
 agentic-lens generate --source opencode --nonce A7F39B2C --ticket-id PAY-42 --ticket-title "Reduce checkout latency" --ticket-type perf --json-output workspaces/PAY-42/agentic_metrics.json --append workspaces/PAY-42/delivery.md
 ```
 
-Generation writes the requested ledger and/or summary. Confirm those destinations before execution. Use a literal nonce. For Codex, select a known session ID or literal nonce as required by that installed version's help; do not guess a session based only on ticket text.
+Generation writes the requested ledger and/or summary. Confirm those destinations before execution. Use a literal nonce for nonce-based extraction. For Codex, confirm support for the chosen selector in the installed version's help. Select the session using native identity evidence.
+
+An eligible checkpoint during an open interval can describe the available provisional facts on stderr. After the owner finishes naturally, supported automatic capture refreshes the ledger when the native source exposes the facts. If automatic capture is unavailable, follow the [exact-session recovery example](../../../../docs/SETUP_MANUAL.md#41-automatic-publication-and-manual-recovery) from a separate shell in the selected checkout. Inspect capture diagnostics if a supported refresh is pending or has failed. A successful command alone does not establish that final usage was visible at that read.
 
 For Claude Code, `--session-id` takes the root session ID or a native subagent ID, which resolves to its root. A subagent becomes a child only when its `meta.json` `toolUseId` matches an `Agent` call in the same tree; unproven or unreadable subagents are reported and never given an inferred parent. Manual generation reads the store without capture budgets. Claude Code deletes transcripts after `cleanupPeriodDays`, so generate before cleanup; recorded facts of cleaned-up sessions are preserved. Automatic capture and `capture install --source claude` are not supported yet (AL-99). Engines older than Claude Code support reject ledgers containing a `claude` session.
 

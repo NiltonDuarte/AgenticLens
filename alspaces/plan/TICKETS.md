@@ -37,7 +37,7 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **File**: [AL-75](to-do/AL-75%20verify%20dependency%20integrity%20and%20build%20reproducibility.md)
 
 - **AL-78**: Make completion feedback effective across harnesses
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
+  - **Status**: In Progress; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-78](to-do/AL-78%20make%20completion%20feedback%20effective%20across%20harnesses.md)
 
 

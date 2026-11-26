@@ -35,6 +35,9 @@ class Owner:
     completed: int = 0
     open: int = 0
     cache_write: int | None = None
+    turns: int = 0
+    last_token_count: tuple[int, int, float] | None = None
+    message_usage: dict[str, tuple[int, int]] = field(default_factory=dict)
 
     @property
     def seconds(self):
@@ -82,6 +85,7 @@ def codex_owners(home):
                 version_model = payload["model"]
             if event["type"] == "event_msg" and kind == "task_started":
                 starts[payload["turn_id"]] = unix_time(event["timestamp"])
+                owner.turns += 1
             if event["type"] == "event_msg" and kind == "task_complete":
                 end = unix_time(event["timestamp"])
                 started = starts.pop(payload["turn_id"])
@@ -91,7 +95,12 @@ def codex_owners(home):
                 owner.latest_completion = max(owner.latest_completion, end)
                 owner.completed += 1
             if event["type"] == "event_msg" and kind == "token_count":
-                usage = (payload.get("info") or {}).get("total_token_usage")
+                info = payload.get("info") or {}
+                usage = info.get("total_token_usage")
+                last_usage = info.get("last_token_usage")
+                if last_usage:
+                    owner.last_token_count = (last_usage["input_tokens"], last_usage["output_tokens"],
+                                              unix_time(event["timestamp"]))
                 if usage:
                     owner.usage = Counter({
                         "input": usage["input_tokens"], "output": usage["output_tokens"],
@@ -120,9 +129,10 @@ def opencode_owners(path):
             open_messages = {}
             for message_id, session_id, text in db.execute("SELECT id, session_id, data FROM message"):
                 message = json.loads(text)
+                owner = owners[session_id]
+                owner.turns += 1
                 if message.get("role") != "assistant":
                     continue
-                owner = owners[session_id]
                 timing = message["time"]
                 if timing.get("completed") is not None:
                     owner.completed_intervals[message_id] = (message["modelID"], timing["created"], timing["completed"])
@@ -133,6 +143,7 @@ def opencode_owners(path):
                     owner.open += 1
                     open_messages[message_id] = (message["modelID"], timing["created"])
                 tokens = message["tokens"]
+                owner.message_usage[message_id] = (tokens["input"], tokens["output"])
                 cache_write = tokens["cache"]["write"]
                 require(type(cache_write) is int and cache_write >= 0, "Invalid native OpenCode cache-write counter")
                 owner.cache_write = (owner.cache_write or 0) + cache_write

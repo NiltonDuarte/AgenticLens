@@ -176,6 +176,8 @@ Follow [AGENTS.md](AGENTS.md#1-ticketed-and-ad-hoc-work) for ticket allocation, 
 
 Apply the [shared writing rules](AGENTS.md#artifact-writing-rules). Artifact purposes and length guidance belong to the producing skill: [development](.agents/skills/agentic-lens-dev/SKILL.md#setup--workspace-structure), [PO](.agents/skills/agentic-lens-po/SKILL.md#po-artifact-definitions), [management](.agents/skills/agentic-lens-management/SKILL.md#management-artifact-definitions) and [review](.agents/skills/agentic-lens-review/SKILL.md#evidence-and-outcomes).
 
+The native source can expose completion and final usage after the agent's code commit. Once the work is complete, let the agent finish its turn normally and verify the settled metrics through [automatic publication or manual recovery](docs/SETUP_MANUAL.md#41-automatic-publication-and-manual-recovery). If the code commit precedes source availability, use a later telemetry commit to version the settled facts.
+
 ### 7.1 Recording steering without restarting the ticket
 
 For material steering within the same change, record a short decision in its current `design.md`. Reconcile the active artifacts using the [OpenSpec workflow](docs/OPENSPEC_WORKFLOW.md#steering-an-active-change). Include the following in the decision.
