@@ -9,8 +9,8 @@
   "ticket_title": "Warn about staged pending capture snapshots",
   "ticket_type": "feat",
   "started_at": "2026-11-23T00:46:33.043Z",
-  "completed_at": "2026-11-24T14:46:36.184063+00:00",
-  "updated_at": "2026-11-24T14:46:36.184063+00:00",
+  "completed_at": "2026-11-26T00:09:05.462491+00:00",
+  "updated_at": "2026-11-26T00:09:05.462491+00:00",
   "code": {
     "lines_added": 1193,
     "lines_deleted": 33,
@@ -19,7 +19,7 @@
     "prod_lines_added": 605,
     "prod_lines_deleted": 33,
     "files_changed": 14,
-    "sdlc_iterations": 85
+    "sdlc_iterations": 87
   },
   "sessions": [
     {
@@ -759,28 +759,31 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 37,
+          "provisional_seconds": 99,
           "role": "",
           "model": "claude-opus-5-5",
           "started_at": "2026-11-24T00:06:32.885Z",
           "completed_at": null,
-          "active_duration_seconds": 673,
-          "turns": 6,
-          "tokens": {"input": 168, "output": 32765, "cache_read": 8542450, "reasoning": 9890, "peak_context": 157863},
+          "active_duration_seconds": 1212,
+          "turns": 10,
+          "tokens": {"input": 284, "output": 59534, "cache_read": 18789185, "reasoning": 13936, "peak_context": 225140},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
-          "user_iterations": 3
+          "user_iterations": 5
         }
       ],
       "tools": [
         {"name": "AskUserQuestion", "calls": 1, "errors": 0},
-        {"name": "Bash", "calls": 59, "errors": 0},
-        {"name": "Edit", "calls": 4, "errors": 0},
+        {"name": "Bash", "calls": 103, "errors": 3},
+        {"name": "Edit", "calls": 9, "errors": 0},
+        {"name": "Read", "calls": 1, "errors": 0},
         {"name": "TaskStop", "calls": 1, "errors": 0},
-        {"name": "ToolSearch", "calls": 3, "errors": 0},
-        {"name": "mcp__t3-code__t3_background_wait", "calls": 7, "errors": 2},
-        {"name": "mcp__t3-code__unwatch_pull_request", "calls": 1, "errors": 0}
+        {"name": "ToolSearch", "calls": 4, "errors": 0},
+        {"name": "mcp__t3-code__link_pull_request", "calls": 1, "errors": 0},
+        {"name": "mcp__t3-code__t3_background_wait", "calls": 10, "errors": 2},
+        {"name": "mcp__t3-code__unwatch_pull_request", "calls": 2, "errors": 0},
+        {"name": "mcp__t3-code__watch_pull_request", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     }
