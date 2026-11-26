@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 600 300" role="img" aria-labelledby="title desc">
+  <title id="title">Recorded history shared through Git</title>
+  <desc id="desc">A developer's local session yields a ledger and ticket summary. Git carries those recorded facts to a teammate on another machine, without copying the private source session store.</desc>
+  <rect width="600" height="300" fill="#111726"/>
+  <g font-family="system-ui, sans-serif">
+    <text x="28" y="37" fill="#94a3b8" font-size="14" letter-spacing="1.5">GIT HISTORY / SHARED TEAM UNDERSTANDING</text>
+    <g fill="#182238" stroke="#243049"><rect x="28" y="70" width="158" height="130" rx="6"/><rect x="220" y="70" width="160" height="130" rx="6"/><rect x="414" y="70" width="158" height="130" rx="6"/></g>
+    <g fill="#f1f5f9" font-size="16" font-weight="600"><text x="45" y="99">Developer</text><text x="239" y="99">Git history</text><text x="431" y="99">Team review</text></g>
+    <g fill="#94a3b8" font-size="14"><text x="45" y="130">Local sessions</text><text x="45" y="155">Generate facts</text><text x="239" y="130">Session ledger</text><text x="239" y="155">Ticket summary</text><text x="431" y="130">Another machine</text><text x="431" y="155">Compare the work</text></g>
+    <g fill="none" stroke="#60a5fa" stroke-width="2"><path d="M186 136h32m-9-6 9 6-9 6 M380 136h32m-9-6 9 6-9 6"/></g>
+    <path d="M47 178h120 M239 178h122 M433 178h120" stroke="#3b82f6" stroke-width="5" stroke-linecap="round"/>
+    <rect x="28" y="224" width="544" height="49" rx="5" fill="#182238"/>
+    <text x="44" y="254" fill="#60a5fa" font-size="14">Recorded history travels. Private source stores stay local.</text>
+  </g>
+</svg>
