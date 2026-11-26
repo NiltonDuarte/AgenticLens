@@ -50,11 +50,23 @@ agentic-lens --al-offline --al-project <PROJECT> capture install-user --user-sou
 
 Review exact additive hooks/plugin/state-ignore changes, then repeat without --dry-run under existing applicable approval. Every installed lifecycle/Git callback uses the stable native manager with explicit project context. Internal workers retain their selected native executable/version for a pass. Capture install, version output and files prove installation only: verify actual normal harness trust, callback, exact session/request, explicit agent response and available source extraction through status/diagnostics/verify. Independent roots require independent bindings; unknown ownership remains unassigned.
 
-After a shared pin change, explicitly install the release, preview owned setup refresh with the original store/state and repeat live verification. Old in-flight workers may finish; other cache versions remain intact. User hooks invoke the stable native manager; ordinary CLI and callbacks use the same offline resolver. No automatic trust changes or repository updater is supported. The optional install-check/uninstall-check integration is separately opt-in and advisory; it honors hooksPath, derives the committing worktree and refuses arbitrary-hook overwrites. No adopting-project CI/global Git settings are changed.
+After a shared pin change, explicitly install the release, preview owned setup refresh with the original store/state and repeat live verification. Old in-flight workers may finish; other cache versions remain intact. User hooks invoke the stable native manager; ordinary CLI and callbacks use the same offline resolver. No automatic trust changes or repository updater is supported. No adopting-project CI/global Git settings are changed.
 
 Publication writes the ledger and the summary selected by shared generation.summary policy, preserving facts and explaining coverage/freshness/failure. Reconciliation/publication evidence stays in local diagnostics. Unowned standalone report files are ignored and untouched; exact interrupted transactions retain authorized recovery. Local state deletion can lose bindings and pending observations; the native home cache does not move the capture database.
 
 See [CLI operations](../.agents/skills/agentic-lens-operator/references/cli.md) and [release/configuration profile](../.agents/skills/agentic-lens-operator/references/configuration.md#shared-release-authority-and-user-entrypoint).
+
+### Optional Git pre-commit advisory
+
+The advisory checks pending snapshots added or updated in the committing worktree's Git index under the shared `agenticlens.pending_dir`. It compares staged content with the current `HEAD`, or an empty tree for the first commit. An amend with no staged snapshot changes produces no snapshot warning. The advisory distinguishes captures awaiting a ticket from bound captures awaiting publication. Review the staged changes or unstage the snapshots if needed. AgenticLens leaves the index untouched and allows the commit to proceed.
+
+```sh
+agentic-lens --al-offline --al-project <PROJECT> capture install-check --repo <PROJECT> --dry-run
+```
+
+Review the effective hook path and action. To opt in, repeat without `--dry-run`. Set `telemetry.capture.commit_warning` in the selected local YAML to control the advisory. Use `capture uninstall-check` to remove an unchanged owned hook. Installation honors Git's effective `core.hooksPath`.
+
+If another integration already owns the hook, its owner can call the stable manager with `--al-offline --al-project "$project" capture check --repo "$project"`, where `project` is the output of `git rev-parse --show-toplevel` at runtime. Run the advisory as a best-effort command and preserve the existing hook's checks and exit status.
 
 ## 2. Agnostic Adoption for OpenCode Projects
 

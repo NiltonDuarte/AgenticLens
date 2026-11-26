@@ -11,3 +11,5 @@ Give developers an optional pre-commit warning when they stage a pending Agentic
 - The hook reports actionable warnings without changing the index or blocking the commit.
 
 Depends on the [AL-96 pending snapshot contract](../../../openspec/changes/al-96-verify-automatic-ticket-metrics-capture-end-to-end-for-v3/specs/automatic-ticket-publication/spec.md).
+
+[OpenSpec change](../../../openspec/changes/al-97-warn-about-staged-pending-capture-snapshots/proposal.md)

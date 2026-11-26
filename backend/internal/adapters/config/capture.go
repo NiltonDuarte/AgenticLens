@@ -10,6 +10,36 @@ import (
 	"strings"
 )
 
+// ResolveCommitWarning reads the Git advisory preference independently of
+// worker limits and the optional local state used to confirm discards.
+func ResolveCommitWarning(project string) (bool, error) {
+	selection, err := SelectConfig(project)
+	if err != nil {
+		return false, err
+	}
+	data, err := readSelectedLocal(selection)
+	if err != nil {
+		return false, err
+	}
+	nodes, err := configurationNodes(data)
+	if err != nil {
+		return false, err
+	}
+	const key = "telemetry.capture.commit_warning"
+	node := nodes[key]
+	if node == nil {
+		return false, fmt.Errorf("%s must be explicitly configured in the selected local YAML", key)
+	}
+	if err := requireNodeType(node, key, yaml.ScalarNode, "!!bool"); err != nil {
+		return false, err
+	}
+	var enabled bool
+	if err := node.Decode(&enabled); err != nil {
+		return false, fmt.Errorf("read %s: %w", key, err)
+	}
+	return enabled, nil
+}
+
 // ResolveCapture selects one whole local policy; no shared capture state is inherited.
 func ResolveCapture(project, stateOverride string) (domain.CaptureConfig, error) {
 	selection, err := SelectConfig(project)

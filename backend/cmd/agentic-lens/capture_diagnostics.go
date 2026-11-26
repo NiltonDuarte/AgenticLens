@@ -368,7 +368,7 @@ func inspectCapture(ctx context.Context, command, directory, project string, pol
 		if len(message) > 1800 {
 			message = message[:1800] + " See capture diagnostics."
 		}
-		_, err = fmt.Fprintln(output, "AgenticLens capture advisory:", message)
+		_, err = fmt.Fprintln(output, captureAdvisoryPrefix, message)
 	}
 	return err
 }

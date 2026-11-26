@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"agenticlens/internal/adapters/filesystem"
@@ -71,13 +72,8 @@ func resolvePendingDirectory(cfg domain.ProjectConfig, root string) (string, err
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", pendingDirectoryKey, err)
 	}
-	if dir == root || !insidePath(dir, root) {
-		return "", fmt.Errorf("%s must select a directory inside the project", pendingDirectoryKey)
-	}
-	for entry := dir; entry != root; entry = filepath.Dir(entry) {
-		if strings.EqualFold(filepath.Base(entry), ".git") {
-			return "", fmt.Errorf("%s cannot overlap Git metadata", pendingDirectoryKey)
-		}
+	if err := validatePendingPlacement(root, dir); err != nil {
+		return "", err
 	}
 	if info, err := os.Stat(dir); err == nil && !info.IsDir() {
 		return "", fmt.Errorf("%s must select a directory", pendingDirectoryKey)
@@ -107,6 +103,136 @@ func resolvePendingDirectory(cfg domain.ProjectConfig, root string) (string, err
 		}
 	}
 	return dir, nil
+}
+
+func validatePendingPlacement(root, directory string) error {
+	if directory == root || !insidePath(directory, root) {
+		return fmt.Errorf("%s must select a directory inside the project", pendingDirectoryKey)
+	}
+	for entry := directory; entry != root; entry = filepath.Dir(entry) {
+		if strings.EqualFold(filepath.Base(entry), ".git") {
+			return fmt.Errorf("%s cannot overlap Git metadata", pendingDirectoryKey)
+		}
+	}
+	return nil
+}
+
+// ResolveStagedPendingDirectories maps the shared selection to literal Git
+// paths. The configured path stays usable for index reads after its working
+// copy is removed or replaced. A valid physical alias can also hold snapshots.
+func ResolveStagedPendingDirectories(project string) ([]string, error) {
+	shared, err := FindConfigFile(project)
+	if err != nil {
+		return nil, err
+	}
+	if shared == "" {
+		return nil, ErrConfigNotFound
+	}
+	value, err := readPendingDirectoryValue(shared)
+	if err != nil {
+		return nil, err
+	}
+	if err := validatePendingDirectoryValue(value); err != nil {
+		return nil, err
+	}
+	selected, err := ResolveConfiguredPath(project, value)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", pendingDirectoryKey, err)
+	}
+	logical := filepath.Clean(selected)
+	candidates := []string{logical}
+	physical, physicalErr := filesystem.PhysicalPath(selected)
+	if traversesPendingParent(selected) {
+		// Cleaning before resolving changes parent traversal after a symlink.
+		// Such a lexical path cannot identify a second snapshot directory.
+		if physicalErr != nil {
+			return nil, fmt.Errorf("resolve staged %s: %w", pendingDirectoryKey, physicalErr)
+		}
+		candidates = []string{physical}
+	} else if physicalErr == nil && physical != logical {
+		if info, err := os.Stat(physical); errors.Is(err, os.ErrNotExist) || err == nil && info.IsDir() {
+			candidates = append(candidates, physical)
+		}
+	}
+	private := stagedPendingPrivatePaths(project)
+	var paths []string
+	var rejected error
+	for _, candidate := range candidates {
+		if err := validatePendingPlacement(project, candidate); err != nil {
+			rejected = errors.Join(rejected, err)
+			continue
+		}
+		if err := rejectPendingPrivateOverlap(candidate, private); err != nil {
+			rejected = errors.Join(rejected, err)
+			continue
+		}
+		relative, err := filepath.Rel(project, candidate)
+		if err != nil {
+			return nil, fmt.Errorf("resolve staged %s: %w", pendingDirectoryKey, err)
+		}
+		paths = append(paths, filepath.ToSlash(relative))
+	}
+	if len(paths) == 0 {
+		return nil, rejected
+	}
+	return paths, nil
+}
+
+// Only known private placements can disqualify an index path. A missing or
+// inaccessible local path leaves the shared staged selection usable.
+func stagedPendingPrivatePaths(project string) []string {
+	selection, err := SelectConfig(project)
+	if err != nil {
+		return nil
+	}
+	data, err := readSelectedLocal(selection)
+	if err != nil {
+		return nil
+	}
+	origin := filepath.Dir(selection.LocalPath)
+	var values []string
+	if entrypoint, err := parseEntrypoint(data, true); err == nil {
+		values = append(values, entrypoint.StateDir)
+	}
+	if captureState, present, err := captureStateValue(data); err == nil && present {
+		values = append(values, captureState)
+	}
+	var paths []string
+	for _, value := range values {
+		if value == "" {
+			continue
+		}
+		path, err := ResolveConfiguredPath(origin, value)
+		if err != nil {
+			continue
+		}
+		physical, physicalErr := filesystem.PhysicalPath(path)
+		if traversesPendingParent(path) {
+			if physicalErr == nil {
+				paths = append(paths, physical)
+			}
+			continue
+		}
+		logical := filepath.Clean(path)
+		paths = append(paths, logical)
+		if physicalErr == nil && physical != logical {
+			paths = append(paths, physical)
+		}
+	}
+	return paths
+}
+
+func traversesPendingParent(path string) bool {
+	return slices.Contains(strings.Split(filepath.ToSlash(path), "/"), "..")
+}
+
+func rejectPendingPrivateOverlap(directory string, private []string) error {
+	for _, path := range private {
+		if insidePath(directory, path) || insidePath(path, directory) {
+			return fmt.Errorf("%s must not overlap private state", pendingDirectoryKey)
+		}
+	}
+	return nil
 }
 
 // PendingDirectoryForSetup retains the target's existing choice unless the
