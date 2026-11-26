@@ -1,0 +1,15 @@
+package	make run1 race (load 14-31, 10m limit)	make run2 race (load 1-5, 10m limit)	json race (load avg 6.4, 60m limit)	json no-race (load ~5, 60m limit)
+cmd/agentic-lens	618 fail	495 fail	1086 fail	499 pass
+internal/adapters/capture	601 fail	421 pass	880 pass	187 pass
+internal/adapters/backfill	194 pass	57 pass	128 pass	37 pass
+internal/adapters	155 pass	59 pass	109 pass	27 pass
+internal/adapters/live	82 pass	20 pass	53 pass	16 pass
+internal/adapters/manager	81 pass	26 pass	51 pass	22 pass
+internal/adapters/opencode	60 pass	23 pass	41 pass	8 pass
+internal/adapters/http	34 pass	16 pass	25 pass	7 pass
+internal/adapters/config	17 pass	9 pass	12 pass	4 pass
+internal/adapters/codex	11 pass	8 pass	8 pass	4 pass
+internal/adapters/codex/codexstoretest	8 pass	4 pass	6 pass	3 pass
+internal/adapters/git	7 pass	4 pass	5 pass	3 pass
+internal/adapters/claude	3 pass	2 pass	2 pass	0 pass
+internal/adapters/web	1 pass	1 pass	1 pass	0 pass
