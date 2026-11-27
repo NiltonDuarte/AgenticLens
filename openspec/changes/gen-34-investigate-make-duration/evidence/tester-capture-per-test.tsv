@@ -1,0 +1,186 @@
+test	baseline_race_s	candidate_race_s	baseline_norace_s	candidate_norace_s	report_race_s	report_norace_s
+TestUserInstallationDurablePrefixesRecoverExplicitMigration	25.66	3.35	2.19	1.07	36.9	3.1
+TestUserMigrationCoordinatorCrashPrefixesPreserveCommitBoundary	24.69	3.12	2.27	0.95	33.4	3.8
+TestUserMigrationPublicInstallPreservesDeletedOwner	20.88	2.04	1.94	0.68	27.8	2.9
+TestUserMigrationCoordinatorCorruptionPreservesUnknownRecords	20.56	2.38	1.71	0.81	29.3	3.9
+TestUserHooksDoNotOwnOrReplaceManager	14.96	0.99	0.86	0.24	15.7	1.2
+TestRootRecoveryLocksInterruptedHomeEvenWhenCurrentHomeDiffers	15.04	1.75	1.29	0.56	18.0	1.7
+TestRetainedAdmissionRejectsSourceChangedAfterValidation	13.30	1.03	0.97	0.26	16.5	1.8
+TestUserMigrationDeletedCoordinatorRetainsPrivateUndo	12.36	1.39	1.02	0.41	17.0	2.1
+TestLargeStoreFamilyWithinCaptureBudget	23.10	13.28	3.36	2.29	40.3	5.7
+TestIncompatibleUserManagerDoesNotCreateOrChangeOwnedState	9.17	0.67	0.71	0.17
+TestUserRecoveryRejectsResourcesAddedAfterDiscovery	9.24	1.02	0.71	0.27
+TestDiagnosticHeadLookupWorkIndependentOfRotatingOwnerHistory	12.39	4.24	2.96	1.26	41.0	12.9
+TestUserMigrationDeletedOwnerPreservesUnknownSharedReference	7.87	0.84	0.63	0.31	13.2	1.0
+TestUserMigrationStaleReferenceCannotRecoverAnotherOwnersJournal	8.11	1.08	0.70	0.33
+TestRetainedExecutableSurvivesMutableOutputReplacement	6.68	0.41	0.53	0.14
+TestUncommittedUserRemovalKeepsProtectedWorktreeAdmission	5.53	0.50	0.47	0.18
+TestUserHooksModifiedOwnedCommandPreserved	5.25	0.30	0.29	0.17
+TestInterruptedUserMigrationPreservesEditAndResumesAfterResolution	5.63	0.72	0.46	0.22
+TestUserHooksInstallIdempotentAndOwnedRemoval	5.19	0.38	0.41	0.13
+TestUserMigrationDifferentHomeRecoversCanonicalOwnerBeforeCommit	4.55	0.59	0.42	0.21
+TestCodexInboxInstallInEmptySandboxTable	4.37	0.43	0.32	0.15
+TestUserRecoveryRefusesUnmatchedPrivateJournalEdit	4.60	0.67	0.47	0.17
+TestCodexCaptureControlInboxAuthenticatesScopeAndIsolatesStaleReplays	4.92	1.16	0.48	0.58
+TestCodexInboxRollbackPreservesDirectoryCreatedByUser	4.20	0.46	0.37	0.13
+TestCodexInboxInstallPreservesConcurrentAtomicSave	4.16	0.50	0.33	0.16
+TestCodexDestinationInboxAuthenticatesPurposeTicketAndRevision	4.10	0.68	0.52	0.28
+TestInstalledHealthOwnedConfigurationReadOnly	13.61	11.11	2.03	2.07	29.4	3.0
+TestWorkerSuccessorRequiresExactReadyInstallationAndOriginalState	6.29	4.75	1.24	1.16	16.6	2.2
+TestRelocationResumesInterruptedOwnedHookAndPluginBeforeManifest	11.72	10.33	40.21	39.14	76.3	57.9
+TestCompatibleGlobalWrapperUpdatePreservesOtherPinnedProject	2.51	1.72	0.66	0.67
+TestFIX19CodexDiscoveryCannotPermanentlyStarveFittingOpenCodeOwner	3.38	2.63	0.68	0.72
+TestInstallationManifestRecordsChangedOptionalProbeOnly	1.43	0.86	0.25	0.19
+TestInstallationManifestStableAndPinSwitchRequiresRefresh	2.08	1.52	0.35	0.26
+TestFIX19ReconcileAccountsExactDiscoveryWithinSharedOperationBudget	1.27	0.84	0.20	0.20
+TestInstalledStateDriftAliasRemovalAndDryRun	1.75	1.32	0.33	0.27
+TestGitCheckInvokesNativeManagerWithLiteralPath	1.18	0.75	0.89	0.89
+TestRegistryInvalidCachedSnapshotsRecoverFromUnchangedNativeSource	3.66	3.26	0.76	0.85	15.1	2.1
+TestOpenCodeChildDiscoveryContinuesPastAlreadyKnownPrefix	1.65	1.25	0.37	0.30
+TestReconcileFreshContradictingChildClearsItsRetainedLink	3.48	3.14	0.77	0.71
+TestLargeStoreIdentificationAllowance	3.74	3.43	1.10	1.00
+TestReconcileInterruptedAnnotationKeepsRegistryLinks	1.71	1.40	0.37	0.37
+TestReconcileArchivedCodexLateRegistryChangeExcludesSourceEvidence	1.92	1.63	0.42	0.41
+TestLegacyOpenCodeInstallationDiscovery	0.77	0.50	0.15	0.12
+TestInstallCallerCancellationDuringOptionalProbe	1.34	1.10	0.92	0.75
+TestOpenCodeCaptureRejectsMixedFamiliesRegardlessOfExactMembership	1.56	1.34	0.57	0.57
+TestInstallationIssuesSeparatesNamespaceConflictsFromDrift	0.79	0.61	0.26	0.14
+TestInitialCaptureHandoffInterruptionBeforeAndAfterCommit	0.54	0.39	0.11	0.13
+TestReconcileFatalCollisionRetainsCollectionFailureUntilCompletedRecovery	2.13	1.98	0.44	0.55
+TestDiagnosticCurrentFailuresSurvivePendingAndUnrelatedHistory	0.95	0.80	0.20	0.21
+TestRelocationRejectsReplacedDestinationOwnerAtEveryReservationBoundary	2.31	2.17	0.74	0.64
+TestReconcileSuccessfulReadPreservesParentConflictAndNormalPendingRecovery	1.09	0.95	0.27	0.23
+TestReconcileCodexRecoversNestedSpawnWithoutChildCallbacks	3.64	3.51	0.84	0.85
+TestDiagnosticInspectionBoundsRowsBytesAndPreservesRelevantCurrentState	1.53	1.40	0.35	0.33
+TestReconcileSchedulerEventuallyDiscoversStartOnlyChildWithPersistentFailedStop	0.90	0.77	0.24	0.25
+TestOpenCodeRegistrationNeverFallsBackToMatchingTitle	0.62	0.49	0.16	0.16
+TestRelocationBusySQLiteWriterPreservesSource	0.60	0.47	0.45	0.43
+TestCaptureReadOnlyDiagnosticsPreserveSettledFilesAndReadCommittedWAL	0.58	0.45	0.10	0.11
+TestReconcileArchivedCodexFailuresPreserveOwnerAndRefreshSibling	2.85	2.72	0.59	0.60
+TestReconcileArchivedUnassignedCodexChild	2.62	2.49	0.52	0.51
+TestBindArchivedUnboundCodex	1.50	1.37	0.34	0.35
+TestRelocationPreservesActualRecoverablePublicationJournal	0.95	0.83	0.17	0.19
+TestRelocationRejectsNamespaceAliasBeforeSourceFence	0.82	0.70	0.34	0.36
+TestRelocationPreservesScopedFactsAndFencesAlreadyOpenLegacyWriter	1.38	1.26	0.27	0.26
+TestReconcileArchivedBoundCodexChildPreservesParent	1.11	1.01	0.25	0.25
+TestReconcileReplacesCompleteRestoredSnapshotAndPreservesMissingSource	0.70	0.60	0.11	0.13
+TestNamespaceAliasesResolveOneContainedRegistry	1.72	1.62	0.50	0.48
+TestReconcileAmbiguousGroupLinksSurviveRepeatedPartialPasses	1.77	1.68	0.52	0.40
+TestCoordinationDirectoryNamesConcurrentFirstOpenAndStableReopen	1.04	0.95	0.28	0.29
+TestDiagnosticAttemptMetadataLegacyAndOlderWriterStayUnknown	0.34	0.25	0.05	0.07
+TestReconcileRejectsCanonicalIdentityCollisionAcrossStores	0.26	0.17	0.06	0.07
+TestRelocationContainedNamespaceAliasReopensPreservingEvidence	0.84	0.75	0.17	0.21
+TestReconcileArchivedRegroupKeepsAcceptedChildLink	0.58	0.49	0.11	0.09
+TestReconcileChargesDiscoveryAndExtractionOnceAndContinuesBudgetedWork	0.68	0.60	0.15	0.14
+TestNamespaceAliasesRejectEscapeAndMalformedTargetsBeforeAllocation	0.71	0.63	0.32	0.31
+TestRelocationExplicitPathsUseSelectedProjectAndHome	0.75	0.68	0.20	0.20
+TestReconcileConfirmedChildMovingPositionCountsTheDisplacedChild	0.57	0.50	0.16	0.11
+TestLargeStoreDeferredOwnerPrecedesLaterDiscoveryInFinalRefresh	1.53	1.47	0.49	0.36
+TestRetainAcceptedChildLinksReportsRegistryContention	1.53	1.47	1.11	1.13
+TestRetainAcceptedChildLinksReturnsDiagnosticWriteFailure	0.45	0.39	0.09	0.10
+TestDiagnosticIndexBackfillBudgetResumeAndLegacyWriterGap	0.30	0.24	0.06	0.08
+TestDiagnosticIndexScopeDoesNotScanOrCertifyAnotherWorktree	0.25	0.19	0.04	0.05
+TestDiagnosticHistoryOversizedRowDoesNotAdvanceCursor	0.19	0.13	0.03	0.04
+TestRelocationReservationFencesAllocationBeforeSourceRetirement	2.37	2.32	0.42	0.41
+TestRetainAcceptedChildLinksCountsRefusedLinksOnceBesideFreshLinks	0.52	0.47	0.12	0.12
+TestBindingRequestCannotReuseOldCallbackForNewInstallation	0.16	0.11	0.05	0.04
+TestReconcileVerifiesChildSourceAndIsolatesIndependentTickets	0.35	0.30	0.08	0.10
+TestFIX19DiscoveryCandidateAllowanceSurvivesSecondRefreshClass	0.33	0.28	0.08	0.09
+TestProjectReconciliationReceivesConfiguredAnomalyPolicy	0.33	0.28	0.07	0.05
+TestPublishedOwnerAssociationUsesSelectedFactsAndSourceInstallation	0.46	0.42	0.11	0.12
+TestRelocationRefusesUnknownSchemaBeforeFencing	0.25	0.21	0.12	0.12
+TestProjectStateAliasesIsolationAndCopiedOwnership	0.25	0.21	0.05	0.05
+TestRegistryTransactionRollbackAndConcurrentWriters	0.29	0.25	0.10	0.11
+TestChildSweepWindowFromNonV7ParentTimestamp	0.21	0.17	0.08	0.08
+TestCaptureOrdinarySourceWriteRejectsSupersededRestoreObservation	0.94	0.90	0.32	0.27
+TestUnsupportedCoordinateLayoutFailsWithoutChangingState	0.60	0.56	0.26	0.23
+TestRelocationRefusesSharedProtocolTwoWithoutChangingPeers	0.45	0.42	0.25	0.17
+TestGitCheckRuntimeWorktreeAndSharedHookIsolation	0.14	0.11	0.10	0.08
+TestCoordinationStateBaseUnderWorktreesRemainsAStateBase	0.48	0.45	0.15	0.13
+TestPublicationLockSharesPhysicalAliasBeforeAndAfterCreation	0.82	0.79	0.68	0.69
+TestGitCheckAdvisoryFailuresOutputAndDeadline	4.11	4.09	4.09	4.07
+TestCallbackProjectProofRetainsUnflushedAndForeignHandoffs	0.49	0.47	0.13	0.14
+TestHookInputBoundsAndUnsupportedEvent	0.14	0.12	0.03	0.03
+TestCoordinateAllocationSkipsReservedNamesAndBoundsCollisions	0.13	0.11	0.05	0.03
+TestGitCheckPreservesForeignEditedAndSymlinkHooks	0.08	0.06	0.06	0.05
+TestOpenCodeRestoreRejectsDiscoveryCursorFromBeforeReset	0.25	0.23	0.10	0.09
+TestBrandNewSweepAdmittingNothingWritesNoCursor	0.22	0.20	0.06	0.07
+TestAdministrativeRelocationGuardReadsIncompleteConfigWithoutLoadFallback	0.19	0.17	0.11	0.12
+TestCodexHookFeedbackBindsOnlyAnExplicitResponse	0.16	0.14	0.05	0.04
+TestRetainAcceptedChildLinksMarksAnExpiredRegistryWaitAsContention	0.48	0.46	0.23	0.24
+TestResumedSweepAtTheCeilingKeepsItsFileCursor	0.95	0.94	0.27	0.30
+TestDiagnosticLegacyPayloadDoesNotDelayDurableRegistration	0.66	0.65	0.12	0.14
+TestCoordinationUUIDFallbackPersistsAcrossGitEnrichment	0.33	0.32	0.13	0.12
+TestReconcilePreservesFactsWhenSourceParsingIsPartial	0.33	0.32	0.08	0.07
+TestInstallerPendingRecoveryPreservesEditsAndExactContext	0.22	0.21	0.13	0.12
+TestRegistryBindingRequiresExactSessionRequestAndPreservesConflicts	0.14	0.13	0.04	0.06
+TestSubagentHookDoesNotInventChildIdentityFromParentSession	0.13	0.12	0.07	0.04
+TestWorktreeRepositoryProofEnrichesOnlyUnchangedOwnership	0.07	0.06	0.07	0.06
+TestInstallerFailedWriteWithVisibleOutputRestoresBefore	0.05	0.04	0.03	0.03
+TestInstallNativeValidationDistinguishesExecutionAndIdentity	0.08	0.07	0.03	0.01
+TestPublicationRequiresOwningProjectForExternalHome	0.08	0.07	0.02	0.02
+TestInstallerInterruptedRollbackRetainsRecoverableOwnedOutputs	0.06	0.05	0.04	0.04
+TestRegistryCrashRecoveryRetainsCommittedRequest	0.21	0.20	0.05	0.05
+TestOpenCodeCaptureControlKeepsBindingCredentialsSeparate	0.30	0.30	0.07	0.09
+TestRelocationPreviewAndBusyWorkerDoNotChangeSource	0.24	0.24	0.12	0.12
+TestInstallOptionalProbeBoundsInheritedPipes	0.21	0.21	0.21	0.20
+TestInstallerFinalWriteCancellationRollsBack	0.20	0.20	0.14	0.12
+TestDiagnosticReadLegacyMissingMetadataNeverRepairsSchema	0.14	0.14	0.03	0.04
+TestCaptureSQLiteURIUsesPathAndEscapesFilenameForRealReadOnlyOpen	0.13	0.13	0.03	0.03
+TestInstallerOrdinaryFailureRollsBackOnlyOwnedPrefix	0.06	0.06	0.03	0.03
+TestGitCheckOwnershipPreviewUpgradeAndRemoval	0.06	0.06	0.05	0.04
+TestUnavailableOperationalStateStopsBeforeWorkspaceChanges	0.02	0.02	0.01	0.00
+TestRegistryContentionUsesRealSQLiteErrorAndRejectsOtherCauses	0.02	0.02	0.01	0.01
+TestProjectDestinationResolvesDanglingSymlinks	0.01	0.01	0.01	0.01
+TestProjectDirectoryTraversesSymlinksBeforeDotDot	0.01	0.01	0.00	0.00
+TestCodexInstalledHookWireBudgets	0.00	0.00	0.00	0.00
+TestTicketMetadataConflictOrder	0.00	0.00	0.00	0.00
+TestSourceProjectDescendantBoundary	0.00	0.00	0.00	0.00
+TestProjectNameNamespacePreservesConfiguredIdentity	0.00	0.00	0.00	0.00
+TestInitialCaptureHandoffProcess	0.00	0.00	0.00	0.00
+TestNativeBindingPromptUsesExecutableShellSyntaxAndLiteralArguments	0.00	0.00	0.00	0.00
+TestAutomaticDeactivationRetainsOtherIntegration	0.00	0.00	0.00	0.00
+TestCoverageSummaryDoesNotPublishLocalPathsOrBindingToken	0.00	0.00	0.00	0.00
+TestRetainAcceptedChildLinksRewritesRestoredSessions	0.00	0.00	0.00	0.00
+TestRetainAcceptedChildLinksUsesRegistrySessionsAsChildEvidence	0.00	0.00	0.00	0.00
+TestRetainAcceptedChildLinksReportsALinkKeptAndRefusedAsKept	0.00	0.00	0.00	0.00
+TestRetainAcceptedChildLinksIgnoresADuplicatedFreshChild	0.00	0.00	0.00	0.00
+TestRetainAcceptedChildLinksClearsContradictedLinksWithoutALedger	0.00	0.00	0.00	0.00
+TestCaptureInterruptedWriterProcess	0.00	0.00	0.00	0.00
+TestPublicationLeaseFollowsRealRenameAndRejectsOutsideScope	0.05	0.06	0.02	0.02
+TestPublicationReadRootSurvivesRenameAndRejectsEscapingMembers	0.00	0.01	0.00	0.00
+TestUnsupportedRegistryOpenDoesNotChangeLegacyDatabase	0.03	0.04	0.04	0.04
+TestOpenCodeRestoreRechecksCoveredOwnerAfterSilentSourceChange	1.15	1.16	0.31	0.25
+TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints	0.64	0.65	0.44	0.35
+TestReconcileArchivedCodexRootRejectsNewParent	0.31	0.32	0.07	0.08
+TestReconcileReportsCompletionAfterOwnerCheckpoint	0.27	0.28	0.06	0.06
+TestOpenCodeCaptureControlRequiresCurrentIndependentRoot	0.45	0.47	0.12	0.12
+TestReconcileSchedulerEventuallyRefreshesOwnerWhenFailedMetadataConsumesByteAllowance	0.33	0.35	0.09	0.09
+TestInstallerCompletedRecoveryRetainsExpiredAcceptance	0.27	0.29	0.18	0.14
+TestPublicationControlEmptyRegistryAndTicketRotation	0.13	0.15	0.04	0.04
+TestAdministrativeRelocationRejectsUnsupportedNameShapesWithoutWrites	0.07	0.09	0.02	0.02
+TestRegistryConstructorRejectsForeignDatabaseWithoutChangingIt	0.04	0.06	0.04	0.04
+TestQueuedCodexChildRecoveryContinuesPastMalformedAndMismatchedMetadata	0.71	0.73	0.17	0.17
+TestSessionAssociationChecksActualConflictsWithoutPrivateHistoryGate	0.43	0.45	0.15	0.13
+TestCoordinationDirectoryNameAliasesRejectUnknownAndRedirectedState	0.39	0.42	0.12	0.11
+TestPublicationGenerationAcknowledgesOnlyObservedWork	0.38	0.41	0.09	0.10
+TestExpiredRegistryConstructorDoesNotAllocateState	0.07	0.10	0.06	0.07
+TestRelocationReservationRefusesPriorDestinationWorkBeforeRetiringSource	0.82	0.85	0.33	0.32
+TestReconcileExplicitChildTicketDoesNotBlockOrReassignParent	0.56	0.60	0.13	0.10
+TestArchiveRefreshRejectsStaleRegistryObservation	0.55	0.59	0.10	0.12
+TestSharedRegistryRefusesReusedWorktreeButAllowsNormalWrites	0.27	0.31	0.11	0.12
+TestLargeStoreChildSweepAcrossLocalMidnight	1.78	1.82	0.59	0.50
+TestRegistryConstructorSharesShortHandoffDeadlineWithSQLiteContention	0.30	0.34	0.16	0.17
+TestReconcileFailedReadsConsumeSharedByteBudget	0.27	0.32	0.08	0.07
+TestOpenCodeCapturePreservesSnapshotWhenCoexistingOwnerBecomesAmbiguousOrMissing	0.93	0.99	0.36	0.33
+TestReconcileRecoversSourceProvenChildAfterStartWithoutStop	0.31	0.37	0.10	0.09
+TestQueuedChildPathsResumeAtTheRefusedPath	0.21	0.27	0.09	0.09
+TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities	0.56	0.63	0.17	0.15
+TestSharedNamedRegistryScopesConcurrentSameTicketWorktrees	0.40	0.47	0.17	0.23
+TestReconcileArchivedCodexBudgetRetriesWithoutLosingFacts	0.39	0.46	0.09	0.11
+TestRelocationPreservesDisabledLegacyInstallationAndRefreshesOwnedAnchor	2.73	2.82	0.65	0.60
+TestRelocationResumesPendingCutoverAndRetainsDeletedWorktreeDiagnostics	1.15	1.24	0.28	0.25
+TestReconcileRetainsAcceptedChildLinksThroughPartialRefresh	4.35	4.44	0.98	0.88	15.4	2.0
+TestCaptureDiagnosticRetentionKeepsLastSuccessAndBoundedFailures	0.72	0.82	0.16	0.19
+TestAdministrativeRelocationGuardUsesCanonicalConfiguredName	0.59	0.75	0.15	0.17
+TOTAL(sum of 184 tests)	425.2	177.1	106.2	89.4

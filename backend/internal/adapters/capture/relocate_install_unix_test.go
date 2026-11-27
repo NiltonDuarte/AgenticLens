@@ -24,7 +24,6 @@ func TestRelocationResumesInterruptedOwnedHookAndPluginBeforeManifest(t *testing
 		t.Run(sourceKind, func(t *testing.T) {
 			ctx := context.Background()
 			project, source, base, legacyDB := relocationFixture(t)
-			t.Setenv("AL_CAPTURE_INSTALL_FIXTURE", "1")
 			t.Setenv("GORACE", "atexit_sleep_ms=0")
 			cache := filepath.Join(t.TempDir(), "native-cache")
 			local := filepath.Join(project, ".agenticlens-config.local.yaml")
@@ -42,11 +41,7 @@ func TestRelocationResumesInterruptedOwnedHookAndPluginBeforeManifest(t *testing
 			if err = os.MkdirAll(filepath.Dir(binary), 0700); err != nil {
 				t.Fatal(err)
 			}
-			executable, err := os.Executable()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err = os.Symlink(executable, binary); err != nil {
+			if err = os.Symlink(nativeTestFixture(t), binary); err != nil {
 				t.Fatal(err)
 			}
 			wrapperBody, err := os.ReadFile(relocationManagerExecutable(t))

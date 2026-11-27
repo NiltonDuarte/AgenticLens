@@ -240,44 +240,11 @@ func mustReadUserInstall(t *testing.T, path string) []byte {
 	return body
 }
 
-func init() {
-	if os.Getenv("AL79_CAPTURE_NATIVE_FIXTURE") == "" {
-		return
-	}
-	switch strings.Join(os.Args[1:], " ") {
-	case "engine protocol":
-		fmt.Println("1")
-	case "capture protocol":
-		if os.Getenv("AL79_CAPTURE_NATIVE_FIXTURE") == "old-interface" {
-			fmt.Println("1")
-		} else {
-			fmt.Println(HandlerProtocolVersion)
-		}
-	case "capture protected-worker-protocol":
-		fmt.Println("2")
-	case "manager protocol", "dispatch protocol", "manager codex-binding-wake-protocol", "manager protected-codex-hook-protocol":
-		if os.Getenv("AL79_CAPTURE_NATIVE_FIXTURE") == "bad-manager" {
-			fmt.Println("0")
-		} else {
-			fmt.Println("1")
-		}
-	case "version --short":
-		fmt.Println("v9.8.7")
-	case "version --json", "--manager-version --json":
-		fmt.Println(`{"version":"v9.8.7","commit":"native-test-fixture","build_date":"test"}`)
-	default:
-		return
-	}
-	os.Exit(0)
-}
 func compatibleCaptureTestExecutable(t *testing.T) (string, error) {
 	t.Helper()
 	t.Setenv("AL79_CAPTURE_NATIVE_FIXTURE", "1")
 	t.Setenv("GORACE", strings.TrimSpace(os.Getenv("GORACE")+" atexit_sleep_ms=0"))
-	source, err := os.Executable()
-	if err != nil {
-		return "", err
-	}
+	source := nativeTestFixture(t)
 	home := protectedUserFixtureRoot(t)
 	t.Setenv("HOME", home)
 	target := filepath.Join(home, ".local", "bin", "agentic-lens")

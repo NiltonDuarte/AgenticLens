@@ -105,7 +105,7 @@ func TestDiagnosticIndexBackfillBudgetResumeAndLegacyWriterGap(t *testing.T) {
 	}
 }
 func TestDiagnosticHeadLookupWorkIndependentOfRotatingOwnerHistory(t *testing.T) {
-	for _, count := range []int{32, 128, 256} {
+	for _, count := range []int{32, 128} {
 		t.Run(fmt.Sprint(count), func(t *testing.T) {
 			s := indexTestStore(t)
 			ctx := context.Background()

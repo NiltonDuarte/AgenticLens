@@ -1,0 +1,5 @@
+revision	run	result	seconds	load1_before	load1_after
+candidate	1	PASS	189.13	6.64	20.19
+candidate	2	FAIL	185.22	20.19	21.80
+candidate	3	PASS	166.59	21.80	23.52
+baseline	1	FAIL	143.82	23.52	24.03
