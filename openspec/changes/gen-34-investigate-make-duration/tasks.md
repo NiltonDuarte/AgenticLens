@@ -34,8 +34,8 @@ Reference design.md for approved scope and steering. This change has no delta sp
 
 ## Review and delivery (orchestrator)
 - [x] Run focused test-effectiveness and behavior reviews of fixture fidelity and coverage, then the consolidated review; retain findings under `evidence/`.
-- [ ] Commit the candidate, merge `main`, run the integrated `make` and record the tested revision.
-- [ ] Update `delivery.md` and the PR title and body, validate the change, regenerate final telemetry, then commit, push and update PR #171 without merging.
+- [x] Commit the candidate, merge `main`, run the integrated `make` and record the tested revision.
+- [x] Update `delivery.md` and the PR title and body, validate the change, regenerate final telemetry, then commit, push and update PR #171 without merging.
 
 ## Workflow follow-up
 Archive only after verified delivery. GEN-34 has no roadmap entry to reconcile.

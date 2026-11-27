@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "TEST-01",
+      "severity": 2,
+      "issue": "The bad-manager install test accepted any error, so a fixture probe that failed to run would still pass.",
+      "reporters": [
+        {"persona": "tester", "model": "claude-opus-5-5", "effort": null, "identity_basis": "requested", "identity_note": "Inherited the parent model; effort not set."},
+        {"persona": "reviewer-tests", "model": "claude-opus-5-5", "effort": "medium", "identity_basis": "requested"},
+        {"persona": "reviewer-tests", "model": "claude-sonnet-5-5", "effort": "high", "identity_basis": "requested"},
+        {"persona": "reviewer-behavior", "model": "claude-sonnet-5-5", "effort": "high", "identity_basis": "requested"}
+      ],
+      "disposition": "Fixed in 3b6c485f: the test asserts the native manager interface incompatibility; a scratch mutation proves it now fails for the wrong reason."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 1,
+      "issue": "The workspace replacement test never asserts that any read succeeded and fails only when two identity guards are removed.",
+      "reporters": [
+        {"persona": "tester", "model": "claude-opus-5-5", "effort": null, "identity_basis": "requested", "identity_note": "Inherited the parent model; effort not set."},
+        {"persona": "reviewer-tests", "model": "claude-opus-5-5", "effort": "medium", "identity_basis": "requested"}
+      ],
+      "disposition": "Pre-existing at 1500 reads; accepted debt. Zero successes in 400 reads is below 1e-14 at the observed 8% rate."
+    },
+    {
+      "finding_id": "TEST-03",
+      "severity": 1,
+      "issue": "GORACE settings kept in the converted fixtures no longer affect any child process.",
+      "reporters": [
+        {"persona": "reviewer-tests", "model": "claude-opus-5-5", "effort": "medium", "identity_basis": "requested"},
+        {"persona": "reviewer-behavior", "model": "claude-sonnet-5-5", "effort": "high", "identity_basis": "requested"}
+      ],
+      "disposition": "Accepted: harmless, kept as the plan required."
+    },
+    {
+      "finding_id": "TEST-04",
+      "severity": 1,
+      "issue": "The fixture keeps probe answers and an old-interface variant that no test calls.",
+      "reporters": [
+        {"persona": "tester", "model": "claude-opus-5-5", "effort": null, "identity_basis": "requested", "identity_note": "Inherited the parent model; effort not set."},
+        {"persona": "reviewer-tests", "model": "claude-sonnet-5-5", "effort": "high", "identity_basis": "requested"}
+      ],
+      "disposition": "Accepted: carried over unchanged from the removed init table for a mechanical move."
+    },
+    {
+      "finding_id": "TEST-05",
+      "severity": 2,
+      "issue": "Nothing asserts that the large-store fixture exceeds the session budget, which divisor 8 clears by only 5 files.",
+      "reporters": [
+        {"persona": "reviewer-tests", "model": "claude-sonnet-5-5", "effort": "high", "identity_basis": "requested"}
+      ],
+      "disposition": "Accepted: exact byte and claim oracles still detect a disabled creation-window pruning at divisors 8 and 4; possible follow-up assertion."
+    },
+    {
+      "finding_id": "TEST-06",
+      "severity": 2,
+      "issue": "The design stated the replacement-test loss per total read and understated it.",
+      "reporters": [
+        {"persona": "reviewer-tests", "model": "claude-sonnet-5-5", "effort": "high", "identity_basis": "requested"}
+      ],
+      "disposition": "Fixed in 3b6c485f: design states successful reads (about 122 to 32) with the mutation evidence."
+    },
+    {
+      "finding_id": "TEST-07",
+      "severity": 0,
+      "issue": "The removed 256-owner head-lookup case added no distinct oracle.",
+      "reporters": [
+        {"persona": "reviewer-tests", "model": "claude-sonnet-5-5", "effort": "high", "identity_basis": "requested"}
+      ],
+      "disposition": "Informational; supports the change."
+    },
+    {
+      "finding_id": "BEH-01",
+      "severity": 2,
+      "issue": "The 2.4 MB fixture directory leaks in TMPDIR when the test process panics, times out or exits before TestMain cleanup.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "claude-opus-5-5", "effort": "medium", "identity_basis": "requested"},
+        {"persona": "reviewer-behavior", "model": "claude-sonnet-5-5", "effort": "high", "identity_basis": "requested"}
+      ],
+      "disposition": "Accepted limit recorded in design: same pattern as existing TestMain temporary roots."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 1,
+      "issue": "A failed first fixture build fails every later fixture test in that process instead of retrying.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "claude-opus-5-5", "effort": "medium", "identity_basis": "requested"}
+      ],
+      "disposition": "Accepted: failure is loud and attributed, matching installationManagerExecutable."
+    },
+    {
+      "finding_id": "BEH-03",
+      "severity": 2,
+      "issue": "Converted tests now need go on PATH and the package directory as working directory.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "claude-sonnet-5-5", "effort": "high", "identity_basis": "requested"}
+      ],
+      "disposition": "Accepted limit recorded in design: go test, make and CI satisfy it, as existing build helpers already require."
+    },
+    {
+      "finding_id": "BEH-04",
+      "severity": 1,
+      "issue": "gofmt flags internal/adapters/failure_rate_policy_test.go, which this change does not touch.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "claude-sonnet-5-5", "effort": "high", "identity_basis": "requested"}
+      ],
+      "disposition": "Pre-existing on main since 0e9c8b36; out of scope, left for its owner."
+    }
+  ]
+}
