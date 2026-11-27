@@ -1,0 +1,13 @@
+count	AL79_CAPTURE_NATIVE_FIXTURE	arguments
+134	1	["manager" "protocol"]
+134	1	["--manager-version" "--json"]
+84	1	["manager" "protected-codex-hook-protocol"]
+75	(unset)	["capture" "protocol"]
+75	(unset)	["version" "--short"]
+25	(unset)	["engine" "protocol"]
+25	(unset)	["version" "--json"]
+15	1	["engine" "protocol"]
+15	1	["capture" "protocol"]
+15	1	["version" "--json"]
+5	1	["capture" "protected-worker-protocol"]
+2	bad-manager	["manager" "protocol"]

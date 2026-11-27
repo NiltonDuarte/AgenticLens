@@ -1,0 +1,36 @@
+seconds	exit	load_at_start	recipe
+0.6	0	1.36	(cd "backend" && go test -count=1 ./internal/domain/...)
+3.5	0	1.36	(cd "web" && npm run test:unit)
+17.9	0	2.05	(cd "web" && npm run build)
+0.5	0	2.38	(cd "backend" && go vet ./...)
+22.4	0	2.38	(cd "web" && npm run typecheck && npm run lint)
+3.6	0	2.50	python3 scripts/tests/test_release_revision.py
+22.3	0	2.50	python3 scripts/tests/test_installation.py
+5.5	0	2.06	python3 scripts/tests/test_platform_support.py
+36.0	0	1.97	python3 scripts/tests/test_capture_distribution.py
+73.5	0	1.52	python3 scripts/tests/test_test_orchestration.py
+2.0	0	2.83	(cd "backend" && go test -race -count=1 ./internal/domain/...)
+528.2	0	2.83	packages=$(cd "backend" && "/home/niltonduarte/.t3/worktrees/AgenticLens/GEN-34-investigate-make-e2c
+38.8	0	2.93	(cd "web" && npm exec -- vitest run --config vitest.integration.config.ts)
+13.9	0	6.43	build_dir=$(CDPATH= cd -P -- "bin" && pwd -P) || exit 1; \ for platform in linux/amd64 linux/arm64 d
+
+# go packages (race lane)
+# ok  	agenticlens/internal/domain	0.053s
+# ok  	agenticlens/internal/domain/migration	0.053s
+# ok  	agenticlens/internal/domain	1.155s
+# ok  	agenticlens/internal/domain/migration	1.302s
+# ok  	agenticlens/cmd/agentic-lens	524.619s
+# ok  	agenticlens/internal/adapters	50.201s
+# ok  	agenticlens/internal/adapters/backfill	66.330s
+# ok  	agenticlens/internal/adapters/capture	289.526s
+# ok  	agenticlens/internal/adapters/claude	2.032s
+# ok  	agenticlens/internal/adapters/codex	7.030s
+# ok  	agenticlens/internal/adapters/codex/codexstoretest	4.619s
+# ok  	agenticlens/internal/adapters/config	9.629s
+# ok  	agenticlens/internal/adapters/git	4.474s
+# ok  	agenticlens/internal/adapters/http	17.347s
+# ok  	agenticlens/internal/adapters/live	24.647s
+# ok  	agenticlens/internal/adapters/manager	30.486s
+# ok  	agenticlens/internal/adapters/opencode	23.935s
+# ok  	agenticlens/internal/adapters/web	1.035s
+# total wall 769 s, exit 0, revision 3b6c485f, load 1.2 at start, 5.6 at end

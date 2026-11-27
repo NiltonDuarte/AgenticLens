@@ -1,0 +1,15 @@
+seconds	exit	load1_at_start	recipe
+0.1	0	1.11	(cd "backend" && go mod download)
+0.7	0	1.11	(cd "backend" && go test -count=1 ./internal/domain/...)
+2.7	0	1.11	(cd "web" && npm run test:unit)
+14.5	0	2.06	(cd "web" && npm run build)
+0.5	0	2.14	(cd "backend" && go vet ./...)
+16.3	0	2.14	(cd "web" && npm run typecheck && npm run lint)
+2.7	0	1.96	python3 scripts/tests/test_release_revision.py
+18.3	0	1.97	python3 scripts/tests/test_installation.py
+4.2	0	2.26	python3 scripts/tests/test_platform_support.py
+30.8	0	2.16	python3 scripts/tests/test_capture_distribution.py
+59.2	0	1.82	python3 scripts/tests/test_test_orchestration.py
+0.0	0	3.77	git diff --check
+2.0	0	3.77	(cd "backend" && go test -race -count=1 ./internal/domain/...)
+497.7	1	3.77	packages=$(cd "backend" && "./scripts/go-test-packages.sh" integration) || e

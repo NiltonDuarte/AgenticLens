@@ -1,0 +1,5 @@
+package	mode	wall	user_s	sys_s	cpu_percent_of_one_core	load1_at_start	result
+internal/adapters/capture	race	8:44.62	472.62	236.05	135	3.08	pass
+internal/adapters/capture	no-race	2:19.95	215.85	114.93	236	2.12	pass
+cmd/agentic-lens	race	8:55.22	250.55	183.58	81	2.25	pass
+cmd/agentic-lens	no-race	6:11.30	142.43	129.79	73	3.20	pass

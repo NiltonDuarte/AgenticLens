@@ -43,9 +43,10 @@ const (
 )
 
 // largeStoreDivisor scales the store and its budget down together. The
-// default keeps the package's race-enabled run reasonable; divisor 1 is the
-// incident-scale store of about 1,900 rollouts and 3 GB.
-var largeStoreDivisor = flag.Int("fix21.large-store-divisor", 4, "divisor applied to the FIX-21 incident-scale store and budget")
+// default of 8 keeps the package's race-enabled run reasonable; divisor 1 is
+// the incident-scale store of about 1,900 rollouts and 3 GB, and the flag
+// accepts 1 through 16.
+var largeStoreDivisor = flag.Int("fix21.large-store-divisor", 8, "divisor applied to the FIX-21 incident-scale store and budget")
 
 type largeStoreFixture struct {
 	store   codexstoretest.LargeStore

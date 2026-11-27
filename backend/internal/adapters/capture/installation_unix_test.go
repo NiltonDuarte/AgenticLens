@@ -23,24 +23,6 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if os.Getenv("AL_CAPTURE_INSTALL_FIXTURE") == "1" {
-		if len(os.Args) == 3 && os.Args[1] == "engine" && os.Args[2] == "protocol" {
-			fmt.Println("1")
-			os.Exit(0)
-		}
-		if len(os.Args) == 3 && os.Args[1] == "capture" && os.Args[2] == "protocol" {
-			fmt.Println(capture.HandlerProtocolVersion)
-			os.Exit(0)
-		}
-		if len(os.Args) == 3 && os.Args[1] == "version" && os.Args[2] == "--short" {
-			fmt.Println("v9.8.7")
-			os.Exit(0)
-		}
-		if len(os.Args) == 3 && os.Args[1] == "version" && os.Args[2] == "--json" {
-			fmt.Println(`{"version":"v9.8.7","commit":"adapter-fixture","build_date":"fixture"}`)
-			os.Exit(0)
-		}
-	}
 	// Both the effective OpenCode plugin directory and its XDG peer are
 	// inspected for duplicate loading when the legacy installer runs.
 	configRoot, err := os.MkdirTemp("", "capture-opencode-config-*")
@@ -57,6 +39,7 @@ func TestMain(m *testing.M) {
 	if installationManagerRoot != "" {
 		os.RemoveAll(installationManagerRoot)
 	}
+	capture.RemoveNativeTestFixture()
 	os.Exit(code)
 }
 
@@ -331,10 +314,9 @@ func TestInstallationIssuesSeparatesNamespaceConflictsFromDrift(t *testing.T) {
 	}
 }
 
-// Real shell selection and a native ELF test helper guard installer provenance.
+// Real shell selection and the shared native fixture guard installer provenance.
 func installFixture(t *testing.T, project string) (string, string) {
 	t.Helper()
-	t.Setenv("AL_CAPTURE_INSTALL_FIXTURE", "1")
 	t.Setenv("GORACE", "atexit_sleep_ms=0")
 	harnessDir := t.TempDir()
 	for source, body := range map[string]string{
@@ -367,11 +349,7 @@ func installFixture(t *testing.T, project string) (string, string) {
 	if err := os.MkdirAll(filepath.Dir(binary), 0700); err != nil {
 		t.Fatal(err)
 	}
-	testBinary, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Symlink(testBinary, binary); err != nil {
+	if err := os.Symlink(capture.NativeTestFixture(t), binary); err != nil {
 		t.Fatal(err)
 	}
 	body, err := os.ReadFile(installationManagerExecutable(t))

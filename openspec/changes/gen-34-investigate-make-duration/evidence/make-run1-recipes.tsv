@@ -1,0 +1,18 @@
+seconds	exit	load1_at_start	recipe
+0.3	0	19.18	(cd "backend" && go mod download)
+148.7	0	19.18	(cd "web" && npm ci)
+5.3	0	20.95	(cd "backend" && go test -count=1 ./internal/domain/...)
+4.5	0	22.16	(cd "web" && npm run test:unit)
+26.6	0	22.79	(cd "web" && npm run build)
+21.5	0	20.62	(cd "backend" && go vet ./...)
+41.7	0	31.24	(cd "web" && npm run typecheck && npm run lint)
+5.6	0	29.75	python3 scripts/tests/test_release_revision.py
+61.9	0	29.13	python3 scripts/tests/test_installation.py
+24.2	0	23.61	python3 scripts/tests/test_platform_support.py
+161.0	0	20.27	python3 scripts/tests/test_capture_distribution.py
+249.6	0	21.00	python3 scripts/tests/test_test_orchestration.py
+0.0	0	17.42	git diff --check
+16.1	0	17.42	(cd "backend" && go test -race -count=1 ./internal/domain/...)
+667.4	1	14.11	packages=$(cd "backend" && "./scripts/go-test-packages.sh" integration) || e
+55.7	0	5.78	(cd "web" && npm exec -- vitest run --config vitest.integration.config.ts)
+35.0	0	7.66	build_dir=$(CDPATH= cd -P -- "bin" && pwd -P) || exit 1; \ for platform in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do \

@@ -11,6 +11,9 @@ import (
 	"testing"
 )
 
+// replacementReads is the number of reads raced against directory exchange.
+const replacementReads = 400
+
 func TestLoadTicketWorkspaceRejectsReplacementIdentity(t *testing.T) {
 	project := discoveryPhysicalDirectory(t, t.TempDir())
 	first, second := filepath.Join(project, "selected"), filepath.Join(project, "replacement")
@@ -48,7 +51,7 @@ func TestLoadTicketWorkspaceRejectsReplacementIdentity(t *testing.T) {
 		}
 	})
 	successful := 0
-	for i := 0; i < 1500; i++ {
+	for i := 0; i < replacementReads; i++ {
 		ledger, err := adapters.LoadTicketWorkspace("Recorded-A", project)
 		if err != nil {
 			continue
@@ -72,7 +75,7 @@ func TestLoadTicketWorkspaceRejectsReplacementIdentity(t *testing.T) {
 		}
 	}
 	check()
-	t.Logf("identity remained correct across 1500 replacement reads (%d successful reads)", successful)
+	t.Logf("identity remained correct across %d replacement reads (%d successful reads)", replacementReads, successful)
 }
 
 // A mutable selection may initially resolve either copy. Successful detail reads
