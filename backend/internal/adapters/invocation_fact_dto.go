@@ -1,6 +1,8 @@
 package adapters
 
 import (
+	"fmt"
+
 	"agenticlens/internal/domain"
 	"agenticlens/internal/domain/migration"
 )
@@ -36,6 +38,7 @@ type InvocationFactDTO struct {
 	Tokens                InvocationTokensDTO  `json:"tokens"`
 	CostUSD               *float64             `json:"cost_usd"`
 	CostEvidence          *domain.CostEvidence `json:"cost_evidence"`
+	CostEstimate          *domain.CostEstimate `json:"cost_estimate,omitempty"`
 	decodedCost           bool
 	costPresent           bool
 	evidencePresent       bool
@@ -56,6 +59,7 @@ func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 		Tokens:                dto.Tokens.ToDomain(),
 		CostUSD:               costFactAccumulator(dto.CostUSD, evidence),
 		CostEvidence:          evidence,
+		CostEstimate:          domain.CloneCostEstimate(dto.CostEstimate),
 		Compactions:           dto.Compactions,
 		UserIterations:        dto.UserIterations,
 	}
@@ -81,6 +85,7 @@ func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 		},
 		CostUSD:        factCostAmount(inv.CostUSD, evidence),
 		CostEvidence:   costEvidencePointer(evidence),
+		CostEstimate:   domain.CloneCostEstimate(inv.CostEstimate),
 		Compactions:    inv.Compactions,
 		UserIterations: inv.UserIterations,
 	}
@@ -100,9 +105,12 @@ func (dto *InvocationFactDTO) UnmarshalJSON(data []byte) error {
 	if err := requireFactJSONEOF(decoder, "invocation"); err != nil {
 		return err
 	}
-	amountPresent, evidencePresent, err := factCostMemberPresence(data)
+	amountPresent, evidencePresent, estimateNull, err := factCostMemberPresence(data)
 	if err != nil {
 		return err
+	}
+	if estimateNull {
+		return fmt.Errorf("cost_estimate must be omitted instead of null")
 	}
 	*dto = InvocationFactDTO(value)
 	dto.decodedCost = true
@@ -111,7 +119,10 @@ func (dto *InvocationFactDTO) UnmarshalJSON(data []byte) error {
 	if err := domain.ValidateDuration(dto.ActiveDurationSeconds, dto.ProvisionalSeconds); err != nil {
 		return err
 	}
-	return domain.ValidateCostEvidence(dto.CostUSD, dto.CostEvidence, false)
+	if err := domain.ValidateCostEvidence(dto.CostUSD, dto.CostEvidence, false); err != nil {
+		return err
+	}
+	return domain.ValidateCostEstimate(costFactEvidence(dto.CostUSD, dto.CostEvidence), dto.CostEstimate)
 }
 
 func InvocationFactDTOsFromDomain(values []domain.InvocationFact) []InvocationFactDTO {

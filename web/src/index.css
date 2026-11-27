@@ -279,6 +279,13 @@ body {
   letter-spacing: 0.04em;
 }
 
+.kpi-value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .kpi-value {
   font-size: 1.75rem;
   font-weight: 700;
@@ -3622,6 +3629,8 @@ body {
   font-weight: 400;
   line-height: 1.4;
   white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   text-align: left;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
   pointer-events: none;
@@ -3698,6 +3707,20 @@ body {
   transform: translateY(-50%);
   border-width: 5px 5px 5px 0;
   border-color: transparent var(--bg-surface-elevated) transparent transparent;
+}
+
+.info-tooltip-bubble.is-portaled {
+  position: fixed;
+  z-index: 1200;
+  top: 0;
+  right: auto;
+  bottom: auto;
+  left: 0;
+  transform: none;
+}
+
+.info-tooltip-bubble.is-portaled::after {
+  display: none;
 }
 
 .distribution-header {
@@ -5332,3 +5355,61 @@ button.trace-invocation-badge { cursor: pointer; }
 .workspace-roots { display: flex; flex-wrap: wrap; gap: 0.4rem; min-width: 0; }
 .workspace-roots .workspace-pill { max-width: 24rem; overflow-wrap: anywhere; white-space: normal; }
 .workspace-location { display: block; overflow-wrap: anywhere; white-space: normal; font-size: 0.8rem; color: var(--text-muted, #8793a3); }
+
+/* API-equivalent cost estimate badge and CacheWrite caveat banner */
+.cost-cell-with-est {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.cost-cell-suffix {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.cost-est-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background-color: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  line-height: 1.4;
+}
+
+.cost-estimate-warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background-color: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-left: 4px solid var(--status-yellow);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.cost-estimate-warning-badge {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fbbf24;
+  padding-top: 2px;
+}
+
+.cost-estimate-warning-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}

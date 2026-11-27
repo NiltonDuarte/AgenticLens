@@ -64,25 +64,33 @@ func ticketSortParts(id string, cfg TicketConfig) (string, string, bool) {
 }
 
 type invocationAccumulator struct {
-	invocations       int64
-	inputTokens       int64
-	outputTokens      int64
-	cacheReadTokens   int64
-	cacheHitRatePct   float64
-	costUSD           float64
-	costSummary       CostSummary
-	peakContextTokens int64
+	invocations           int64
+	inputTokens           int64
+	outputTokens          int64
+	cacheReadTokens       int64
+	cacheHitRatePct       float64
+	costUSD               float64
+	costSummary           CostSummary
+	equivalentCostSummary EquivalentCostSummary
+	appliedRates          []AppliedRateSnapshot
+	peakContextTokens     int64
 }
 
 func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
 	var inp, out, cache, peak int64
 	var costSummary CostSummary
+	var equivSummary EquivalentCostSummary
+	var appliedRates []AppliedRateSnapshot
 
 	for _, inv := range invs {
 		inp += inv.Tokens.Input
 		out += inv.Tokens.Output
 		cache += inv.Tokens.CacheRead
 		costSummary = MergeCostSummaries(costSummary, SummaryForCost(inv.CostUSD, inv.CostEvidence))
+		equivSummary = MergeEquivalentCostSummaries(equivSummary, SummaryForInvocationEquivalentCost(inv))
+		if EffectiveCost(inv.CostUSD, inv.CostEvidence).State == CostUnavailable && inv.CostEstimate != nil {
+			appliedRates = append(appliedRates, inv.CostEstimate.Rate)
+		}
 		if inv.Tokens.PeakContext > peak {
 			peak = inv.Tokens.PeakContext
 		}
@@ -95,14 +103,16 @@ func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
 	}
 
 	return invocationAccumulator{
-		invocations:       int64(len(invs)),
-		inputTokens:       inp,
-		outputTokens:      out,
-		cacheReadTokens:   cache,
-		cacheHitRatePct:   hitPct,
-		costUSD:           math.Round(costSummary.Subtotal()*10000.0) / 10000.0,
-		costSummary:       FinalizeCostSummary(costSummary),
-		peakContextTokens: peak,
+		invocations:           int64(len(invs)),
+		inputTokens:           inp,
+		outputTokens:          out,
+		cacheReadTokens:       cache,
+		cacheHitRatePct:       hitPct,
+		costUSD:               math.Round(costSummary.Subtotal()*10000.0) / 10000.0,
+		costSummary:           FinalizeCostSummary(costSummary),
+		equivalentCostSummary: FinalizeEquivalentCostSummary(equivSummary),
+		appliedRates:          DeduplicateAndSortAppliedRates(appliedRates),
+		peakContextTokens:     peak,
 	}
 }
 
@@ -115,15 +125,16 @@ func ComputeTotals(invocations []InvocationFact, ceiling ...int64) GroupedMetric
 
 	if len(invocations) == 0 {
 		return GroupedMetric{
-			Invocations:       0,
-			InputTokens:       0,
-			OutputTokens:      0,
-			CacheReadTokens:   0,
-			CacheHitRatePct:   0.0,
-			CostUSD:           0.0,
-			CostSummary:       FinalizeCostSummary(CostSummary{}),
-			PeakContextTokens: 0,
-			ContextHealth:     GetBaseHealthStatus(0, effCeiling),
+			Invocations:           0,
+			InputTokens:           0,
+			OutputTokens:          0,
+			CacheReadTokens:       0,
+			CacheHitRatePct:       0.0,
+			CostUSD:               0.0,
+			CostSummary:           FinalizeCostSummary(CostSummary{}),
+			EquivalentCostSummary: FinalizeEquivalentCostSummary(EquivalentCostSummary{}),
+			PeakContextTokens:     0,
+			ContextHealth:         GetBaseHealthStatus(0, effCeiling),
 		}
 	}
 
@@ -131,15 +142,16 @@ func ComputeTotals(invocations []InvocationFact, ceiling ...int64) GroupedMetric
 	healthStatus := GetBaseHealthStatus(acc.peakContextTokens, effCeiling)
 
 	return GroupedMetric{
-		Invocations:       acc.invocations,
-		InputTokens:       acc.inputTokens,
-		OutputTokens:      acc.outputTokens,
-		CacheReadTokens:   acc.cacheReadTokens,
-		CacheHitRatePct:   acc.cacheHitRatePct,
-		CostUSD:           acc.costUSD,
-		CostSummary:       acc.costSummary,
-		PeakContextTokens: acc.peakContextTokens,
-		ContextHealth:     healthStatus,
+		Invocations:           acc.invocations,
+		InputTokens:           acc.inputTokens,
+		OutputTokens:          acc.outputTokens,
+		CacheReadTokens:       acc.cacheReadTokens,
+		CacheHitRatePct:       acc.cacheHitRatePct,
+		CostUSD:               acc.costUSD,
+		CostSummary:           acc.costSummary,
+		EquivalentCostSummary: acc.equivalentCostSummary,
+		PeakContextTokens:     acc.peakContextTokens,
+		ContextHealth:         healthStatus,
 	}
 }
 
@@ -447,16 +459,17 @@ func ComputeRoleMetricsWithCeiling(invocations []InvocationFact, ceiling int64, 
 		health := GetBaseHealthStatus(acc.peakContextTokens, ceiling)
 
 		metrics = append(metrics, RoleMetric{
-			Role:              role,
-			Invocations:       acc.invocations,
-			InputTokens:       acc.inputTokens,
-			OutputTokens:      acc.outputTokens,
-			CacheReadTokens:   acc.cacheReadTokens,
-			CacheHitRatePct:   acc.cacheHitRatePct,
-			CostUSD:           acc.costUSD,
-			CostSummary:       acc.costSummary,
-			PeakContextTokens: acc.peakContextTokens,
-			ContextHealth:     health,
+			Role:                  role,
+			Invocations:           acc.invocations,
+			InputTokens:           acc.inputTokens,
+			OutputTokens:          acc.outputTokens,
+			CacheReadTokens:       acc.cacheReadTokens,
+			CacheHitRatePct:       acc.cacheHitRatePct,
+			CostUSD:               acc.costUSD,
+			CostSummary:           acc.costSummary,
+			EquivalentCostSummary: acc.equivalentCostSummary,
+			PeakContextTokens:     acc.peakContextTokens,
+			ContextHealth:         health,
 		})
 	}
 
@@ -482,16 +495,18 @@ func ComputeModelMetrics(invocations []InvocationFact, ceiling ...int64) []Model
 		health := GetBaseHealthStatus(acc.peakContextTokens, effCeiling)
 
 		metrics = append(metrics, ModelMetric{
-			Model:             model,
-			Invocations:       acc.invocations,
-			InputTokens:       acc.inputTokens,
-			OutputTokens:      acc.outputTokens,
-			CacheReadTokens:   acc.cacheReadTokens,
-			CacheHitRatePct:   acc.cacheHitRatePct,
-			CostUSD:           acc.costUSD,
-			CostSummary:       acc.costSummary,
-			PeakContextTokens: acc.peakContextTokens,
-			ContextHealth:     health,
+			Model:                 model,
+			Invocations:           acc.invocations,
+			InputTokens:           acc.inputTokens,
+			OutputTokens:          acc.outputTokens,
+			CacheReadTokens:       acc.cacheReadTokens,
+			CacheHitRatePct:       acc.cacheHitRatePct,
+			CostUSD:               acc.costUSD,
+			CostSummary:           acc.costSummary,
+			EquivalentCostSummary: acc.equivalentCostSummary,
+			AppliedRates:          acc.appliedRates,
+			PeakContextTokens:     acc.peakContextTokens,
+			ContextHealth:         health,
 		})
 	}
 
@@ -602,16 +617,18 @@ func ComputeThreadSummariesWithCeiling(sessions []SessionFact, ceiling int64, ro
 				health := GetBaseHealthStatus(acc.peakContextTokens, ceiling)
 
 				modelMetrics = append(modelMetrics, ModelMetric{
-					Model:             model,
-					Invocations:       acc.invocations,
-					InputTokens:       acc.inputTokens,
-					OutputTokens:      acc.outputTokens,
-					CacheReadTokens:   acc.cacheReadTokens,
-					CacheHitRatePct:   acc.cacheHitRatePct,
-					CostUSD:           acc.costUSD,
-					CostSummary:       acc.costSummary,
-					PeakContextTokens: acc.peakContextTokens,
-					ContextHealth:     health,
+					Model:                 model,
+					Invocations:           acc.invocations,
+					InputTokens:           acc.inputTokens,
+					OutputTokens:          acc.outputTokens,
+					CacheReadTokens:       acc.cacheReadTokens,
+					CacheHitRatePct:       acc.cacheHitRatePct,
+					CostUSD:               acc.costUSD,
+					CostSummary:           acc.costSummary,
+					EquivalentCostSummary: acc.equivalentCostSummary,
+					AppliedRates:          acc.appliedRates,
+					PeakContextTokens:     acc.peakContextTokens,
+					ContextHealth:         health,
 				})
 			}
 
@@ -815,27 +832,30 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 	totalTickets := int64(len(ledgers))
 	if totalTickets == 0 {
 		return FleetSummary{
-			TotalTickets:             0,
-			TotalCostUSD:             0.0,
-			CostSummary:              FinalizeCostSummary(CostSummary{}),
-			RoleCostSummaries:        make(map[AgentRole]CostSummary),
-			ModelCostSummaries:       make(map[string]CostSummary),
-			TotalInvocations:         0,
-			TotalInputTokens:         0,
-			TotalOutputTokens:        0,
-			TotalCacheReadTokens:     0,
-			OverallCacheHitRatePct:   0.0,
-			TotalDurationSeconds:     0,
-			FormattedTotalDuration:   "0m 0s",
-			TotalLinesAdded:          0,
-			TotalLinesDeleted:        0,
-			TotalFilesChanged:        0,
-			TotalReasoningTokens:     0,
-			OverallReasoningRatioPct: 0.0,
-			RoleCosts:                make(map[AgentRole]float64),
-			ModelCosts:               make(map[string]float64),
-			AnomalySummary:           ComputeFleetAnomalies(nil),
-			SkillAdoption:            ComputeSkillAdoption(nil),
+			TotalTickets:                 0,
+			TotalCostUSD:                 0.0,
+			CostSummary:                  FinalizeCostSummary(CostSummary{}),
+			EquivalentCostSummary:        FinalizeEquivalentCostSummary(EquivalentCostSummary{}),
+			RoleCostSummaries:            make(map[AgentRole]CostSummary),
+			ModelCostSummaries:           make(map[string]CostSummary),
+			RoleEquivalentCostSummaries:  make(map[AgentRole]EquivalentCostSummary),
+			ModelEquivalentCostSummaries: make(map[string]EquivalentCostSummary),
+			TotalInvocations:             0,
+			TotalInputTokens:             0,
+			TotalOutputTokens:            0,
+			TotalCacheReadTokens:         0,
+			OverallCacheHitRatePct:       0.0,
+			TotalDurationSeconds:         0,
+			FormattedTotalDuration:       "0m 0s",
+			TotalLinesAdded:              0,
+			TotalLinesDeleted:            0,
+			TotalFilesChanged:            0,
+			TotalReasoningTokens:         0,
+			OverallReasoningRatioPct:     0.0,
+			RoleCosts:                    make(map[AgentRole]float64),
+			ModelCosts:                   make(map[string]float64),
+			AnomalySummary:               ComputeFleetAnomalies(nil),
+			SkillAdoption:                ComputeSkillAdoption(nil),
 		}
 	}
 
@@ -843,8 +863,11 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 	// evidence summaries retain source precision for nullable wire amounts.
 	var totalCostUSD float64
 	var fleetCostSummary CostSummary
+	var fleetEquivCostSummary EquivalentCostSummary
 	roleCostSummaries := make(map[AgentRole]CostSummary)
 	modelCostSummaries := make(map[string]CostSummary)
+	roleEquivCostSummaries := make(map[AgentRole]EquivalentCostSummary)
+	modelEquivCostSummaries := make(map[string]EquivalentCostSummary)
 	var totalInvocations, totalInputTokens, totalOutputTokens, totalCacheReadTokens int64
 	var fleetProvisionalSeconds int64
 	var totalDurationSeconds, totalLinesAdded, totalLinesDeleted, totalFilesChanged, totalReasoningTokens int64
@@ -858,6 +881,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		factLedgers[i] = ledger.Facts
 		totalCostUSD += ledger.Totals.CostUSD
 		fleetCostSummary = MergeCostSummaries(fleetCostSummary, EffectiveCostSummary(ledger.Totals.CostSummary, ledger.Totals.CostUSD, ledger.Totals.Invocations))
+		fleetEquivCostSummary = MergeEquivalentCostSummaries(fleetEquivCostSummary, EffectiveEquivalentCostSummary(ledger.Totals.EquivalentCostSummary, ledger.Totals.CostSummary, ledger.Totals.CostUSD, ledger.Totals.Invocations))
 		totalInvocations += ledger.Totals.Invocations
 		totalInputTokens += ledger.Totals.InputTokens
 		totalOutputTokens += ledger.Totals.OutputTokens
@@ -872,10 +896,12 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		for _, r := range ledger.Roles {
 			roleCosts[r.Role] += r.CostUSD
 			roleCostSummaries[r.Role] = MergeCostSummaries(roleCostSummaries[r.Role], EffectiveCostSummary(r.CostSummary, r.CostUSD, r.Invocations))
+			roleEquivCostSummaries[r.Role] = MergeEquivalentCostSummaries(roleEquivCostSummaries[r.Role], EffectiveEquivalentCostSummary(r.EquivalentCostSummary, r.CostSummary, r.CostUSD, r.Invocations))
 		}
 		for _, m := range ledger.Models {
 			modelCosts[m.Model] += m.CostUSD
 			modelCostSummaries[m.Model] = MergeCostSummaries(modelCostSummaries[m.Model], EffectiveCostSummary(m.CostSummary, m.CostUSD, m.Invocations))
+			modelEquivCostSummaries[m.Model] = MergeEquivalentCostSummaries(modelEquivCostSummaries[m.Model], EffectiveEquivalentCostSummary(m.EquivalentCostSummary, m.CostSummary, m.CostUSD, m.Invocations))
 		}
 	}
 
@@ -910,12 +936,15 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 	}
 
 	return FleetSummary{
-		TotalTickets:             totalTickets,
-		TotalCostUSD:             math.Round(totalCostUSD*10000.0) / 10000.0,
-		CostSummary:              fleetCostSummary,
-		RoleCostSummaries:        roleCostSummaries,
-		ModelCostSummaries:       modelCostSummaries,
-		TotalInvocations:         totalInvocations,
+		TotalTickets:                 totalTickets,
+		TotalCostUSD:                 math.Round(totalCostUSD*10000.0) / 10000.0,
+		CostSummary:                  fleetCostSummary,
+		EquivalentCostSummary:        FinalizeEquivalentCostSummary(fleetEquivCostSummary),
+		RoleCostSummaries:            roleCostSummaries,
+		ModelCostSummaries:           modelCostSummaries,
+		RoleEquivalentCostSummaries:  roleEquivCostSummaries,
+		ModelEquivalentCostSummaries: modelEquivCostSummaries,
+		TotalInvocations:             totalInvocations,
 		TotalInputTokens:         totalInputTokens,
 		TotalOutputTokens:        totalOutputTokens,
 		TotalCacheReadTokens:     totalCacheReadTokens,
@@ -1011,6 +1040,7 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger, policies ...TicketConfi
 			ActiveDurationFormatted: eff.ActiveDurationFormatted,
 			CostUSD:                 tot.CostUSD,
 			CostSummary:             EffectiveCostSummary(tot.CostSummary, tot.CostUSD, tot.Invocations),
+			EquivalentCostSummary:   EffectiveEquivalentCostSummary(tot.EquivalentCostSummary, tot.CostSummary, tot.CostUSD, tot.Invocations),
 			CacheHitRatePct:         tot.CacheHitRatePct,
 			TestToCodeRatio:         eff.TestToProductionRatio.Ratio,
 			LinesAdded:              eff.CodeDelivered.LinesAdded,
@@ -1339,6 +1369,7 @@ type bucketAccumulator struct {
 	provisionalSeconds    int64
 	invocations           int64
 	costSummary           CostSummary
+	equivalentCostSummary EquivalentCostSummary
 	inputTokens           int64
 	outputTokens          int64
 	cacheReadTokens       int64
@@ -1416,6 +1447,7 @@ func AggregateMetricsOverTime(
 			}
 			acc.invocations++
 			acc.costSummary = MergeCostSummaries(acc.costSummary, SummaryForCost(inv.CostUSD, inv.CostEvidence))
+			acc.equivalentCostSummary = MergeEquivalentCostSummaries(acc.equivalentCostSummary, SummaryForInvocationEquivalentCost(inv))
 			acc.inputTokens += inv.Tokens.Input
 			acc.outputTokens += inv.Tokens.Output
 			acc.cacheReadTokens += inv.Tokens.CacheRead
@@ -1475,12 +1507,14 @@ func AggregateMetricsOverTime(
 	sort.Strings(sortedKeys)
 
 	var cumulativeCostSummary CostSummary
+	var cumulativeEquivCostSummary EquivalentCostSummary
 	var runningCumInput, runningCumOutput, runningCumLinesAdded, runningCumLinesDeleted, runningCumInvocations int64
 
 	var results []TimeBucketMetric
 	for _, bkey := range sortedKeys {
 		acc := accumulators[bkey]
 		cumulativeCostSummary = MergeCostSummaries(cumulativeCostSummary, acc.costSummary)
+		cumulativeEquivCostSummary = MergeEquivalentCostSummaries(cumulativeEquivCostSummary, acc.equivalentCostSummary)
 		runningCumInput += acc.inputTokens
 		runningCumOutput += acc.outputTokens
 		runningCumLinesAdded += acc.linesAdded
@@ -1494,31 +1528,33 @@ func AggregateMetricsOverTime(
 		}
 
 		results = append(results, TimeBucketMetric{
-			BucketKey:               bkey,
-			BucketDate:              bkey,
-			Invocations:             acc.invocations,
-			CostUSD:                 math.Round(acc.costSummary.Subtotal()*10000.0) / 10000.0,
-			CostSummary:             FinalizeCostSummary(acc.costSummary),
-			InputTokens:             acc.inputTokens,
-			OutputTokens:            acc.outputTokens,
-			CacheReadTokens:         acc.cacheReadTokens,
-			ReasoningTokens:         acc.reasoningTokens,
-			CacheHitRatePct:         hitPct,
-			LinesAdded:              acc.linesAdded,
-			LinesDeleted:            acc.linesDeleted,
-			FilesChanged:            acc.filesChanged,
-			NetLinesAdded:           acc.linesAdded - acc.linesDeleted,
-			PeakContextTokens:       acc.peakContextTokens,
-			ActiveDurationSeconds:   acc.activeDurationSeconds,
-			ProvisionalSeconds:      acc.provisionalSeconds,
-			CumulativeCostUSD:       math.Round(cumulativeCostSummary.Subtotal()*10000.0) / 10000.0,
-			CumulativeCostSummary:   FinalizeCostSummary(cumulativeCostSummary),
-			CumulativeInputTokens:   runningCumInput,
-			CumulativeOutputTokens:  runningCumOutput,
-			CumulativeLinesAdded:    runningCumLinesAdded,
-			CumulativeLinesDeleted:  runningCumLinesDeleted,
-			CumulativeNetLinesAdded: runningCumLinesAdded - runningCumLinesDeleted,
-			CumulativeInvocations:   runningCumInvocations,
+			BucketKey:                       bkey,
+			BucketDate:                      bkey,
+			Invocations:                     acc.invocations,
+			CostUSD:                         math.Round(acc.costSummary.Subtotal()*10000.0) / 10000.0,
+			CostSummary:                     FinalizeCostSummary(acc.costSummary),
+			EquivalentCostSummary:           FinalizeEquivalentCostSummary(acc.equivalentCostSummary),
+			InputTokens:                     acc.inputTokens,
+			OutputTokens:                    acc.outputTokens,
+			CacheReadTokens:                 acc.cacheReadTokens,
+			ReasoningTokens:                 acc.reasoningTokens,
+			CacheHitRatePct:                 hitPct,
+			LinesAdded:                      acc.linesAdded,
+			LinesDeleted:                    acc.linesDeleted,
+			FilesChanged:                    acc.filesChanged,
+			NetLinesAdded:                   acc.linesAdded - acc.linesDeleted,
+			PeakContextTokens:               acc.peakContextTokens,
+			ActiveDurationSeconds:           acc.activeDurationSeconds,
+			ProvisionalSeconds:              acc.provisionalSeconds,
+			CumulativeCostUSD:               math.Round(cumulativeCostSummary.Subtotal()*10000.0) / 10000.0,
+			CumulativeCostSummary:           FinalizeCostSummary(cumulativeCostSummary),
+			CumulativeEquivalentCostSummary: FinalizeEquivalentCostSummary(cumulativeEquivCostSummary),
+			CumulativeInputTokens:           runningCumInput,
+			CumulativeOutputTokens:          runningCumOutput,
+			CumulativeLinesAdded:            runningCumLinesAdded,
+			CumulativeLinesDeleted:          runningCumLinesDeleted,
+			CumulativeNetLinesAdded:         runningCumLinesAdded - runningCumLinesDeleted,
+			CumulativeInvocations:           runningCumInvocations,
 		})
 	}
 

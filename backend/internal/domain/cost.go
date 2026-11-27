@@ -172,3 +172,165 @@ func ValidateCostEvidence(amount *float64, evidence *CostEvidence, required bool
 	}
 	return nil
 }
+
+// CostProvenance classifies combined measured and API-equivalent billing provenance.
+type CostProvenance string
+
+const (
+	CostProvenanceEmpty       CostProvenance = "empty"
+	CostProvenanceMeasured    CostProvenance = "measured"
+	CostProvenanceEstimated   CostProvenance = "estimated"
+	CostProvenanceHybrid      CostProvenance = "hybrid"
+	CostProvenancePartial     CostProvenance = "partial"
+	CostProvenanceUnavailable CostProvenance = "unavailable"
+)
+
+// EquivalentCostSummary separates source-reported measured spend from persisted API-equivalent estimates.
+type EquivalentCostSummary struct {
+	Provenance             CostProvenance `json:"provenance"`
+	MeasuredCostUSD        *float64       `json:"measured_cost_usd"`
+	EstimatedCostUSD       *float64       `json:"estimated_cost_usd"`
+	TotalEquivalentCostUSD *float64       `json:"total_equivalent_cost_usd"`
+	KnownSubtotalUSD       *float64       `json:"known_subtotal_usd"`
+	Measured               int64          `json:"measured"`
+	Estimated              int64          `json:"estimated"`
+	PartialMeasured        int64          `json:"partial_measured"`
+	Unavailable            int64          `json:"unavailable"`
+	Total                  int64          `json:"total"`
+}
+
+func copyCostPtr(value *float64) *float64 {
+	if value == nil {
+		return nil
+	}
+	return CostNumber(*value)
+}
+
+// SummaryForInvocationEquivalentCost projects one invocation into an EquivalentCostSummary
+// using only its persisted measured evidence and persisted cost_estimate.
+func SummaryForInvocationEquivalentCost(inv InvocationFact) EquivalentCostSummary {
+	evidence := EffectiveCost(inv.CostUSD, inv.CostEvidence)
+	result := EquivalentCostSummary{Total: 1}
+	switch evidence.State {
+	case CostObserved:
+		result.Measured = 1
+		result.MeasuredCostUSD = CostNumber(inv.CostUSD)
+	case CostPartial:
+		result.PartialMeasured = 1
+		result.MeasuredCostUSD = copyCostPtr(evidence.KnownSubtotalUSD)
+	default:
+		if inv.CostEstimate != nil {
+			result.Estimated = 1
+			result.EstimatedCostUSD = CostNumber(inv.CostEstimate.AmountUSD)
+		} else {
+			result.Unavailable = 1
+		}
+	}
+	return FinalizeEquivalentCostSummary(result)
+}
+
+// MergeEquivalentCostSummaries combines two equivalent-cost summaries without
+// premature per-invocation rounding.
+func MergeEquivalentCostSummaries(a, b EquivalentCostSummary) EquivalentCostSummary {
+	result := EquivalentCostSummary{
+		Measured:        a.Measured + b.Measured,
+		Estimated:       a.Estimated + b.Estimated,
+		PartialMeasured: a.PartialMeasured + b.PartialMeasured,
+		Unavailable:     a.Unavailable + b.Unavailable,
+		Total:           a.Total + b.Total,
+	}
+	if a.MeasuredCostUSD != nil || b.MeasuredCostUSD != nil {
+		sum := 0.0
+		if a.MeasuredCostUSD != nil {
+			sum += *a.MeasuredCostUSD
+		}
+		if b.MeasuredCostUSD != nil {
+			sum += *b.MeasuredCostUSD
+		}
+		result.MeasuredCostUSD = CostNumber(sum)
+	}
+	if a.EstimatedCostUSD != nil || b.EstimatedCostUSD != nil {
+		sum := 0.0
+		if a.EstimatedCostUSD != nil {
+			sum += *a.EstimatedCostUSD
+		}
+		if b.EstimatedCostUSD != nil {
+			sum += *b.EstimatedCostUSD
+		}
+		result.EstimatedCostUSD = CostNumber(sum)
+	}
+	return FinalizeEquivalentCostSummary(result)
+}
+
+// FinalizeEquivalentCostSummary derives exact provenance and nullable totals from accumulated counts and subtotals.
+func FinalizeEquivalentCostSummary(summary EquivalentCostSummary) EquivalentCostSummary {
+	if summary.Total == 0 {
+		return EquivalentCostSummary{Provenance: CostProvenanceEmpty}
+	}
+	if summary.Measured == 0 && summary.PartialMeasured == 0 {
+		summary.MeasuredCostUSD = nil
+	} else {
+		summary.MeasuredCostUSD = copyCostPtr(summary.MeasuredCostUSD)
+	}
+	if summary.Estimated == 0 {
+		summary.EstimatedCostUSD = nil
+	} else {
+		summary.EstimatedCostUSD = copyCostPtr(summary.EstimatedCostUSD)
+	}
+
+	if summary.MeasuredCostUSD != nil || summary.EstimatedCostUSD != nil {
+		subtotal := 0.0
+		if summary.MeasuredCostUSD != nil {
+			subtotal += *summary.MeasuredCostUSD
+		}
+		if summary.EstimatedCostUSD != nil {
+			subtotal += *summary.EstimatedCostUSD
+		}
+		summary.KnownSubtotalUSD = CostNumber(subtotal)
+	} else {
+		summary.KnownSubtotalUSD = nil
+	}
+
+	switch {
+	case summary.Measured == summary.Total:
+		summary.Provenance = CostProvenanceMeasured
+		summary.EstimatedCostUSD = nil
+		summary.TotalEquivalentCostUSD = copyCostPtr(summary.MeasuredCostUSD)
+	case summary.Estimated == summary.Total:
+		summary.Provenance = CostProvenanceEstimated
+		summary.MeasuredCostUSD = nil
+		summary.TotalEquivalentCostUSD = copyCostPtr(summary.EstimatedCostUSD)
+	case summary.Measured+summary.Estimated == summary.Total && summary.Measured > 0 && summary.Estimated > 0:
+		summary.Provenance = CostProvenanceHybrid
+		summary.TotalEquivalentCostUSD = copyCostPtr(summary.KnownSubtotalUSD)
+	case summary.KnownSubtotalUSD != nil:
+		summary.Provenance = CostProvenancePartial
+		summary.TotalEquivalentCostUSD = nil
+	default:
+		summary.Provenance = CostProvenanceUnavailable
+		summary.MeasuredCostUSD = nil
+		summary.EstimatedCostUSD = nil
+		summary.TotalEquivalentCostUSD = nil
+		summary.KnownSubtotalUSD = nil
+	}
+	return summary
+}
+
+// EffectiveEquivalentCostSummary returns a finalized EquivalentCostSummary,
+// falling back to measured-only CostSummary projection for older in-memory callers.
+func EffectiveEquivalentCostSummary(equiv EquivalentCostSummary, summary CostSummary, amount float64, count int64) EquivalentCostSummary {
+	if equiv.Provenance != "" {
+		return FinalizeEquivalentCostSummary(equiv)
+	}
+	measured := EffectiveCostSummary(summary, amount, count)
+	derived := EquivalentCostSummary{
+		Measured:        measured.FullyObserved,
+		PartialMeasured: measured.Partial,
+		Unavailable:     measured.Unavailable,
+		Total:           measured.Total,
+	}
+	if measured.FullyObserved > 0 || measured.Partial > 0 {
+		derived.MeasuredCostUSD = copyCostPtr(measured.KnownSubtotalUSD)
+	}
+	return FinalizeEquivalentCostSummary(derived)
+}

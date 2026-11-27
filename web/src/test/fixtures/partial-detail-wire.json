@@ -186,6 +186,22 @@
                   "unavailable": 0,
                   "total": 1
                 },
+                "measured_cost_usd": 0.1,
+                "estimated_cost_usd": null,
+                "total_equivalent_cost_usd": 0.1,
+                "cost_provenance": "measured",
+                "equivalent_cost_summary": {
+                  "provenance": "measured",
+                  "measured_cost_usd": 0.1,
+                  "estimated_cost_usd": null,
+                  "total_equivalent_cost_usd": 0.1,
+                  "known_subtotal_usd": 0.1,
+                  "measured": 1,
+                  "estimated": 0,
+                  "partial_measured": 0,
+                  "unavailable": 0,
+                  "total": 1
+                },
                 "peak_context_tokens": 17,
                 "context_health": "UNAVAILABLE"
               }
@@ -217,6 +233,22 @@
                   "unavailable": 0,
                   "total": 1
                 },
+                "measured_cost_usd": 0.1,
+                "estimated_cost_usd": null,
+                "total_equivalent_cost_usd": 0.1,
+                "cost_provenance": "measured",
+                "equivalent_cost_summary": {
+                  "provenance": "measured",
+                  "measured_cost_usd": 0.1,
+                  "estimated_cost_usd": null,
+                  "total_equivalent_cost_usd": 0.1,
+                  "known_subtotal_usd": 0.1,
+                  "measured": 1,
+                  "estimated": 0,
+                  "partial_measured": 0,
+                  "unavailable": 0,
+                  "total": 1
+                },
                 "peak_context_tokens": 17,
                 "context_health": "UNAVAILABLE"
               }
@@ -241,6 +273,22 @@
         "unavailable": 0,
         "total": 2
       },
+      "measured_cost_usd": 0.2,
+      "estimated_cost_usd": null,
+      "total_equivalent_cost_usd": 0.2,
+      "cost_provenance": "measured",
+      "equivalent_cost_summary": {
+        "provenance": "measured",
+        "measured_cost_usd": 0.2,
+        "estimated_cost_usd": null,
+        "total_equivalent_cost_usd": 0.2,
+        "known_subtotal_usd": 0.2,
+        "measured": 2,
+        "estimated": 0,
+        "partial_measured": 0,
+        "unavailable": 0,
+        "total": 2
+      },
       "peak_context_tokens": 17,
       "context_health": "UNAVAILABLE"
     },
@@ -258,6 +306,22 @@
           "known_subtotal_usd": 0.2,
           "fully_observed": 2,
           "partial": 0,
+          "unavailable": 0,
+          "total": 2
+        },
+        "measured_cost_usd": 0.2,
+        "estimated_cost_usd": null,
+        "total_equivalent_cost_usd": 0.2,
+        "cost_provenance": "measured",
+        "equivalent_cost_summary": {
+          "provenance": "measured",
+          "measured_cost_usd": 0.2,
+          "estimated_cost_usd": null,
+          "total_equivalent_cost_usd": 0.2,
+          "known_subtotal_usd": 0.2,
+          "measured": 2,
+          "estimated": 0,
+          "partial_measured": 0,
           "unavailable": 0,
           "total": 2
         },
@@ -279,6 +343,22 @@
           "known_subtotal_usd": 0.2,
           "fully_observed": 2,
           "partial": 0,
+          "unavailable": 0,
+          "total": 2
+        },
+        "measured_cost_usd": 0.2,
+        "estimated_cost_usd": null,
+        "total_equivalent_cost_usd": 0.2,
+        "cost_provenance": "measured",
+        "equivalent_cost_summary": {
+          "provenance": "measured",
+          "measured_cost_usd": 0.2,
+          "estimated_cost_usd": null,
+          "total_equivalent_cost_usd": 0.2,
+          "known_subtotal_usd": 0.2,
+          "measured": 2,
+          "estimated": 0,
+          "partial_measured": 0,
           "unavailable": 0,
           "total": 2
         },

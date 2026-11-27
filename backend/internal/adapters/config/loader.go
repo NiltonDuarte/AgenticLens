@@ -107,6 +107,9 @@ func ValidateConfig(cfg domain.ProjectConfig) error {
 			return fmt.Errorf("role_order contains a blank role")
 		}
 	}
+	if err := domain.ValidateModelPricingConfig(cfg.ModelPricing); err != nil {
+		return err
+	}
 	return nil
 }
 

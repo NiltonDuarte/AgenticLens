@@ -753,6 +753,24 @@ func (e *BackfillEngine) processSingleWorkspace(
 				return result
 			}
 		}
+		refreshedSet := make(map[string]bool, len(sourceEvents.CompleteSessionIDs))
+		for _, id := range sourceEvents.CompleteSessionIDs {
+			refreshedSet[id] = true
+		}
+		pricedSessions := make([]domain.SessionFact, len(factLedger.Sessions))
+		for i, session := range factLedger.Sessions {
+			if refreshedSet[session.ID] {
+				priced, priceErr := domain.ApplyModelPricingToSession(session, cfg.ModelPricing)
+				if priceErr != nil {
+					result.Error = fmt.Errorf("applying model pricing to session %s: %w", session.ID, priceErr)
+					return result
+				}
+				pricedSessions[i] = priced
+			} else {
+				pricedSessions[i] = session
+			}
+		}
+		factLedger.Sessions = pricedSessions
 		var err error
 		persistedLedger, err = domain.PersistSourceAnomalySummariesWithPolicy(factLedger, sourceEvents, *e.generationPolicy, cfg.AnomalyThresholds)
 		if err != nil {

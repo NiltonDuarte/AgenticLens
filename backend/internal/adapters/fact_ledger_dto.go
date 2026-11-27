@@ -308,6 +308,9 @@ func (dto AgenticFactLedgerDTO) validateCostFields(required bool) error {
 			if err := domain.ValidateCostEvidence(inv.CostUSD, inv.CostEvidence, required); err != nil {
 				return fmt.Errorf("sessions[%d].invocations[%d]: %w", si, ii, err)
 			}
+			if err := domain.ValidateCostEstimate(costFactEvidence(inv.CostUSD, inv.CostEvidence), inv.CostEstimate); err != nil {
+				return fmt.Errorf("sessions[%d].invocations[%d]: %w", si, ii, err)
+			}
 		}
 	}
 	return nil

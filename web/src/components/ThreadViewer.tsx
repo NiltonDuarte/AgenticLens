@@ -1,7 +1,8 @@
 import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ThreadExecutionRecord } from '../domain/types';
-import { formatModelLabel, formatRoleLabel, formatCostUSD, formatPercentage, formatTokensK } from '../domain/formatters';
+import { formatModelLabel, formatRoleLabel, formatPercentage, formatTokensK } from '../domain/formatters';
+import { EstimatedCostCell } from './EstimatedCostCell';
 import { InfoTooltip } from './InfoTooltip';
 
 export interface ThreadViewerProps {
@@ -210,7 +211,15 @@ export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads, focusSessio
                               <td className="num-col">{formatTokensK(m.output_tokens)}</td>
                               <td className="num-col">{formatTokensK(m.cache_read_tokens)}</td>
                               <td className="num-col">{formatPercentage(m.cache_hit_rate_pct)}</td>
-                              <td className="num-col">{formatCostUSD(m.cost_usd, m.cost_summary)}</td>
+                              <td className="num-col">
+                                <EstimatedCostCell
+                                  amount={m.cost_usd}
+                                  summary={m.cost_summary}
+                                  equivalentSummary={m.equivalent_cost_summary}
+                                  appliedRates={m.applied_rates}
+                                  subjectLabel={formatModelLabel(m.model)}
+                                />
+                              </td>
                               <td className="num-col">{formatTokensK(m.peak_context_tokens)}</td>
                               <td>
                                 <span className={`health-pill mini ${m.context_health.toLowerCase()}`}>

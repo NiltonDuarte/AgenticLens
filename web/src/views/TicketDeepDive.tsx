@@ -7,6 +7,7 @@ import React, { useEffect, useState, useCallback, useRef, useId, useMemo } from 
 import type {
   AgenticMetricsLedger,
   Anomaly,
+  AppliedRateSnapshot,
   DataSource,
   EventFact,
   WorkspaceDetail,
@@ -22,7 +23,6 @@ import {
 import {
   formatModelLabel,
   formatRoleLabel,
-  formatCostUSD,
   formatDurationSeconds,
   formatIsoDateTimeShort,
   formatLeadTime,
@@ -32,10 +32,12 @@ import {
   formatLocalDateTime,
   formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime,
 } from '../domain/formatters';
+import { hasEstimatedCost } from '../domain/cost';
 import { formatAnomaly } from '../domain/anomalies';
 import { aggregateToolUsage } from '../domain/tools';
 import { KPICard } from '../components/KPICard';
 import { CostKPICard } from '../components/CostKPICard';
+import { EstimatedCostCell } from '../components/EstimatedCostCell';
 import { EmptyState } from '../components/EmptyState';
 import { TicketSelector } from '../components/TicketSelector';
 import { SaturationBar } from '../components/SaturationBar';
@@ -292,6 +294,21 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   }
 
   const turnEntries = Object.entries(subTurns.by_role ?? {}).sort((a, b) => rolePresentation.compareProjected(a[0], b[0]));
+  const hasEstimatedCosts =
+    hasEstimatedCost(totals.equivalent_cost_summary) ||
+    ledger.models.some((m) => hasEstimatedCost(m.equivalent_cost_summary)) ||
+    ledger.roles.some((r) => hasEstimatedCost(r.equivalent_cost_summary));
+  const appliedRates: AppliedRateSnapshot[] = [];
+  const seenRateKeys = new Set<string>();
+  for (const model of ledger.models) {
+    for (const rate of model.applied_rates ?? []) {
+      const rateKey = `${rate.matched_pattern}|${rate.input_per_million}|${rate.cache_read_per_million}|${rate.output_per_million}|${rate.effective_catalog_id}`;
+      if (!seenRateKeys.has(rateKey)) {
+        seenRateKeys.add(rateKey);
+        appliedRates.push(rate);
+      }
+    }
+  }
 
   return (
     <div className="deep-dive-container">
@@ -357,6 +374,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           title="Total Cost"
           amount={totals.cost_usd}
           summary={totals.cost_summary}
+          equivalentSummary={totals.equivalent_cost_summary}
+          appliedRates={appliedRates.length > 0 ? appliedRates : undefined}
           invocations={totals.invocations}
           secondary={`${totals.invocations} invocations`}
           tooltip="Total USD spend across all model calls"
@@ -497,6 +516,19 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       </div>
 
       {/* Row 5: Role and Model Metrics Tables */}
+      {hasEstimatedCosts && (
+        <div
+          className="cost-estimate-warning-banner"
+          role="note"
+          aria-label="API-equivalent cost estimation caveat"
+          data-testid="cache-write-warning-banner"
+        >
+          <span className="cost-estimate-warning-badge">Estimate Note</span>
+          <p className="cost-estimate-warning-text">
+            API-equivalent estimates do not currently consider CacheWrite tokens. Models with cache-write surcharges (such as GPT-5 or GPT-6) may have higher actual API costs.
+          </p>
+        </div>
+      )}
       <div className="tables-grid">
         <div className="table-card">
           <div className="table-card-header">
@@ -588,7 +620,14 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                       <td className="num-col">{r.invocations}</td>
                       <td className="num-col">{formatTokensK(r.input_tokens + r.output_tokens)}</td>
                       <td className="num-col">{formatPercentage(r.cache_hit_rate_pct)}</td>
-                      <td className="num-col">{formatCostUSD(r.cost_usd, r.cost_summary)}</td>
+                      <td className="num-col">
+                        <EstimatedCostCell
+                          amount={r.cost_usd}
+                          summary={r.cost_summary}
+                          equivalentSummary={r.equivalent_cost_summary}
+                          subjectLabel={formatRoleLabel(r.role)}
+                        />
+                      </td>
                     </tr>
                   );
                 })}
@@ -687,7 +726,15 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                       <td className="num-col">{m.invocations}</td>
                       <td className="num-col">{formatTokensK(m.input_tokens + m.output_tokens)}</td>
                       <td className="num-col">{formatPercentage(m.cache_hit_rate_pct)}</td>
-                      <td className="num-col">{formatCostUSD(m.cost_usd, m.cost_summary)}</td>
+                      <td className="num-col">
+                        <EstimatedCostCell
+                          amount={m.cost_usd}
+                          summary={m.cost_summary}
+                          equivalentSummary={m.equivalent_cost_summary}
+                          appliedRates={m.applied_rates}
+                          subjectLabel={formatModelLabel(m.model)}
+                        />
+                      </td>
                     </tr>
                   );
                 })}
