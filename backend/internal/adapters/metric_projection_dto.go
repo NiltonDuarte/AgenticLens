@@ -6,59 +6,81 @@ import (
 
 // GroupedMetricDTO is the concrete nullable cost projection of GroupedMetric.
 type GroupedMetricDTO struct {
-	Invocations       int64                      `json:"invocations"`
-	InputTokens       int64                      `json:"input_tokens"`
-	OutputTokens      int64                      `json:"output_tokens"`
-	CacheReadTokens   int64                      `json:"cache_read_tokens"`
-	CacheHitRatePct   float64                    `json:"cache_hit_rate_pct"`
-	CostUSD           *float64                   `json:"cost_usd"`
-	CostSummary       domain.CostSummary         `json:"cost_summary"`
-	PeakContextTokens int64                      `json:"peak_context_tokens"`
-	ContextHealth     domain.ContextHealthStatus `json:"context_health"`
+	Invocations            int64                        `json:"invocations"`
+	InputTokens            int64                        `json:"input_tokens"`
+	OutputTokens           int64                        `json:"output_tokens"`
+	CacheReadTokens        int64                        `json:"cache_read_tokens"`
+	CacheHitRatePct        float64                      `json:"cache_hit_rate_pct"`
+	CostUSD                *float64                     `json:"cost_usd"`
+	CostSummary            domain.CostSummary           `json:"cost_summary"`
+	MeasuredCostUSD        *float64                     `json:"measured_cost_usd"`
+	EstimatedCostUSD       *float64                     `json:"estimated_cost_usd"`
+	TotalEquivalentCostUSD *float64                     `json:"total_equivalent_cost_usd"`
+	CostProvenance         domain.CostProvenance        `json:"cost_provenance"`
+	EquivalentCostSummary  domain.EquivalentCostSummary `json:"equivalent_cost_summary"`
+	PeakContextTokens      int64                        `json:"peak_context_tokens"`
+	ContextHealth          domain.ContextHealthStatus   `json:"context_health"`
 }
 
 func GroupedMetricDTOFromDomain(value domain.GroupedMetric) GroupedMetricDTO {
 	summary := domain.EffectiveCostSummary(value.CostSummary, value.CostUSD, value.Invocations)
+	equiv := domain.EffectiveEquivalentCostSummary(value.EquivalentCostSummary, summary, value.CostUSD, value.Invocations)
 	return GroupedMetricDTO{
-		Invocations:       value.Invocations,
-		InputTokens:       value.InputTokens,
-		OutputTokens:      value.OutputTokens,
-		CacheReadTokens:   value.CacheReadTokens,
-		CacheHitRatePct:   value.CacheHitRatePct,
-		CostUSD:           summary.CompleteAmount(),
-		CostSummary:       summary,
-		PeakContextTokens: value.PeakContextTokens,
-		ContextHealth:     value.ContextHealth,
+		Invocations:            value.Invocations,
+		InputTokens:            value.InputTokens,
+		OutputTokens:           value.OutputTokens,
+		CacheReadTokens:        value.CacheReadTokens,
+		CacheHitRatePct:        value.CacheHitRatePct,
+		CostUSD:                summary.CompleteAmount(),
+		CostSummary:            summary,
+		MeasuredCostUSD:        equiv.MeasuredCostUSD,
+		EstimatedCostUSD:       equiv.EstimatedCostUSD,
+		TotalEquivalentCostUSD: equiv.TotalEquivalentCostUSD,
+		CostProvenance:         equiv.Provenance,
+		EquivalentCostSummary:  equiv,
+		PeakContextTokens:      value.PeakContextTokens,
+		ContextHealth:          value.ContextHealth,
 	}
 }
 
 // RoleMetricDTO is the concrete nullable cost projection of RoleMetric.
 type RoleMetricDTO struct {
-	Role              domain.AgentRole           `json:"role"`
-	Invocations       int64                      `json:"invocations"`
-	InputTokens       int64                      `json:"input_tokens"`
-	OutputTokens      int64                      `json:"output_tokens"`
-	CacheReadTokens   int64                      `json:"cache_read_tokens"`
-	CacheHitRatePct   float64                    `json:"cache_hit_rate_pct"`
-	CostUSD           *float64                   `json:"cost_usd"`
-	CostSummary       domain.CostSummary         `json:"cost_summary"`
-	PeakContextTokens int64                      `json:"peak_context_tokens"`
-	ContextHealth     domain.ContextHealthStatus `json:"context_health"`
+	Role                   domain.AgentRole             `json:"role"`
+	Invocations            int64                        `json:"invocations"`
+	InputTokens            int64                        `json:"input_tokens"`
+	OutputTokens           int64                        `json:"output_tokens"`
+	CacheReadTokens        int64                        `json:"cache_read_tokens"`
+	CacheHitRatePct        float64                      `json:"cache_hit_rate_pct"`
+	CostUSD                *float64                     `json:"cost_usd"`
+	CostSummary            domain.CostSummary           `json:"cost_summary"`
+	MeasuredCostUSD        *float64                     `json:"measured_cost_usd"`
+	EstimatedCostUSD       *float64                     `json:"estimated_cost_usd"`
+	TotalEquivalentCostUSD *float64                     `json:"total_equivalent_cost_usd"`
+	CostProvenance         domain.CostProvenance        `json:"cost_provenance"`
+	EquivalentCostSummary  domain.EquivalentCostSummary `json:"equivalent_cost_summary"`
+	PeakContextTokens      int64                        `json:"peak_context_tokens"`
+	ContextHealth          domain.ContextHealthStatus   `json:"context_health"`
 }
 
 func RoleMetricDTOFromDomain(value domain.RoleMetric) RoleMetricDTO {
 	summary := domain.EffectiveCostSummary(value.CostSummary, value.CostUSD, value.Invocations)
+	equiv := domain.EffectiveEquivalentCostSummary(value.EquivalentCostSummary, summary, value.CostUSD, value.Invocations)
 	return RoleMetricDTO{
-		Role:              value.Role,
-		Invocations:       value.Invocations,
-		InputTokens:       value.InputTokens,
-		OutputTokens:      value.OutputTokens,
-		CacheReadTokens:   value.CacheReadTokens,
-		CacheHitRatePct:   value.CacheHitRatePct,
-		CostUSD:           summary.CompleteAmount(),
-		CostSummary:       summary,
-		PeakContextTokens: value.PeakContextTokens,
-		ContextHealth:     value.ContextHealth,
+		Role:                   value.Role,
+		Invocations:            value.Invocations,
+		InputTokens:            value.InputTokens,
+		OutputTokens:           value.OutputTokens,
+		CacheReadTokens:        value.CacheReadTokens,
+		CacheHitRatePct:        value.CacheHitRatePct,
+		CostUSD:                summary.CompleteAmount(),
+		CostSummary:            summary,
+		MeasuredCostUSD:        equiv.MeasuredCostUSD,
+		EstimatedCostUSD:       equiv.EstimatedCostUSD,
+		TotalEquivalentCostUSD: equiv.TotalEquivalentCostUSD,
+		CostProvenance:         equiv.Provenance,
+		EquivalentCostSummary:  equiv,
+		PeakContextTokens:      value.PeakContextTokens,
+		ContextHealth:          value.ContextHealth,
 	}
 }
 
@@ -75,31 +97,48 @@ func RoleMetricDTOsFromDomain(values []domain.RoleMetric) []RoleMetricDTO {
 
 // ModelMetricDTO is the concrete nullable cost projection of ModelMetric.
 type ModelMetricDTO struct {
-	Model             string                     `json:"model"`
-	Invocations       int64                      `json:"invocations"`
-	InputTokens       int64                      `json:"input_tokens"`
-	OutputTokens      int64                      `json:"output_tokens"`
-	CacheReadTokens   int64                      `json:"cache_read_tokens"`
-	CacheHitRatePct   float64                    `json:"cache_hit_rate_pct"`
-	CostUSD           *float64                   `json:"cost_usd"`
-	CostSummary       domain.CostSummary         `json:"cost_summary"`
-	PeakContextTokens int64                      `json:"peak_context_tokens"`
-	ContextHealth     domain.ContextHealthStatus `json:"context_health"`
+	Model                  string                       `json:"model"`
+	Invocations            int64                        `json:"invocations"`
+	InputTokens            int64                        `json:"input_tokens"`
+	OutputTokens           int64                        `json:"output_tokens"`
+	CacheReadTokens        int64                        `json:"cache_read_tokens"`
+	CacheHitRatePct        float64                      `json:"cache_hit_rate_pct"`
+	CostUSD                *float64                     `json:"cost_usd"`
+	CostSummary            domain.CostSummary           `json:"cost_summary"`
+	MeasuredCostUSD        *float64                     `json:"measured_cost_usd"`
+	EstimatedCostUSD       *float64                     `json:"estimated_cost_usd"`
+	TotalEquivalentCostUSD *float64                     `json:"total_equivalent_cost_usd"`
+	CostProvenance         domain.CostProvenance        `json:"cost_provenance"`
+	EquivalentCostSummary  domain.EquivalentCostSummary `json:"equivalent_cost_summary"`
+	AppliedRates           []domain.AppliedRateSnapshot `json:"applied_rates,omitempty"`
+	PeakContextTokens      int64                        `json:"peak_context_tokens"`
+	ContextHealth          domain.ContextHealthStatus   `json:"context_health"`
 }
 
 func ModelMetricDTOFromDomain(value domain.ModelMetric) ModelMetricDTO {
 	summary := domain.EffectiveCostSummary(value.CostSummary, value.CostUSD, value.Invocations)
+	equiv := domain.EffectiveEquivalentCostSummary(value.EquivalentCostSummary, summary, value.CostUSD, value.Invocations)
+	var appliedRates []domain.AppliedRateSnapshot
+	if len(value.AppliedRates) > 0 {
+		appliedRates = append([]domain.AppliedRateSnapshot(nil), value.AppliedRates...)
+	}
 	return ModelMetricDTO{
-		Model:             value.Model,
-		Invocations:       value.Invocations,
-		InputTokens:       value.InputTokens,
-		OutputTokens:      value.OutputTokens,
-		CacheReadTokens:   value.CacheReadTokens,
-		CacheHitRatePct:   value.CacheHitRatePct,
-		CostUSD:           summary.CompleteAmount(),
-		CostSummary:       summary,
-		PeakContextTokens: value.PeakContextTokens,
-		ContextHealth:     value.ContextHealth,
+		Model:                  value.Model,
+		Invocations:            value.Invocations,
+		InputTokens:            value.InputTokens,
+		OutputTokens:           value.OutputTokens,
+		CacheReadTokens:        value.CacheReadTokens,
+		CacheHitRatePct:        value.CacheHitRatePct,
+		CostUSD:                summary.CompleteAmount(),
+		CostSummary:            summary,
+		MeasuredCostUSD:        equiv.MeasuredCostUSD,
+		EstimatedCostUSD:       equiv.EstimatedCostUSD,
+		TotalEquivalentCostUSD: equiv.TotalEquivalentCostUSD,
+		CostProvenance:         equiv.Provenance,
+		EquivalentCostSummary:  equiv,
+		AppliedRates:           appliedRates,
+		PeakContextTokens:      value.PeakContextTokens,
+		ContextHealth:          value.ContextHealth,
 	}
 }
 

@@ -1967,3 +1967,551 @@ describe('Workspace location recovery', () => {
         expect(events).not.toHaveBeenCalledWith('AL-1', '/records/first');
     });
 });
+
+describe('AL2-6 API-equivalent cost estimation in TicketDeepDive', () => {
+    const sampleCatalogId = 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const sampleRate = {
+        matched_pattern: 'gpt-5.4',
+        input_per_million: 2.0,
+        cache_read_per_million: 0.25,
+        output_per_million: 8.0,
+        effective_catalog_id: sampleCatalogId,
+    } as const;
+
+    const baseDetail = (): WorkspaceDetail => {
+        const base = mockWorkspaceDetails['AL-1']!;
+        return {
+            ...base,
+            ledger: {
+                ...base.ledger,
+                facts: { ...base.ledger.facts, schema_version: 6 as const },
+            },
+        };
+    };
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: Object.values(mockAgenticMetricsLedgers) });
+        vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockRejectedValue(new Error('Source unavailable'));
+    });
+
+    it('renders pure measured ticket without EST badges or CacheWrite warning banner', async () => {
+        const detail = baseDetail();
+        const measuredSummary = {
+            provenance: 'measured' as const,
+            measured_cost_usd: 4.5,
+            estimated_cost_usd: null,
+            total_equivalent_cost_usd: 4.5,
+            known_subtotal_usd: 4.5,
+            measured: 1,
+            estimated: 0,
+            partial_measured: 0,
+            unavailable: 0,
+            total: 1,
+        };
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+            data: withAnomalyFacts({
+                ...detail,
+                ledger: {
+                    ...detail.ledger,
+                    totals: {
+                        ...detail.ledger.totals,
+                        invocations: 1,
+                        cost_usd: 4.5,
+                        cost_summary: { state: 'complete', known_subtotal_usd: 4.5, fully_observed: 1, partial: 0, unavailable: 0, total: 1 },
+                        equivalent_cost_summary: measuredSummary,
+                    },
+                    roles: [
+                        {
+                            ...detail.ledger.roles[0]!,
+                            invocations: 1,
+                            cost_usd: 4.5,
+                            cost_summary: { state: 'complete', known_subtotal_usd: 4.5, fully_observed: 1, partial: 0, unavailable: 0, total: 1 },
+                            equivalent_cost_summary: measuredSummary,
+                        },
+                    ],
+                    models: [
+                        {
+                            ...detail.ledger.models[0]!,
+                            model: 'claude-sonnet-4',
+                            invocations: 1,
+                            cost_usd: 4.5,
+                            cost_summary: { state: 'complete', known_subtotal_usd: 4.5, fully_observed: 1, partial: 0, unavailable: 0, total: 1 },
+                            equivalent_cost_summary: measuredSummary,
+                        },
+                    ],
+                },
+            }),
+        });
+
+        const { container } = render(<TicketDeepDive selectedTicketId="AL-1" />);
+        await screen.findByText('Model Resource Consumption');
+        const costCard = screen.getByText('Total Cost').closest<HTMLElement>('.kpi-card')!;
+        expect(costCard.querySelector('.kpi-value')).toHaveTextContent('$4.50');
+        expect(costCard.querySelector('.cost-est-badge')).not.toBeInTheDocument();
+        expect(container.querySelector('.cost-est-badge')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('cache-write-warning-banner')).not.toBeInTheDocument();
+    });
+
+    it('renders hybrid ticket with EST badge on CostKPICard, estimated model row, and expanded Session Execution Threads, plus rate tooltip and CacheWrite warning', async () => {
+        const detail = baseDetail();
+        const measuredModelEquiv = {
+            provenance: 'measured' as const,
+            measured_cost_usd: 23.2,
+            estimated_cost_usd: null,
+            total_equivalent_cost_usd: 23.2,
+            known_subtotal_usd: 23.2,
+            measured: 1,
+            estimated: 0,
+            partial_measured: 0,
+            unavailable: 0,
+            total: 1,
+        };
+        const estimatedModelEquiv = {
+            provenance: 'estimated' as const,
+            measured_cost_usd: null,
+            estimated_cost_usd: 7.12,
+            total_equivalent_cost_usd: 7.12,
+            known_subtotal_usd: 7.12,
+            measured: 0,
+            estimated: 1,
+            partial_measured: 0,
+            unavailable: 0,
+            total: 1,
+        };
+        const hybridTotalsEquiv = {
+            provenance: 'hybrid' as const,
+            measured_cost_usd: 23.2,
+            estimated_cost_usd: 7.12,
+            total_equivalent_cost_usd: 30.32,
+            known_subtotal_usd: 30.32,
+            measured: 1,
+            estimated: 1,
+            partial_measured: 0,
+            unavailable: 0,
+            total: 2,
+        };
+
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+            data: withAnomalyFacts({
+                ...detail,
+                ledger: {
+                    ...detail.ledger,
+                    totals: {
+                        ...detail.ledger.totals,
+                        invocations: 2,
+                        cost_usd: null,
+                        cost_summary: { state: 'partial', known_subtotal_usd: 23.2, fully_observed: 1, partial: 0, unavailable: 1, total: 2 },
+                        equivalent_cost_summary: hybridTotalsEquiv,
+                    },
+                    roles: [
+                        {
+                            ...detail.ledger.roles[0]!,
+                            role: 'orchestrator',
+                            invocations: 1,
+                            cost_usd: 23.2,
+                            cost_summary: { state: 'complete', known_subtotal_usd: 23.2, fully_observed: 1, partial: 0, unavailable: 0, total: 1 },
+                            equivalent_cost_summary: measuredModelEquiv,
+                        },
+                        {
+                            ...detail.ledger.roles[0]!,
+                            role: 'coder',
+                            invocations: 1,
+                            cost_usd: null,
+                            cost_summary: { state: 'unavailable', known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 1, total: 1 },
+                            equivalent_cost_summary: estimatedModelEquiv,
+                        },
+                    ],
+                    models: [
+                        {
+                            ...detail.ledger.models[0]!,
+                            model: 'claude-sonnet-4',
+                            invocations: 1,
+                            cost_usd: 23.2,
+                            cost_summary: { state: 'complete', known_subtotal_usd: 23.2, fully_observed: 1, partial: 0, unavailable: 0, total: 1 },
+                            equivalent_cost_summary: measuredModelEquiv,
+                        },
+                        {
+                            ...detail.ledger.models[0]!,
+                            model: 'gpt-5.4',
+                            invocations: 1,
+                            cost_usd: null,
+                            cost_summary: { state: 'unavailable', known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 1, total: 1 },
+                            equivalent_cost_summary: estimatedModelEquiv,
+                            applied_rates: [sampleRate],
+                        },
+                    ],
+                    threads: [
+                        {
+                            session_id: 'ses-oc-measured',
+                            user: 'dev-a',
+                            compactions: 0,
+                            roles: [
+                                {
+                                    role: 'orchestrator',
+                                    models: [
+                                        {
+                                            ...detail.ledger.models[0]!,
+                                            model: 'claude-sonnet-4',
+                                            invocations: 1,
+                                            cost_usd: 23.2,
+                                            cost_summary: { state: 'complete', known_subtotal_usd: 23.2, fully_observed: 1, partial: 0, unavailable: 0, total: 1 },
+                                            equivalent_cost_summary: measuredModelEquiv,
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            session_id: 'ses-codex-estimated',
+                            user: 'dev-a',
+                            compactions: 0,
+                            roles: [
+                                {
+                                    role: 'coder',
+                                    models: [
+                                        {
+                                            ...detail.ledger.models[0]!,
+                                            model: 'gpt-5.4',
+                                            invocations: 1,
+                                            cost_usd: null,
+                                            cost_summary: { state: 'unavailable', known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 1, total: 1 },
+                                            equivalent_cost_summary: estimatedModelEquiv,
+                                            applied_rates: [sampleRate],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            }),
+        });
+
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+
+        // CostKPICard shows hybrid breakdown AND .cost-est-badge
+        const costCard = (await screen.findByText('Total Cost')).closest<HTMLElement>('.kpi-card')!;
+        expect(costCard.querySelector('.kpi-value')).toHaveTextContent('$30.32');
+        expect(costCard.querySelector('.cost-est-badge')).toHaveTextContent('EST');
+        expect(costCard.querySelector('.kpi-secondary')).toHaveTextContent('$23.20 measured + $7.12 EST (equiv) · 2 invocations');
+
+        // CacheWrite warning banner is visible and mentions GPT-5 / GPT-6 surcharges
+        const banner = screen.getByTestId('cache-write-warning-banner');
+        expect(banner).toBeVisible();
+        expect(banner).toHaveTextContent(/CacheWrite/i);
+        expect(banner).toHaveTextContent(/GPT-5/);
+        expect(banner).toHaveTextContent(/GPT-6/);
+
+        // Model Resource Consumption table: measured row has NO EST badge; estimated row HAS EST badge + rate tooltip
+        const modelCard = screen.getByText('Model Resource Consumption').closest<HTMLElement>('.table-card')!;
+        const claudeRow = within(modelCard).getByText('claude-sonnet-4').closest('tr')!;
+        const gptRow = within(modelCard).getByText('gpt-5.4').closest('tr')!;
+
+        expect(claudeRow.querySelector('.cost-est-badge')).not.toBeInTheDocument();
+        expect(claudeRow).toHaveTextContent('$23.20');
+
+        expect(gptRow.querySelector('.cost-est-badge')).toHaveTextContent('EST');
+        expect(gptRow).toHaveTextContent('$7.12');
+
+        const rateTrigger = within(gptRow).getByRole('button', { name: 'Applied API-equivalent rate details for gpt-5.4' });
+        fireEvent.focus(rateTrigger);
+        const tooltip = document.getElementById(rateTrigger.getAttribute('aria-describedby')!);
+        expect(tooltip).toHaveTextContent('gpt-5.4: $2.00 in / $0.25 cache read / $8.00 out per 1M tokens');
+        expect(tooltip).toHaveTextContent(sampleCatalogId);
+        expect(tooltip).toHaveTextContent('CacheWrite');
+
+        // Session Execution Threads (ThreadViewer): expand the second thread and verify EST badge renders
+        const threadViewer = screen.getByText('Session Execution Threads').closest<HTMLElement>('.thread-viewer-card')!;
+        expect(threadViewer.querySelector('.cost-est-badge')).not.toBeInTheDocument();
+        const estimatedThreadToggle = within(threadViewer).getByRole('button', { name: /ses-codex-estimated/ });
+        fireEvent.click(estimatedThreadToggle);
+        expect(estimatedThreadToggle).toHaveAttribute('aria-expanded', 'true');
+        const threadGptRow = within(threadViewer).getByText('gpt-5.4').closest('tr')!;
+        expect(threadGptRow.querySelector('.cost-est-badge')).toHaveTextContent('EST');
+        expect(threadGptRow).toHaveTextContent('$7.12');
+    });
+
+    it('renders partial mixed ticket honestly without claiming a complete equivalent total', async () => {
+        const detail = baseDetail();
+        const partialTotalsEquiv = {
+            provenance: 'partial' as const,
+            measured_cost_usd: 2.0,
+            estimated_cost_usd: 3.0,
+            total_equivalent_cost_usd: null,
+            known_subtotal_usd: 5.0,
+            measured: 1,
+            estimated: 1,
+            partial_measured: 0,
+            unavailable: 1,
+            total: 3,
+        };
+
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+            data: withAnomalyFacts({
+                ...detail,
+                ledger: {
+                    ...detail.ledger,
+                    totals: {
+                        ...detail.ledger.totals,
+                        invocations: 3,
+                        cost_usd: null,
+                        cost_summary: { state: 'partial', known_subtotal_usd: 2.0, fully_observed: 1, partial: 0, unavailable: 2, total: 3 },
+                        equivalent_cost_summary: partialTotalsEquiv,
+                    },
+                    roles: [
+                        {
+                            ...detail.ledger.roles[0]!,
+                            role: 'coder',
+                            invocations: 3,
+                            cost_usd: null,
+                            cost_summary: { state: 'partial', known_subtotal_usd: 2.0, fully_observed: 1, partial: 0, unavailable: 2, total: 3 },
+                            equivalent_cost_summary: partialTotalsEquiv,
+                        },
+                    ],
+                    models: [
+                        {
+                            ...detail.ledger.models[0]!,
+                            model: 'gpt-5.4',
+                            invocations: 3,
+                            cost_usd: null,
+                            cost_summary: { state: 'partial', known_subtotal_usd: 2.0, fully_observed: 1, partial: 0, unavailable: 2, total: 3 },
+                            equivalent_cost_summary: partialTotalsEquiv,
+                            applied_rates: [sampleRate],
+                        },
+                    ],
+                },
+            }),
+        });
+
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const costCard = (await screen.findByText('Total Cost')).closest<HTMLElement>('.kpi-card')!;
+        expect(costCard.querySelector('.kpi-value')).toHaveTextContent('$5.00');
+        expect(costCard.querySelector('.kpi-secondary')).toHaveTextContent('Partial ($2.00 measured + $3.00 EST) · 3 invocations');
+        expect(costCard.querySelector('.kpi-secondary')).not.toHaveTextContent('(equiv)');
+        expect(within(costCard).getByRole('tooltip')).toHaveTextContent('complete equivalent cost is unavailable');
+        expect(screen.getByTestId('cache-write-warning-banner')).toBeVisible();
+    });
+
+    it('routes real AL2-6 wire JSON through globalThis.fetch, decodeDetail, and validateLedgerCosts into TicketDeepDive', async () => {
+        vi.restoreAllMocks();
+        const detail = structuredClone(codexOwnedDetail);
+        const estimatedEquiv = {
+            provenance: 'estimated' as const,
+            measured_cost_usd: null,
+            estimated_cost_usd: 7.12,
+            total_equivalent_cost_usd: 7.12,
+            known_subtotal_usd: 7.12,
+            measured: 0,
+            estimated: 1,
+            partial_measured: 0,
+            unavailable: 0,
+            total: 1,
+        };
+        const measuredEquiv = {
+            provenance: 'measured' as const,
+            measured_cost_usd: 23.2,
+            estimated_cost_usd: null,
+            total_equivalent_cost_usd: 23.2,
+            known_subtotal_usd: 23.2,
+            measured: 1,
+            estimated: 0,
+            partial_measured: 0,
+            unavailable: 0,
+            total: 1,
+        };
+        const hybridEquiv = {
+            provenance: 'hybrid' as const,
+            measured_cost_usd: 23.2,
+            estimated_cost_usd: 7.12,
+            total_equivalent_cost_usd: 30.32,
+            known_subtotal_usd: 30.32,
+            measured: 1,
+            estimated: 1,
+            partial_measured: 0,
+            unavailable: 0,
+            total: 2,
+        };
+
+        const wireDetail = {
+            ...detail,
+            ledger: {
+                ...detail.ledger,
+                facts: {
+                    ...detail.ledger.facts,
+                    schema_version: 6,
+                    sessions: [
+                        {
+                            id: 'ses-wire-oc',
+                            source: 'opencode',
+                            user: 'dev-a',
+                            invocations: [
+                                {
+                                    role: 'orchestrator',
+                                    model: 'claude-sonnet-4',
+                                    started_at: '2026-10-15T10:05:00Z',
+                                    completed_at: '2026-10-15T10:20:00Z',
+                                    active_duration_seconds: 900,
+                                    turns: 2,
+                                    tokens: { input: 10000, output: 2000, cache_read: 5000, reasoning: 0, peak_context: 40000 },
+                                    cost_usd: 23.2,
+                                    cost_evidence: { state: 'observed', known_subtotal_usd: 23.2 },
+                                    compactions: 0,
+                                    user_iterations: 1,
+                                },
+                            ],
+                            tools: [],
+                        },
+                        {
+                            id: 'ses-wire-codex',
+                            source: 'codex',
+                            user: 'dev-a',
+                            invocations: [
+                                {
+                                    role: 'coder',
+                                    model: 'gpt-5.4',
+                                    started_at: '2026-10-15T10:25:00Z',
+                                    completed_at: '2026-10-15T10:45:00Z',
+                                    active_duration_seconds: 1200,
+                                    turns: 4,
+                                    tokens: { input: 200000, output: 50000, cache_read: 800000, reasoning: 10000, peak_context: 90000 },
+                                    cost_usd: null,
+                                    cost_evidence: { state: 'unavailable', known_subtotal_usd: null },
+                                    cost_estimate: { amount_usd: 7.12, rate: sampleRate },
+                                    compactions: 0,
+                                    user_iterations: 1,
+                                },
+                            ],
+                            tools: [],
+                        },
+                    ],
+                },
+                totals: {
+                    ...detail.ledger.totals,
+                    invocations: 2,
+                    cost_usd: null,
+                    cost_summary: { state: 'partial', known_subtotal_usd: 23.2, fully_observed: 1, partial: 0, unavailable: 1, total: 2 },
+                    measured_cost_usd: 23.2,
+                    estimated_cost_usd: 7.12,
+                    total_equivalent_cost_usd: 30.32,
+                    cost_provenance: 'hybrid',
+                    equivalent_cost_summary: hybridEquiv,
+                },
+                roles: [
+                    {
+                        ...detail.ledger.roles[0]!,
+                        role: 'orchestrator',
+                        invocations: 1,
+                        cost_usd: 23.2,
+                        cost_summary: { state: 'complete', known_subtotal_usd: 23.2, fully_observed: 1, partial: 0, unavailable: 0, total: 1 },
+                        measured_cost_usd: 23.2,
+                        estimated_cost_usd: null,
+                        total_equivalent_cost_usd: 23.2,
+                        cost_provenance: 'measured',
+                        equivalent_cost_summary: measuredEquiv,
+                    },
+                    {
+                        ...detail.ledger.roles[0]!,
+                        role: 'coder',
+                        invocations: 1,
+                        cost_usd: null,
+                        cost_summary: { state: 'unavailable', known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 1, total: 1 },
+                        measured_cost_usd: null,
+                        estimated_cost_usd: 7.12,
+                        total_equivalent_cost_usd: 7.12,
+                        cost_provenance: 'estimated',
+                        equivalent_cost_summary: estimatedEquiv,
+                    },
+                ],
+                models: [
+                    {
+                        ...detail.ledger.models[0]!,
+                        model: 'claude-sonnet-4',
+                        invocations: 1,
+                        cost_usd: 23.2,
+                        cost_summary: { state: 'complete', known_subtotal_usd: 23.2, fully_observed: 1, partial: 0, unavailable: 0, total: 1 },
+                        measured_cost_usd: 23.2,
+                        estimated_cost_usd: null,
+                        total_equivalent_cost_usd: 23.2,
+                        cost_provenance: 'measured',
+                        equivalent_cost_summary: measuredEquiv,
+                    },
+                    {
+                        ...detail.ledger.models[0]!,
+                        model: 'gpt-5.4',
+                        invocations: 1,
+                        cost_usd: null,
+                        cost_summary: { state: 'unavailable', known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 1, total: 1 },
+                        measured_cost_usd: null,
+                        estimated_cost_usd: 7.12,
+                        total_equivalent_cost_usd: 7.12,
+                        cost_provenance: 'estimated',
+                        equivalent_cost_summary: estimatedEquiv,
+                        applied_rates: [sampleRate],
+                    },
+                ],
+                threads: [
+                    {
+                        session_id: 'ses-wire-codex',
+                        user: 'dev-a',
+                        compactions: 0,
+                        roles: [
+                            {
+                                role: 'coder',
+                                models: [
+                                    {
+                                        ...detail.ledger.models[0]!,
+                                        model: 'gpt-5.4',
+                                        invocations: 1,
+                                        cost_usd: null,
+                                        cost_summary: { state: 'unavailable', known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 1, total: 1 },
+                                        measured_cost_usd: null,
+                                        estimated_cost_usd: 7.12,
+                                        total_equivalent_cost_usd: 7.12,
+                                        cost_provenance: 'estimated',
+                                        equivalent_cost_summary: estimatedEquiv,
+                                        applied_rates: [sampleRate],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        };
+
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+            const route = String(input).split('?')[0];
+            if (route === '/api/workspaces/TEST-WIRE/events') {
+                return new Response('', { status: 503 });
+            }
+            const payload: unknown = route === '/api/workspaces'
+                ? [wireDetail.ledger]
+                : route === '/api/workspaces/TEST-WIRE'
+                    ? wireDetail
+                    : undefined;
+            if (payload === undefined) {
+                throw new Error(`Unexpected wire route: ${route}`);
+            }
+            return new Response(JSON.stringify(payload), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        });
+
+        try {
+            render(<TicketDeepDive selectedTicketId="TEST-WIRE" />);
+            const costCard = (await screen.findByText('Total Cost')).closest<HTMLElement>('.kpi-card')!;
+            expect(costCard.querySelector('.kpi-value')).toHaveTextContent('$30.32');
+            expect(costCard.querySelector('.cost-est-badge')).toHaveTextContent('EST');
+            expect(within(costCard).getByRole('tooltip')).toHaveTextContent('gpt-5.4: $2.00 in / $0.25 cache read / $8.00 out per 1M tokens');
+            expect(screen.getByTestId('cache-write-warning-banner')).toBeVisible();
+
+            const threadViewer = screen.getByText('Session Execution Threads').closest<HTMLElement>('.thread-viewer-card')!;
+            expect(threadViewer.querySelector('.cost-est-badge')).toHaveTextContent('EST');
+            expect(threadViewer).toHaveTextContent('$7.12');
+        } finally {
+            fetchSpy.mockRestore();
+        }
+    });
+});

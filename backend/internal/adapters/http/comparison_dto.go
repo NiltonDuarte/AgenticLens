@@ -17,6 +17,11 @@ type TicketComparisonRowDTO struct {
 	ActiveDurationFormatted string                         `json:"active_duration_formatted"`
 	CostUSD                 *float64                       `json:"cost_usd"`
 	CostSummary             domain.CostSummary             `json:"cost_summary"`
+	MeasuredCostUSD         *float64                       `json:"measured_cost_usd"`
+	EstimatedCostUSD        *float64                       `json:"estimated_cost_usd"`
+	TotalEquivalentCostUSD  *float64                       `json:"total_equivalent_cost_usd"`
+	CostProvenance          domain.CostProvenance          `json:"cost_provenance"`
+	EquivalentCostSummary   domain.EquivalentCostSummary   `json:"equivalent_cost_summary"`
 	CacheHitRatePct         float64                        `json:"cache_hit_rate_pct"`
 	TestToCodeRatio         string                         `json:"test_to_code_ratio"`
 	LinesAdded              int64                          `json:"lines_added"`
@@ -36,6 +41,7 @@ type TicketComparisonRowDTO struct {
 
 func TicketComparisonRowDTOFromDomain(value domain.TicketComparisonRow) TicketComparisonRowDTO {
 	summary := domain.EffectiveCostSummary(value.CostSummary, value.CostUSD, int64(0))
+	equiv := domain.EffectiveEquivalentCostSummary(value.EquivalentCostSummary, summary, value.CostUSD, summary.Total)
 	return TicketComparisonRowDTO{
 		WorkspacePath:           value.WorkspacePath,
 		Tags:                    domain.MergeTags(nil, value.Tags),
@@ -48,6 +54,11 @@ func TicketComparisonRowDTOFromDomain(value domain.TicketComparisonRow) TicketCo
 		ActiveDurationFormatted: value.ActiveDurationFormatted,
 		CostUSD:                 summary.CompleteAmount(),
 		CostSummary:             summary,
+		MeasuredCostUSD:         equiv.MeasuredCostUSD,
+		EstimatedCostUSD:        equiv.EstimatedCostUSD,
+		TotalEquivalentCostUSD:  equiv.TotalEquivalentCostUSD,
+		CostProvenance:          equiv.Provenance,
+		EquivalentCostSummary:   equiv,
 		CacheHitRatePct:         value.CacheHitRatePct,
 		TestToCodeRatio:         value.TestToCodeRatio,
 		LinesAdded:              value.LinesAdded,

@@ -79,6 +79,9 @@ func validateSharedNodes(nodes map[string]*yaml.Node) error {
 	if err := validateWorkspaceNodes(nodes["workspaces"]); err != nil {
 		return err
 	}
+	if err := validateModelPricingNodes(nodes["model_pricing"]); err != nil {
+		return err
+	}
 	for _, key := range []string{"ticket", "workspaces", "database", "live", "anomaly_thresholds", "code_metrics", "code_metrics.production", "code_metrics.tests", "generation", "generation.metrics", "generation.feedback", "generation.summary", "role_mappings"} {
 		if n := nodes[key]; n != nil {
 			if err := requireNodeType(n, key, yaml.MappingNode, ""); err != nil {
@@ -159,6 +162,89 @@ func validateSharedNodes(nodes map[string]*yaml.Node) error {
 			var value float64
 			if err := n.Decode(&value); err != nil || math.IsNaN(value) || math.IsInf(value, 0) || value <= 0 || value > 1 {
 				return fmt.Errorf("%s must be a finite ratio greater than 0 and at most 1", key)
+			}
+		}
+	}
+	return nil
+}
+
+func validateModelPricingNodes(node *yaml.Node) error {
+	if node == nil {
+		return nil
+	}
+	if err := requireNodeType(node, "model_pricing", yaml.MappingNode, ""); err != nil {
+		return err
+	}
+	hasRates := false
+	for i := 0; i < len(node.Content); i += 2 {
+		key := node.Content[i].Value
+		val := node.Content[i+1]
+		if key != "rates" {
+			return fmt.Errorf("model_pricing contains unsupported field %q", key)
+		}
+		if hasRates {
+			return fmt.Errorf("model_pricing contains duplicate field %q", key)
+		}
+		hasRates = true
+		if err := requireNodeType(val, "model_pricing.rates", yaml.SequenceNode, ""); err != nil {
+			return err
+		}
+		for idx, item := range val.Content {
+			if err := requireNodeType(item, fmt.Sprintf("model_pricing.rates[%d]", idx), yaml.MappingNode, ""); err != nil {
+				return err
+			}
+			hasModel := false
+			hasInput := false
+			hasCacheRead := false
+			hasOutput := false
+			for j := 0; j < len(item.Content); j += 2 {
+				field := item.Content[j].Value
+				fieldVal := item.Content[j+1]
+				switch field {
+				case "model":
+					if hasModel {
+						return fmt.Errorf("model_pricing.rates[%d] contains duplicate field %q", idx, field)
+					}
+					hasModel = true
+					if err := requireNodeType(fieldVal, fmt.Sprintf("model_pricing.rates[%d].model", idx), yaml.ScalarNode, "!!str"); err != nil {
+						return err
+					}
+				case "input_per_million", "cache_read_per_million", "output_per_million":
+					var seen *bool
+					switch field {
+					case "input_per_million":
+						seen = &hasInput
+					case "cache_read_per_million":
+						seen = &hasCacheRead
+					case "output_per_million":
+						seen = &hasOutput
+					}
+					if *seen {
+						return fmt.Errorf("model_pricing.rates[%d] contains duplicate field %q", idx, field)
+					}
+					*seen = true
+					if fieldVal.Kind != yaml.ScalarNode || (fieldVal.Tag != "!!float" && fieldVal.Tag != "!!int") {
+						return fmt.Errorf("model_pricing.rates[%d].%s must be a finite non-negative number", idx, field)
+					}
+					var value float64
+					if err := fieldVal.Decode(&value); err != nil || !domain.ValidCostAmount(value) {
+						return fmt.Errorf("model_pricing.rates[%d].%s must be a finite non-negative number", idx, field)
+					}
+				default:
+					return fmt.Errorf("model_pricing.rates[%d] contains unsupported field %q", idx, field)
+				}
+			}
+			if !hasModel {
+				return fmt.Errorf("model_pricing.rates[%d].model is required", idx)
+			}
+			if !hasInput {
+				return fmt.Errorf("model_pricing.rates[%d].input_per_million is required", idx)
+			}
+			if !hasCacheRead {
+				return fmt.Errorf("model_pricing.rates[%d].cache_read_per_million is required", idx)
+			}
+			if !hasOutput {
+				return fmt.Errorf("model_pricing.rates[%d].output_per_million is required", idx)
 			}
 		}
 	}

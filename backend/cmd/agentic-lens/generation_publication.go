@@ -432,9 +432,15 @@ func verifyPendingPromotionCoverage(published, refreshed, pending []domain.Sessi
 			continue
 		}
 		proposed, observed := adapters.SessionFactDTOFromDomain(accepted), adapters.SessionFactDTOFromDomain(owner)
-		// Canonical attribution can differ, but unavailable owner evidence
-		// (including portable anomaly summaries) must be covered.
+		// Canonical attribution and publication-time rate-card estimates can differ,
+		// but unavailable owner evidence (including portable anomaly summaries) must be covered.
 		proposed.User, observed.User = "", ""
+		for i := range proposed.Invocations {
+			proposed.Invocations[i].CostEstimate = nil
+		}
+		for i := range observed.Invocations {
+			observed.Invocations[i].CostEstimate = nil
+		}
 		if !reflect.DeepEqual(proposed, observed) {
 			return fmt.Errorf("canonical and pending facts disagree for unavailable owner %s; preserving both until source verification is possible", owner.ID)
 		}

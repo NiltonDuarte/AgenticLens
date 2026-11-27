@@ -25,6 +25,7 @@ type ProjectConfig struct {
 	Live              LiveConfig               `json:"live" yaml:"live"`
 	AnomalyThresholds AnomalyThresholdsConfig  `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
 	CodeMetrics       CodeMetricsConfig        `json:"code_metrics" yaml:"code_metrics"`
+	ModelPricing      ModelPricingConfig       `json:"model_pricing,omitempty" yaml:"model_pricing,omitempty"`
 	RoleMappings      RoleMappings             `json:"role_mappings" yaml:"role_mappings"`
 	RoleOrder         []string                 `json:"role_order" yaml:"role_order"`
 }

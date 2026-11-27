@@ -10,6 +10,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: In Progress; **Blocked by**: None; **Blocks**: AL-99
   - **File**: [AL-98](to-do/AL-98%20generate%20ticket%20metrics%20from%20claude%20code%20sessions.md); **Change**: [al-98-generate-ticket-metrics-from-claude-code-sessions](../../openspec/changes/al-98-generate-ticket-metrics-from-claude-code-sessions/)
 
+- **AL2-6**: Estimate API-equivalent costs alongside measured spend
+  - **Status**: In Progress; **Blocked by**: None; **Blocks**: AL2-7
+  - **File**: [AL2-6](to-do/AL2-6%20estimate%20api%20equivalent%20costs%20alongside%20measured%20spend.md); **Change**: [al2-6-estimate-api-equivalent-costs-alongside-measured-spend](../../openspec/changes/al2-6-estimate-api-equivalent-costs-alongside-measured-spend/)
+
 ## Ready
 
 - **AL-97**: Warn about staged pending capture snapshots
@@ -52,10 +56,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **AL2-3**: Scan and aggregate local projects
   - **Status**: Ready; **Blocked by**: None; **Blocks**: AL2-4, AL2-5
   - **File**: [AL2-3](to-do/AL2-3%20scan%20and%20aggregate%20local%20projects.md)
-
-- **AL2-6**: Estimate API-equivalent costs alongside measured spend
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: AL2-7
-  - **File**: [AL2-6](to-do/AL2-6%20estimate%20api%20equivalent%20costs%20alongside%20measured%20spend.md)
 
 - **AL2-8**: Show configured reasoning effort across views
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None

@@ -837,16 +837,38 @@ func runGeneration(args []string, protection *capture.ProtectedPublication) {
 			os.Exit(1)
 		}
 		sourceEvents = domain.MergeSourceEvents(captureResult.SourceEvents, sourceEvents)
-		// Retained snapshots fill missing owners only; canonical and explicit facts remain authoritative.
-		sessions = fillMissingCaptureSessions(sessions, pendingSessions)
-		sessions = fillMissingCaptureSessions(sessions, captureResult.Sessions)
+		var priceErr error
+		captureResult.RefreshedSessions, priceErr = domain.ApplyModelPricingToSessions(captureResult.RefreshedSessions, projCfg.ModelPricing)
+		if priceErr != nil {
+			fmt.Fprintf(os.Stderr, "Error applying model pricing: %v\n", priceErr)
+			os.Exit(1)
+		}
+		captureResult.RestoredSessions, priceErr = domain.ApplyModelPricingToSessions(captureResult.RestoredSessions, projCfg.ModelPricing)
+		if priceErr != nil {
+			fmt.Fprintf(os.Stderr, "Error applying model pricing: %v\n", priceErr)
+			os.Exit(1)
+		}
 		// Coverage-ready restores can include accepted reads from earlier passes.
 		// A current-pass read still wins for the same owner.
 		freshSessions = mergeSessions(captureResult.RestoredSessions, captureResult.RefreshedSessions)
+		// Retained snapshots fill missing owners only; canonical and explicit facts remain authoritative.
+		// Price only newly promoted missing owners not already present in cached facts or fresh sessions.
+		sessions, priceErr = fillMissingPricedCaptureSessions(sessions, freshSessions, projCfg.ModelPricing, pendingSessions, captureResult.Sessions)
+		if priceErr != nil {
+			fmt.Fprintf(os.Stderr, "Error applying model pricing: %v\n", priceErr)
+			os.Exit(1)
+		}
 		for _, session := range captureResult.Sessions {
 			knownThreadIDs = append(knownThreadIDs, session.ID)
 		}
 
+	} else if len(freshSessions) > 0 {
+		pricedFresh, priceErr := domain.ApplyModelPricingToSessions(freshSessions, projCfg.ModelPricing)
+		if priceErr != nil {
+			fmt.Fprintf(os.Stderr, "Error applying model pricing: %v\n", priceErr)
+			os.Exit(1)
+		}
+		freshSessions = pricedFresh
 	}
 	if len(freshSessions) > 0 {
 		if err := capture.ValidateSessionMerge(sessions, freshSessions); err != nil {
@@ -2157,7 +2179,9 @@ func main() {
 				tid = *ledger.TicketID
 			}
 			dur := ledger.WorkflowEfficiency.ActiveDurationFormatted + " (" + domain.DurationDescription(ledger.WorkflowEfficiency.ProvisionalSeconds) + ")"
-			cost := adapters.FormatCostSummary(domain.EffectiveCostSummary(ledger.Totals.CostSummary, ledger.Totals.CostUSD, ledger.Totals.Invocations))
+			measuredSummary := domain.EffectiveCostSummary(ledger.Totals.CostSummary, ledger.Totals.CostUSD, ledger.Totals.Invocations)
+			equivSummary := domain.EffectiveEquivalentCostSummary(ledger.Totals.EquivalentCostSummary, measuredSummary, ledger.Totals.CostUSD, ledger.Totals.Invocations)
+			cost := adapters.FormatEquivalentCostSummary(equivSummary, measuredSummary)
 			health := ledger.WorkflowEfficiency.ContextWindowHealth.Status
 			iters := fmt.Sprintf("%d", ledger.WorkflowEfficiency.SDLCIterations)
 			anomSummary := formatAnomalyListSummary(ledger.Anomalies)
@@ -2242,6 +2266,43 @@ func main() {
 	if *appendFlag == "" && *jsonOutputFlag == "" {
 		fmt.Println(tableMD)
 	}
+}
+
+func fillMissingPricedCaptureSessions(existing, fresh []domain.SessionFact, pricing domain.ModelPricingConfig, fallbackGroups ...[]domain.SessionFact) ([]domain.SessionFact, error) {
+	seen := make(map[string]bool, len(existing))
+	for _, owner := range existing {
+		seen[owner.ID] = true
+	}
+	freshIDs := make(map[string]bool, len(fresh))
+	for _, owner := range fresh {
+		freshIDs[owner.ID] = true
+	}
+	var retained []domain.SessionFact
+	var toPrice []domain.SessionFact
+	var toPriceIdx []int
+	for _, fallback := range fallbackGroups {
+		for _, owner := range fallback {
+			if seen[owner.ID] {
+				continue
+			}
+			seen[owner.ID] = true
+			if !freshIDs[owner.ID] {
+				toPriceIdx = append(toPriceIdx, len(retained))
+				toPrice = append(toPrice, owner)
+			}
+			retained = append(retained, owner)
+		}
+	}
+	if len(toPrice) > 0 {
+		priced, err := domain.ApplyModelPricingToSessions(toPrice, pricing)
+		if err != nil {
+			return nil, err
+		}
+		for i, idx := range toPriceIdx {
+			retained[idx] = priced[i]
+		}
+	}
+	return fillMissingCaptureSessions(existing, retained), nil
 }
 
 func mergeSessions(cached []domain.SessionFact, local []domain.SessionFact) []domain.SessionFact {

@@ -28,6 +28,7 @@ type InvocationFact struct {
 	Tokens                InvocationTokens `json:"tokens"`
 	CostUSD               float64          `json:"cost_usd"`
 	CostEvidence          CostEvidence     `json:"cost_evidence"`
+	CostEstimate          *CostEstimate    `json:"cost_estimate,omitempty"`
 	Compactions           int64            `json:"compactions"`
 	UserIterations        int64            `json:"user_iterations"`
 }
@@ -338,15 +339,16 @@ func SessionsFromFactsWithSource(source SourceHarness, invocationSessions []Sess
 
 // GroupedMetric aggregates metrics across invocations.
 type GroupedMetric struct {
-	Invocations       int64               `json:"invocations"`
-	InputTokens       int64               `json:"input_tokens"`
-	OutputTokens      int64               `json:"output_tokens"`
-	CacheReadTokens   int64               `json:"cache_read_tokens"`
-	CacheHitRatePct   float64             `json:"cache_hit_rate_pct"`
-	CostUSD           float64             `json:"cost_usd"`
-	CostSummary       CostSummary         `json:"cost_summary"`
-	PeakContextTokens int64               `json:"peak_context_tokens"`
-	ContextHealth     ContextHealthStatus `json:"context_health"`
+	Invocations           int64                 `json:"invocations"`
+	InputTokens           int64                 `json:"input_tokens"`
+	OutputTokens          int64                 `json:"output_tokens"`
+	CacheReadTokens       int64                 `json:"cache_read_tokens"`
+	CacheHitRatePct       float64               `json:"cache_hit_rate_pct"`
+	CostUSD               float64               `json:"cost_usd"`
+	CostSummary           CostSummary           `json:"cost_summary"`
+	EquivalentCostSummary EquivalentCostSummary `json:"equivalent_cost_summary"`
+	PeakContextTokens     int64                 `json:"peak_context_tokens"`
+	ContextHealth         ContextHealthStatus   `json:"context_health"`
 }
 
 // TestToCodeRatio captures test to production code lines added and ratio string.
@@ -408,30 +410,33 @@ type WorkflowEfficiency struct {
 
 // ModelMetric summarizes aggregated usage and performance for a single model.
 type ModelMetric struct {
-	Model             string              `json:"model"`
-	Invocations       int64               `json:"invocations"`
-	InputTokens       int64               `json:"input_tokens"`
-	OutputTokens      int64               `json:"output_tokens"`
-	CacheReadTokens   int64               `json:"cache_read_tokens"`
-	CacheHitRatePct   float64             `json:"cache_hit_rate_pct"`
-	CostUSD           float64             `json:"cost_usd"`
-	CostSummary       CostSummary         `json:"cost_summary"`
-	PeakContextTokens int64               `json:"peak_context_tokens"`
-	ContextHealth     ContextHealthStatus `json:"context_health"`
+	Model                 string                `json:"model"`
+	Invocations           int64                 `json:"invocations"`
+	InputTokens           int64                 `json:"input_tokens"`
+	OutputTokens          int64                 `json:"output_tokens"`
+	CacheReadTokens       int64                 `json:"cache_read_tokens"`
+	CacheHitRatePct       float64               `json:"cache_hit_rate_pct"`
+	CostUSD               float64               `json:"cost_usd"`
+	CostSummary           CostSummary           `json:"cost_summary"`
+	EquivalentCostSummary EquivalentCostSummary `json:"equivalent_cost_summary"`
+	AppliedRates          []AppliedRateSnapshot `json:"applied_rates,omitempty"`
+	PeakContextTokens     int64                 `json:"peak_context_tokens"`
+	ContextHealth         ContextHealthStatus   `json:"context_health"`
 }
 
 // RoleMetric summarizes aggregated usage and performance for an agent role.
 type RoleMetric struct {
-	Role              AgentRole           `json:"role"`
-	Invocations       int64               `json:"invocations"`
-	InputTokens       int64               `json:"input_tokens"`
-	OutputTokens      int64               `json:"output_tokens"`
-	CacheReadTokens   int64               `json:"cache_read_tokens"`
-	CacheHitRatePct   float64             `json:"cache_hit_rate_pct"`
-	CostUSD           float64             `json:"cost_usd"`
-	CostSummary       CostSummary         `json:"cost_summary"`
-	PeakContextTokens int64               `json:"peak_context_tokens"`
-	ContextHealth     ContextHealthStatus `json:"context_health"`
+	Role                  AgentRole             `json:"role"`
+	Invocations           int64                 `json:"invocations"`
+	InputTokens           int64                 `json:"input_tokens"`
+	OutputTokens          int64                 `json:"output_tokens"`
+	CacheReadTokens       int64                 `json:"cache_read_tokens"`
+	CacheHitRatePct       float64               `json:"cache_hit_rate_pct"`
+	CostUSD               float64               `json:"cost_usd"`
+	CostSummary           CostSummary           `json:"cost_summary"`
+	EquivalentCostSummary EquivalentCostSummary `json:"equivalent_cost_summary"`
+	PeakContextTokens     int64                 `json:"peak_context_tokens"`
+	ContextHealth         ContextHealthStatus   `json:"context_health"`
 }
 
 // ThreadRoleMetric groups model metrics within an agent role under a thread session.
@@ -469,31 +474,33 @@ type AgenticMetricsLedger struct {
 
 // TimeBucketMetric captures telemetry aggregates for a chronological time bucket.
 type TimeBucketMetric struct {
-	ProvisionalSeconds      int64       `json:"provisional_seconds,omitempty"`
-	BucketKey               string      `json:"bucket_key"`
-	BucketDate              string      `json:"bucket_date"`
-	Invocations             int64       `json:"invocations"`
-	CostUSD                 float64     `json:"cost_usd"`
-	CostSummary             CostSummary `json:"cost_summary"`
-	InputTokens             int64       `json:"input_tokens"`
-	OutputTokens            int64       `json:"output_tokens"`
-	CacheReadTokens         int64       `json:"cache_read_tokens"`
-	ReasoningTokens         int64       `json:"reasoning_tokens"`
-	CacheHitRatePct         float64     `json:"cache_hit_rate_pct"`
-	LinesAdded              int64       `json:"lines_added"`
-	LinesDeleted            int64       `json:"lines_deleted"`
-	FilesChanged            int64       `json:"files_changed"`
-	NetLinesAdded           int64       `json:"net_lines_added"`
-	PeakContextTokens       int64       `json:"peak_context_tokens"`
-	ActiveDurationSeconds   int64       `json:"active_duration_seconds"`
-	CumulativeCostUSD       float64     `json:"cumulative_cost_usd"`
-	CumulativeCostSummary   CostSummary `json:"cumulative_cost_summary"`
-	CumulativeInputTokens   int64       `json:"cumulative_input_tokens"`
-	CumulativeOutputTokens  int64       `json:"cumulative_output_tokens"`
-	CumulativeLinesAdded    int64       `json:"cumulative_lines_added"`
-	CumulativeLinesDeleted  int64       `json:"cumulative_lines_deleted"`
-	CumulativeNetLinesAdded int64       `json:"cumulative_net_lines_added"`
-	CumulativeInvocations   int64       `json:"cumulative_invocations"`
+	ProvisionalSeconds              int64                 `json:"provisional_seconds,omitempty"`
+	BucketKey                       string                `json:"bucket_key"`
+	BucketDate                      string                `json:"bucket_date"`
+	Invocations                     int64                 `json:"invocations"`
+	CostUSD                         float64               `json:"cost_usd"`
+	CostSummary                     CostSummary           `json:"cost_summary"`
+	EquivalentCostSummary           EquivalentCostSummary `json:"equivalent_cost_summary"`
+	InputTokens                     int64                 `json:"input_tokens"`
+	OutputTokens                    int64                 `json:"output_tokens"`
+	CacheReadTokens                 int64                 `json:"cache_read_tokens"`
+	ReasoningTokens                 int64                 `json:"reasoning_tokens"`
+	CacheHitRatePct                 float64               `json:"cache_hit_rate_pct"`
+	LinesAdded                      int64                 `json:"lines_added"`
+	LinesDeleted                    int64                 `json:"lines_deleted"`
+	FilesChanged                    int64                 `json:"files_changed"`
+	NetLinesAdded                   int64                 `json:"net_lines_added"`
+	PeakContextTokens               int64                 `json:"peak_context_tokens"`
+	ActiveDurationSeconds           int64                 `json:"active_duration_seconds"`
+	CumulativeCostUSD               float64               `json:"cumulative_cost_usd"`
+	CumulativeCostSummary           CostSummary           `json:"cumulative_cost_summary"`
+	CumulativeEquivalentCostSummary EquivalentCostSummary `json:"cumulative_equivalent_cost_summary"`
+	CumulativeInputTokens           int64                 `json:"cumulative_input_tokens"`
+	CumulativeOutputTokens          int64                 `json:"cumulative_output_tokens"`
+	CumulativeLinesAdded            int64                 `json:"cumulative_lines_added"`
+	CumulativeLinesDeleted          int64                 `json:"cumulative_lines_deleted"`
+	CumulativeNetLinesAdded         int64                 `json:"cumulative_net_lines_added"`
+	CumulativeInvocations           int64                 `json:"cumulative_invocations"`
 }
 
 // BrittleToolSummary represents aggregated failure and anomaly metrics for a tool across the fleet.
@@ -527,28 +534,31 @@ type SkillAdoptionFact struct {
 
 // FleetSummary aggregates high-level metrics across multiple tickets.
 type FleetSummary struct {
-	ProvisionalSeconds       int64                     `json:"provisional_seconds,omitempty"`
-	SkillAdoption            []SkillAdoptionFact       `json:"skill_adoption,omitzero"`
-	TotalTickets             int64                     `json:"total_tickets"`
-	TotalCostUSD             float64                   `json:"total_cost_usd"`
-	CostSummary              CostSummary               `json:"cost_summary"`
-	RoleCostSummaries        map[AgentRole]CostSummary `json:"role_cost_summaries"`
-	ModelCostSummaries       map[string]CostSummary    `json:"model_cost_summaries"`
-	TotalInvocations         int64                     `json:"total_invocations"`
-	TotalInputTokens         int64                     `json:"total_input_tokens"`
-	TotalOutputTokens        int64                     `json:"total_output_tokens"`
-	TotalCacheReadTokens     int64                     `json:"total_cache_read_tokens"`
-	OverallCacheHitRatePct   float64                   `json:"overall_cache_hit_rate_pct"`
-	TotalDurationSeconds     int64                     `json:"total_duration_seconds"`
-	FormattedTotalDuration   string                    `json:"formatted_total_duration"`
-	TotalLinesAdded          int64                     `json:"total_lines_added"`
-	TotalLinesDeleted        int64                     `json:"total_lines_deleted"`
-	TotalFilesChanged        int64                     `json:"total_files_changed"`
-	TotalReasoningTokens     int64                     `json:"total_reasoning_tokens"`
-	OverallReasoningRatioPct float64                   `json:"overall_reasoning_ratio_pct"`
-	RoleCosts                map[AgentRole]float64     `json:"role_costs"`
-	ModelCosts               map[string]float64        `json:"model_costs"`
-	AnomalySummary           FleetAnomalySummary       `json:"anomaly_summary"`
+	ProvisionalSeconds           int64                               `json:"provisional_seconds,omitempty"`
+	SkillAdoption                []SkillAdoptionFact                 `json:"skill_adoption,omitzero"`
+	TotalTickets                 int64                               `json:"total_tickets"`
+	TotalCostUSD                 float64                             `json:"total_cost_usd"`
+	CostSummary                  CostSummary                         `json:"cost_summary"`
+	EquivalentCostSummary        EquivalentCostSummary               `json:"equivalent_cost_summary"`
+	RoleCostSummaries            map[AgentRole]CostSummary           `json:"role_cost_summaries"`
+	ModelCostSummaries           map[string]CostSummary              `json:"model_cost_summaries"`
+	RoleEquivalentCostSummaries  map[AgentRole]EquivalentCostSummary `json:"role_equivalent_cost_summaries"`
+	ModelEquivalentCostSummaries map[string]EquivalentCostSummary    `json:"model_equivalent_cost_summaries"`
+	TotalInvocations             int64                               `json:"total_invocations"`
+	TotalInputTokens             int64                               `json:"total_input_tokens"`
+	TotalOutputTokens            int64                               `json:"total_output_tokens"`
+	TotalCacheReadTokens         int64                               `json:"total_cache_read_tokens"`
+	OverallCacheHitRatePct       float64                             `json:"overall_cache_hit_rate_pct"`
+	TotalDurationSeconds         int64                               `json:"total_duration_seconds"`
+	FormattedTotalDuration       string                              `json:"formatted_total_duration"`
+	TotalLinesAdded              int64                               `json:"total_lines_added"`
+	TotalLinesDeleted            int64                               `json:"total_lines_deleted"`
+	TotalFilesChanged            int64                               `json:"total_files_changed"`
+	TotalReasoningTokens         int64                               `json:"total_reasoning_tokens"`
+	OverallReasoningRatioPct     float64                             `json:"overall_reasoning_ratio_pct"`
+	RoleCosts                    map[AgentRole]float64               `json:"role_costs"`
+	ModelCosts                   map[string]float64                  `json:"model_costs"`
+	AnomalySummary               FleetAnomalySummary                 `json:"anomaly_summary"`
 }
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.
@@ -564,6 +574,7 @@ type TicketComparisonRow struct {
 	ActiveDurationFormatted string                  `json:"active_duration_formatted"`
 	CostUSD                 float64                 `json:"cost_usd"`
 	CostSummary             CostSummary             `json:"cost_summary"`
+	EquivalentCostSummary   EquivalentCostSummary   `json:"equivalent_cost_summary"`
 	CacheHitRatePct         float64                 `json:"cache_hit_rate_pct"`
 	TestToCodeRatio         string                  `json:"test_to_code_ratio"`
 	LinesAdded              int64                   `json:"lines_added"`

@@ -3,11 +3,45 @@ export type CostEvidence =
   | { readonly state: 'partial'; readonly known_subtotal_usd: number }
   | { readonly state: 'unavailable'; readonly known_subtotal_usd: null };
 
+export interface AppliedRateSnapshot {
+  readonly matched_pattern: string;
+  readonly input_per_million: number;
+  readonly cache_read_per_million: number;
+  readonly output_per_million: number;
+  readonly effective_catalog_id: string;
+}
+
+export interface CostEstimate {
+  readonly amount_usd: number;
+  readonly rate: AppliedRateSnapshot;
+}
+
+export type CostProvenance =
+  | 'empty'
+  | 'measured'
+  | 'estimated'
+  | 'hybrid'
+  | 'partial'
+  | 'unavailable';
+
 export interface CostSummary {
   readonly state: 'empty' | 'complete' | 'partial' | 'unavailable';
   readonly known_subtotal_usd: number | null;
   readonly fully_observed: number;
   readonly partial: number;
+  readonly unavailable: number;
+  readonly total: number;
+}
+
+export interface EquivalentCostSummary {
+  readonly provenance: CostProvenance;
+  readonly measured_cost_usd: number | null;
+  readonly estimated_cost_usd: number | null;
+  readonly total_equivalent_cost_usd: number | null;
+  readonly known_subtotal_usd: number | null;
+  readonly measured: number;
+  readonly estimated: number;
+  readonly partial_measured: number;
   readonly unavailable: number;
   readonly total: number;
 }
@@ -72,6 +106,7 @@ export interface InvocationFact {
   // Current invocation wire facts require explicit cost evidence at the API boundary.
   readonly cost_usd?: number | null;
   readonly cost_evidence?: CostEvidence;
+  readonly cost_estimate?: CostEstimate | undefined;
   readonly compactions: number;
   readonly user_iterations?: number;
 }
@@ -197,6 +232,11 @@ export interface GroupedMetric {
   readonly cache_hit_rate_pct: number;
   readonly cost_usd: number | null;
   readonly cost_summary?: CostSummary;
+  readonly measured_cost_usd?: number | null | undefined;
+  readonly estimated_cost_usd?: number | null | undefined;
+  readonly total_equivalent_cost_usd?: number | null | undefined;
+  readonly cost_provenance?: CostProvenance | undefined;
+  readonly equivalent_cost_summary?: EquivalentCostSummary | undefined;
   readonly peak_context_tokens: number;
   readonly context_health: ContextHealthStatus;
 }
@@ -261,6 +301,12 @@ export interface ModelMetric {
   readonly cache_hit_rate_pct: number;
   readonly cost_usd: number | null;
   readonly cost_summary?: CostSummary;
+  readonly measured_cost_usd?: number | null | undefined;
+  readonly estimated_cost_usd?: number | null | undefined;
+  readonly total_equivalent_cost_usd?: number | null | undefined;
+  readonly cost_provenance?: CostProvenance | undefined;
+  readonly equivalent_cost_summary?: EquivalentCostSummary | undefined;
+  readonly applied_rates?: readonly AppliedRateSnapshot[] | undefined;
   readonly peak_context_tokens: number;
   readonly context_health: ContextHealthStatus;
 }
@@ -274,6 +320,11 @@ export interface RoleMetric {
   readonly cache_hit_rate_pct: number;
   readonly cost_usd: number | null;
   readonly cost_summary?: CostSummary;
+  readonly measured_cost_usd?: number | null | undefined;
+  readonly estimated_cost_usd?: number | null | undefined;
+  readonly total_equivalent_cost_usd?: number | null | undefined;
+  readonly cost_provenance?: CostProvenance | undefined;
+  readonly equivalent_cost_summary?: EquivalentCostSummary | undefined;
   readonly peak_context_tokens: number;
   readonly context_health: ContextHealthStatus;
 }
@@ -320,6 +371,11 @@ export interface FleetSummary {
   readonly total_tickets: number;
   readonly total_cost_usd: number | null;
   readonly cost_summary?: CostSummary;
+  readonly measured_cost_usd?: number | null | undefined;
+  readonly estimated_cost_usd?: number | null | undefined;
+  readonly total_equivalent_cost_usd?: number | null | undefined;
+  readonly cost_provenance?: CostProvenance | undefined;
+  readonly equivalent_cost_summary?: EquivalentCostSummary | undefined;
   readonly total_invocations: number;
   readonly total_input_tokens: number;
   readonly total_output_tokens: number;
@@ -334,8 +390,10 @@ export interface FleetSummary {
   readonly overall_reasoning_ratio_pct: number;
   readonly role_costs: Readonly<Record<string, number | null>>;
   readonly role_cost_summaries?: Readonly<Record<string, CostSummary>>;
+  readonly role_equivalent_cost_summaries?: Readonly<Record<string, EquivalentCostSummary>> | undefined;
   readonly model_costs: Readonly<Record<string, number | null>>;
   readonly model_cost_summaries?: Readonly<Record<string, CostSummary>>;
+  readonly model_equivalent_cost_summaries?: Readonly<Record<string, EquivalentCostSummary>> | undefined;
   readonly anomaly_summary: FleetAnomalySummary;
 }
 
@@ -352,6 +410,11 @@ export interface TicketComparisonRow {
   readonly active_duration_formatted: string;
   readonly cost_usd: number | null;
   readonly cost_summary?: CostSummary;
+  readonly measured_cost_usd?: number | null | undefined;
+  readonly estimated_cost_usd?: number | null | undefined;
+  readonly total_equivalent_cost_usd?: number | null | undefined;
+  readonly cost_provenance?: CostProvenance | undefined;
+  readonly equivalent_cost_summary?: EquivalentCostSummary | undefined;
   readonly cache_hit_rate_pct: number;
   readonly test_to_code_ratio: string;
   readonly lines_added: number;
@@ -416,6 +479,11 @@ export interface TimeBucketMetric {
   readonly invocations: number;
   readonly cost_usd: number | null;
   readonly cost_summary?: CostSummary;
+  readonly measured_cost_usd?: number | null | undefined;
+  readonly estimated_cost_usd?: number | null | undefined;
+  readonly total_equivalent_cost_usd?: number | null | undefined;
+  readonly cost_provenance?: CostProvenance | undefined;
+  readonly equivalent_cost_summary?: EquivalentCostSummary | undefined;
   readonly input_tokens: number;
   readonly output_tokens: number;
   readonly cache_read_tokens: number;
@@ -429,6 +497,11 @@ export interface TimeBucketMetric {
   readonly active_duration_seconds: number;
   readonly cumulative_cost_usd: number | null;
   readonly cumulative_cost_summary?: CostSummary;
+  readonly cumulative_measured_cost_usd?: number | null | undefined;
+  readonly cumulative_estimated_cost_usd?: number | null | undefined;
+  readonly cumulative_total_equivalent_cost_usd?: number | null | undefined;
+  readonly cumulative_cost_provenance?: CostProvenance | undefined;
+  readonly cumulative_equivalent_cost_summary?: EquivalentCostSummary | undefined;
   readonly cumulative_input_tokens: number;
   readonly cumulative_output_tokens: number;
   readonly cumulative_lines_added: number;

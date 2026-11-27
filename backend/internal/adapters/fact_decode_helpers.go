@@ -26,13 +26,15 @@ func requireFactJSONEOF(decoder *json.Decoder, owner string) error {
 
 // factCostMemberPresence observes only the declared cost fields of an invocation
 // or task object; null is present and remains distinct from omission.
-func factCostMemberPresence(data []byte) (amount, evidence bool, err error) {
+func factCostMemberPresence(data []byte) (amount, evidence, estimateNull bool, err error) {
 	var fields struct {
 		CostUSD      json.RawMessage `json:"cost_usd"`
 		CostEvidence json.RawMessage `json:"cost_evidence"`
+		CostEstimate json.RawMessage `json:"cost_estimate"`
 	}
 	if err := json.Unmarshal(data, &fields); err != nil {
-		return false, false, err
+		return false, false, false, err
 	}
-	return len(fields.CostUSD) > 0, len(fields.CostEvidence) > 0, nil
+	isEstimateNull := len(fields.CostEstimate) > 0 && bytes.Equal(bytes.TrimSpace(fields.CostEstimate), []byte("null"))
+	return len(fields.CostUSD) > 0, len(fields.CostEvidence) > 0, isEstimateNull, nil
 }

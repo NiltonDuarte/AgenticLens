@@ -1,6 +1,6 @@
 import { ledgerMetricCoverage } from './types';
 import { compareCosts, costSummaryForAmount } from './cost';
-import type { CostEvidence, CostSummary } from './types';
+import type { AppliedRateSnapshot, CostEvidence, CostSummary, EquivalentCostSummary } from './types';
 import { skillNames } from './aggregations';
 import type {
   AgenticMetricsLedger,
@@ -140,6 +140,57 @@ export function formatCostUSD(amount: number | null | undefined, summary?: CostS
   return cost.known_subtotal_usd === null
     ? `Unavailable (${coverage})`
     : `${formatCurrencyUSD(cost.known_subtotal_usd)} known subtotal (${coverage})`;
+}
+
+export function formatRatePerMillion(rate: number): string {
+  if (!Number.isFinite(rate) || rate <= 0) return '$0.00';
+  const raw = rate.toString();
+  let plain = raw;
+  const sci = /^(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/.exec(raw);
+  if (sci) {
+    const intDigits = sci[1] ?? '0';
+    const fracDigits = sci[2] ?? '';
+    const exp = Number(sci[3]);
+    const digits = intDigits + fracDigits;
+    const decimalPos = intDigits.length + exp;
+    if (decimalPos <= 0) {
+      plain = `0.${'0'.repeat(-decimalPos)}${digits}`;
+    } else if (decimalPos >= digits.length) {
+      plain = `${digits}${'0'.repeat(decimalPos - digits.length)}`;
+    } else {
+      plain = `${digits.slice(0, decimalPos)}.${digits.slice(decimalPos)}`;
+    }
+  }
+  const dotIndex = plain.indexOf('.');
+  if (dotIndex === -1) return `$${plain}.00`;
+  const frac = plain.slice(dotIndex + 1);
+  if (frac.length < 2) return `$${plain}${'0'.repeat(2 - frac.length)}`;
+  return `$${plain}`;
+}
+
+export function formatEquivalentCoverage(summary: EquivalentCostSummary): string {
+  return `Coverage: ${summary.measured.toLocaleString()} measured, ${summary.estimated.toLocaleString()} estimated, ${summary.partial_measured.toLocaleString()} partial, ${summary.unavailable.toLocaleString()} unavailable of ${summary.total.toLocaleString()} invocations. Invocation coverage is not financial coverage.`;
+}
+
+export function formatAppliedRatesTooltip(
+  rates: readonly AppliedRateSnapshot[] | undefined,
+  summary?: EquivalentCostSummary | undefined
+): string {
+  const parts: string[] = [];
+  if (rates && rates.length > 0) {
+    const rateDescriptions = rates.map(
+      (rate) =>
+        `${rate.matched_pattern}: ${formatRatePerMillion(rate.input_per_million)} in / ${formatRatePerMillion(rate.cache_read_per_million)} cache read / ${formatRatePerMillion(rate.output_per_million)} out per 1M tokens (catalog ${rate.effective_catalog_id})`
+    );
+    parts.push(`Applied rate card: ${rateDescriptions.join('; ')}.`);
+  } else {
+    parts.push('API-equivalent rate-card estimate (not billed spend).');
+  }
+  if (summary) {
+    parts.push(formatEquivalentCoverage(summary));
+  }
+  parts.push('API-equivalent estimates do not currently include CacheWrite tokens.');
+  return parts.join(' ');
 }
 
 /** References carry fact evidence but do not establish invocation coverage. */
@@ -293,6 +344,11 @@ export function deriveTicketComparisonRows(
       active_duration_formatted: eff.active_duration_formatted,
       cost_usd: tot.cost_usd,
       ...(tot.cost_summary ? { cost_summary: tot.cost_summary } : {}),
+      ...(tot.measured_cost_usd !== undefined ? { measured_cost_usd: tot.measured_cost_usd } : {}),
+      ...(tot.estimated_cost_usd !== undefined ? { estimated_cost_usd: tot.estimated_cost_usd } : {}),
+      ...(tot.total_equivalent_cost_usd !== undefined ? { total_equivalent_cost_usd: tot.total_equivalent_cost_usd } : {}),
+      ...(tot.cost_provenance !== undefined ? { cost_provenance: tot.cost_provenance } : {}),
+      ...(tot.equivalent_cost_summary !== undefined ? { equivalent_cost_summary: tot.equivalent_cost_summary } : {}),
       cache_hit_rate_pct: tot.cache_hit_rate_pct,
       test_to_code_ratio: eff.test_to_production_ratio.ratio,
       lines_added: eff.code_delivered.lines_added,

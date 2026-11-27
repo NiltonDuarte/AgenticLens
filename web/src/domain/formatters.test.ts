@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { formatModelLabel, formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows as configuredDeriveTicketComparisonRows, formatIsoDateTimeShort, compareTicketIds as configuredCompareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate as configuredCompareTicketCompletionDate, canonicalTicketType, extractTicketPrefix, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes as configuredFilterLedgersByPrefixes, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, formatLocalDateTime, formatHistoricalDateTimeTooltip, } from './formatters';
+import { formatModelLabel, formatTokensK, formatCurrencyUSD, formatRatePerMillion, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows as configuredDeriveTicketComparisonRows, formatIsoDateTimeShort, compareTicketIds as configuredCompareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate as configuredCompareTicketCompletionDate, canonicalTicketType, extractTicketPrefix, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes as configuredFilterLedgersByPrefixes, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, formatLocalDateTime, formatHistoricalDateTimeTooltip, } from './formatters';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, } from './types';
 const policy = {prefixes: ['AL', 'BL', 'GEN', 'PO', 'TEST'], caseInsensitive: true};
@@ -130,6 +130,25 @@ describe('Domain Pure Formatters', () => {
             expect(formatCurrencyUSD(14.821)).toBe('$14.82');
             expect(formatCurrencyUSD(1234.5)).toBe('$1234.50');
             expect(formatCurrencyUSD(1000000.999)).toBe('$1000001.00');
+        });
+    });
+    describe('formatRatePerMillion', () => {
+        it('formats small scientific-notation rates as plain decimal strings without scientific notation', () => {
+            expect(formatRatePerMillion(1e-7)).toBe('$0.0000001');
+            expect(formatRatePerMillion(1.5e-8)).toBe('$0.000000015');
+        });
+        it('formats integer, cent, and fractional per-million rates accurately', () => {
+            expect(formatRatePerMillion(2)).toBe('$2.00');
+            expect(formatRatePerMillion(0.5)).toBe('$0.50');
+            expect(formatRatePerMillion(0.25)).toBe('$0.25');
+            expect(formatRatePerMillion(0.0025)).toBe('$0.0025');
+            expect(formatRatePerMillion(0)).toBe('$0.00');
+        });
+        it('handles negative and non-finite rates defensively', () => {
+            expect(formatRatePerMillion(-1)).toBe('$0.00');
+            expect(formatRatePerMillion(NaN)).toBe('$0.00');
+            expect(formatRatePerMillion(Infinity)).toBe('$0.00');
+            expect(formatRatePerMillion(-Infinity)).toBe('$0.00');
         });
     });
     describe('formatPercentage', () => {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	"agenticlens/internal/domain"
@@ -274,6 +275,8 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 		} else if incompleteAnalysis {
 			healthLabel = "Not recorded"
 		}
+		roleMeasured := domain.EffectiveCostSummary(r.CostSummary, r.CostUSD, r.Invocations)
+		roleEquiv := domain.EffectiveEquivalentCostSummary(r.EquivalentCostSummary, roleMeasured, r.CostUSD, r.Invocations)
 		lines = append(lines, fmt.Sprintf(
 			"| **%s** | %d | %s | %s | %s | %.1f%% | %s | %s | %s |",
 			roleLabel(r.Role),
@@ -284,7 +287,7 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 			r.CacheHitRatePct,
 			domain.FormatTokensK(r.PeakContextTokens),
 			healthLabel,
-			FormatCostSummary(domain.EffectiveCostSummary(r.CostSummary, r.CostUSD, r.Invocations)),
+			FormatEquivalentCostSummary(roleEquiv, roleMeasured),
 		))
 	}
 
@@ -294,6 +297,9 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 	} else if incompleteAnalysis {
 		totalHealth = "Not recorded"
 	}
+	totalMeasured := domain.EffectiveCostSummary(totals.CostSummary, totals.CostUSD, totals.Invocations)
+	totalEquiv := domain.EffectiveEquivalentCostSummary(totals.EquivalentCostSummary, totalMeasured, totals.CostUSD, totals.Invocations)
+	totalCostText := FormatEquivalentCostSummary(totalEquiv, totalMeasured)
 	lines = append(lines, fmt.Sprintf(
 		"| **Total** | **%d** | **%s** | **%s** | **%s** | **%.1f%%** | **%s** | **%s** | **%s** |",
 		totals.Invocations,
@@ -303,7 +309,7 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 		totals.CacheHitRatePct,
 		domain.FormatTokensK(totals.PeakContextTokens),
 		totalHealth,
-		FormatCostSummary(domain.EffectiveCostSummary(totals.CostSummary, totals.CostUSD, totals.Invocations)),
+		totalCostText,
 	))
 
 	lines = append(lines,
@@ -327,11 +333,15 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 		return *a > *b
 	})
 
+	var allAppliedRates []domain.AppliedRateSnapshot
 	for _, m := range sortedModels {
 		modelLabel := m.Model
 		if modelLabel == "" {
 			modelLabel = "Unknown"
 		}
+		modelMeasured := domain.EffectiveCostSummary(m.CostSummary, m.CostUSD, m.Invocations)
+		modelEquiv := domain.EffectiveEquivalentCostSummary(m.EquivalentCostSummary, modelMeasured, m.CostUSD, m.Invocations)
+		allAppliedRates = append(allAppliedRates, m.AppliedRates...)
 		lines = append(lines, fmt.Sprintf(
 			"| **%s** | %d | %s | %s | %s | %.1f%% | %s |",
 			modelLabel,
@@ -340,7 +350,7 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 			FormatNumber(m.OutputTokens),
 			FormatNumber(m.CacheReadTokens),
 			m.CacheHitRatePct,
-			FormatCostSummary(domain.EffectiveCostSummary(m.CostSummary, m.CostUSD, m.Invocations)),
+			FormatEquivalentCostSummary(modelEquiv, modelMeasured),
 		))
 	}
 
@@ -352,10 +362,30 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 			FormatNumber(totals.OutputTokens),
 			FormatNumber(totals.CacheReadTokens),
 			totals.CacheHitRatePct,
-			FormatCostSummary(domain.EffectiveCostSummary(totals.CostSummary, totals.CostUSD, totals.Invocations)),
+			totalCostText,
 		),
-		"",
 	)
+
+	appliedRates := domain.DeduplicateAndSortAppliedRates(allAppliedRates)
+	if len(appliedRates) > 0 {
+		lines = append(lines,
+			"",
+			"**Applied API-equivalent rate card:**",
+		)
+		for _, rate := range appliedRates {
+			lines = append(lines, fmt.Sprintf(
+				"- `%s`: %s / %s / %s per 1M tokens (input / cache_read / output; catalog `%s`)",
+				rate.MatchedPattern,
+				formatRatePerMillion(rate.InputPerMillion),
+				formatRatePerMillion(rate.CacheReadPerMillion),
+				formatRatePerMillion(rate.OutputPerMillion),
+				rate.EffectiveCatalogID,
+			))
+		}
+		lines = append(lines, "- Note: API-equivalent estimates are calculated from configured rate cards and currently exclude `CacheWrite` tokens when a model has cache-write surcharges.")
+	}
+
+	lines = append(lines, "")
 
 	return strings.Join(lines, "\n")
 }
@@ -374,6 +404,49 @@ func FormatCostSummary(summary domain.CostSummary) string {
 		return fmt.Sprintf("$%.2f known subtotal (partial; %s)", *summary.KnownSubtotalUSD, coverage)
 	}
 	return "Unavailable (" + coverage + ")"
+}
+
+// FormatEquivalentCostSummary preserves exact FormatCostSummary output when no
+// API-equivalent estimates exist and clearly separates measured vs EST values otherwise.
+func FormatEquivalentCostSummary(equiv domain.EquivalentCostSummary, measured domain.CostSummary) string {
+	equiv = domain.FinalizeEquivalentCostSummary(equiv)
+	if equiv.Estimated == 0 {
+		return FormatCostSummary(measured)
+	}
+	switch equiv.Provenance {
+	case domain.CostProvenanceEstimated:
+		if equiv.EstimatedCostUSD != nil {
+			return fmt.Sprintf("$%.2f EST", *equiv.EstimatedCostUSD)
+		}
+	case domain.CostProvenanceHybrid:
+		if equiv.MeasuredCostUSD != nil && equiv.EstimatedCostUSD != nil && equiv.TotalEquivalentCostUSD != nil {
+			return fmt.Sprintf("$%.2f measured + $%.2f EST ($%.2f equiv)", *equiv.MeasuredCostUSD, *equiv.EstimatedCostUSD, *equiv.TotalEquivalentCostUSD)
+		}
+	case domain.CostProvenancePartial:
+		coverage := fmt.Sprintf("%d measured, %d estimated, %d partial, %d unavailable / %d invocations", equiv.Measured, equiv.Estimated, equiv.PartialMeasured, equiv.Unavailable, equiv.Total)
+		if equiv.MeasuredCostUSD != nil && equiv.EstimatedCostUSD != nil {
+			return fmt.Sprintf("$%.2f measured + $%.2f EST (partial; %s)", *equiv.MeasuredCostUSD, *equiv.EstimatedCostUSD, coverage)
+		}
+		if equiv.EstimatedCostUSD != nil {
+			return fmt.Sprintf("$%.2f EST (partial; %s)", *equiv.EstimatedCostUSD, coverage)
+		}
+	}
+	return FormatCostSummary(measured)
+}
+
+func formatRatePerMillion(rate float64) string {
+	if rate == 0 {
+		return "$0.00"
+	}
+	s := strconv.FormatFloat(rate, 'f', -1, 64)
+	if !strings.Contains(s, ".") {
+		return "$" + s + ".00"
+	}
+	parts := strings.SplitN(s, ".", 2)
+	if len(parts[1]) == 1 {
+		return "$" + s + "0"
+	}
+	return "$" + s
 }
 
 // roleLabel keeps source persona spelling while making unavailable roles visible.
