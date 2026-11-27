@@ -303,8 +303,14 @@ func TestIncompatibleUserManagerDoesNotCreateOrChangeOwnedState(t *testing.T) {
 				}
 			}
 			t.Setenv("AL79_CAPTURE_NATIVE_FIXTURE", "bad-manager")
-			if _, err := InstallUserCodex(context.Background(), options); err == nil {
+			_, err = InstallUserCodex(context.Background(), options)
+			if err == nil {
 				t.Fatal("incompatible manager accepted")
+			}
+			// Only the manager's protocol answer may cause the rejection; a
+			// probe that fails to run or a checksum error must not pass here.
+			if !strings.Contains(err.Error(), `native manager interface incompatible: "0"`) {
+				t.Fatalf("incompatible manager rejected for another reason: %v", err)
 			}
 			if !owned {
 				for _, path := range []string{options.Home, filepath.Join(root, "cache")} {

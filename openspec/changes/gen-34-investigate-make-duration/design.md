@@ -20,6 +20,13 @@ Steps are in [tasks.md](tasks.md). Run affected packages with and without `-race
 - **Baseline:** commit `ab42d501`, with the report measured on `be630e36`.
 - **Superseded decision:** "this change delivers an investigation report only, and each accepted proposal becomes a separate ticket". Test changes now land here. The other proposals still need their own tickets.
 - **Preserved guarantees:** every converted assertion keeps its oracle, and production validation is unchanged. Race detection still covers all production code running in the test process; only the fixture, which contains no production code, is not race-built.
-- **Coverage lost:** the 256-owner case, the race detection probability per run of the replacement test (at 1 % per read: 98 % instead of nearly 100 %), and default-scale large-store coverage below divisor 8. Copy and journal paths now handle about 2.4 MB instead of 35 MB.
+- **Coverage lost:** the 256-owner case, and default-scale large-store coverage below divisor 8. Copy and journal paths now handle about 2.4 MB instead of 35 MB. The replacement test keeps its case but makes fewer checks: about 8 % of reads succeed, so the successful identity reads per run fall from about 122 to about 32, roughly 3.7 times fewer ([TESTS.md](evidence/TESTS.md)). Mutation runs still caught every guard regression:
+  - With both identity guards removed, 8 of 8 race runs failed, all by read 79 ([reviewer-tests, Opus](evidence/review/reviewer-tests-opus.md)).
+  - With the directory-identity guard and the ticket check removed together, 25 of 25 runs failed at both 400 and 1500 reads ([reviewer-tests, Sonnet](evidence/review/reviewer-tests-sonnet.md)).
+  - Removing a single guard passes at both sizes. That is defence in depth that predates this change.
+- **Coverage gained:** the `bad-manager` case now also asserts the incompatibility reason, not just any error (RT-01).
+- **Accepted limits** (reviewer-behavior):
+  - The fixture directory, about 2.4 MB in `TMPDIR`, is left behind when the test process panics, times out or calls `os.Exit` before the `TestMain` cleanup runs. The existing `installationManagerRoot` and `capture-opencode-config-*` directories leak the same way.
+  - The converted tests need `go` on `PATH` and the package directory as the working directory. That holds for `go test`, `make` and CI, and the existing `installationManagerExecutable` and `cmd/agentic-lens` `TestMain` make the same assumption.
 - **Verification impact:** the report's measurements stay valid for `be630e36`. New results apply to the candidate revision.
-- **Delivery status:** approved. Not yet implemented.
+- **Delivery status:** implemented in `66a62c9d`. Verification and review passed. The integrated `make` is still pending.

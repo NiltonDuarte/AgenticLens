@@ -116,3 +116,16 @@ The candidate's failure has the same cause as the baseline's: `owned integration
 4. **`TestRelocationResumes…` takes about 40 s without race but about 11 s with race**, on both revisions. This was already the case on the baseline and comes from a time-dependent wait. It does not affect the race lane that `make` runs.
 5. **The fixture build needs `go` on `PATH` and a writable temporary directory**, as the existing `installationManagerExecutable` helper already does. Cleanup runs only from the Unix `TestMain`. The fixture tests are Unix-only in practice because they use `/var/tmp`. No fixture directory was left behind by any run in this pass.
 6. **Not run by the tester:** the integrated `make` after merging `main`. The orchestrator owns that step.
+
+## Review follow-up (2026-11-27, RT-01)
+
+Gap 1 above is addressed against `66a62c9d` plus an uncommitted test change. `TestIncompatibleUserManagerDoesNotCreateOrChangeOwnedState` now passes only when production returns the error `native manager interface incompatible: "0"`, produced by `config/native.go` from the manager's protocol answer. The `err == nil` check and the checks that fresh and owned state are untouched remain in place.
+
+- `gofmt -l ./internal/adapters/capture` produced no output, and `go vet ./internal/adapters/capture` exited 0.
+- `go test -count=1 -run '^TestIncompatibleUserManagerDoesNotCreateOrChangeOwnedState$' -v ./internal/adapters/capture` passed both subtests, with and without `-race`, at load 2.2.
+- **Mutation check.** This ran in a temporary worktree at `66a62c9d` that was removed afterwards:
+
+  | Scratch change to the fixture's `bad-manager` variant | Committed test | Tightened test |
+  |---|---|---|
+  | `manager protocol` exits 2 with "unsupported arguments" | passes (the gap) | fails: `rejected for another reason: native manager unavailable: native manager interface: exit status 2` |
+  | `manager protocol` answers 1 (compatible) | fails: `incompatible manager accepted` | fails: `incompatible manager accepted` |
