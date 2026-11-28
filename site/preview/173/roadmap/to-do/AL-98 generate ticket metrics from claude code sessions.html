@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-98 generate ticket metrics from claude code sessions.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/173/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/173/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="al-98-generate-ticket-metrics-from-claude-code-sessions">AL-98: Generate ticket metrics from Claude Code sessions</h1>
+
+<h2 id="goal">Goal</h2>
+
+<p>A developer working in Claude Code can run manual <code class="language-plaintext highlighter-rouge">generate</code> and explicit <code class="language-plaintext highlighter-rouge">backfill</code> with <code class="language-plaintext highlighter-rouge">--source claude</code> and publish a ticket ledger. The ledger holds the root session, its native subagents, usage, models, effort, skills, delegations and duration. Cost coverage stays explicit. This meets AGENTS.md rule 7 without falling back to another harness.</p>
+
+<h2 id="context">Context</h2>
+
+<p>Today <code class="language-plaintext highlighter-rouge">--source</code>, <code class="language-plaintext highlighter-rouge">capture install</code> and <code class="language-plaintext highlighter-rouge">telemetry.default_source</code> accept only <code class="language-plaintext highlighter-rouge">codex</code> or <code class="language-plaintext highlighter-rouge">opencode</code>, so a Claude Code session can only be recorded as unavailable telemetry. These are the facts we have about the source. Checked on 2026-11-23 against Claude Code 2.1.331 (transcript shape and binary strings only):</p>
+
+<ul>
+  <li>
+<strong>Where sessions live.</strong> Each session is a JSONL file at <code class="language-plaintext highlighter-rouge">&lt;store&gt;/projects/&lt;encoded cwd&gt;/&lt;sessionId&gt;.jsonl</code>. The store is <code class="language-plaintext highlighter-rouge">~/.claude</code> by default and <code class="language-plaintext highlighter-rouge">CLAUDE_CONFIG_DIR</code> overrides it. The encoding replaces both <code class="language-plaintext highlighter-rouge">/</code> and <code class="language-plaintext highlighter-rouge">.</code> with <code class="language-plaintext highlighter-rouge">-</code>, so you cannot decode a folder name back to its cwd. Every record carries its <code class="language-plaintext highlighter-rouge">cwd</code> and <code class="language-plaintext highlighter-rouge">gitBranch</code> instead.</li>
+  <li>
+<strong>Duplicate usage.</strong> Assistant records carry <code class="language-plaintext highlighter-rouge">requestId</code>, <code class="language-plaintext highlighter-rouge">message.id</code>, <code class="language-plaintext highlighter-rouge">message.model</code>, <code class="language-plaintext highlighter-rouge">requestedModel</code>, <code class="language-plaintext highlighter-rouge">effort</code> and <code class="language-plaintext highlighter-rouge">message.usage</code>. Usage covers input, output, cache read, and cache creation with a 5m/1h split, plus thinking tokens and server tool use. One API response is written as one record per content block, and every one of those records repeats the same usage. That held for all 35 multi-record requests we inspected.</li>
+  <li>
+<strong>No per-invocation cost.</strong> No assistant record has a cost field. A session-level <code class="language-plaintext highlighter-rouge">cost-state</code> record, which is not written for every session, holds Claude Code’s own per-model <code class="language-plaintext highlighter-rouge">costUSD</code> estimate.</li>
+  <li>
+<strong>Subagents.</strong> Records carry <code class="language-plaintext highlighter-rouge">isSidechain</code>, <code class="language-plaintext highlighter-rouge">parentUuid</code> and <code class="language-plaintext highlighter-rouge">uuid</code>. The binary refers to a per-session <code class="language-plaintext highlighter-rouge">subagents/</code> folder. We did not observe a native subagent transcript on this machine.</li>
+  <li>
+<strong>Settings that affect history.</strong> Transcripts are removed after <code class="language-plaintext highlighter-rouge">cleanupPeriodDays</code>. Forked or resumed sessions can copy earlier history into a new file.</li>
+  <li>
+<strong>Interface-launched sessions.</strong> Sessions launched through an interface (for example T3 delegation) are separate root sessions with no native parent link.</li>
+</ul>
+
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+
+<ul>
+  <li>
+<strong>Choosing the source.</strong> <code class="language-plaintext highlighter-rouge">claude</code> is accepted by <code class="language-plaintext highlighter-rouge">generate</code>, <code class="language-plaintext highlighter-rouge">backfill</code> and local <code class="language-plaintext highlighter-rouge">telemetry.default_source</code>. The store location comes from an explicit flag or the selected local configuration, with the same precedence and no-fallback rules as the Codex home. If the store is missing or unreadable, the command stops with an actionable error. It never returns empty successful telemetry and never reads another harness.</li>
+  <li>
+<strong>Finding sessions.</strong> Discovery finds the root by a literal nonce or an exact session ID across all project folders under the store, including linked worktrees. It works within the existing discovery budget and reports when that budget is exhausted. Worktree and project identity come from record fields, never from decoded folder names.</li>
+  <li>
+<strong>Counting usage once.</strong> Each API response contributes its usage exactly once, even when it is split across content blocks, copied into forked or resumed transcripts, or seen again on refresh. Missing usage categories stay unknown rather than zero. Native model and effort values are kept as they are, including requested versus served models.</li>
+  <li>
+<strong>Subagents and delegations.</strong> A native subagent becomes a child session only when the source proves its parentage. Its role comes from its native agent type through <code class="language-plaintext highlighter-rouge">role_mappings</code>. Skill and delegation occurrences are owned by the session that recorded them, following the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/cd1a7b4c05fb27ffcdce71c59e796a5adddc17ac/docs/OWNED_OCCURRENCES.md">owned-occurrence rules</a>. Children that cannot be read, and sessions launched independently, stay explicitly unresolved and never get an inferred parent.</li>
+  <li>
+<strong>Duration.</strong> Duration follows AL-64: completed turns are measured; an open turn counts as provisional time up to the snapshot cutoff and is replaced on refresh. Time between turns is never counted.</li>
+  <li>
+<strong>Cost.</strong> Invocation cost is reported as unavailable. The <code class="language-plaintext highlighter-rouge">cost-state</code> estimate is not treated as observed spend (see open questions).</li>
+  <li>
+<strong>Shared ledgers stay intact.</strong> Refresh replaces only owners whose sources are complete. It keeps Codex, OpenCode and other-machine sessions, owners whose transcripts are unavailable or were cleaned up, and unchanged repeat runs. The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/cd1a7b4c05fb27ffcdce71c59e796a5adddc17ac/TECHNICAL_GUIDELINES.md#portable-ledger-contract">portable ledger contract</a> applies.</li>
+  <li>
+<strong>Capability matrix.</strong> The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/cd1a7b4c05fb27ffcdce71c59e796a5adddc17ac/openspec/changes/al-63-verify-source-capabilities-across-harnesses/CAPABILITIES.md">source capability matrix</a> gains a Claude Code entry with the tested version, the evidence behind each claim and any unsupported cells.</li>
+  <li>
+<strong>Guidance.</strong> Setup, operator and developer guidance, the AGENTS.md rule 7 command and source references in <code class="language-plaintext highlighter-rouge">docs/OPENSPEC_WORKFLOW.md</code> name the <code class="language-plaintext highlighter-rouge">claude</code> source and its retention caveat.</li>
+  <li>
+<strong>Real verification.</strong> Run against an installed Claude Code with a real root session and a native subagent. Record the version, source IDs, the deduplicated totals checked against the records, and the limits. Synthetic fixtures do not count as native evidence.</li>
+</ul>
+
+<p>Note: on 2026-11-24 the user removed keeping effort values and preserving requested versus served models from this ticket’s scope. Ledgers record only the served model. See the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/cd1a7b4c05fb27ffcdce71c59e796a5adddc17ac/openspec/changes/al-98-generate-ticket-metrics-from-claude-code-sessions/design.md#effort-and-requested-model-removed-from-scope">change design’s steering record</a>.</p>
+
+<p>Out of scope: automatic capture (AL-99), live trace or observability services, API-equivalent pricing (AL2-6), effort display (AL2-8), and this repository’s own Claude Code instructions (GEN-30, related but not a dependency).</p>
+
+<h2 id="implementation-notes">Implementation notes</h2>
+
+<p>Open questions for the developer contract:</p>
+
+<ul>
+  <li>Should the <code class="language-plaintext highlighter-rouge">cost-state</code> estimate feed AL2-6?</li>
+  <li>Which entrypoints (CLI and SDK hosts) are claimed as supported?</li>
+  <li>Does compaction keep the same session file?</li>
+  <li>What exact tool names does the native version use for skills and subagents?</li>
+</ul>
+
+<p>Coordinate the shared backfill and CLI paths with AL-94 and AL-78.</p>
+
+<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/cd1a7b4c05fb27ffcdce71c59e796a5adddc17ac/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/cd1a7b4c05fb27ffcdce71c59e796a5adddc17ac/docs/REGRESSION_PREVENTION.md">regression boundaries</a> apply.</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>
