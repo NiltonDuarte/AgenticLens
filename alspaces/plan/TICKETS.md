@@ -54,7 +54,7 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **File**: [AL2-3](to-do/AL2-3%20scan%20and%20aggregate%20local%20projects.md)
 
 - **AL2-6**: Estimate API-equivalent costs alongside measured spend
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: AL2-7
+  - **Status**: Ready; **Blocked by**: None; **Blocks**: AL2-7, AL2-10
   - **File**: [AL2-6](to-do/AL2-6%20estimate%20api%20equivalent%20costs%20alongside%20measured%20spend.md)
 
 - **AL2-8**: Show configured reasoning effort across views
@@ -90,3 +90,7 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **AL2-7**: Compare cost modes and simulate rate cards
   - **Status**: Blocked; **Blocked by**: AL2-6; **Blocks**: None
   - **File**: [AL2-7](to-do/AL2-7%20compare%20cost%20modes%20and%20simulate%20rate%20cards.md)
+
+- **AL2-10**: Capture cache write tokens and support cache creation pricing
+  - **Status**: Blocked; **Blocked by**: AL2-6; **Blocks**: None
+  - **File**: [AL2-10](to-do/AL2-10%20capture%20cache%20write%20tokens%20and%20support%20cache%20creation%20pricing.md)
